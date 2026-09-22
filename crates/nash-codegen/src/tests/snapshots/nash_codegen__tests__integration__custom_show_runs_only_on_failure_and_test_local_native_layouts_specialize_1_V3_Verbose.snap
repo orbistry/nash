@@ -277,9 +277,11 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 --- ordinary assertion unchanged
 (program 1.1.0
   [(lam i0
-    [(lam i1 i1)
-      (case
-        (con bool False)
-        (force [[(force (builtin trace)) i0] (delay (error))])
-        (con unit ()))])
+    [(lam i1
+      [(lam i2 i2)
+        (case
+          [i1 (con bool False)]
+          (force [[(force (builtin trace)) i0] (delay (error))])
+          (con unit ()))])
+      (lam i1 i1)])
     (con string "assertion failed")])

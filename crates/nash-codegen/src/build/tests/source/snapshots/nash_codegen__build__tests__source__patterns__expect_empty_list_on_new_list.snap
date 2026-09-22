@@ -3,23 +3,26 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    let\n        x : list int\n        x = []\n    in\n    case x of\n        [] -> True\n        _ -> fail\n"
 ---
 --- core
+let fromBool#3 : bool -> bool = \value#7 : bool -> value#7 in
 let x#2 : list int = (con (list integer) []) in
-let match#3 : list int = x#2 in
-let main#1 : bool = case@List match#3 of
-  Nil -> true
-  Cons field#4 field#5 -> error in
+let match#4 : list int = x#2 in
+let main#1 : bool = case@List match#4 of
+  Nil -> fromBool#3 true
+  Cons field#5 field#6 -> error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam x_2
-    [(lam match_3
-      [(lam main_1 main_1)
-        (case match_3 (lam field_4 (lam field_5 (error))) (con bool True))])
-      x_2])
-    (con (list integer) [])])
+  [(lam fromBool_3
+    [(lam x_2
+      [(lam match_4
+        [(lam main_1 main_1)
+          (case match_4 (lam field_5 (lam field_6 (error))) [fromBool_3 (con bool True)])])
+        x_2])
+      (con (list integer) [])])
+    (lam value_7 value_7)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 192100, memory: 1300
+cpu: 288100, memory: 1900

@@ -422,7 +422,7 @@ mod tests {
             trait Drop 'a where
                 drop : 'a -> ()
             impl Drop int where
-                drop x = ()
+                drop _ = assert Primitive.True
             value n = drop (fromInt n)
         "#
             )

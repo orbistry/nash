@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Storable (option Primitive.unit)`.
+  × Unsatisfied representation constraint `Storable (option 'a)`.
    ╭─[Main.nash:7:10]
  6 │ first x xs = x
  7 │ bad xs = first (Some ()) xs
@@ -14,14 +14,14 @@ nash::type::missing_impl
    ╰────
   help: Requirement chain:
 
-            forming Primitive.list (option Primitive.unit)
+            forming Primitive.list (option 'a)
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Storable (option Primitive.unit)`.
+  × Unsatisfied representation constraint `Storable (option 'a)`.
    ╭─[Main.nash:7:10]
  6 │ first x xs = x
  7 │ bad xs = first (Some ()) xs

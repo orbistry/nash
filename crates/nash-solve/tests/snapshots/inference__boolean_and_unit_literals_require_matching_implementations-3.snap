@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\ntype token = Token\nvalue : token\nvalue = ()\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Literal.FromUnit token`.
+   ╭─[Main.nash:5:9]
+ 4 │ value : token
+ 5 │ value = ()
+   ·         ─┬
+   ·          ╰── required by `fromUnit`
+   ╰────
+  help: Available impl heads:
+
+            unit
+
+        Import or define an impl for `Literal.FromUnit token`.

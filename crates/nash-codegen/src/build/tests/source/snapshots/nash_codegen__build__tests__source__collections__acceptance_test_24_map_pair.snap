@@ -3,116 +3,119 @@ source: crates/nash-codegen/src/build/tests/source/collections.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\noptionEq same a b =\n    case (a, b) of\n        (None, None) -> True\n        (Some x, Some y) -> same x y\n        _ -> False\nmap2 optA optB f =\n    case optA of\n        None -> None\n        Some a ->\n            case optB of\n                None -> None\n                Some b -> Some (f a b)\nmain = optionEq pairEq (map2 (Some 14) (Some 42) (\\a b -> mkPairData (iData a) (iData b))) (Some (mkPairData (iData 14) (iData 42)))\npairEq a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False\n"
 ---
 --- core
-let optionEq#2 : ('erased -> 'erased -> bool) -> Main.option 'erased -> Main.option 'erased -> bool = \(same#11 : 'erased -> 'erased -> bool) a#12 : Main.option 'erased b#13 : Main.option 'erased -> let match#16 : (Main.option 'erased, Main.option 'erased) = constr 0 a#12 b#13 in
-let leaf#22 : 'erased = delay false in
-case@Tag match#16 of
-  0 field#23 field#24 -> case@Tag field#23 of
-    0 -> case@Tag field#24 of
-      0 -> true
-      1 field#25 -> force leaf#22
-    1 field#26 -> case@Tag field#24 of
-      0 -> force leaf#22
-      1 field#27 -> let x#14 : 'erased = field#26 in
-      let y#15 : 'erased = field#27 in
-      same#11 x#14 y#15 in
-let toData#30 : 'erased -> Data = \coerce#42 : 'erased -> coerce#42 in
-let pairEq#3 : pair 'erased 'erased -> pair 'erased 'erased -> bool = \a#28 : pair 'erased 'erased b#29 : pair 'erased 'erased -> let projection#43 : 'erased = fstPair a#28 in
-let evaluated#45 : 'erased = toData#30 projection#43 in
-let projection#44 : 'erased = fstPair b#29 in
-case@Bool equalsData evaluated#45 (toData#30 projection#44) of
-  True -> let projection#46 : 'erased = sndPair a#28 in
-  let evaluated#48 : 'erased = toData#30 projection#46 in
-  let projection#47 : 'erased = sndPair b#29 in
-  equalsData evaluated#48 (toData#30 projection#47)
-  False -> false in
-let map2#4 : Main.option 'erased -> Main.option 'erased -> ('erased -> 'erased -> 'erased) -> Main.option 'erased = \optA#31 : Main.option 'erased optB#32 : Main.option 'erased (f#33 : 'erased -> 'erased -> 'erased) -> let match#39 : Main.option 'erased = optA#31 in
-case@Tag match#39 of
+let fromBool#14 : bool -> bool = \value#43 : bool -> value#43 in
+let optionEq#2 : ('erased -> 'erased -> 'erased) -> Main.option 'erased -> Main.option 'erased -> 'erased = \(same#11 : 'erased -> 'erased -> 'erased) a#12 : Main.option 'erased b#13 : Main.option 'erased -> let match#17 : (Main.option 'erased, Main.option 'erased) = constr 0 a#12 b#13 in
+let leaf#23 : 'erased = delay (fromBool#14 false) in
+case@Tag match#17 of
+  0 field#24 field#25 -> case@Tag field#24 of
+    0 -> case@Tag field#25 of
+      0 -> fromBool#14 true
+      1 field#26 -> force leaf#23
+    1 field#27 -> case@Tag field#25 of
+      0 -> force leaf#23
+      1 field#28 -> let x#15 : 'erased = field#27 in
+      let y#16 : 'erased = field#28 in
+      same#11 x#15 y#16 in
+let toData#31 : 'erased -> Data = \coerce#44 : 'erased -> coerce#44 in
+let pairEq#3 : pair 'erased 'erased -> pair 'erased 'erased -> bool = \a#29 : pair 'erased 'erased b#30 : pair 'erased 'erased -> let projection#45 : 'erased = fstPair a#29 in
+let evaluated#47 : 'erased = toData#31 projection#45 in
+let projection#46 : 'erased = fstPair b#30 in
+case@Bool equalsData evaluated#47 (toData#31 projection#46) of
+  True -> let projection#48 : 'erased = sndPair a#29 in
+  let evaluated#50 : 'erased = toData#31 projection#48 in
+  let projection#49 : 'erased = sndPair b#30 in
+  equalsData evaluated#50 (toData#31 projection#49)
+  False -> fromBool#14 false in
+let map2#4 : Main.option 'erased -> Main.option 'erased -> ('erased -> 'erased -> 'erased) -> Main.option 'erased = \optA#32 : Main.option 'erased optB#33 : Main.option 'erased (f#34 : 'erased -> 'erased -> 'erased) -> let match#40 : Main.option 'erased = optA#32 in
+case@Tag match#40 of
   0 -> constr 0
-  1 field#40 -> let a#34 : 'erased = field#40 in
-  let match#37 : Main.option 'erased = optB#32 in
-  case@Tag match#37 of
+  1 field#41 -> let a#35 : 'erased = field#41 in
+  let match#38 : Main.option 'erased = optB#33 in
+  case@Tag match#38 of
     0 -> constr 0
-    1 field#38 -> let b#35 : 'erased = field#38 in
-    (\field#36 : 'erased -> constr 1 field#36) (f#33 a#34 b#35) in
-let fromInt#6 : int -> int = \value#41 : int -> value#41 in
+    1 field#39 -> let b#36 : 'erased = field#39 in
+    (\field#37 : 'erased -> constr 1 field#37) (f#34 a#35 b#36) in
+let fromInt#6 : int -> int = \value#42 : int -> value#42 in
 let main#1 : bool = optionEq#2 pairEq#3 (map2#4 ((\field#5 : int -> constr 1 field#5) (fromInt#6 14)) ((\field#7 : int -> constr 1 field#7) (fromInt#6 42)) (\a#8 : int b#9 : int -> mkPairData (iData a#8) (iData b#9))) ((\field#10 : pair Int Int -> constr 1 field#10) (mkPairData (iData (fromInt#6 14)) (iData (fromInt#6 42)))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam optionEq_2
-    [(lam toData_30
-      [(lam pairEq_3
-        [(lam map2_4
-          [(lam fromInt_6
-            [(lam main_1 main_1)
-              [[[optionEq_2 pairEq_3]
-                [[[map2_4 [(lam field_5 (constr 1 field_5)) [fromInt_6 (con integer 14)]]]
-                  [(lam field_7 (constr 1 field_7)) [fromInt_6 (con integer 42)]]]
-                  (lam a_8
-                    (lam b_9 [[(builtin mkPairData) [(builtin iData) a_8]] [(builtin iData) b_9]]))]]
-                [(lam field_10 (constr 1 field_10))
-                  [[(builtin mkPairData) [(builtin iData) [fromInt_6 (con integer 14)]]]
-                    [(builtin iData) [fromInt_6 (con integer 42)]]]]]])
-            (lam value_41 value_41)])
-          (lam optA_31
-            (lam optB_32
-              (lam f_33
-                [(lam match_39
-                  (case
-                    match_39
-                    (constr 0)
-                    (lam field_40
-                      [(lam a_34
-                        [(lam match_37
-                          (case
-                            match_37
-                            (constr 0)
-                            (lam field_38
-                              [(lam b_35 [(lam field_36 (constr 1 field_36)) [[f_33 a_34] b_35]]) field_38])))
-                          optB_32])
-                        field_40])))
-                  optA_31])))])
-        (lam a_28
-          (lam b_29
-            [(lam projection_43
-              [(lam evaluated_45
-                [(lam projection_44
-                  (case
-                    [[(builtin equalsData) evaluated_45] [toData_30 projection_44]]
-                    (con bool False)
-                    [(lam projection_46
-                      [(lam evaluated_48
-                        [(lam projection_47
-                          [[(builtin equalsData) evaluated_48] [toData_30 projection_47]])
-                          [(force (force (builtin sndPair))) b_29]])
-                        [toData_30 projection_46]])
-                      [(force (force (builtin sndPair))) a_28]]))
-                  [(force (force (builtin fstPair))) b_29]])
-                [toData_30 projection_43]])
-              [(force (force (builtin fstPair))) a_28]]))])
-      (lam coerce_42 coerce_42)])
-    (lam same_11
-      (lam a_12
-        (lam b_13
-          [(lam match_16
-            [(lam leaf_22
-              (case
-                match_16
-                (lam field_23
-                  (lam field_24
+  [(lam fromBool_14
+    [(lam optionEq_2
+      [(lam toData_31
+        [(lam pairEq_3
+          [(lam map2_4
+            [(lam fromInt_6
+              [(lam main_1 main_1)
+                [[[optionEq_2 pairEq_3]
+                  [[[map2_4 [(lam field_5 (constr 1 field_5)) [fromInt_6 (con integer 14)]]]
+                    [(lam field_7 (constr 1 field_7)) [fromInt_6 (con integer 42)]]]
+                    (lam a_8
+                      (lam b_9 [[(builtin mkPairData) [(builtin iData) a_8]] [(builtin iData) b_9]]))]]
+                  [(lam field_10 (constr 1 field_10))
+                    [[(builtin mkPairData) [(builtin iData) [fromInt_6 (con integer 14)]]]
+                      [(builtin iData) [fromInt_6 (con integer 42)]]]]]])
+              (lam value_42 value_42)])
+            (lam optA_32
+              (lam optB_33
+                (lam f_34
+                  [(lam match_40
                     (case
-                      field_23
-                      (case field_24 (con bool True) (lam field_25 (force leaf_22)))
-                      (lam field_26
-                        (case
-                          field_24
-                          (force leaf_22)
-                          (lam field_27 [(lam x_14 [(lam y_15 [[same_11 x_14] y_15]) field_27]) field_26]))))))))
-              (delay (con bool False))])
-            (constr 0 a_12 b_13)])))])
+                      match_40
+                      (constr 0)
+                      (lam field_41
+                        [(lam a_35
+                          [(lam match_38
+                            (case
+                              match_38
+                              (constr 0)
+                              (lam field_39
+                                [(lam b_36 [(lam field_37 (constr 1 field_37)) [[f_34 a_35] b_36]]) field_39])))
+                            optB_33])
+                          field_41])))
+                    optA_32])))])
+          (lam a_29
+            (lam b_30
+              [(lam projection_45
+                [(lam evaluated_47
+                  [(lam projection_46
+                    (case
+                      [[(builtin equalsData) evaluated_47] [toData_31 projection_46]]
+                      [fromBool_14 (con bool False)]
+                      [(lam projection_48
+                        [(lam evaluated_50
+                          [(lam projection_49
+                            [[(builtin equalsData) evaluated_50] [toData_31 projection_49]])
+                            [(force (force (builtin sndPair))) b_30]])
+                          [toData_31 projection_48]])
+                        [(force (force (builtin sndPair))) a_29]]))
+                    [(force (force (builtin fstPair))) b_30]])
+                  [toData_31 projection_45]])
+                [(force (force (builtin fstPair))) a_29]]))])
+        (lam coerce_44 coerce_44)])
+      (lam same_11
+        (lam a_12
+          (lam b_13
+            [(lam match_17
+              [(lam leaf_23
+                (case
+                  match_17
+                  (lam field_24
+                    (lam field_25
+                      (case
+                        field_24
+                        (case field_25 [fromBool_14 (con bool True)] (lam field_26 (force leaf_23)))
+                        (lam field_27
+                          (case
+                            field_25
+                            (force leaf_23)
+                            (lam field_28 [(lam x_15 [(lam y_16 [[same_11 x_15] y_16]) field_28]) field_27]))))))))
+                (delay [fromBool_14 (con bool False)])])
+              (constr 0 a_12 b_13)])))])
+    (lam value_43 value_43)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 5777248, memory: 19522
+cpu: 5825248, memory: 19822

@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × No impl for `Literal.FromInt (unit -> 'a)`.
+  × No impl for `Literal.FromInt ('a -> 'b)`.
    ╭─[Main.nash:6:5]
  5 │     in
  6 │     value ()
@@ -16,4 +16,4 @@ nash::type::missing_impl
 
             int
 
-        Import or define an impl for `Literal.FromInt (unit -> 'a)`.
+        Import or define an impl for `Literal.FromInt ('a -> 'b)`.

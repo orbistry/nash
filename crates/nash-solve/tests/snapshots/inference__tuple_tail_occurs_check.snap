@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::infinite_type
 
-  × `x` has a self-referential type: ( unit, unit, unit, ∞ ) -> 'a
+  × `x` has a self-referential type: ( 'a2, 'a1, 'a, ∞ ) -> 'b
    ╭─[Main.nash:2:6]
  1 │ module Main exposing (..)
  2 │ loop x = x ((), (), (), x)

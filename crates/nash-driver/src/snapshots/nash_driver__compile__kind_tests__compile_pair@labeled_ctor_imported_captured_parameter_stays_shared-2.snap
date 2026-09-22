@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n\nmodule Main exposing (..)\nimport Types\nbad : Types.box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n"
+description: "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n\nmodule Main exposing (..)\nimport Types\nbad : Types.box 'a -> ('a, bool)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get Primitive.True, get Primitive.True)\n"
 ---
 nash::warning::unused_variable
 
@@ -15,18 +15,18 @@ nash::warning::unused_variable
 
 nash::type::mismatch
 
-  × Type mismatch: expected `( 'a, unit )`, found `( 'a, 'a )`.
+  × Type mismatch: expected `( 'a, bool )`, found `( 'a, 'a )`.
    ╭─[/Main.nash:8:5]
  2 │ import Types
- 3 │ bad : Types.box 'a -> ('a, unit)
+ 3 │ bad : Types.box 'a -> ('a, bool)
    ·       ─────────────┬────────────
    ·                    ╰── declared type
  4 │ bad b =
  5 │     let
  6 │         get ignored = b.value
  7 │     in
- 8 │     (get (), get ())
-   ·     ────────┬───────
-   ·             ╰── body of `bad`
+ 8 │     (get Primitive.True, get Primitive.True)
+   ·     ────────────────────┬───────────────────
+   ·                         ╰── body of `bad`
    ╰────
   help: Keep the implementation generic over `'a`, or specialize its annotation.

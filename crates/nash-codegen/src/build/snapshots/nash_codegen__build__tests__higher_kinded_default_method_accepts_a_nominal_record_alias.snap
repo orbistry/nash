@@ -4,24 +4,27 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 let pass#2 : 'erased -> 'erased = \x#4 : 'erased -> x#4 in
-let boxed#3 : { _0 : unit } = constr 0 () in
-let evaluated#5 : 'erased = pass#2 boxed#3 in
-let projection#6 : 'erased = field@0/1 evaluated#5 in
-let main#1 : unit = projection#6 in
+let fromUnit#5 : unit -> unit = \value#6 : unit -> value#6 in
+let boxed#3 : { _0 : unit } = constr 0 (fromUnit#5 ()) in
+let evaluated#7 : 'erased = pass#2 boxed#3 in
+let projection#8 : 'erased = field@0/1 evaluated#7 in
+let main#1 : unit = projection#8 in
 main#1
 --- uplc
 (program 1.1.0
   [(lam pass_2
-    [(lam boxed_3
-      [(lam evaluated_5
-        [(lam projection_6 [(lam main_1 main_1) projection_6])
-          (case evaluated_5 (lam generated_7 generated_7))])
-        [pass_2 boxed_3]])
-      (constr 0 (con unit ()))])
+    [(lam fromUnit_5
+      [(lam boxed_3
+        [(lam evaluated_7
+          [(lam projection_8 [(lam main_1 main_1) projection_8])
+            (case evaluated_7 (lam generated_9 generated_9))])
+          [pass_2 boxed_3]])
+        (constr 0 [fromUnit_5 (con unit ())])])
+      (lam value_6 value_6)])
     (lam x_4 x_4)])
 --- result
 (con unit ())
 --- logs
 []
 --- budget
-cpu: 368100, memory: 2400
+cpu: 464100, memory: 3000

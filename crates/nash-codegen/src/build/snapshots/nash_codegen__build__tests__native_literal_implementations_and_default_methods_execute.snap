@@ -3,37 +3,45 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nsame : int -> int -> bool\nsame = eq\nmain = if neq (Builtin.addInteger 20 21) 42 then same 42 42 else False\n"
 ---
 --- core
-let eq#7 : int -> int -> bool = equalsInteger in
-let neq#2 : 'erased -> 'erased -> bool = \a#5 : 'erased b#6 : 'erased -> case@Bool eq#7 a#5 b#6 of
-  True -> false
-  False -> true in
-let fromInt#3 : int -> int = \value#8 : int -> value#8 in
-let same#4 : int -> int -> bool = eq#7 in
-let main#1 : bool = case@Bool neq#2 (addInteger (fromInt#3 20) (fromInt#3 21)) (fromInt#3 42) of
-  True -> same#4 (fromInt#3 42) (fromInt#3 42)
-  False -> false in
+let fromBool#2 : bool -> bool = \value#6 : bool -> value#6 in
+let eq#9 : int -> int -> bool = equalsInteger in
+let neq#3 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> case@Bool eq#9 a#7 b#8 of
+  True -> fromBool#2 false
+  False -> fromBool#2 true in
+let fromInt#4 : int -> int = \value#10 : int -> value#10 in
+let same#5 : int -> int -> bool = eq#9 in
+let main#1 : bool = case@Bool neq#3 (addInteger (fromInt#4 20) (fromInt#4 21)) (fromInt#4 42) of
+  True -> same#5 (fromInt#4 42) (fromInt#4 42)
+  False -> fromBool#2 false in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_7
-    [(lam neq_2
-      [(lam fromInt_3
-        [(lam same_4
-          [(lam main_1 main_1)
+  [(lam fromBool_2
+    [(lam eq_9
+      [(lam neq_3
+        [(lam fromInt_4
+          [(lam same_5
+            [(lam main_1 main_1)
+              (case
+                [[neq_3
+                  [[(builtin addInteger) [fromInt_4 (con integer 20)]]
+                    [fromInt_4 (con integer 21)]]]
+                  [fromInt_4 (con integer 42)]]
+                [fromBool_2 (con bool False)]
+                [[same_5 [fromInt_4 (con integer 42)]] [fromInt_4 (con integer 42)]])])
+            eq_9])
+          (lam value_10 value_10)])
+        (lam a_7
+          (lam b_8
             (case
-              [[neq_2
-                [[(builtin addInteger) [fromInt_3 (con integer 20)]]
-                  [fromInt_3 (con integer 21)]]]
-                [fromInt_3 (con integer 42)]]
-              (con bool False)
-              [[same_4 [fromInt_3 (con integer 42)]] [fromInt_3 (con integer 42)]])])
-          eq_7])
-        (lam value_8 value_8)])
-      (lam a_5 (lam b_6 (case [[eq_7 a_5] b_6] (con bool True) (con bool False))))])
-    (builtin equalsInteger)])
+              [[eq_9 a_7] b_8]
+              [fromBool_2 (con bool True)]
+              [fromBool_2 (con bool False)])))])
+      (builtin equalsInteger)])
+    (lam value_6 value_6)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1053974, memory: 5404
+cpu: 1149974, memory: 6004

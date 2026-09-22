@@ -3,27 +3,30 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : unit\nmain = trace \"hello\" (assert False)\n"
 ---
 --- core
-let message#4 : string = "hello" in
-let message#5 : string = "assertion failed" in
-let fromString#2 : string -> string = \value#3 : string -> value#3 in
-let main#1 : unit = trace (fromString#2 message#4) in case@Bool false of
+let message#6 : string = "hello" in
+let message#7 : string = "assertion failed" in
+let fromBool#2 : bool -> bool = \value#4 : bool -> value#4 in
+let fromString#3 : string -> string = \value#5 : string -> value#5 in
+let main#1 : unit = trace (fromString#3 message#6) in case@Bool fromBool#2 false of
   True -> ()
-  False -> trace message#5 in error in
+  False -> trace message#7 in error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_4
-    [(lam message_5
-      [(lam fromString_2
-        [(lam main_1 main_1)
-          (force
-            [[(force (builtin trace)) [fromString_2 message_4]]
-              (delay
-                (case
-                  (con bool False)
-                  (force [[(force (builtin trace)) message_5] (delay (error))])
-                  (con unit ())))])])
-        (lam value_3 value_3)])
+  [(lam message_6
+    [(lam message_7
+      [(lam fromBool_2
+        [(lam fromString_3
+          [(lam main_1 main_1)
+            (force
+              [[(force (builtin trace)) [fromString_3 message_6]]
+                (delay
+                  (case
+                    [fromBool_2 (con bool False)]
+                    (force [[(force (builtin trace)) message_7] (delay (error))])
+                    (con unit ())))])])
+          (lam value_5 value_5)])
+        (lam value_4 value_4)])
       (con string "assertion failed")])
     (con string "hello")])
 --- result

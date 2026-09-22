@@ -3,20 +3,23 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "validator module Main exposing (main)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : Data -> Bytes -> Data -> unit\nmain redeemer policyId transaction = assert True\n"
 ---
 --- core
-let message#5 : string = "assertion failed" in
-let main#1 : Data -> Bytes -> Data -> unit = \redeemer#2 : Data policyId#3 : Bytes transaction#4 : Data -> case@Bool true of
+let message#7 : string = "assertion failed" in
+let fromBool#5 : bool -> bool = \value#6 : bool -> value#6 in
+let main#1 : Data -> Bytes -> Data -> unit = \redeemer#2 : Data policyId#3 : Bytes transaction#4 : Data -> case@Bool fromBool#5 true of
   True -> ()
-  False -> trace message#5 in error in
+  False -> trace message#7 in error in
 main#1
 --- uplc
 (program 1.1.0
   [(lam i0
-    [(lam i1 i1)
-      (lam i1
+    [(lam i1
+      [(lam i2 i2)
         (lam i2
           (lam i3
-            (case
-              (con bool True)
-              (force [[(force (builtin trace)) i0] (delay (error))])
-              (con unit ())))))])
+            (lam i4
+              (case
+                [i1 (con bool True)]
+                (force [[(force (builtin trace)) i0] (delay (error))])
+                (con unit ())))))])
+      (lam i1 i1)])
     (con string "assertion failed")])

@@ -303,6 +303,7 @@ pub enum Expr<'a> {
         /// Fields in declaration (wire) order.
         fields: &'a [FieldValue<'a>],
     },
+    Bool(bool),
     Unit,
     Tuple {
         first: &'a Located<Expr<'a>>,

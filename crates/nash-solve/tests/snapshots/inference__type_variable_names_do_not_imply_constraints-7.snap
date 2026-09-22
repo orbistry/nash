@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nidentity : 'appendableish -> 'appendableish\nidentity x = x\nmain = identity ()\n"
+description: "module Main exposing (..)\nidentity : 'appendableish -> 'appendableish\nidentity x = x\nmain : unit\nmain = identity ()\n"
 ---
 identity : forall appendableish. appendableish -> appendableish
 main : unit

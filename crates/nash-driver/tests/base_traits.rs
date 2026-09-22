@@ -106,3 +106,7 @@ async fn debug_syntax_silent() {
 
 base_snapshot!(list_helpers, "fixtures/base-traits/Lists.nash");
 base_snapshot!(type_helpers, "fixtures/base-traits/TypeHelpers.nash");
+base_snapshot!(
+    boolean_and_unit_literals,
+    "fixtures/base-traits/BooleanUnitLiterals.nash"
+);

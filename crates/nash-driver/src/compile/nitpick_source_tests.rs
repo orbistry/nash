@@ -893,12 +893,14 @@ fn transparent_alias_coverage() {
     );
 }
 
-fn core_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
+pub(super) fn core_interfaces(
+    bump: &Bump,
+) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
     let mut interfaces =
         std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     for (name, source) in [
-        ("Eq", include_str!("fixtures/Eq.nash")),
         ("Literal", include_str!("fixtures/Literal.nash")),
+        ("Eq", include_str!("fixtures/Eq.nash")),
         ("Monad", include_str!("fixtures/Monad.nash")),
     ] {
         let (module, annotations) = solve_source(

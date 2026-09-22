@@ -1,0 +1,11 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (type bool(..))\ntruth = True\nfalsehood = False\nnothing = ()\nnativeBool : bool\nnativeBool = True\nnativeUnit : unit\nnativeUnit = ()\nqualified = Primitive.True\nchoose value = if value then True else False\n"
+---
+choose : forall a. FromBool a => bool -> a
+falsehood : forall a. FromBool a => a
+nativeBool : bool
+nativeUnit : unit
+nothing : forall a. FromUnit a => a
+qualified : bool
+truth : forall a. FromBool a => a

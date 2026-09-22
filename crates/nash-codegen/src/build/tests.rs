@@ -37,31 +37,7 @@ fn fixture_in<'a>(
 }
 
 fn evaluate(name: &str, source: &str) -> crate::harness::Evaluated {
-    let arena = Arena::new();
-    let (module, solved) = fixture(&arena, source);
-    let build = Build::new([Input {
-        module: &module.module,
-        types: &solved,
-        tables: &module.tables,
-    }]);
-    let compiled = build
-        .compile(
-            &arena,
-            QualifiedName {
-                home: module.module.name,
-                name: "main",
-            },
-            None,
-            TraceConfig::default(),
-        )
-        .unwrap();
-    let core =
-        crate::recursion::rewrite(&nash_ir::build::Builder::new(&arena), compiled.core).unwrap();
-    let evaluated = crate::harness::eval_core(&arena, core);
-    insta::with_settings!({description => source, omit_expression => true}, {
-        insta::assert_snapshot!(name, format!("--- core\n{}\n{evaluated}", nash_ir::pretty::pretty(core)));
-    });
-    evaluated
+    core_eval(name, source)
 }
 
 fn compiled_output<'a>(arena: &'a Arena, core: &'a nash_ir::core::Core<'a>) -> String {
@@ -110,6 +86,7 @@ fn source_little_constructor_patterns_and_tuples() {
             case opt of
                 None -> fallback
                 Some x -> x
+        main : unit
         main = unwrap () (Some ())
     "#
         ),
@@ -276,6 +253,7 @@ fn literal_patterns_use_the_selected_conversion_and_eq_body() {
             eq (Box a) (Box b) = Builtin.equalsInteger (Builtin.addInteger a 1) b
         boxed : box
         boxed = 40
+        main : bool
         main =
             case boxed of
                 41 -> True
@@ -345,6 +323,7 @@ fn aggregate_destructuring_preserves_generalized_components() {
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
+        main : (unit, bool)
         main =
             let
                 (identity, second) = (\x -> x, \x -> x)
@@ -387,6 +366,7 @@ fn closed_local_comptime_includes_its_reachable_helper() {
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        main : unit
         main =
             let
                 helper x = x
@@ -405,6 +385,7 @@ fn unused_polymorphic_bottom_is_still_strict() {
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        main : unit
         main =
             let
                 unused = fail
@@ -512,6 +493,7 @@ fn implementation_method_only_type_variables_match_by_type() {
             keep : 'a -> 'b -> 'b
         impl Keep (list 'b) where
             keep _ value = value
+        main : bool
         main = keep [()] True
     "#
         ),
@@ -615,6 +597,7 @@ fn repeated_trace_strings_are_hoisted_once() {
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        main : (unit, unit)
         main = (trace "hello" (), trace "hello" ())
     "#
         ),
@@ -639,6 +622,7 @@ fn unused_overloaded_value_does_not_choose_an_arbitrary_instance() {
         indoc::indoc!(
             r#"
         module Main exposing (..)
+        main : unit
         main =
             let
                 unused = trace "no instance" 42
@@ -825,7 +809,10 @@ fn transparent_alias_method_variables_are_matched_after_expansion() {
             keep : 'a -> identity 'b -> identity 'b
         impl Keep unit where
             keep _ x = x
-        main = keep () ()
+        raw : unit
+        raw = ()
+        main : unit
+        main = keep () raw
     "#
         ),
     );
@@ -906,6 +893,7 @@ fn generalized_destructuring_evaluates_its_aggregate_once() {
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
+        main : (unit, bool)
         main =
             let
                 (first, second) = trace "aggregate" (\x -> x, \x -> x)
@@ -936,6 +924,7 @@ fn separate_lexical_helpers_with_the_same_name_do_not_collide() {
                 helper y = y
             in
             helper x
+        main : (bool, unit)
         main = (first True, second ())
     "#
         ),
@@ -1734,6 +1723,7 @@ source_codegen_snapshot!(
     import Builtin
     wrong : list int
     wrong = Primitive.coerce ()
+    main : unit
     main =
         let
             xs = Builtin.dropList 0 wrong

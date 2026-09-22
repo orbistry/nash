@@ -1,53 +1,59 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        (first, second) = trace \"aggregate\" (\\x -> x, \\x -> x)\n    in\n    (first (), second True)\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : (unit, bool)\nmain =\n    let\n        (first, second) = trace \"aggregate\" (\\x -> x, \\x -> x)\n    in\n    (first (), second True)\n"
 ---
 --- core
-let message#18 : string = "aggregate" in
-let fromString#15 : string -> string = \value#16 : string -> value#16 in
-let destruct#2 : ('erased -> 'erased, 'erased -> 'erased) = trace (fromString#15 message#18) in constr 0 (\x#13 : 'erased -> x#13) (\x#14 : 'erased -> x#14) in
+let message#22 : string = "aggregate" in
+let fromUnit#8 : unit -> unit = \value#18 : unit -> value#18 in
+let fromBool#14 : bool -> bool = \value#19 : bool -> value#19 in
+let fromString#17 : string -> string = \value#20 : string -> value#20 in
+let destruct#2 : ('erased -> 'erased, 'erased -> 'erased) = trace (fromString#17 message#22) in constr 0 (\x#15 : 'erased -> x#15) (\x#16 : 'erased -> x#16) in
 let match#5 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
-let evaluated#17 : 'erased = (case@Tag match#5 of
+let evaluated#21 : 'erased = (case@Tag match#5 of
   0 field#6 field#7 -> let first#3 : 'erased -> 'erased = field#6 in
   let second#4 : 'erased -> 'erased = field#7 in
-  first#3) () in
-let match#10 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
-let main#1 : (unit, bool) = constr 0 evaluated#17 ((case@Tag match#10 of
-  0 field#11 field#12 -> let first#8 : 'erased -> 'erased = field#11 in
-  let second#9 : 'erased -> 'erased = field#12 in
-  second#9) true) in
+  first#3) (fromUnit#8 ()) in
+let match#11 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
+let main#1 : (unit, bool) = constr 0 evaluated#21 ((case@Tag match#11 of
+  0 field#12 field#13 -> let first#9 : 'erased -> 'erased = field#12 in
+  let second#10 : 'erased -> 'erased = field#13 in
+  second#10) (fromBool#14 true)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_18
-    [(lam fromString_15
-      [(lam destruct_2
-        [(lam match_5
-          [(lam evaluated_17
-            [(lam match_10
-              [(lam main_1 main_1)
-                (constr 0
-                  evaluated_17
-                  [(case
-                    match_10
-                    (lam field_11
-                      (lam field_12 [(lam first_8 [(lam second_9 second_9) field_12]) field_11])))
-                    (con bool True)])])
+  [(lam message_22
+    [(lam fromUnit_8
+      [(lam fromBool_14
+        [(lam fromString_17
+          [(lam destruct_2
+            [(lam match_5
+              [(lam evaluated_21
+                [(lam match_11
+                  [(lam main_1 main_1)
+                    (constr 0
+                      evaluated_21
+                      [(case
+                        match_11
+                        (lam field_12
+                          (lam field_13 [(lam first_9 [(lam second_10 second_10) field_13]) field_12])))
+                        [fromBool_14 (con bool True)]])])
+                  destruct_2])
+                [(case
+                  match_5
+                  (lam field_6
+                    (lam field_7 [(lam first_3 [(lam second_4 first_3) field_7]) field_6])))
+                  [fromUnit_8 (con unit ())]]])
               destruct_2])
-            [(case
-              match_5
-              (lam field_6
-                (lam field_7 [(lam first_3 [(lam second_4 first_3) field_7]) field_6])))
-              (con unit ())]])
-          destruct_2])
-        (force
-          [[(force (builtin trace)) [fromString_15 message_18]]
-            (delay (constr 0 (lam x_13 x_13) (lam x_14 x_14)))])])
-      (lam value_16 value_16)])
+            (force
+              [[(force (builtin trace)) [fromString_17 message_22]]
+                (delay (constr 0 (lam x_15 x_15) (lam x_16 x_16)))])])
+          (lam value_20 value_20)])
+        (lam value_19 value_19)])
+      (lam value_18 value_18)])
     (con string "aggregate")])
 --- result
 (constr 0 (con unit ()) (con bool True))
 --- logs
 ["aggregate"]
 --- budget
-cpu: 1051598, memory: 6332
+cpu: 1243598, memory: 7532

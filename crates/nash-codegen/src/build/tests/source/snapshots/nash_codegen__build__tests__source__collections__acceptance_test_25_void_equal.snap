@@ -3,19 +3,28 @@ source: crates/nash-codegen/src/build/tests/source/collections.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nmain = eq () ()\n"
 ---
 --- core
-let eq#2 : unit -> unit -> bool = \arg#3 : unit arg#4 : unit -> let match#6 : unit = arg#3 in
-let match#5 : unit = arg#4 in
-true in
-let main#1 : bool = eq#2 () () in
+let fromBool#6 : bool -> bool = \value#10 : bool -> value#10 in
+let eq#2 : unit -> unit -> bool = \arg#4 : unit arg#5 : unit -> let match#8 : unit = arg#4 in
+let match#7 : unit = arg#5 in
+fromBool#6 true in
+let fromUnit#3 : unit -> unit = \value#9 : unit -> value#9 in
+let main#1 : bool = eq#2 (fromUnit#3 ()) (fromUnit#3 ()) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_2 [(lam main_1 main_1) [[eq_2 (con unit ())] (con unit ())]])
-    (lam arg_3
-      (lam arg_4 [(lam match_6 [(lam match_5 (con bool True)) arg_4]) arg_3]))])
+  [(lam fromBool_6
+    [(lam eq_2
+      [(lam fromUnit_3
+        [(lam main_1 main_1)
+          [[eq_2 [fromUnit_3 (con unit ())]] [fromUnit_3 (con unit ())]]])
+        (lam value_9 value_9)])
+      (lam arg_4
+        (lam arg_5
+          [(lam match_8 [(lam match_7 [fromBool_6 (con bool True)]) arg_5]) arg_4]))])
+    (lam value_10 value_10)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 304100, memory: 2000
+cpu: 544100, memory: 3500

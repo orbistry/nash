@@ -3,22 +3,25 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> (unit, Int)\nmain d = (trace \"before\" (), d.first)\n"
 ---
 --- core
-let message#8 : string = "before" in
-let fromString#3 : string -> string = \value#4 : string -> value#4 in
-let main#1 : { _0 : Int, _1 : Int } -> (unit, Int) = \d#2 : { _0 : Int, _1 : Int } -> let evaluated#7 : 'erased = trace (fromString#3 message#8) in () in
-let projection#5 : list Data = unListData d#2 in
-let projection#6 : Data = headList projection#5 in
-constr 0 evaluated#7 projection#6 in
+let message#10 : string = "before" in
+let fromUnit#3 : unit -> unit = \value#5 : unit -> value#5 in
+let fromString#4 : string -> string = \value#6 : string -> value#6 in
+let main#1 : { _0 : Int, _1 : Int } -> (unit, Int) = \d#2 : { _0 : Int, _1 : Int } -> let evaluated#9 : 'erased = trace (fromString#4 message#10) in fromUnit#3 () in
+let projection#7 : list Data = unListData d#2 in
+let projection#8 : Data = headList projection#7 in
+constr 0 evaluated#9 projection#8 in
 main#1
 --- uplc
 (program 1.1.0
   [(lam i0
     [(lam i1
-      [(lam i2 i2)
-        (lam i2
-          [(lam i3
-            [(lam i4 [(lam i5 (constr 0 i3 i5)) [(force (builtin headList)) i4]])
-              [(builtin unListData) i2]])
-            (force [[(force (builtin trace)) [i1 i0]] (delay (con unit ()))])])])
+      [(lam i2
+        [(lam i3 i3)
+          (lam i3
+            [(lam i4
+              [(lam i5 [(lam i6 (constr 0 i4 i6)) [(force (builtin headList)) i5]])
+                [(builtin unListData) i3]])
+              (force [[(force (builtin trace)) [i2 i0]] (delay [i1 (con unit ())])])])])
+        (lam i2 i2)])
       (lam i1 i1)])
     (con string "before")])

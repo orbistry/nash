@@ -20,3 +20,15 @@ impl FromString string where
 
 impl FromBytes bytes where
     fromBytes x = x
+
+trait FromBool 'a where
+    fromBool : bool -> 'a
+
+trait FromUnit 'a where
+    fromUnit : unit -> 'a
+
+impl FromBool bool where
+    fromBool value = value
+
+impl FromUnit unit where
+    fromUnit value = value

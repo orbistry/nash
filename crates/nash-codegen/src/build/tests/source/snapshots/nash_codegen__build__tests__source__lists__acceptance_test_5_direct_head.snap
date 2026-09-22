@@ -3,20 +3,21 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmain =\n    let\n        head = \\xs ->\n            case xs of\n                [] -> None\n                _ -> Some (headList xs)\n    in\n    eq (head [1, 2, 3]) (Some 1)\n"
 ---
 --- core
-let eq#15 : int -> int -> bool = equalsInteger in
-let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#11 : Main.option 'erased b#12 : Main.option 'erased -> let match#16 : (Main.option 'erased, Main.option 'erased) = constr 0 a#11 b#12 in
-let leaf#22 : 'erased = delay false in
-case@Tag match#16 of
-  0 field#23 field#24 -> case@Tag field#23 of
-    0 -> case@Tag field#24 of
-      0 -> true
-      1 field#25 -> force leaf#22
-    1 field#26 -> case@Tag field#24 of
-      0 -> force leaf#22
-      1 field#27 -> let x#13 : 'erased = field#26 in
-      let y#14 : 'erased = field#27 in
-      eq#15 x#13 y#14 in
-let fromInt#4 : int -> int = \value#28 : int -> value#28 in
+let fromBool#13 : bool -> bool = \value#30 : bool -> value#30 in
+let eq#16 : int -> int -> bool = equalsInteger in
+let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#11 : Main.option 'erased b#12 : Main.option 'erased -> let match#17 : (Main.option 'erased, Main.option 'erased) = constr 0 a#11 b#12 in
+let leaf#23 : 'erased = delay (fromBool#13 false) in
+case@Tag match#17 of
+  0 field#24 field#25 -> case@Tag field#24 of
+    0 -> case@Tag field#25 of
+      0 -> fromBool#13 true
+      1 field#26 -> force leaf#23
+    1 field#27 -> case@Tag field#25 of
+      0 -> force leaf#23
+      1 field#28 -> let x#14 : 'erased = field#27 in
+      let y#15 : 'erased = field#28 in
+      eq#16 x#14 y#15 in
+let fromInt#4 : int -> int = \value#29 : int -> value#29 in
 let head#3 : list 'erased -> Main.option 'erased = \xs#6 : list 'erased -> let match#8 : list 'erased = xs#6 in
 case@List match#8 of
   Nil -> constr 0
@@ -25,47 +26,49 @@ let main#1 : bool = eq#2 (head#3 (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mk
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_15
-    [(lam eq_2
-      [(lam fromInt_4
-        [(lam head_3
-          [(lam main_1 main_1)
-            [[eq_2
-              [head_3
-                [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
-                  [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
-                    [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]]
-              [(lam field_5 (constr 1 field_5)) [fromInt_4 (con integer 1)]]]])
-          (lam xs_6
-            [(lam match_8
-              (case
-                match_8
-                (lam field_9 (lam field_10 [(lam field_7 (constr 1 field_7)) field_9]))
-                (constr 0)))
-              xs_6])])
-        (lam value_28 value_28)])
-      (lam a_11
-        (lam b_12
-          [(lam match_16
-            [(lam leaf_22
-              (case
-                match_16
-                (lam field_23
+  [(lam fromBool_13
+    [(lam eq_16
+      [(lam eq_2
+        [(lam fromInt_4
+          [(lam head_3
+            [(lam main_1 main_1)
+              [[eq_2
+                [head_3
+                  [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
+                    [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]]
+                [(lam field_5 (constr 1 field_5)) [fromInt_4 (con integer 1)]]]])
+            (lam xs_6
+              [(lam match_8
+                (case
+                  match_8
+                  (lam field_9 (lam field_10 [(lam field_7 (constr 1 field_7)) field_9]))
+                  (constr 0)))
+                xs_6])])
+          (lam value_29 value_29)])
+        (lam a_11
+          (lam b_12
+            [(lam match_17
+              [(lam leaf_23
+                (case
+                  match_17
                   (lam field_24
-                    (case
-                      field_23
-                      (case field_24 (con bool True) (lam field_25 (force leaf_22)))
-                      (lam field_26
-                        (case
-                          field_24
-                          (force leaf_22)
-                          (lam field_27 [(lam x_13 [(lam y_14 [[eq_15 x_13] y_14]) field_27]) field_26]))))))))
-              (delay (con bool False))])
-            (constr 0 a_11 b_12)]))])
-    (builtin equalsInteger)])
+                    (lam field_25
+                      (case
+                        field_24
+                        (case field_25 [fromBool_13 (con bool True)] (lam field_26 (force leaf_23)))
+                        (lam field_27
+                          (case
+                            field_25
+                            (force leaf_23)
+                            (lam field_28 [(lam x_14 [(lam y_15 [[eq_16 x_14] y_15]) field_28]) field_27]))))))))
+                (delay [fromBool_13 (con bool False)])])
+              (constr 0 a_11 b_12)]))])
+      (builtin equalsInteger)])
+    (lam value_30 value_30)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1789519, memory: 9697
+cpu: 1837519, memory: 9997

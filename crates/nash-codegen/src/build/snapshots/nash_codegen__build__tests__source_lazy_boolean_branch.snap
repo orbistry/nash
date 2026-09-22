@@ -3,20 +3,23 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : int\nmain = if True then 42 else fail\n"
 ---
 --- core
-let fromInt#2 : int -> int = \value#3 : int -> value#3 in
-let main#1 : int = case@Bool true of
-  True -> fromInt#2 42
+let fromBool#2 : bool -> bool = \value#4 : bool -> value#4 in
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+let main#1 : int = case@Bool fromBool#2 true of
+  True -> fromInt#3 42
   False -> error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_2
-    [(lam main_1 main_1)
-      (case (con bool True) (error) [fromInt_2 (con integer 42)])])
-    (lam value_3 value_3)])
+  [(lam fromBool_2
+    [(lam fromInt_3
+      [(lam main_1 main_1)
+        (case [fromBool_2 (con bool True)] (error) [fromInt_3 (con integer 42)])])
+      (lam value_5 value_5)])
+    (lam value_4 value_4)])
 --- result
 (con integer 42)
 --- logs
 []
 --- budget
-cpu: 192100, memory: 1300
+cpu: 288100, memory: 1900

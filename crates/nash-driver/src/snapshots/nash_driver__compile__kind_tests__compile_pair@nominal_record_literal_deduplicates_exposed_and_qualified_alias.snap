@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (type point)\ntype alias point = { x : unit }\n\nmodule Main exposing (..)\nimport Types exposing (type point)\nvalue = { x = () }\n"
+description: "module Types exposing (type point)\ntype alias point = { x : bool }\n\nmodule Main exposing (..)\nimport Types exposing (type point)\nvalue = { x = Primitive.True }\n"
 ---
 {
     "Main": [

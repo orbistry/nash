@@ -17,7 +17,7 @@ fn infer<'a>(
 ) -> Result<(nash_can::Annotations<'a>, nash_solve::SolvedTypes<'a>), Vec<Error<'a>>> {
     let source = bump.alloc_str(&module_source(body));
     let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
-    let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
+    let interfaces = snapshot_support::literals::literal_interfaces(bump);
     let canonical = nash_can::canonicalize(
         bump,
         nash_can::Context {
@@ -113,7 +113,7 @@ fn directly_inferred_list_rejects_function_elements() {
 fn inferred_list_context_is_retained_and_instantiated() {
     let bump = Bump::new();
     let (annotations, solved) =
-        infer_snapshot!(&bump, "singleton x = [x]\ngood = singleton True").unwrap();
+        infer_snapshot!(&bump, "singleton x = [x]\ngood = singleton Primitive.True").unwrap();
     let context = annotations["singleton"].context;
     assert_eq!(context.len(), 1);
     assert!(context[0].hidden());

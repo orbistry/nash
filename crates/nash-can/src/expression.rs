@@ -164,7 +164,10 @@ pub fn canonicalize_expr<'a>(
             name,
         } => {
             let ctor = env.module.find_ctor(bump, region, name)?;
-            to_var_ctor(bump, env, name, &ctor)?
+            match &ctor {
+                EnvCtor::Bool { index, .. } => CanExpr::Bool(*index == 1),
+                _ => to_var_ctor(bump, env, name, &ctor)?,
+            }
         }
 
         SourceExpr::VarQual {

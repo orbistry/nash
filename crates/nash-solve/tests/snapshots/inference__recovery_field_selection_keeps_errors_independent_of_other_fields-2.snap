@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntype alias record 'a 'b = { a : 'a, b : 'b }\nbad : ()\nbad = { a = (\\x -> x), b = ().field }.a\n"
+description: "module Main exposing (..)\ntype alias record 'a 'b = { a : 'a, b : 'b }\nbad : ()\nbad = { a = (\\x -> x), b = (assert Primitive.True).field }.a\n"
 info: diagnostic
 ---
 nash::type::mismatch
@@ -11,9 +11,9 @@ nash::type::mismatch
  3 │ bad : ()
    ·       ─┬
    ·        ╰── declared type
- 4 │ bad = { a = (\x -> x), b = ().field }.a
-   ·       ────────────────┬────────────────
-   ·                       ╰── body of `bad`
+ 4 │ bad = { a = (\x -> x), b = (assert Primitive.True).field }.a
+   ·       ───────────────────────────┬──────────────────────────
+   ·                                  ╰── body of `bad`
    ╰────
 
 
@@ -22,7 +22,7 @@ nash::type::not_a_record
   × Expected a record, found `unit`.
    ╭─[Main.nash:4:28]
  3 │ bad : ()
- 4 │ bad = { a = (\x -> x), b = ().field }.a
-   ·                            ────┬───
-   ·                                ╰── field `field` access
+ 4 │ bad = { a = (\x -> x), b = (assert Primitive.True).field }.a
+   ·                            ──────────────┬──────────────
+   ·                                          ╰── field `field` access
    ╰────

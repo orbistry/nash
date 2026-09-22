@@ -3,27 +3,30 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nselect : list int -> bool\nselect xs =\n    let\n        dropped = Builtin.dropList 1 xs\n    in\n    if Builtin.nullList dropped then\n        Builtin.nullList (Builtin.tailList xs)\n    else False\nmain = select []\n"
 ---
 --- core
-let fromInt#5 : int -> int = \value#6 : int -> value#6 in
-let select#2 : list int -> bool = \xs#3 : list int -> let dropped#4 : list int = dropList (fromInt#5 1) xs#3 in
+let fromBool#5 : bool -> bool = \value#7 : bool -> value#7 in
+let fromInt#6 : int -> int = \value#8 : int -> value#8 in
+let select#2 : list int -> bool = \xs#3 : list int -> let dropped#4 : list int = dropList (fromInt#6 1) xs#3 in
 case@Bool nullList dropped#4 of
-  True -> let projection#7 : list int = tailList xs#3 in
-  nullList projection#7
-  False -> false in
+  True -> let projection#9 : list int = tailList xs#3 in
+  nullList projection#9
+  False -> fromBool#5 false in
 let main#1 : bool = select#2 (con (list integer) []) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_5
-    [(lam select_2 [(lam main_1 main_1) [select_2 (con (list integer) [])]])
-      (lam xs_3
-        [(lam dropped_4
-          (case
-            [(force (builtin nullList)) dropped_4]
-            (con bool False)
-            [(lam projection_7 [(force (builtin nullList)) projection_7])
-              [(force (builtin tailList)) xs_3]]))
-          [[(force (builtin dropList)) [fromInt_5 (con integer 1)]] xs_3]])])
-    (lam value_6 value_6)])
+  [(lam fromBool_5
+    [(lam fromInt_6
+      [(lam select_2 [(lam main_1 main_1) [select_2 (con (list integer) [])]])
+        (lam xs_3
+          [(lam dropped_4
+            (case
+              [(force (builtin nullList)) dropped_4]
+              [fromBool_5 (con bool False)]
+              [(lam projection_9 [(force (builtin nullList)) projection_9])
+                [(force (builtin tailList)) xs_3]]))
+            [[(force (builtin dropList)) [fromInt_6 (con integer 1)]] xs_3]])])
+      (lam value_8 value_8)])
+    (lam value_7 value_7)])
 --- result
 error: Runtime(EmptyList([]))
 --- logs

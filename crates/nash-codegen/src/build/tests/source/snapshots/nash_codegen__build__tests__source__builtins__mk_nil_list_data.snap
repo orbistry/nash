@@ -3,20 +3,23 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nmain : bool\nmain = equalsData\n    (toData (Builtin.listData (Builtin.mkNilData ())))\n    (toData (Builtin.listData (Builtin.mkNilData ())))\n"
 ---
 --- core
-let toData#2 : 'erased -> Data = \coerce#3 : 'erased -> coerce#3 in
-let main#1 : bool = equalsData (toData#2 (listData (mkNilData ()))) (toData#2 (listData (mkNilData ()))) in
+let toData#2 : 'erased -> Data = \coerce#4 : 'erased -> coerce#4 in
+let fromUnit#3 : unit -> unit = \value#5 : unit -> value#5 in
+let main#1 : bool = equalsData (toData#2 (listData (mkNilData (fromUnit#3 ())))) (toData#2 (listData (mkNilData (fromUnit#3 ())))) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam toData_2
-    [(lam main_1 main_1)
-      [[(builtin equalsData)
-        [toData_2 [(builtin listData) [(builtin mkNilData) (con unit ())]]]]
-        [toData_2 [(builtin listData) [(builtin mkNilData) (con unit ())]]]]])
-    (lam coerce_3 coerce_3)])
+    [(lam fromUnit_3
+      [(lam main_1 main_1)
+        [[(builtin equalsData)
+          [toData_2 [(builtin listData) [(builtin mkNilData) [fromUnit_3 (con unit ())]]]]]
+          [toData_2 [(builtin listData) [(builtin mkNilData) [fromUnit_3 (con unit ())]]]]]])
+      (lam value_5 value_5)])
+    (lam coerce_4 coerce_4)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1489554, memory: 2729
+cpu: 1633554, memory: 3629

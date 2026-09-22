@@ -304,7 +304,7 @@ impl<'a> KindEnv<'a> {
         };
         // Literal expressions and literal patterns emit these compiler-owned
         // predicates even before an imported implementation is available.
-        for name in ["FromInt", "FromString", "FromBytes"] {
+        for name in ["FromInt", "FromString", "FromBytes", "FromBool", "FromUnit"] {
             env.traits.insert(
                 QualifiedName {
                     home: primitives::literal_home(),

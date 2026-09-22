@@ -901,7 +901,7 @@ module Main exposing (..)
 
 import Utils
 
-main = Utils.pong ()
+main = Utils.pong Primitive.True
 "#
             .to_string(),
         );
@@ -1053,8 +1053,8 @@ mod kind_tests {
     #[tokio::test]
     async fn labeled_ctor_imports_preserve_sugar_and_projection() {
         let result = compile_pair(
-            "module Types exposing (type box(..))\ntype box 'a = Box { z : 'a, a : unit }\n",
-            "module Main exposing (..)\nimport Types\nmake x = Types.Box { a = (), z = x }\nget : Types.box 'a -> 'a\nget x = x.z\npattern (Types.Box { z }) = z\n",
+            "module Types exposing (type box(..))\ntype box 'a = Box { z : 'a, a : bool }\n",
+            "module Main exposing (..)\nimport Types\nmake x = Types.Box { a = Primitive.True, z = x }\nget : Types.box 'a -> 'a\nget x = x.z\npattern (Types.Box { z }) = z\n",
         ).await;
         assert_eq!(result.success, 2, "{result:?}");
     }
@@ -1079,8 +1079,8 @@ mod kind_tests {
     #[tokio::test]
     async fn labeled_ctor_import_rejects_updates() {
         let result = compile_pair(
-            "module Types exposing (type box(..))\ntype box = Box { value : unit }\n",
-            "module Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = () }\n",
+            "module Types exposing (type box(..))\ntype box = Box { value : bool }\n",
+            "module Main exposing (..)\nimport Types\nchange : Types.box -> Types.box\nchange x = { x | value = Primitive.True }\n",
         ).await;
         assert_eq!(result.success, 1, "{result:?}");
         let ModuleResult::Failed(reports) =
@@ -1098,7 +1098,7 @@ mod kind_tests {
     #[tokio::test]
     async fn labeled_ctor_private_type_returned_by_export_has_no_projection() {
         let result = compile_pair(
-            "module Types exposing (make)\ntype box = Box { value : unit }\nmake = Box ()\n",
+            "module Types exposing (make)\ntype box = Box { value : bool }\nmake = Box Primitive.True\n",
             "module Main exposing (..)\nimport Types\nbad = Types.make.value\n",
         )
         .await;
@@ -1133,12 +1133,12 @@ mod kind_tests {
         let producer = "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n";
         let positive = compile_pair(
             producer,
-            "module Main exposing (..)\nimport Types\ngood : Types.box 'a -> ('a, 'a)\ngood b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n",
+            "module Main exposing (..)\nimport Types\ngood : Types.box 'a -> ('a, 'a)\ngood b =\n    let\n        get ignored = b.value\n    in\n    (get Primitive.True, get Primitive.True)\n",
         ).await;
         assert_eq!(positive.success, 2, "{positive:?}");
         let negative = compile_pair(
             producer,
-            "module Main exposing (..)\nimport Types\nbad : Types.box 'a -> ('a, unit)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n",
+            "module Main exposing (..)\nimport Types\nbad : Types.box 'a -> ('a, bool)\nbad b =\n    let\n        get ignored = b.value\n    in\n    (get Primitive.True, get Primitive.True)\n",
         ).await;
         assert_eq!(negative.success, 1, "{negative:?}");
         assert_eq!(negative.failed, 1, "{negative:?}");
@@ -1147,8 +1147,8 @@ mod kind_tests {
     #[tokio::test]
     async fn nominal_record_imports_preserve_identity_and_field_order() {
         let result = compile_pair(
-            "module Types exposing (type point)\ntype alias point = { z : unit, a : unit }\n",
-            "module Main exposing (..)\nimport Types\nvalue = { a = (), z = () }\nget : Types.point -> unit\nget r = r.z\nconstructed = Types.point () ()\n",
+            "module Types exposing (type point)\ntype alias point = { z : bool, a : bool }\n",
+            "module Main exposing (..)\nimport Types\nvalue = { a = Primitive.True, z = Primitive.True }\nget : Types.point -> bool\nget r = r.z\nconstructed = Types.point Primitive.True Primitive.False\n",
         ).await;
         assert_eq!(result.success, 2, "{result:?}");
         assert!(result.is_success());
@@ -1167,8 +1167,8 @@ mod kind_tests {
     #[tokio::test]
     async fn nominal_record_literal_deduplicates_exposed_and_qualified_alias() {
         let result = compile_pair(
-            "module Types exposing (type point)\ntype alias point = { x : unit }\n",
-            "module Main exposing (..)\nimport Types exposing (type point)\nvalue = { x = () }\n",
+            "module Types exposing (type point)\ntype alias point = { x : bool }\n",
+            "module Main exposing (..)\nimport Types exposing (type point)\nvalue = { x = Primitive.True }\n",
         )
         .await;
         assert_eq!(result.success, 2, "{result:?}");

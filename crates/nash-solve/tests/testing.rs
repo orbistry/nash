@@ -1,18 +1,21 @@
+#[path = "snapshot_support/literals.rs"]
+mod literals;
+
 use bumpalo::Bump;
 use nash_ast::NodeId;
 use nash_can::Context;
 use nash_constrain::UnionFind;
 
-const PROP: &str =
-    "module Prop exposing (..)\ntype generator 'a = Generator 'a\nunit = Generator ()\n";
+const PROP: &str = "module Prop exposing (..)\nimport Literal\ntype generator 'a = Generator 'a\nunit = Generator ()\n";
 
 fn canonicalize<'a>(bump: &'a Bump, source: &'a str) -> nash_can::CanResult<'a> {
+    let mut interfaces = literals::literal_interfaces(bump);
     let generate = nash_parse::Parser::new(bump, PROP).module().unwrap();
     let generate = nash_can::canonicalize(
         bump,
         Context {
             package: Some(nash_ast::primitives::BASE),
-            interfaces: None,
+            interfaces: Some(&interfaces),
         },
         &generate,
     )
@@ -24,10 +27,10 @@ fn canonicalize<'a>(bump: &'a Bump, source: &'a str) -> nash_can::CanResult<'a> 
         &generate.tables,
     )
     .unwrap();
-    let interfaces = std::collections::BTreeMap::from([(
+    interfaces.insert(
         "Prop",
         nash_can::from_module(bump, &generate.module, &annotations),
-    )]);
+    );
     let module = nash_parse::Parser::new(bump, source).module().unwrap();
     nash_can::canonicalize(
         bump,
@@ -113,7 +116,7 @@ fn test_imports_do_not_grant_field_visibility_to_module_values() {
     let good = "module Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
     let bad = "module Main exposing (..)\nimport Bridge\nleak = Bridge.boxed.value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
     let bump = Bump::new();
-    let mut interfaces = std::collections::BTreeMap::new();
+    let mut interfaces = literals::literal_interfaces(&bump);
     for (name, source) in [("Aux", aux), ("Bridge", bridge)] {
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let can = nash_can::canonicalize(

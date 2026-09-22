@@ -4,11 +4,12 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 ---
 --- core
 letrec
-  plain#2 : 'erased -> unit [static []] = \x#3 : 'erased -> plain#2 ((\field#4 : 'erased -> constr 1 field#4) x#3)
+  plain#2 : 'erased -> unit [static []] = \x#4 : 'erased -> plain#2 ((\field#5 : 'erased -> constr 1 field#5) x#4)
 in
-let main#1 : unit = plain#2 () in
+let fromUnit#3 : unit -> unit = \value#6 : unit -> value#6 in
+let main#1 : unit = plain#2 (fromUnit#3 ()) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam i0 [(lam i1 i1) [i0 (con unit ())]])
+  [(lam i0 [(lam i1 [(lam i2 i2) [i0 [i1 (con unit ())]]]) (lam i1 i1)])
     [(lam i0 [i0 i0]) (lam i0 (lam i1 [[i0 i0] [(lam i2 (constr 1 i2)) i1]]))]])

@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( 'a, 'a )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]
@@ -14,15 +14,15 @@ nash::type::missing_impl
     ╰────
   help: Requirement chain:
 
-            forming list ( unit, unit )
-            list ( unit, unit )
+            forming list ( 'a, 'a )
+            list ( 'a, 'a )
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( 'a, 'a )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]
@@ -31,14 +31,14 @@ nash::type::missing_impl
     ╰────
   help: Requirement chain:
 
-            list ( unit, unit )
+            list ( 'a, 'a )
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable ( unit, unit )`.
+  × Unsatisfied representation constraint `Primitive.Storable ( 'a, 'a )`.
     ╭─[Main.nash:10:7]
   9 │             x :: rest -> Builtin.mkCons (f x) (map f rest)
  10 │ bad = map (\x -> (x, x)) [()]
@@ -47,6 +47,6 @@ nash::type::missing_impl
     ╰────
   help: Requirement chain:
 
-            forming list ( unit, unit )
+            forming list ( 'a, 'a )
 
         Use a type with Big or Const representation; an impl cannot change representation.

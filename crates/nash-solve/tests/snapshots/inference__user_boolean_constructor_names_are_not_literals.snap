@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype flag = True | False\ntruth = True\nfalsehood = False\n"
+---
+falsehood : flag
+truth : flag

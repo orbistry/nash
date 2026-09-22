@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype alias record = { a : () }\nbad : ()\nbad = missing ({ a = () }.field)\nsibling = missing ()\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype alias record = { a : () }\nbad : ()\nbad = missing ({ a = (assert Primitive.True) }.field)\nsibling = missing (assert Primitive.True)\n"
 info: diagnostic
 ---
 nash::type::missing_field
@@ -8,10 +8,10 @@ nash::type::missing_field
   × Record has no field `field`.
    ╭─[Main.nash:6:16]
  5 │ bad : ()
- 6 │ bad = missing ({ a = () }.field)
-   ·                ────────┬───────
-   ·                        ╰── field `field` access
- 7 │ sibling = missing ()
+ 6 │ bad = missing ({ a = (assert Primitive.True) }.field)
+   ·                ──────────────────┬──────────────────
+   ·                                  ╰── field `field` access
+ 7 │ sibling = missing (assert Primitive.True)
    ╰────
   help: Did you mean `a`?
 
@@ -23,8 +23,8 @@ nash::type::missing_impl
 
   × No impl for `Missing unit`.
    ╭─[Main.nash:7:11]
- 6 │ bad = missing ({ a = () }.field)
- 7 │ sibling = missing ()
+ 6 │ bad = missing ({ a = (assert Primitive.True) }.field)
+ 7 │ sibling = missing (assert Primitive.True)
    ·           ───┬───
    ·              ╰── required by `missing`
    ╰────

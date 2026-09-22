@@ -1,19 +1,22 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-description: "module Main exposing (..)\nmain = (trace \"hello\" (), trace \"hello\" ())\n"
+description: "module Main exposing (..)\nmain : (unit, unit)\nmain = (trace \"hello\" (), trace \"hello\" ())\n"
 ---
 --- core
-let message#4 : string = "hello" in
-let fromString#2 : string -> string = \value#3 : string -> value#3 in
-let main#1 : (unit, unit) = constr 0 (trace (fromString#2 message#4) in ()) (trace (fromString#2 message#4) in ()) in
+let message#6 : string = "hello" in
+let fromUnit#2 : unit -> unit = \value#4 : unit -> value#4 in
+let fromString#3 : string -> string = \value#5 : string -> value#5 in
+let main#1 : (unit, unit) = constr 0 (trace (fromString#3 message#6) in fromUnit#2 ()) (trace (fromString#3 message#6) in fromUnit#2 ()) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam i0
     [(lam i1
-      [(lam i2 i2)
-        (constr 0
-          (force [[(force (builtin trace)) [i1 i0]] (delay (con unit ()))])
-          (force [[(force (builtin trace)) [i1 i0]] (delay (con unit ()))]))])
+      [(lam i2
+        [(lam i3 i3)
+          (constr 0
+            (force [[(force (builtin trace)) [i2 i0]] (delay [i1 (con unit ())])])
+            (force [[(force (builtin trace)) [i2 i0]] (delay [i1 (con unit ())])]))])
+        (lam i2 i2)])
       (lam i1 i1)])
     (con string "hello")])

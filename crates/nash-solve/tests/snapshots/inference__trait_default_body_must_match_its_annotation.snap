@@ -3,16 +3,14 @@ source: crates/nash-solve/tests/inference.rs
 description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\n    keep x = ()\n"
 info: diagnostic
 ---
-nash::type::mismatch
+nash::type::missing_constraint
 
-  × Type mismatch: expected `'a`, found `unit`.
+  × `fromUnit` requires undeclared constraint `Literal.FromUnit 'a`.
    ╭─[Main.nash:4:14]
- 2 │ trait Keep 'a where
  3 │     keep : 'a -> 'a
-   ·            ────┬───
-   ·                ╰── declared type
  4 │     keep x = ()
-   ·              ─┬
-   ·               ╰── body of `keep`
+   ·     ──┬─     ─┬
+   ·       │       ╰── constraint required here
+   ·       ╰── annotation for `keep`
    ╰────
-  help: Keep the implementation generic over `'a`, or specialize its annotation.
+  help: Add `Literal.FromUnit 'a` to the annotation for `keep`.

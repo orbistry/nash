@@ -3,75 +3,78 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        a : list int\n        a = [1, 2, 3]\n    in\n    case a of\n        [h, i, j] ->\n            if equalsInteger h h then\n                if equalsInteger i i then equalsInteger j j else False\n            else False\n        _ -> fail\n"
 ---
 --- core
-let fromInt#24 : int -> int = \value#25 : int -> value#25 in
-let a#2 : list int = mkCons (fromInt#24 1) (mkCons (fromInt#24 2) (mkCons (fromInt#24 3) (con (list integer) []))) in
-let match#6 : list int = a#2 in
-let leaf#15 : 'erased = delay error in
-let main#1 : bool = case@List match#6 of
-  Nil -> force leaf#15
-  Cons field#16 field#17 -> case@List field#17 of
-    Nil -> force leaf#15
-    Cons field#18 field#19 -> case@List field#19 of
-      Nil -> force leaf#15
-      Cons field#20 field#21 -> case@List field#21 of
-        Nil -> let h#3 : int = field#16 in
-        let i#4 : int = field#18 in
-        let j#5 : int = field#20 in
+let fromBool#6 : bool -> bool = \value#26 : bool -> value#26 in
+let fromInt#25 : int -> int = \value#27 : int -> value#27 in
+let a#2 : list int = mkCons (fromInt#25 1) (mkCons (fromInt#25 2) (mkCons (fromInt#25 3) (con (list integer) []))) in
+let match#7 : list int = a#2 in
+let leaf#16 : 'erased = delay error in
+let main#1 : bool = case@List match#7 of
+  Nil -> force leaf#16
+  Cons field#17 field#18 -> case@List field#18 of
+    Nil -> force leaf#16
+    Cons field#19 field#20 -> case@List field#20 of
+      Nil -> force leaf#16
+      Cons field#21 field#22 -> case@List field#22 of
+        Nil -> let h#3 : int = field#17 in
+        let i#4 : int = field#19 in
+        let j#5 : int = field#21 in
         case@Bool equalsInteger h#3 h#3 of
           True -> case@Bool equalsInteger i#4 i#4 of
             True -> equalsInteger j#5 j#5
-            False -> false
-          False -> false
-        Cons field#22 field#23 -> force leaf#15 in
+            False -> fromBool#6 false
+          False -> fromBool#6 false
+        Cons field#23 field#24 -> force leaf#16 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_24
-    [(lam a_2
-      [(lam match_6
-        [(lam leaf_15
-          [(lam main_1 main_1)
-            (case
-              match_6
-              (lam field_16
+  [(lam fromBool_6
+    [(lam fromInt_25
+      [(lam a_2
+        [(lam match_7
+          [(lam leaf_16
+            [(lam main_1 main_1)
+              (case
+                match_7
                 (lam field_17
-                  (case
-                    field_17
-                    (lam field_18
+                  (lam field_18
+                    (case
+                      field_18
                       (lam field_19
-                        (case
-                          field_19
-                          (lam field_20
+                        (lam field_20
+                          (case
+                            field_20
                             (lam field_21
-                              (case
-                                field_21
-                                (lam field_22 (lam field_23 (force leaf_15)))
-                                [(lam h_3
-                                  [(lam i_4
-                                    [(lam j_5
-                                      (case
-                                        [[(builtin equalsInteger) h_3] h_3]
-                                        (con bool False)
+                              (lam field_22
+                                (case
+                                  field_22
+                                  (lam field_23 (lam field_24 (force leaf_16)))
+                                  [(lam h_3
+                                    [(lam i_4
+                                      [(lam j_5
                                         (case
-                                          [[(builtin equalsInteger) i_4] i_4]
-                                          (con bool False)
-                                          [[(builtin equalsInteger) j_5] j_5])))
-                                      field_20])
-                                    field_18])
-                                  field_16])))
-                          (force leaf_15))))
-                    (force leaf_15))))
-              (force leaf_15))])
-          (delay (error))])
-        a_2])
-      [[(force (builtin mkCons)) [fromInt_24 (con integer 1)]]
-        [[(force (builtin mkCons)) [fromInt_24 (con integer 2)]]
-          [[(force (builtin mkCons)) [fromInt_24 (con integer 3)]]
-            (con (list integer) [])]]]])
-    (lam value_25 value_25)])
+                                          [[(builtin equalsInteger) h_3] h_3]
+                                          [fromBool_6 (con bool False)]
+                                          (case
+                                            [[(builtin equalsInteger) i_4] i_4]
+                                            [fromBool_6 (con bool False)]
+                                            [[(builtin equalsInteger) j_5] j_5])))
+                                        field_21])
+                                      field_19])
+                                    field_17])))
+                            (force leaf_16))))
+                      (force leaf_16))))
+                (force leaf_16))])
+            (delay (error))])
+          a_2])
+        [[(force (builtin mkCons)) [fromInt_25 (con integer 1)]]
+          [[(force (builtin mkCons)) [fromInt_25 (con integer 2)]]
+            [[(force (builtin mkCons)) [fromInt_25 (con integer 3)]]
+              (con (list integer) [])]]]])
+      (lam value_27 value_27)])
+    (lam value_26 value_26)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1638185, memory: 8099
+cpu: 1686185, memory: 8399

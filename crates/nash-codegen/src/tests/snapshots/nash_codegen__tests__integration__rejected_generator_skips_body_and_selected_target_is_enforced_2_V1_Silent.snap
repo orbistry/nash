@@ -5,10 +5,12 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
 --- plain
 (program 1.1.0
   [(lam i0
-    (case
-      (con bool True)
-      (force [[(force (builtin trace)) i0] (delay (error))])
-      (con unit ())))
+    [(lam i1
+      (case
+        [i1 (con bool True)]
+        (force [[(force (builtin trace)) i0] (delay (error))])
+        (con unit ())))
+      (lam i1 i1)])
     (con string "\0assert\0\48")])
 --- invalid
 --- draw

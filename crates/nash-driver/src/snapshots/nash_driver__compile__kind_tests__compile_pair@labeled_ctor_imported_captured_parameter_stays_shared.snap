@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n\nmodule Main exposing (..)\nimport Types\ngood : Types.box 'a -> ('a, 'a)\ngood b =\n    let\n        get ignored = b.value\n    in\n    (get (), get ())\n"
+description: "module Types exposing (type box(..))\ntype box 'a = Box { value : 'a }\n\nmodule Main exposing (..)\nimport Types\ngood : Types.box 'a -> ('a, 'a)\ngood b =\n    let\n        get ignored = b.value\n    in\n    (get Primitive.True, get Primitive.True)\n"
 ---
 {
     "Main": [

@@ -3,86 +3,89 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype make = Make { a : int, b : subMake }\ntype subMake = SubMake { c : int }\nimpl Eq subMake where\n    eq (SubMake a) (SubMake b) = equalsInteger a b\nimpl Eq make where\n    eq (Make a b) (Make c d) = if equalsInteger a c then eq b d else False\nhi sm toMake = toMake 3 sm\nmain = eq (Make 3 (SubMake 1)) (hi (SubMake 1) Make)\n"
 ---
 --- core
-let eq#17 : Main.subMake -> Main.subMake -> bool = \arg#27 : Main.subMake arg#29 : Main.subMake -> let match#33 : Main.subMake = arg#27 in
-case@Tag match#33 of
-  0 field#34 -> let a#28 : int = field#34 in
-  let match#31 : Main.subMake = arg#29 in
-  case@Tag match#31 of
-    0 field#32 -> let b#30 : int = field#32 in
-    equalsInteger a#28 b#30 in
-let eq#2 : Main.make -> Main.make -> bool = \arg#11 : Main.make arg#14 : Main.make -> let match#21 : Main.make = arg#11 in
-case@Tag match#21 of
-  0 field#22 field#23 -> let a#12 : int = field#22 in
-  let b#13 : Main.subMake = field#23 in
-  let match#18 : Main.make = arg#14 in
-  case@Tag match#18 of
-    0 field#19 field#20 -> let c#15 : int = field#19 in
-    let d#16 : Main.subMake = field#20 in
+let fromBool#17 : bool -> bool = \value#28 : bool -> value#28 in
+let eq#18 : Main.subMake -> Main.subMake -> bool = \arg#29 : Main.subMake arg#31 : Main.subMake -> let match#35 : Main.subMake = arg#29 in
+case@Tag match#35 of
+  0 field#36 -> let a#30 : int = field#36 in
+  let match#33 : Main.subMake = arg#31 in
+  case@Tag match#33 of
+    0 field#34 -> let b#32 : int = field#34 in
+    equalsInteger a#30 b#32 in
+let eq#2 : Main.make -> Main.make -> bool = \arg#11 : Main.make arg#14 : Main.make -> let match#22 : Main.make = arg#11 in
+case@Tag match#22 of
+  0 field#23 field#24 -> let a#12 : int = field#23 in
+  let b#13 : Main.subMake = field#24 in
+  let match#19 : Main.make = arg#14 in
+  case@Tag match#19 of
+    0 field#20 field#21 -> let c#15 : int = field#20 in
+    let d#16 : Main.subMake = field#21 in
     case@Bool equalsInteger a#12 c#15 of
-      True -> eq#17 b#13 d#16
-      False -> false in
-let fromInt#5 : int -> int = \value#24 : int -> value#24 in
-let hi#7 : 'erased -> ('erased -> 'erased -> 'erased) -> 'erased = \sm#25 : 'erased (toMake#26 : 'erased -> 'erased -> 'erased) -> toMake#26 (fromInt#5 3) sm#25 in
+      True -> eq#18 b#13 d#16
+      False -> fromBool#17 false in
+let fromInt#5 : int -> int = \value#25 : int -> value#25 in
+let hi#7 : 'erased -> ('erased -> 'erased -> 'erased) -> 'erased = \sm#26 : 'erased (toMake#27 : 'erased -> 'erased -> 'erased) -> toMake#27 (fromInt#5 3) sm#26 in
 let main#1 : bool = eq#2 ((\field#3 : int field#4 : Main.subMake -> constr 0 field#3 field#4) (fromInt#5 3) ((\field#6 : int -> constr 0 field#6) (fromInt#5 1))) (hi#7 ((\field#8 : int -> constr 0 field#8) (fromInt#5 1)) (\field#9 : int field#10 : Main.subMake -> constr 0 field#9 field#10)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_17
-    [(lam eq_2
-      [(lam fromInt_5
-        [(lam hi_7
-          [(lam main_1 main_1)
-            [[eq_2
-              [[(lam field_3 (lam field_4 (constr 0 field_3 field_4)))
-                [fromInt_5 (con integer 3)]]
-                [(lam field_6 (constr 0 field_6)) [fromInt_5 (con integer 1)]]]]
-              [[hi_7 [(lam field_8 (constr 0 field_8)) [fromInt_5 (con integer 1)]]]
-                (lam field_9 (lam field_10 (constr 0 field_9 field_10)))]]])
-          (lam sm_25 (lam toMake_26 [[toMake_26 [fromInt_5 (con integer 3)]] sm_25]))])
-        (lam value_24 value_24)])
-      (lam arg_11
-        (lam arg_14
-          [(lam match_21
-            (case
-              match_21
-              (lam field_22
+  [(lam fromBool_17
+    [(lam eq_18
+      [(lam eq_2
+        [(lam fromInt_5
+          [(lam hi_7
+            [(lam main_1 main_1)
+              [[eq_2
+                [[(lam field_3 (lam field_4 (constr 0 field_3 field_4)))
+                  [fromInt_5 (con integer 3)]]
+                  [(lam field_6 (constr 0 field_6)) [fromInt_5 (con integer 1)]]]]
+                [[hi_7 [(lam field_8 (constr 0 field_8)) [fromInt_5 (con integer 1)]]]
+                  (lam field_9 (lam field_10 (constr 0 field_9 field_10)))]]])
+            (lam sm_26 (lam toMake_27 [[toMake_27 [fromInt_5 (con integer 3)]] sm_26]))])
+          (lam value_25 value_25)])
+        (lam arg_11
+          (lam arg_14
+            [(lam match_22
+              (case
+                match_22
                 (lam field_23
-                  [(lam a_12
-                    [(lam b_13
-                      [(lam match_18
-                        (case
-                          match_18
-                          (lam field_19
+                  (lam field_24
+                    [(lam a_12
+                      [(lam b_13
+                        [(lam match_19
+                          (case
+                            match_19
                             (lam field_20
-                              [(lam c_15
-                                [(lam d_16
-                                  (case
-                                    [[(builtin equalsInteger) a_12] c_15]
-                                    (con bool False)
-                                    [[eq_17 b_13] d_16]))
-                                  field_20])
-                                field_19]))))
-                        arg_14])
-                      field_23])
-                    field_22]))))
-            arg_11]))])
-    (lam arg_27
+                              (lam field_21
+                                [(lam c_15
+                                  [(lam d_16
+                                    (case
+                                      [[(builtin equalsInteger) a_12] c_15]
+                                      [fromBool_17 (con bool False)]
+                                      [[eq_18 b_13] d_16]))
+                                    field_21])
+                                  field_20]))))
+                          arg_14])
+                        field_24])
+                      field_23]))))
+              arg_11]))])
       (lam arg_29
-        [(lam match_33
-          (case
-            match_33
-            (lam field_34
-              [(lam a_28
-                [(lam match_31
-                  (case
-                    match_31
-                    (lam field_32 [(lam b_30 [[(builtin equalsInteger) a_28] b_30]) field_32])))
-                  arg_29])
-                field_34])))
-          arg_27]))])
+        (lam arg_31
+          [(lam match_35
+            (case
+              match_35
+              (lam field_36
+                [(lam a_30
+                  [(lam match_33
+                    (case
+                      match_33
+                      (lam field_34 [(lam b_32 [[(builtin equalsInteger) a_30] b_32]) field_34])))
+                    arg_31])
+                  field_36])))
+            arg_29]))])
+    (lam value_28 value_28)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2088766, memory: 12502
+cpu: 2136766, memory: 12802

@@ -3,39 +3,42 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (ToData)\ntype Foo = Foo Int\ntype Bar = Bar Int\nmain : bool\nmain =\n    if Builtin.nullList [toData (Foo 14), toData (Bar 42)] then False\n    else True\n"
 ---
 --- core
-let toData#2 : 'erased -> Data = \coerce#6 : 'erased -> coerce#6 in
-let fromInt#4 : int -> Int = iData in
-let main#1 : bool = case@Bool nullList (mkCons (toData#2 ((\field#3 : Int -> constrData 0 (mkCons field#3 (con (list data) []))) (fromInt#4 14))) (mkCons (toData#2 ((\field#5 : Int -> constrData 0 (mkCons field#5 (con (list data) []))) (fromInt#4 42))) (con (list data) []))) of
-  True -> false
-  False -> true in
+let fromBool#2 : bool -> bool = \value#7 : bool -> value#7 in
+let toData#3 : 'erased -> Data = \coerce#8 : 'erased -> coerce#8 in
+let fromInt#5 : int -> Int = iData in
+let main#1 : bool = case@Bool nullList (mkCons (toData#3 ((\field#4 : Int -> constrData 0 (mkCons field#4 (con (list data) []))) (fromInt#5 14))) (mkCons (toData#3 ((\field#6 : Int -> constrData 0 (mkCons field#6 (con (list data) []))) (fromInt#5 42))) (con (list data) []))) of
+  True -> fromBool#2 false
+  False -> fromBool#2 true in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam toData_2
-    [(lam fromInt_4
-      [(lam main_1 main_1)
-        (case
-          [(force (builtin nullList))
-            [[(force (builtin mkCons))
-              [toData_2
-                [(lam field_3
-                  [[(builtin constrData) (con integer 0)]
-                    [[(force (builtin mkCons)) field_3] (con (list data) [])]])
-                  [fromInt_4 (con integer 14)]]]]
+  [(lam fromBool_2
+    [(lam toData_3
+      [(lam fromInt_5
+        [(lam main_1 main_1)
+          (case
+            [(force (builtin nullList))
               [[(force (builtin mkCons))
-                [toData_2
-                  [(lam field_5
+                [toData_3
+                  [(lam field_4
                     [[(builtin constrData) (con integer 0)]
-                      [[(force (builtin mkCons)) field_5] (con (list data) [])]])
-                    [fromInt_4 (con integer 42)]]]]
-                (con (list data) [])]]]
-          (con bool True)
-          (con bool False))])
-      (builtin iData)])
-    (lam coerce_6 coerce_6)])
+                      [[(force (builtin mkCons)) field_4] (con (list data) [])]])
+                    [fromInt_5 (con integer 14)]]]]
+                [[(force (builtin mkCons))
+                  [toData_3
+                    [(lam field_6
+                      [[(builtin constrData) (con integer 0)]
+                        [[(force (builtin mkCons)) field_6] (con (list data) [])]])
+                      [fromInt_5 (con integer 42)]]]]
+                  (con (list data) [])]]]
+            [fromBool_2 (con bool True)]
+            [fromBool_2 (con bool False)])])
+        (builtin iData)])
+      (lam coerce_8 coerce_8)])
+    (lam value_7 value_7)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1382881, memory: 6288
+cpu: 1478881, memory: 6888

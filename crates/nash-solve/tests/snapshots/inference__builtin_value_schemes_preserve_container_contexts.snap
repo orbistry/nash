@@ -5,7 +5,7 @@ description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (typ
 choose : forall a. bool -> a -> a -> a
 cons : forall a. Storable a => a -> list a -> list a
 fields : Data -> list Data
-kept : unit
+kept : forall a. (Keep a, FromUnit a) => a
 namedUnit : unit
 tag : Data -> int
 unit : forall a. a -> a

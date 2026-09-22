@@ -3,62 +3,63 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "validator module Main exposing (main)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype Void = Void\ntype A 'x = NoA | SomeA Void 'x\ntype B = B { something : Void }\ntype Option 'a = None | Some 'a\nmain : Option Data -> A B -> Data -> Data -> unit\nmain datum r outputRef transaction =\n    assert\n        (case r of\n            NoA -> False\n            SomeA _ (B something) -> eq something Void\n        )\n"
 ---
 --- core
-let message#24 : string = "incomplete pattern match" in
-let message#25 : string = "assertion failed" in
-let main#1 : Main.Option Data -> Main.A Main.B -> Data -> Data -> unit = \datum#2 : Main.Option Data r#3 : Main.A Main.B outputRef#4 : Data transaction#5 : Data -> let match#7 : Main.A Main.B = r#3 in
-case@Bool (case@Data match#7 of
-  DataConstr pair#19 -> case@Pair pair#19 of
-    Pair tag#15 fields#16 -> case@Int tag#15 of
-      0 -> false
-      1 -> let fieldList#17 : list Data = fields#16 in
-      let projection#20 : Data = headList fieldList#17 in
-      let field#8 : Main.Void = projection#20 in
-      let projection#21 : list Data = tailList fieldList#17 in
-      let fieldList#18 : list Data = projection#21 in
+let message#26 : string = "incomplete pattern match" in
+let message#27 : string = "assertion failed" in
+let fromBool#6 : bool -> bool = \value#21 : bool -> value#21 in
+let main#1 : Main.Option Data -> Main.A Main.B -> Data -> Data -> unit = \datum#2 : Main.Option Data r#3 : Main.A Main.B outputRef#4 : Data transaction#5 : Data -> let match#8 : Main.A Main.B = r#3 in
+case@Bool (case@Data match#8 of
+  DataConstr pair#20 -> case@Pair pair#20 of
+    Pair tag#16 fields#17 -> case@Int tag#16 of
+      0 -> fromBool#6 false
+      1 -> let fieldList#18 : list Data = fields#17 in
       let projection#22 : Data = headList fieldList#18 in
-      let field#9 : Main.B = projection#22 in
-      case@Data field#9 of
-        DataConstr pair#14 -> case@Pair pair#14 of
-          Pair tag#11 fields#12 -> case@Int tag#11 of
-            0 -> let fieldList#13 : list Data = fields#12 in
-            let projection#23 : Data = headList fieldList#13 in
-            let field#10 : Main.Void = projection#23 in
-            let something#6 : Main.Void = field#10 in
-            equalsData something#6 (constrData 0 (con (list data) []))
-            _ -> trace message#24 in error
-        _ -> trace message#24 in error
-      _ -> trace message#24 in error
-  _ -> trace message#24 in error) of
+      let field#9 : Main.Void = projection#22 in
+      let projection#23 : list Data = tailList fieldList#18 in
+      let fieldList#19 : list Data = projection#23 in
+      let projection#24 : Data = headList fieldList#19 in
+      let field#10 : Main.B = projection#24 in
+      case@Data field#10 of
+        DataConstr pair#15 -> case@Pair pair#15 of
+          Pair tag#12 fields#13 -> case@Int tag#12 of
+            0 -> let fieldList#14 : list Data = fields#13 in
+            let projection#25 : Data = headList fieldList#14 in
+            let field#11 : Main.Void = projection#25 in
+            let something#7 : Main.Void = field#11 in
+            equalsData something#7 (constrData 0 (con (list data) []))
+            _ -> trace message#26 in error
+        _ -> trace message#26 in error
+      _ -> trace message#26 in error
+  _ -> trace message#26 in error) of
   True -> ()
-  False -> trace message#25 in error in
+  False -> trace message#27 in error in
 main#1
 --- uplc
 (program 1.1.0
   [(lam i0
     [(lam i1
-      [(lam i2 i2)
-        (lam i2
+      [(lam i2
+        [(lam i3 i3)
           (lam i3
             (lam i4
               (lam i5
-                [(lam i6
-                  (case
-                    [(lam i7
-                      (force
-                        [[[[[[(force (builtin chooseData)) i7]
-                          (delay
-                            [(lam i8
-                              (case
-                                i8
-                                (lam i9
+                (lam i6
+                  [(lam i7
+                    (case
+                      [(lam i8
+                        (force
+                          [[[[[[(force (builtin chooseData)) i8]
+                            (delay
+                              [(lam i9
+                                (case
+                                  i9
                                   (lam i10
-                                    [(lam i11
-                                      (case
-                                        [[(builtin equalsInteger) i11] (con integer 0)]
+                                    (lam i11
+                                      [(lam i12
                                         (case
-                                          [[(builtin equalsInteger) i11] (con integer 1)]
-                                          (force [[(force (builtin trace)) i0] (delay (error))])
-                                          [(lam i12
+                                          [[(builtin equalsInteger) i12] (con integer 0)]
+                                          (case
+                                            [[(builtin equalsInteger) i12] (con integer 1)]
+                                            (force [[(force (builtin trace)) i0] (delay (error))])
                                             [(lam i13
                                               [(lam i14
                                                 [(lam i15
@@ -66,52 +67,54 @@ main#1
                                                     [(lam i17
                                                       [(lam i18
                                                         [(lam i19
-                                                          (force
-                                                            [[[[[[(force (builtin chooseData)) i19]
-                                                              (delay
-                                                                [(lam i20
-                                                                  (case
-                                                                    i20
-                                                                    (lam i21
+                                                          [(lam i20
+                                                            (force
+                                                              [[[[[[(force (builtin chooseData)) i20]
+                                                                (delay
+                                                                  [(lam i21
+                                                                    (case
+                                                                      i21
                                                                       (lam i22
-                                                                        [(lam i23
-                                                                          (case
-                                                                            [[(builtin equalsInteger) i23] (con integer 0)]
-                                                                            (force [[(force (builtin trace)) i0] (delay (error))])
-                                                                            [(lam i24
+                                                                        (lam i23
+                                                                          [(lam i24
+                                                                            (case
+                                                                              [[(builtin equalsInteger) i24] (con integer 0)]
+                                                                              (force [[(force (builtin trace)) i0] (delay (error))])
                                                                               [(lam i25
                                                                                 [(lam i26
                                                                                   [(lam i27
-                                                                                    [[(builtin equalsData) i27]
-                                                                                      [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                                                                    [(lam i28
+                                                                                      [[(builtin equalsData) i28]
+                                                                                        [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                                                                      i27])
                                                                                     i26])
-                                                                                  i25])
-                                                                                [(force (builtin headList)) i24]])
-                                                                              i22]))
-                                                                          i21]))))
-                                                                  [(builtin unConstrData) i19]])]
-                                                              (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                                                              (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                                                              (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                                                              (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+                                                                                  [(force (builtin headList)) i25]])
+                                                                                i23]))
+                                                                            i22]))))
+                                                                    [(builtin unConstrData) i20]])]
+                                                                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                                                                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                                                                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                                                                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+                                                            i19])
                                                           i18])
-                                                        i17])
-                                                      [(force (builtin headList)) i16]])
-                                                    i15])
-                                                  [(force (builtin tailList)) i12]])
-                                                i13])
-                                              [(force (builtin headList)) i12]])
-                                            i10])
-                                        (con bool False)))
-                                      i9]))))
-                              [(builtin unConstrData) i7]])]
-                          (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
-                      i6]
-                    (force [[(force (builtin trace)) i1] (delay (error))])
-                    (con unit ())))
-                  i3]))))])
+                                                        [(force (builtin headList)) i17]])
+                                                      i16])
+                                                    [(force (builtin tailList)) i13]])
+                                                  i14])
+                                                [(force (builtin headList)) i13]])
+                                              i11])
+                                          [i2 (con bool False)]))
+                                        i10]))))
+                                [(builtin unConstrData) i8]])]
+                            (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                            (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                            (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                            (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+                        i7]
+                      (force [[(force (builtin trace)) i1] (delay (error))])
+                      (con unit ())))
+                    i4]))))])
+        (lam i2 i2)])
       (con string "assertion failed")])
     (con string "incomplete pattern match")])

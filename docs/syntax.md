@@ -38,6 +38,11 @@ body-less `type int` declaration form.
 | `"hi"`, `"""..."""` | `string` via `FromString` | Elm escapes; `\u{..}` kept |
 | `#"ff00"` (*new*) | `bytes` via `FromBytes` | even number of hex digits, decoded at parse time |
 
+Bare `True` and `False` expressions use `FromBool` (default `bool`); `()` uses
+`FromUnit` (default `unit`). Qualified constructors such as `Primitive.True`
+and `Bool.True` keep their declared type. Boolean constructor patterns and unit
+patterns retain their existing fixed types; they do not use literal traits.
+
 Char literals are removed. A `'` in expression or pattern position is a
 syntax error; in type position it starts a type variable.
 

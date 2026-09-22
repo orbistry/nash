@@ -53,7 +53,7 @@ async fn production_excludes_test_blocks_and_their_imports() {
         ),
     ];
     let memory = InMemorySource::new();
-    let origins: BTreeMap<_, _> = files
+    let mut origins: BTreeMap<_, _> = files
         .iter()
         .map(|(name, text)| {
             let uri = Url::parse(&format!("file:///project/src/{name}.nash")).unwrap();
@@ -61,12 +61,20 @@ async fn production_excludes_test_blocks_and_their_imports() {
             (uri, None)
         })
         .collect();
+    origins.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
     let (report, output) = build_with(db.clone(), &graph, &origins, |solved| {
-        assert_eq!(solved.modules.len(), 2);
+        assert_eq!(
+            solved
+                .modules
+                .iter()
+                .filter(|module| module.uri.scheme() == "file")
+                .count(),
+            2
+        );
         nash_driver::build::build_validators(solved, nash_config::Build::default())
     })
     .await;
@@ -92,9 +100,12 @@ async fn production_keeps_normal_import_errors() {
     let uri = Url::parse("file:///project/src/Main.nash").unwrap();
     let memory = InMemorySource::new();
     memory.insert(uri.clone(), text.to_string());
-    let origins = BTreeMap::from([(uri.clone(), None)]);
+    let mut origins = BTreeMap::from([(uri.clone(), None)]);
+    origins.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(memory)));
-    let graph = build_graph(db.clone(), &[uri]).await.unwrap();
+    let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
+        .await
+        .unwrap();
     let (report, output) = build_with(db, &graph, &origins, |_| {
         panic!("invalid production module reached codegen")
     })
@@ -124,14 +135,21 @@ async fn check_retains_tests_and_production_has_no_test_dependency_edges() {
     memory.insert(main.clone(), source.into());
     // Dependency tests must not be checked or executed as part of root tests.
     memory.insert(helper.clone(), "module Helper exposing (identity)\nidentity x = x\ntests\n    import Missing\n    test \"dependency\" = do\n        undefined\n".into());
-    let origins = BTreeMap::from([(main.clone(), None), (helper.clone(), None)]);
+    let mut origins = BTreeMap::from([(main.clone(), None), (helper.clone(), None)]);
+    origins.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let modules: Vec<_> = origins.keys().cloned().collect();
     let graph =
         nash_driver::build_graph_with_tests(db.clone(), &modules, std::slice::from_ref(&main))
             .await
             .unwrap();
-    assert_eq!(graph.edges[&main], vec![helper]);
+    assert_eq!(
+        graph.edges[&main]
+            .iter()
+            .filter(|uri| uri.scheme() == "file")
+            .collect::<Vec<_>>(),
+        vec![&helper]
+    );
     let checked = build(db.clone(), &graph, &origins).await;
     assert!(checked.is_success(), "{checked:#?}");
     let (checked, retained) = nash_driver::test_with(db.clone(), &graph, &origins, move |solved| {
@@ -149,7 +167,13 @@ async fn check_retains_tests_and_production_has_no_test_dependency_edges() {
     let production = nash_driver::build_graph_production(db, &modules)
         .await
         .unwrap();
-    assert!(production.edges.values().all(Vec::is_empty));
+    assert!(
+        production
+            .edges
+            .iter()
+            .filter(|(uri, _)| uri.scheme() == "file")
+            .all(|(_, edges)| edges.iter().all(|uri| uri.scheme() == "nash-base"))
+    );
 }
 
 #[tokio::test]
@@ -162,14 +186,15 @@ async fn check_rejects_non_unit_test_body() {
         import Builtin
         tests
             test "must return unit" = do
-                True
+                Primitive.True
     "#
     );
     let memory = InMemorySource::new();
     memory.insert(uri.clone(), source.into());
-    let origins = BTreeMap::from([(uri.clone(), None)]);
+    let mut origins = BTreeMap::from([(uri.clone(), None)]);
+    origins.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(memory)));
-    let graph = build_graph(db.clone(), std::slice::from_ref(&uri))
+    let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
     let checked = build(db, &graph, &origins).await;
@@ -191,10 +216,11 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
         "validator module Dependency exposing (main)\nmain : Data -> unit\nmain _ = ()\n";
     memory.insert(main.clone(), main_source.into());
     memory.insert(dependency.clone(), dependency_source.into());
-    let origins = BTreeMap::from([
+    let mut origins = BTreeMap::from([
         (main.clone(), None),
         (dependency, Some("sample/dependency".parse().unwrap())),
     ]);
+    origins.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = nash_driver::build_graph_production(
         db.clone(),

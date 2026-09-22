@@ -1,0 +1,8 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Literal exposing (FromBool, FromUnit)\ntype marker = Present | Absent\nimpl FromBool marker where\n    fromBool value = if value then Present else Absent\nimpl FromUnit marker where\n    fromUnit _ = Present\nyes : marker\nyes = True\nempty : marker\nempty = ()\ngenericBool : FromBool 'a => 'a\ngenericBool = False\ngenericUnit : FromUnit 'a => 'a\ngenericUnit = ()\n"
+---
+empty : marker
+genericBool : forall a. FromBool a => a
+genericUnit : forall a. FromUnit a => a
+yes : marker

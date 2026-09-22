@@ -3,22 +3,25 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nidentity x = x\nmain : unit\nmain =\n    let\n        captured = ()\n        helper x = identity captured\n    in\n    helper ()\n"
 ---
 --- core
-let identity#5 : 'erased -> 'erased = \x#6 : 'erased -> x#6 in
-let captured#2 : unit = () in
-let helper#3 : 'erased -> unit = \x#4 : 'erased -> identity#5 captured#2 in
-let main#1 : unit = helper#3 () in
+let fromUnit#3 : unit -> unit = \value#7 : unit -> value#7 in
+let identity#5 : 'erased -> 'erased = \x#8 : 'erased -> x#8 in
+let captured#6 : 'erased = fromUnit#3 () in
+let helper#2 : 'erased -> 'erased = \x#4 : 'erased -> identity#5 captured#6 in
+let main#1 : unit = helper#2 (fromUnit#3 ()) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam identity_5
-    [(lam captured_2
-      [(lam helper_3 [(lam main_1 main_1) [helper_3 (con unit ())]])
-        (lam x_4 [identity_5 captured_2])])
-      (con unit ())])
-    (lam x_6 x_6)])
+  [(lam fromUnit_3
+    [(lam identity_5
+      [(lam captured_6
+        [(lam helper_2 [(lam main_1 main_1) [helper_2 [fromUnit_3 (con unit ())]]])
+          (lam x_4 [identity_5 captured_6])])
+        [fromUnit_3 (con unit ())]])
+      (lam x_8 x_8)])
+    (lam value_7 value_7)])
 --- result
 (con unit ())
 --- logs
 []
 --- budget
-cpu: 304100, memory: 2000
+cpu: 448100, memory: 2900

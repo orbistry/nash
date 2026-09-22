@@ -102,6 +102,7 @@ impl<'a> Checker<'a> {
             | Expr::VarOperator { .. }
             | Expr::Str(_)
             | Expr::Int(_)
+            | Expr::Bool(_)
             | Expr::Accessor(_)
             | Expr::Unit => {}
             Expr::Assert(inner) | Expr::Comptime(inner) => self.expr(inner),

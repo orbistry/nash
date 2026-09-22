@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing ()\nfirst : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing (assert Primitive.True)\nfirst : ()\nfirst = broken\nsecond : ()\nsecond = broken\nsibling : ()\nsibling = \\x -> x\n"
 info: diagnostic
 ---
 nash::type::missing_impl
@@ -8,7 +8,7 @@ nash::type::missing_impl
   × No impl for `Missing Primitive.unit`.
    ╭─[Main.nash:6:10]
  5 │     missing : 'a -> 'a
- 6 │ broken = missing ()
+ 6 │ broken = missing (assert Primitive.True)
    ·          ───┬───
    ·             ╰── required by `missing`
  7 │ first : ()

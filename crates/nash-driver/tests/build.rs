@@ -20,7 +20,7 @@ async fn outputs_result_with(
     config_for: impl FnMut(&Url) -> nash_config::Build + Send + 'static,
 ) -> Result<Vec<nash_driver::build::ValidatorOutput>, nash_driver::build::BuildError> {
     let source = InMemorySource::new();
-    let modules: BTreeMap<_, _> = files
+    let mut modules: BTreeMap<_, _> = files
         .iter()
         .map(|(name, text)| {
             let uri = Url::parse(&format!("file:///project/src/{name}.nash")).unwrap();
@@ -28,6 +28,7 @@ async fn outputs_result_with(
             (uri, None)
         })
         .collect();
+    modules.extend(nash_driver::bundled_base::modules());
     let db = Arc::new(Mutex::new(Database::new(source)));
     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
         .await
@@ -74,7 +75,7 @@ async fn ordinary_modules_produce_no_scripts() {
 
 #[tokio::test]
 async fn unconstrained_validator_input_uses_data() {
-    let source = "validator module Main exposing (main)\nmain _ = ()\n";
+    let source = "validator module Main exposing (main)\nmain : 'a -> unit\nmain _ = ()\n";
     let outputs = outputs(&[("Main", source)]).await;
     assert_eq!(outputs.len(), 1);
     insta::with_settings!({description => source, omit_expression => true}, {
@@ -109,7 +110,7 @@ async fn writes_dotted_names_hex_cbor_and_removes_only_owned_stale_outputs() {
     let directory = OutputDirectory::new();
     let mut artifacts = outputs(&[(
         "Main",
-        "validator module Main exposing (main)\nmain _ = ()\n",
+        "validator module Main exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
     )])
     .await;
     artifacts[0].module = "Policy.Main".into();
@@ -212,11 +213,11 @@ async fn roots_use_their_own_target_settings_and_hashes() {
     let files = [
         (
             "First",
-            "validator module First exposing (main)\nmain _ = ()\n",
+            "validator module First exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
         (
             "Second",
-            "validator module Second exposing (main)\nmain _ = ()\n",
+            "validator module Second exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
     ];
     let artifacts = outputs_with(&files, |uri| nash_config::Build {
@@ -250,7 +251,7 @@ async fn unowned_destination_collision_preserves_every_file() {
     let directory = OutputDirectory::new();
     let mut artifacts = outputs(&[(
         "Main",
-        "validator module Main exposing (main)\nmain _ = ()\n",
+        "validator module Main exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
     )])
     .await;
     // Preserve pre-manifest artifacts too: ownership cannot be inferred from a suffix.
@@ -285,11 +286,11 @@ async fn case_alias_validator_roots_are_rejected() {
     let files = [
         (
             "Main",
-            "validator module Main exposing (main)\nmain _ = ()\n",
+            "validator module Main exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
         (
             "MAIN",
-            "validator module MAIN exposing (main)\nmain _ = ()\n",
+            "validator module MAIN exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
     ];
     let error = outputs_result_with(&files, |_| nash_config::Build::default())
@@ -307,11 +308,11 @@ async fn case_alias_outputs_and_renames_preserve_existing_artifacts() {
     let mut artifacts = outputs(&[
         (
             "First",
-            "validator module First exposing (main)\nmain _ = ()\n",
+            "validator module First exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
         (
             "Second",
-            "validator module Second exposing (main)\nmain _ = ()\n",
+            "validator module Second exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
     ])
     .await;

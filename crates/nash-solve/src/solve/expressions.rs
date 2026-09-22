@@ -102,10 +102,16 @@ impl<'a> Solver<'a, '_> {
             CanExpr::VarOperator {
                 symbol, annotation, ..
             } => self.foreign(uf, rank, state, region, node, symbol, annotation, expected),
-            CanExpr::Str(_) | CanExpr::Bytes(_) | CanExpr::Int(_) => {
+            CanExpr::Str(_)
+            | CanExpr::Bytes(_)
+            | CanExpr::Int(_)
+            | CanExpr::Bool(_)
+            | CanExpr::Unit => {
                 let (name, trait_) = match &expr.value {
                     CanExpr::Str(_) => ("fromString", "FromString"),
                     CanExpr::Bytes(_) => ("fromBytes", "FromBytes"),
+                    CanExpr::Bool(_) => ("fromBool", "FromBool"),
+                    CanExpr::Unit => ("fromUnit", "FromUnit"),
                     _ => ("fromInt", "FromInt"),
                 };
                 let annotation =
@@ -622,14 +628,6 @@ impl<'a> Solver<'a, '_> {
                 self.infer_expr(uf, env, rank, state, rtv, body, expected)
             }
             CanExpr::Comptime(inner) => self.infer_expr(uf, env, rank, state, rtv, inner, expected),
-            CanExpr::Unit => {
-                let unit = self.structure(
-                    uf,
-                    rank,
-                    FlatType::App1(nash_ast::primitives::primitive_home(), "unit", vec![]),
-                );
-                self.equal(uf, rank, state, region, Category::Unit, unit, expected)
-            }
             CanExpr::Tuple {
                 first,
                 second,

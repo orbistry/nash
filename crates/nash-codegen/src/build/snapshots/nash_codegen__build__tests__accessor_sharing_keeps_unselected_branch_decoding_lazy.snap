@@ -3,18 +3,25 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> unit\nmain d = if False then (\\x -> ()) d.first else ()\n"
 ---
 --- core
-let main#1 : { _0 : Int, _1 : Int } -> unit = \d#2 : { _0 : Int, _1 : Int } -> case@Bool false of
-  True -> let projection#4 : list Data = unListData d#2 in
-  let projection#5 : Data = headList projection#4 in
-  (\x#3 : Int -> ()) projection#5
-  False -> () in
+let fromUnit#3 : unit -> unit = \value#6 : unit -> value#6 in
+let fromBool#4 : bool -> bool = \value#7 : bool -> value#7 in
+let main#1 : { _0 : Int, _1 : Int } -> unit = \d#2 : { _0 : Int, _1 : Int } -> case@Bool fromBool#4 false of
+  True -> let projection#8 : list Data = unListData d#2 in
+  let projection#9 : Data = headList projection#8 in
+  (\x#5 : Int -> fromUnit#3 ()) projection#9
+  False -> fromUnit#3 () in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam i0 i0)
-    (lam i0
-      (case
-        (con bool False)
-        (con unit ())
-        [(lam i1 [(lam i2 [(lam i3 (con unit ())) i2]) [(force (builtin headList)) i1]])
-          [(builtin unListData) i0]]))])
+  [(lam i0
+    [(lam i1
+      [(lam i2 i2)
+        (lam i2
+          (case
+            [i1 (con bool False)]
+            [i0 (con unit ())]
+            [(lam i3
+              [(lam i4 [(lam i5 [i0 (con unit ())]) i4]) [(force (builtin headList)) i3]])
+              [(builtin unListData) i2]]))])
+      (lam i1 i1)])
+    (lam i0 i0)])

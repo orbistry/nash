@@ -3,13 +3,16 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : unit\nmain = trace \"hello\" (assert False)\n"
 ---
 --- core
-let main#1 : unit = case@Bool false of
+let fromBool#2 : bool -> bool = \value#3 : bool -> value#3 in
+let main#1 : unit = case@Bool fromBool#2 false of
   True -> ()
   False -> error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam main_1 main_1) (case (con bool False) (error) (con unit ()))])
+  [(lam fromBool_2
+    [(lam main_1 main_1) (case [fromBool_2 (con bool False)] (error) (con unit ()))])
+    (lam value_3 value_3)])
 --- result
 error: ExplicitErrorTerm
 --- logs

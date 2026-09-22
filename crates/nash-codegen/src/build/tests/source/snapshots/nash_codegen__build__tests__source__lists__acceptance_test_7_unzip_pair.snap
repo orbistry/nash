@@ -3,119 +3,122 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nunzip : list (pair Int Bytes) -> pair (List Int) (List Bytes)\nunzip xs =\n    case xs of\n        [] -> mkPairData (listData []) (listData [])\n        entry :: rest ->\n            let\n                tails = unzip rest\n            in\n            mkPairData\n                (listData (mkCons (fstPair entry) (unListData (fstPair tails))))\n                (listData (mkCons (sndPair entry) (unListData (sndPair tails))))\nsame : pair (List Int) (List Bytes) -> pair (List Int) (List Bytes) -> bool\nsame a b =\n    if equalsData (toData (fstPair a)) (toData (fstPair b)) then\n        equalsData (toData (sndPair a)) (toData (sndPair b))\n    else False\nmain =\n    let\n        x = [mkPairData (iData 3) (bData #\"55\"), mkPairData (iData 4) (bData #\"7799\")]\n    in\n    same (unzip x)\n        (mkPairData (listData [iData 3, iData 4]) (listData [bData #\"55\", bData #\"7799\"]))\n"
 ---
 --- core
-let toData#9 : 'erased -> Data = \coerce#19 : 'erased -> coerce#19 in
-let same#3 : pair (List Int) (List Bytes) -> pair (List Int) (List Bytes) -> bool = \a#7 : pair (List Int) (List Bytes) b#8 : pair (List Int) (List Bytes) -> let projection#20 : List Int = fstPair a#7 in
-let evaluated#22 : 'erased = toData#9 projection#20 in
-let projection#21 : List Int = fstPair b#8 in
-case@Bool equalsData evaluated#22 (toData#9 projection#21) of
-  True -> let projection#23 : List Bytes = sndPair a#7 in
-  let evaluated#25 : 'erased = toData#9 projection#23 in
-  let projection#24 : List Bytes = sndPair b#8 in
-  equalsData evaluated#25 (toData#9 projection#24)
-  False -> false in
-let unzip#4 : list (pair Int Bytes) -> pair (List Int) (List Bytes) = (\self#33 : 'erased -> self#33 self#33) (\self#33 : 'erased xs#10 : list (pair Int Bytes) -> let match#14 : list (pair Int Bytes) = xs#10 in
-case@List match#14 of
+let fromBool#9 : bool -> bool = \value#20 : bool -> value#20 in
+let toData#10 : 'erased -> Data = \coerce#21 : 'erased -> coerce#21 in
+let same#3 : pair (List Int) (List Bytes) -> pair (List Int) (List Bytes) -> bool = \a#7 : pair (List Int) (List Bytes) b#8 : pair (List Int) (List Bytes) -> let projection#22 : List Int = fstPair a#7 in
+let evaluated#24 : 'erased = toData#10 projection#22 in
+let projection#23 : List Int = fstPair b#8 in
+case@Bool equalsData evaluated#24 (toData#10 projection#23) of
+  True -> let projection#25 : List Bytes = sndPair a#7 in
+  let evaluated#27 : 'erased = toData#10 projection#25 in
+  let projection#26 : List Bytes = sndPair b#8 in
+  equalsData evaluated#27 (toData#10 projection#26)
+  False -> fromBool#9 false in
+let unzip#4 : list (pair Int Bytes) -> pair (List Int) (List Bytes) = (\self#35 : 'erased -> self#35 self#35) (\self#35 : 'erased xs#11 : list (pair Int Bytes) -> let match#15 : list (pair Int Bytes) = xs#11 in
+case@List match#15 of
   Nil -> mkPairData (listData (con (list data) [])) (listData (con (list data) []))
-  Cons field#15 field#16 -> let entry#11 : pair Int Bytes = field#15 in
-  let rest#12 : list (pair Int Bytes) = field#16 in
-  let tails#13 : pair (List Int) (List Bytes) = self#33 self#33 rest#12 in
-  let projection#26 : Int = fstPair entry#11 in
-  let projection#27 : List Int = fstPair tails#13 in
-  let projection#28 : list Data = unListData projection#27 in
-  let evaluated#32 : 'erased = listData (mkCons projection#26 projection#28) in
-  let projection#29 : Bytes = sndPair entry#11 in
-  let projection#30 : List Bytes = sndPair tails#13 in
-  let projection#31 : list Data = unListData projection#30 in
-  mkPairData evaluated#32 (listData (mkCons projection#29 projection#31))) in
-let fromInt#5 : int -> int = \value#17 : int -> value#17 in
-let fromBytes#6 : bytes -> bytes = \value#18 : bytes -> value#18 in
+  Cons field#16 field#17 -> let entry#12 : pair Int Bytes = field#16 in
+  let rest#13 : list (pair Int Bytes) = field#17 in
+  let tails#14 : pair (List Int) (List Bytes) = self#35 self#35 rest#13 in
+  let projection#28 : Int = fstPair entry#12 in
+  let projection#29 : List Int = fstPair tails#14 in
+  let projection#30 : list Data = unListData projection#29 in
+  let evaluated#34 : 'erased = listData (mkCons projection#28 projection#30) in
+  let projection#31 : Bytes = sndPair entry#12 in
+  let projection#32 : List Bytes = sndPair tails#14 in
+  let projection#33 : list Data = unListData projection#32 in
+  mkPairData evaluated#34 (listData (mkCons projection#31 projection#33))) in
+let fromInt#5 : int -> int = \value#18 : int -> value#18 in
+let fromBytes#6 : bytes -> bytes = \value#19 : bytes -> value#19 in
 let x#2 : list (pair Int Bytes) = mkCons (mkPairData (iData (fromInt#5 3)) (bData (fromBytes#6 (con bytestring #55)))) (mkCons (mkPairData (iData (fromInt#5 4)) (bData (fromBytes#6 (con bytestring #7799)))) (con (list (pair data data)) [])) in
 let main#1 : bool = same#3 (unzip#4 x#2) (mkPairData (listData (mkCons (iData (fromInt#5 3)) (mkCons (iData (fromInt#5 4)) (con (list data) [])))) (listData (mkCons (bData (fromBytes#6 (con bytestring #55))) (mkCons (bData (fromBytes#6 (con bytestring #7799))) (con (list data) []))))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam toData_9
-    [(lam same_3
-      [(lam unzip_4
-        [(lam fromInt_5
-          [(lam fromBytes_6
-            [(lam x_2
-              [(lam main_1 main_1)
-                [[same_3 [unzip_4 x_2]]
-                  [[(builtin mkPairData)
-                    [(builtin listData)
-                      [[(force (builtin mkCons)) [(builtin iData) [fromInt_5 (con integer 3)]]]
-                        [[(force (builtin mkCons)) [(builtin iData) [fromInt_5 (con integer 4)]]]
-                          (con (list data) [])]]]]
-                    [(builtin listData)
-                      [[(force (builtin mkCons)) [(builtin bData) [fromBytes_6 (con bytestring #55)]]]
-                        [[(force (builtin mkCons))
-                          [(builtin bData) [fromBytes_6 (con bytestring #7799)]]]
-                          (con (list data) [])]]]]]])
-              [[(force (builtin mkCons))
-                [[(builtin mkPairData) [(builtin iData) [fromInt_5 (con integer 3)]]]
-                  [(builtin bData) [fromBytes_6 (con bytestring #55)]]]]
+  [(lam fromBool_9
+    [(lam toData_10
+      [(lam same_3
+        [(lam unzip_4
+          [(lam fromInt_5
+            [(lam fromBytes_6
+              [(lam x_2
+                [(lam main_1 main_1)
+                  [[same_3 [unzip_4 x_2]]
+                    [[(builtin mkPairData)
+                      [(builtin listData)
+                        [[(force (builtin mkCons)) [(builtin iData) [fromInt_5 (con integer 3)]]]
+                          [[(force (builtin mkCons)) [(builtin iData) [fromInt_5 (con integer 4)]]]
+                            (con (list data) [])]]]]
+                      [(builtin listData)
+                        [[(force (builtin mkCons)) [(builtin bData) [fromBytes_6 (con bytestring #55)]]]
+                          [[(force (builtin mkCons))
+                            [(builtin bData) [fromBytes_6 (con bytestring #7799)]]]
+                            (con (list data) [])]]]]]])
                 [[(force (builtin mkCons))
-                  [[(builtin mkPairData) [(builtin iData) [fromInt_5 (con integer 4)]]]
-                    [(builtin bData) [fromBytes_6 (con bytestring #7799)]]]]
-                  (con (list (pair data data)) [])]]])
+                  [[(builtin mkPairData) [(builtin iData) [fromInt_5 (con integer 3)]]]
+                    [(builtin bData) [fromBytes_6 (con bytestring #55)]]]]
+                  [[(force (builtin mkCons))
+                    [[(builtin mkPairData) [(builtin iData) [fromInt_5 (con integer 4)]]]
+                      [(builtin bData) [fromBytes_6 (con bytestring #7799)]]]]
+                    (con (list (pair data data)) [])]]])
+              (lam value_19 value_19)])
             (lam value_18 value_18)])
-          (lam value_17 value_17)])
-        [(lam self_33 [self_33 self_33])
-          (lam self_33
-            (lam xs_10
-              [(lam match_14
-                (case
-                  match_14
-                  (lam field_15
+          [(lam self_35 [self_35 self_35])
+            (lam self_35
+              (lam xs_11
+                [(lam match_15
+                  (case
+                    match_15
                     (lam field_16
-                      [(lam entry_11
-                        [(lam rest_12
-                          [(lam tails_13
-                            [(lam projection_26
-                              [(lam projection_27
-                                [(lam projection_28
-                                  [(lam evaluated_32
-                                    [(lam projection_29
-                                      [(lam projection_30
-                                        [(lam projection_31
-                                          [[(builtin mkPairData) evaluated_32]
-                                            [(builtin listData) [[(force (builtin mkCons)) projection_29] projection_31]]])
-                                          [(builtin unListData) projection_30]])
-                                        [(force (force (builtin sndPair))) tails_13]])
-                                      [(force (force (builtin sndPair))) entry_11]])
-                                    [(builtin listData) [[(force (builtin mkCons)) projection_26] projection_28]]])
-                                  [(builtin unListData) projection_27]])
-                                [(force (force (builtin fstPair))) tails_13]])
-                              [(force (force (builtin fstPair))) entry_11]])
-                            [[self_33 self_33] rest_12]])
-                          field_16])
-                        field_15]))
-                  [[(builtin mkPairData) [(builtin listData) (con (list data) [])]]
-                    [(builtin listData) (con (list data) [])]]))
-                xs_10]))]])
-      (lam a_7
-        (lam b_8
-          [(lam projection_20
-            [(lam evaluated_22
-              [(lam projection_21
-                (case
-                  [[(builtin equalsData) evaluated_22] [toData_9 projection_21]]
-                  (con bool False)
-                  [(lam projection_23
-                    [(lam evaluated_25
-                      [(lam projection_24
-                        [[(builtin equalsData) evaluated_25] [toData_9 projection_24]])
-                        [(force (force (builtin sndPair))) b_8]])
-                      [toData_9 projection_23]])
-                    [(force (force (builtin sndPair))) a_7]]))
-                [(force (force (builtin fstPair))) b_8]])
-              [toData_9 projection_20]])
-            [(force (force (builtin fstPair))) a_7]]))])
-    (lam coerce_19 coerce_19)])
+                      (lam field_17
+                        [(lam entry_12
+                          [(lam rest_13
+                            [(lam tails_14
+                              [(lam projection_28
+                                [(lam projection_29
+                                  [(lam projection_30
+                                    [(lam evaluated_34
+                                      [(lam projection_31
+                                        [(lam projection_32
+                                          [(lam projection_33
+                                            [[(builtin mkPairData) evaluated_34]
+                                              [(builtin listData) [[(force (builtin mkCons)) projection_31] projection_33]]])
+                                            [(builtin unListData) projection_32]])
+                                          [(force (force (builtin sndPair))) tails_14]])
+                                        [(force (force (builtin sndPair))) entry_12]])
+                                      [(builtin listData) [[(force (builtin mkCons)) projection_28] projection_30]]])
+                                    [(builtin unListData) projection_29]])
+                                  [(force (force (builtin fstPair))) tails_14]])
+                                [(force (force (builtin fstPair))) entry_12]])
+                              [[self_35 self_35] rest_13]])
+                            field_17])
+                          field_16]))
+                    [[(builtin mkPairData) [(builtin listData) (con (list data) [])]]
+                      [(builtin listData) (con (list data) [])]]))
+                  xs_11]))]])
+        (lam a_7
+          (lam b_8
+            [(lam projection_22
+              [(lam evaluated_24
+                [(lam projection_23
+                  (case
+                    [[(builtin equalsData) evaluated_24] [toData_10 projection_23]]
+                    [fromBool_9 (con bool False)]
+                    [(lam projection_25
+                      [(lam evaluated_27
+                        [(lam projection_26
+                          [[(builtin equalsData) evaluated_27] [toData_10 projection_26]])
+                          [(force (force (builtin sndPair))) b_8]])
+                        [toData_10 projection_25]])
+                      [(force (force (builtin sndPair))) a_7]]))
+                  [(force (force (builtin fstPair))) b_8]])
+                [toData_10 projection_22]])
+              [(force (force (builtin fstPair))) a_7]]))])
+      (lam coerce_21 coerce_21)])
+    (lam value_20 value_20)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 11200902, memory: 37038
+cpu: 11248902, memory: 37338

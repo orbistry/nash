@@ -1,24 +1,28 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option = Some int | None\nmain =\n    let\n        x = None\n    in\n    case x of\n        None -> True\n        _ -> fail\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option = Some int | None\nmain : bool\nmain =\n    let\n        x = None\n    in\n    case x of\n        None -> True\n        _ -> fail\n"
 ---
 --- core
+let fromBool#3 : bool -> bool = \value#6 : bool -> value#6 in
 let x#2 : Main.option = constr 1 in
-let match#3 : Main.option = x#2 in
-let main#1 : bool = case@Tag match#3 of
-  0 field#4 -> error
-  1 -> true in
+let match#4 : Main.option = x#2 in
+let main#1 : bool = case@Tag match#4 of
+  0 field#5 -> error
+  1 -> fromBool#3 true in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam x_2
-    [(lam match_3
-      [(lam main_1 main_1) (case match_3 (lam field_4 (error)) (con bool True))])
-      x_2])
-    (constr 1)])
+  [(lam fromBool_3
+    [(lam x_2
+      [(lam match_4
+        [(lam main_1 main_1)
+          (case match_4 (lam field_5 (error)) [fromBool_3 (con bool True)])])
+        x_2])
+      (constr 1)])
+    (lam value_6 value_6)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 192100, memory: 1300
+cpu: 288100, memory: 1900

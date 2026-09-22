@@ -3,78 +3,81 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nrepeat x n =\n    if lessThanEqualsInteger n 0 then []\n    else mkCons x (repeat x (subtractInteger n 1))\nmain = eq (repeat #\"61696b656e\" 2) [#\"61696b656e\", #\"61696b656e\"]\n"
 ---
 --- core
-let eq#8 : bytes -> bytes -> bool = equalsByteString in
-let eq#2 : list 'erased -> list 'erased -> bool = (\self#18 : 'erased -> self#18 self#18) (\self#18 : 'erased xs#6 : list 'erased ys#7 : list 'erased -> case@Bool nullList xs#6 of
+let fromBool#8 : bool -> bool = \value#14 : bool -> value#14 in
+let eq#9 : bytes -> bytes -> bool = equalsByteString in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#20 : 'erased -> self#20 self#20) (\self#20 : 'erased xs#6 : list 'erased ys#7 : list 'erased -> case@Bool nullList xs#6 of
   True -> nullList ys#7
   False -> case@Bool nullList ys#7 of
-    True -> false
-    False -> let projection#13 : 'erased = headList xs#6 in
-    let projection#14 : 'erased = headList ys#7 in
-    case@Bool eq#8 projection#13 projection#14 of
-      True -> let projection#15 : list 'erased = tailList xs#6 in
-      let projection#16 : list 'erased = tailList ys#7 in
-      self#18 self#18 projection#15 projection#16
-      False -> false) in
-let fromInt#5 : int -> int = \value#12 : int -> value#12 in
-let repeat#3 : bytes -> int -> list bytes = \x#9 : bytes n#10 : int -> (\self#17 : 'erased -> self#17 self#17) (\self#17 : 'erased n#10 : int -> case@Bool lessThanEqualsInteger n#10 (fromInt#5 0) of
+    True -> fromBool#8 false
+    False -> let projection#15 : 'erased = headList xs#6 in
+    let projection#16 : 'erased = headList ys#7 in
+    case@Bool eq#9 projection#15 projection#16 of
+      True -> let projection#17 : list 'erased = tailList xs#6 in
+      let projection#18 : list 'erased = tailList ys#7 in
+      self#20 self#20 projection#17 projection#18
+      False -> fromBool#8 false) in
+let fromInt#5 : int -> int = \value#13 : int -> value#13 in
+let repeat#3 : bytes -> int -> list bytes = \x#10 : bytes n#11 : int -> (\self#19 : 'erased -> self#19 self#19) (\self#19 : 'erased n#11 : int -> case@Bool lessThanEqualsInteger n#11 (fromInt#5 0) of
   True -> (con (list bytestring) [])
-  False -> mkCons x#9 (self#17 self#17 (subtractInteger n#10 (fromInt#5 1)))) n#10 in
-let fromBytes#4 : bytes -> bytes = \value#11 : bytes -> value#11 in
+  False -> mkCons x#10 (self#19 self#19 (subtractInteger n#11 (fromInt#5 1)))) n#11 in
+let fromBytes#4 : bytes -> bytes = \value#12 : bytes -> value#12 in
 let main#1 : bool = eq#2 (repeat#3 (fromBytes#4 (con bytestring #61696b656e)) (fromInt#5 2)) (mkCons (fromBytes#4 (con bytestring #61696b656e)) (mkCons (fromBytes#4 (con bytestring #61696b656e)) (con (list bytestring) []))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_8
-    [(lam eq_2
-      [(lam fromInt_5
-        [(lam repeat_3
-          [(lam fromBytes_4
-            [(lam main_1 main_1)
-              [[eq_2
-                [[repeat_3 [fromBytes_4 (con bytestring #61696b656e)]]
-                  [fromInt_5 (con integer 2)]]]
-                [[(force (builtin mkCons)) [fromBytes_4 (con bytestring #61696b656e)]]
+  [(lam fromBool_8
+    [(lam eq_9
+      [(lam eq_2
+        [(lam fromInt_5
+          [(lam repeat_3
+            [(lam fromBytes_4
+              [(lam main_1 main_1)
+                [[eq_2
+                  [[repeat_3 [fromBytes_4 (con bytestring #61696b656e)]]
+                    [fromInt_5 (con integer 2)]]]
                   [[(force (builtin mkCons)) [fromBytes_4 (con bytestring #61696b656e)]]
-                    (con (list bytestring) [])]]]])
-            (lam value_11 value_11)])
-          (lam x_9
-            (lam n_10
-              [[(lam self_17 [self_17 self_17])
-                (lam self_17
-                  (lam n_10
-                    (case
-                      [[(builtin lessThanEqualsInteger) n_10] [fromInt_5 (con integer 0)]]
-                      [[(force (builtin mkCons)) x_9]
-                        [[self_17 self_17]
-                          [[(builtin subtractInteger) n_10] [fromInt_5 (con integer 1)]]]]
-                      (con (list bytestring) []))))]
-                n_10]))])
-        (lam value_12 value_12)])
-      [(lam self_18 [self_18 self_18])
-        (lam self_18
-          (lam xs_6
-            (lam ys_7
-              (case
-                [(force (builtin nullList)) xs_6]
-                (case
-                  [(force (builtin nullList)) ys_7]
-                  [(lam projection_13
-                    [(lam projection_14
+                    [[(force (builtin mkCons)) [fromBytes_4 (con bytestring #61696b656e)]]
+                      (con (list bytestring) [])]]]])
+              (lam value_12 value_12)])
+            (lam x_10
+              (lam n_11
+                [[(lam self_19 [self_19 self_19])
+                  (lam self_19
+                    (lam n_11
                       (case
-                        [[eq_8 projection_13] projection_14]
-                        (con bool False)
-                        [(lam projection_15
-                          [(lam projection_16 [[[self_18 self_18] projection_15] projection_16])
-                            [(force (builtin tailList)) ys_7]])
-                          [(force (builtin tailList)) xs_6]]))
-                      [(force (builtin headList)) ys_7]])
-                    [(force (builtin headList)) xs_6]]
-                  (con bool False))
-                [(force (builtin nullList)) ys_7]))))]])
-    (builtin equalsByteString)])
+                        [[(builtin lessThanEqualsInteger) n_11] [fromInt_5 (con integer 0)]]
+                        [[(force (builtin mkCons)) x_10]
+                          [[self_19 self_19]
+                            [[(builtin subtractInteger) n_11] [fromInt_5 (con integer 1)]]]]
+                        (con (list bytestring) []))))]
+                  n_11]))])
+          (lam value_13 value_13)])
+        [(lam self_20 [self_20 self_20])
+          (lam self_20
+            (lam xs_6
+              (lam ys_7
+                (case
+                  [(force (builtin nullList)) xs_6]
+                  (case
+                    [(force (builtin nullList)) ys_7]
+                    [(lam projection_15
+                      [(lam projection_16
+                        (case
+                          [[eq_9 projection_15] projection_16]
+                          [fromBool_8 (con bool False)]
+                          [(lam projection_17
+                            [(lam projection_18 [[[self_20 self_20] projection_17] projection_18])
+                              [(force (builtin tailList)) ys_7]])
+                            [(force (builtin tailList)) xs_6]]))
+                        [(force (builtin headList)) ys_7]])
+                      [(force (builtin headList)) xs_6]]
+                    [fromBool_8 (con bool False)])
+                  [(force (builtin nullList)) ys_7]))))]])
+      (builtin equalsByteString)])
+    (lam value_14 value_14)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 5580397, memory: 24385
+cpu: 5628397, memory: 24685

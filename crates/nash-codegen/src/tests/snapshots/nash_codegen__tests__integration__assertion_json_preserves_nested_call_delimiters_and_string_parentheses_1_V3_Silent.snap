@@ -714,10 +714,12 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
   [(lam i0
     [(lam i1
       [(lam i2
-        (case
-          [i1 i2]
-          (force [[(force (builtin trace)) i0] (delay (error))])
-          (con unit ())))
-        (con bool False)])
+        [(lam i3
+          (case
+            [i2 i3]
+            (force [[(force (builtin trace)) i0] (delay (error))])
+            (con unit ())))
+          [i1 (con bool False)]])
+        (lam i2 i2)])
       (lam i1 i1)])
     (con string "\0assert\0\48")])

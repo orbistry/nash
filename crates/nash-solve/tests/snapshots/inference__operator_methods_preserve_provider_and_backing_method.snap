@@ -1,13 +1,13 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n\n\nmodule Operators exposing ((<*>), (<|>))\nimport Methods exposing (Select, plain)\ninfix left 5 (<*>) = select\ninfix left 5 (<|>) = plain\n\n\nmodule Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = () <+> ()\nright = () <*> ()\nsection = (() <*>)\noperator = (<*>)\n\n\nmodule OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = () <*> ()\nordinary = () <|> ()\n"
+description: "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select bool where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n\n\nmodule Operators exposing ((<*>), (<|>))\nimport Methods exposing (Select, plain)\ninfix left 5 (<*>) = select\ninfix left 5 (<|>) = plain\n\n\nmodule Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = Primitive.True <+> Primitive.True\nright = Primitive.True <*> Primitive.True\nsection = (Primitive.True <*>)\noperator = (<*>)\n\n\nmodule OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = Primitive.True <*> Primitive.True\nordinary = Primitive.True <|> Primitive.True\n"
 ---
 Main:
-left : unit
+left : bool
 operator : forall a. Select a => a -> a -> a
 pick : forall a. Select a => a -> a -> a
-right : unit
-section : unit -> unit
+right : bool
+section : bool -> bool
 OnlyOperators:
-ordinary : unit
-value : unit
+ordinary : bool
+value : bool

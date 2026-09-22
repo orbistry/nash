@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ()\nbad = missing (().field)\nsibling = missing ()\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ()\nbad = missing ((assert Primitive.True).field)\nsibling = missing (assert Primitive.True)\n"
 info: diagnostic
 ---
 nash::type::not_a_record
@@ -8,10 +8,10 @@ nash::type::not_a_record
   × Expected a record, found `unit`.
    ╭─[Main.nash:5:16]
  4 │ bad : ()
- 5 │ bad = missing (().field)
-   ·                ────┬───
-   ·                    ╰── field `field` access
- 6 │ sibling = missing ()
+ 5 │ bad = missing ((assert Primitive.True).field)
+   ·                ──────────────┬──────────────
+   ·                              ╰── field `field` access
+ 6 │ sibling = missing (assert Primitive.True)
    ╰────
 
 
@@ -19,8 +19,8 @@ nash::type::missing_impl
 
   × No impl for `Missing unit`.
    ╭─[Main.nash:6:11]
- 5 │ bad = missing (().field)
- 6 │ sibling = missing ()
+ 5 │ bad = missing ((assert Primitive.True).field)
+ 6 │ sibling = missing (assert Primitive.True)
    ·           ───┬───
    ·              ╰── required by `missing`
    ╰────

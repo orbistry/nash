@@ -17,3 +17,5 @@ impl SnapshotInputs {
         self.0.borrow().join("\n\n")
     }
 }
+
+pub mod literals;

@@ -1,14 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nvalue = trace () ()\n"
+description: "module Main exposing (..)\nunitValue : unit\nunitValue = ()\nvalue = trace unitValue unitValue\n"
 info: diagnostic
 ---
 nash::type::mismatch
 
   × Type mismatch: expected `string`, found `unit`.
-   ╭─[Main.nash:2:15]
- 1 │ module Main exposing (..)
- 2 │ value = trace () ()
-   ·               ─┬
-   ·                ╰── unit
+   ╭─[Main.nash:4:15]
+ 3 │ unitValue = ()
+ 4 │ value = trace unitValue unitValue
+   ·               ────┬────
+   ·                   ╰── `unitValue`
    ╰────

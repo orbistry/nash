@@ -578,54 +578,9 @@ Module {
                                                 column: 20,
                                             },
                                         },
-                                        value: VarConstructor {
-                                            options: Enum,
-                                            reference: ConstructorName {
-                                                home: ModuleName {
-                                                    package: Some(
-                                                        PackageName {
-                                                            author: "nash",
-                                                            project: "base",
-                                                        },
-                                                    ),
-                                                    name: "Primitive",
-                                                },
-                                                union: "bool",
-                                                name: "True",
-                                            },
-                                            index: 1,
-                                            annotation: Annotation {
-                                                context: [],
-                                                free_vars: [],
-                                                typ: Located {
-                                                    region: Region {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 0,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 0,
-                                                        },
-                                                    },
-                                                    value: Named {
-                                                        reference: QualifiedName {
-                                                            home: ModuleName {
-                                                                package: Some(
-                                                                    PackageName {
-                                                                        author: "nash",
-                                                                        project: "base",
-                                                                    },
-                                                                ),
-                                                                name: "Primitive",
-                                                            },
-                                                            name: "bool",
-                                                        },
-                                                        args: [],
-                                                    },
-                                                },
-                                            },
-                                        },
+                                        value: Bool(
+                                            true,
+                                        ),
                                     },
                                 ),
                             },

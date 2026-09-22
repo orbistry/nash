@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntype Container 'a = Wrap 'a\nimpl Keep () where\n    keep x = x\ntype Color = Red\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (Container 'a) where\n    keep (Wrap x) = Wrap (keep x)\nboxed : Keep (Container 'a) => 'a -> 'a\nboxed x = x\nuseBox = (boxed (Wrap Red), boxed Red)\nforward : Keep 'a => 'a -> 'a\nforward x = x\nmonomorphic : Keep () => ()\nmonomorphic = ()\nuse = (forward (), monomorphic)\nrecursive : Keep 'a => 'a -> 'a\nrecursive x = helper x\nhelper x = recursive x\n"
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\ntype Container 'a = Wrap 'a\nimpl Keep () where\n    keep x = x\ntype Color = Red\nimpl Keep Color where\n    keep x = x\nimpl Keep 'a => Keep (Container 'a) where\n    keep (Wrap x) = Wrap (keep x)\nboxed : Keep (Container 'a) => 'a -> 'a\nboxed x = x\nuseBox = (boxed (Wrap Red), boxed Red)\nforward : Keep 'a => 'a -> 'a\nforward x = x\nmonomorphic : Keep () => ()\nmonomorphic = ()\nuse : (unit, unit)\nuse = (forward (), monomorphic)\nrecursive : Keep 'a => 'a -> 'a\nrecursive x = helper x\nhelper x = recursive x\n"
 ---
 boxed : forall a. (Big a, Keep (Container a)) => a -> a
 forward : forall a. Keep a => a -> a

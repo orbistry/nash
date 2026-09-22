@@ -3125,7 +3125,7 @@ mod copy_tests {
     #[test]
     fn givens_discharge_body_uses_without_escaping_their_scope() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nf : Keep 'a => 'a -> 'a\nf x = keep x\ng : Keep () => ()\ng = keep ()\nh = keep ()\n";
+        let source = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nf : Keep 'a => 'a -> 'a\nf x = keep x\ng : Keep () => () -> ()\ng x = keep x\nh : () -> ()\nh x = keep x\n";
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
@@ -3175,7 +3175,7 @@ mod copy_tests {
             ).collect::<Vec<_>>().join("\n"));
         });
         assert!(
-            matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 8)
+            matches!(&result.errors[..], [Error::MissingImpl { region, .. }] if region.start.line == 9)
         );
         assert!(solver.givens.is_empty());
         let uses: Vec<_> = solver
@@ -3191,7 +3191,7 @@ mod copy_tests {
             .collect();
         assert_eq!(uses.len(), 3);
         for (line, solved) in uses {
-            assert_eq!(solved, line != 8, "only f and g have enclosing givens");
+            assert_eq!(solved, line != 9, "only f and g have enclosing givens");
         }
         assert!(result.env["h"].context.is_empty());
     }
@@ -3199,7 +3199,7 @@ mod copy_tests {
     #[test]
     fn scheme_records_freeze_local_quantifiers_before_outer_generalization() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\nouter x =\n    let\n        local y = (x, y)\n    in\n    local ()\n";
+        let source = "module Main exposing (..)\nouter x =\n    let\n        local y = (x, y)\n    in\n    local Primitive.True\n";
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();

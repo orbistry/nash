@@ -3,59 +3,62 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nexpected : list int\nexpected = [1]\nmain : bool\nmain = eq (Builtin.mkCons 1 []) expected\n"
 ---
 --- core
-let eq#7 : int -> int -> bool = equalsInteger in
-let eq#2 : list 'erased -> list 'erased -> bool = (\self#13 : 'erased -> self#13 self#13) (\self#13 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
+let fromBool#7 : bool -> bool = \value#10 : bool -> value#10 in
+let eq#8 : int -> int -> bool = equalsInteger in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#15 : 'erased -> self#15 self#15) (\self#15 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
   True -> nullList ys#6
   False -> case@Bool nullList ys#6 of
-    True -> false
-    False -> let projection#9 : 'erased = headList xs#5 in
-    let projection#10 : 'erased = headList ys#6 in
-    case@Bool eq#7 projection#9 projection#10 of
-      True -> let projection#11 : list 'erased = tailList xs#5 in
-      let projection#12 : list 'erased = tailList ys#6 in
-      self#13 self#13 projection#11 projection#12
-      False -> false) in
-let fromInt#3 : int -> int = \value#8 : int -> value#8 in
+    True -> fromBool#7 false
+    False -> let projection#11 : 'erased = headList xs#5 in
+    let projection#12 : 'erased = headList ys#6 in
+    case@Bool eq#8 projection#11 projection#12 of
+      True -> let projection#13 : list 'erased = tailList xs#5 in
+      let projection#14 : list 'erased = tailList ys#6 in
+      self#15 self#15 projection#13 projection#14
+      False -> fromBool#7 false) in
+let fromInt#3 : int -> int = \value#9 : int -> value#9 in
 let expected#4 : list int = mkCons (fromInt#3 1) (con (list integer) []) in
 let main#1 : bool = eq#2 (mkCons (fromInt#3 1) (con (list integer) [])) expected#4 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_7
-    [(lam eq_2
-      [(lam fromInt_3
-        [(lam expected_4
-          [(lam main_1 main_1)
-            [[eq_2
-              [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]] (con (list integer) [])]]
-              expected_4]])
-          [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]] (con (list integer) [])]])
-        (lam value_8 value_8)])
-      [(lam self_13 [self_13 self_13])
-        (lam self_13
-          (lam xs_5
-            (lam ys_6
-              (case
-                [(force (builtin nullList)) xs_5]
+  [(lam fromBool_7
+    [(lam eq_8
+      [(lam eq_2
+        [(lam fromInt_3
+          [(lam expected_4
+            [(lam main_1 main_1)
+              [[eq_2
+                [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]] (con (list integer) [])]]
+                expected_4]])
+            [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]] (con (list integer) [])]])
+          (lam value_9 value_9)])
+        [(lam self_15 [self_15 self_15])
+          (lam self_15
+            (lam xs_5
+              (lam ys_6
                 (case
-                  [(force (builtin nullList)) ys_6]
-                  [(lam projection_9
-                    [(lam projection_10
-                      (case
-                        [[eq_7 projection_9] projection_10]
-                        (con bool False)
-                        [(lam projection_11
-                          [(lam projection_12 [[[self_13 self_13] projection_11] projection_12])
-                            [(force (builtin tailList)) ys_6]])
-                          [(force (builtin tailList)) xs_5]]))
-                      [(force (builtin headList)) ys_6]])
-                    [(force (builtin headList)) xs_5]]
-                  (con bool False))
-                [(force (builtin nullList)) ys_6]))))]])
-    (builtin equalsInteger)])
+                  [(force (builtin nullList)) xs_5]
+                  (case
+                    [(force (builtin nullList)) ys_6]
+                    [(lam projection_11
+                      [(lam projection_12
+                        (case
+                          [[eq_8 projection_11] projection_12]
+                          [fromBool_7 (con bool False)]
+                          [(lam projection_13
+                            [(lam projection_14 [[[self_15 self_15] projection_13] projection_14])
+                              [(force (builtin tailList)) ys_6]])
+                            [(force (builtin tailList)) xs_5]]))
+                        [(force (builtin headList)) ys_6]])
+                      [(force (builtin headList)) xs_5]]
+                    [fromBool_7 (con bool False)])
+                  [(force (builtin nullList)) ys_6]))))]])
+      (builtin equalsInteger)])
+    (lam value_10 value_10)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2440515, memory: 10521
+cpu: 2488515, memory: 10821

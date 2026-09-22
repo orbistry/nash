@@ -3,26 +3,30 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntrait Keep 'a where\n    keep : Eq 'b => 'a -> 'b -> bool\nimpl Keep (list 'b) where\n    keep _ x = eq x x\nmain = keep [()] 42\n"
 ---
 --- core
-let eq#6 : int -> int -> bool = equalsInteger in
-let keep#2 : list 'erased -> 'erased -> bool = \arg#4 : list 'erased x#5 : 'erased -> let match#7 : list 'erased = arg#4 in
-eq#6 x#5 x#5 in
-let fromInt#3 : int -> int = \value#8 : int -> value#8 in
-let main#1 : bool = keep#2 (mkCons () (con (list unit) [])) (fromInt#3 42) in
+let eq#7 : int -> int -> bool = equalsInteger in
+let keep#2 : list 'erased -> 'erased -> bool = \arg#5 : list 'erased x#6 : 'erased -> let match#8 : list 'erased = arg#5 in
+eq#7 x#6 x#6 in
+let fromUnit#3 : unit -> unit = \value#9 : unit -> value#9 in
+let fromInt#4 : int -> int = \value#10 : int -> value#10 in
+let main#1 : bool = keep#2 (mkCons (fromUnit#3 ()) (con (list unit) [])) (fromInt#4 42) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_6
+  [(lam eq_7
     [(lam keep_2
-      [(lam fromInt_3
-        [(lam main_1 main_1)
-          [[keep_2 [[(force (builtin mkCons)) (con unit ())] (con (list unit) [])]]
-            [fromInt_3 (con integer 42)]]])
-        (lam value_8 value_8)])
-      (lam arg_4 (lam x_5 [(lam match_7 [[eq_6 x_5] x_5]) arg_4]))])
+      [(lam fromUnit_3
+        [(lam fromInt_4
+          [(lam main_1 main_1)
+            [[keep_2
+              [[(force (builtin mkCons)) [fromUnit_3 (con unit ())]] (con (list unit) [])]]
+              [fromInt_4 (con integer 42)]]])
+          (lam value_10 value_10)])
+        (lam value_9 value_9)])
+      (lam arg_5 (lam x_6 [(lam match_8 [[eq_7 x_6] x_6]) arg_5]))])
     (builtin equalsInteger)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 668795, memory: 3533
+cpu: 764795, memory: 4133

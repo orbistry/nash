@@ -3,43 +3,58 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..), coerce)\nimport Bool\nimport Lift exposing (Lift)\ntype alias flag = bool\nimpl Lift bool flag where\n    lift value = coerce value\n    lower value = if coerce value then False else True\noff : flag\noff = coerce True\nboth : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool\nboth a b = Bool.and a b\nmain : bool\nmain = if Bool.and off True then True else both off True\n"
 ---
 --- core
-let both#2 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> let lower#9 : bool -> bool = \value#10 : bool -> case@Bool (\coerce#11 : 'erased -> coerce#11) value#10 of
-  True -> false
-  False -> true in
-case@Bool lower#9 a#7 of
-  True -> b#8
+let both#2 : 'erased -> 'erased -> bool = \a#10 : 'erased b#11 : 'erased -> let fromBool#14 : bool -> bool = \value#16 : bool -> value#16 in
+let lower#12 : bool -> bool = \value#13 : bool -> case@Bool (\coerce#15 : 'erased -> coerce#15) value#13 of
+  True -> fromBool#14 false
+  False -> fromBool#14 true in
+case@Bool lower#12 a#10 of
+  True -> b#11
   False -> false in
-let off#3 : bool = (\coerce#12 : 'erased -> coerce#12) true in
-let lower#4 : bool -> bool = \value#5 : bool -> case@Bool (\coerce#6 : 'erased -> coerce#6) value#5 of
-  True -> false
-  False -> true in
-let main#1 : bool = case@Bool (case@Bool lower#4 off#3 of
-  True -> true
+let fromBool#4 : bool -> bool = \value#18 : bool -> value#18 in
+let off#3 : bool = (\coerce#17 : 'erased -> coerce#17) (fromBool#4 true) in
+let fromBool#7 : bool -> bool = \value#9 : bool -> value#9 in
+let lower#5 : bool -> bool = \value#6 : bool -> case@Bool (\coerce#8 : 'erased -> coerce#8) value#6 of
+  True -> fromBool#7 false
+  False -> fromBool#7 true in
+let main#1 : bool = case@Bool (case@Bool lower#5 off#3 of
+  True -> fromBool#4 true
   False -> false) of
-  True -> true
-  False -> both#2 off#3 true in
+  True -> fromBool#4 true
+  False -> both#2 off#3 (fromBool#4 true) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam both_2
-    [(lam off_3
-      [(lam lower_4
-        [(lam main_1 main_1)
-          (case
-            (case [lower_4 off_3] (con bool False) (con bool True))
-            [[both_2 off_3] (con bool True)]
-            (con bool True))])
-        (lam value_5
-          (case [(lam coerce_6 coerce_6) value_5] (con bool True) (con bool False)))])
-      [(lam coerce_12 coerce_12) (con bool True)]])
-    (lam a_7
-      (lam b_8
-        [(lam lower_9 (case [lower_9 a_7] (con bool False) b_8))
-          (lam value_10
-            (case [(lam coerce_11 coerce_11) value_10] (con bool True) (con bool False)))]))])
+    [(lam fromBool_4
+      [(lam off_3
+        [(lam fromBool_7
+          [(lam lower_5
+            [(lam main_1 main_1)
+              (case
+                (case [lower_5 off_3] (con bool False) [fromBool_4 (con bool True)])
+                [[both_2 off_3] [fromBool_4 (con bool True)]]
+                [fromBool_4 (con bool True)])])
+            (lam value_6
+              (case
+                [(lam coerce_8 coerce_8) value_6]
+                [fromBool_7 (con bool True)]
+                [fromBool_7 (con bool False)]))])
+          (lam value_9 value_9)])
+        [(lam coerce_17 coerce_17) [fromBool_4 (con bool True)]]])
+      (lam value_18 value_18)])
+    (lam a_10
+      (lam b_11
+        [(lam fromBool_14
+          [(lam lower_12 (case [lower_12 a_10] (con bool False) b_11))
+            (lam value_13
+              (case
+                [(lam coerce_15 coerce_15) value_13]
+                [fromBool_14 (con bool True)]
+                [fromBool_14 (con bool False)]))])
+          (lam value_16 value_16)]))])
 --- result
 (con bool False)
 --- logs
 []
 --- budget
-cpu: 752100, memory: 4800
+cpu: 1088100, memory: 6900

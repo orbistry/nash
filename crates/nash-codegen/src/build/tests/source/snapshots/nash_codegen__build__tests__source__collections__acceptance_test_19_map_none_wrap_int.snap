@@ -3,73 +3,76 @@ source: crates/nash-codegen/src/build/tests/source/collections.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmap opt f =\n    case opt of\n        None -> None\n        Some a -> Some (f a)\nnone : option int\nnone = None\nmain = eq (map none (\\_ -> 14)) None\n"
 ---
 --- core
-let eq#12 : int -> int -> bool = equalsInteger in
-let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#8 : Main.option 'erased b#9 : Main.option 'erased -> let match#13 : (Main.option 'erased, Main.option 'erased) = constr 0 a#8 b#9 in
-let leaf#19 : 'erased = delay false in
-case@Tag match#13 of
-  0 field#20 field#21 -> case@Tag field#20 of
-    0 -> case@Tag field#21 of
-      0 -> true
-      1 field#22 -> force leaf#19
-    1 field#23 -> case@Tag field#21 of
-      0 -> force leaf#19
-      1 field#24 -> let x#10 : 'erased = field#23 in
-      let y#11 : 'erased = field#24 in
-      eq#12 x#10 y#11 in
-let map#3 : Main.option 'erased -> ('erased -> 'erased) -> Main.option 'erased = \opt#25 : Main.option 'erased (f#26 : 'erased -> 'erased) -> let match#29 : Main.option 'erased = opt#25 in
-case@Tag match#29 of
+let fromBool#10 : bool -> bool = \value#33 : bool -> value#33 in
+let eq#13 : int -> int -> bool = equalsInteger in
+let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#8 : Main.option 'erased b#9 : Main.option 'erased -> let match#14 : (Main.option 'erased, Main.option 'erased) = constr 0 a#8 b#9 in
+let leaf#20 : 'erased = delay (fromBool#10 false) in
+case@Tag match#14 of
+  0 field#21 field#22 -> case@Tag field#21 of
+    0 -> case@Tag field#22 of
+      0 -> fromBool#10 true
+      1 field#23 -> force leaf#20
+    1 field#24 -> case@Tag field#22 of
+      0 -> force leaf#20
+      1 field#25 -> let x#11 : 'erased = field#24 in
+      let y#12 : 'erased = field#25 in
+      eq#13 x#11 y#12 in
+let map#3 : Main.option 'erased -> ('erased -> 'erased) -> Main.option 'erased = \opt#26 : Main.option 'erased (f#27 : 'erased -> 'erased) -> let match#30 : Main.option 'erased = opt#26 in
+case@Tag match#30 of
   0 -> constr 0
-  1 field#30 -> let a#27 : 'erased = field#30 in
-  (\field#28 : 'erased -> constr 1 field#28) (f#26 a#27) in
+  1 field#31 -> let a#28 : 'erased = field#31 in
+  (\field#29 : 'erased -> constr 1 field#29) (f#27 a#28) in
 let none#4 : Main.option int = constr 0 in
-let fromInt#6 : int -> int = \value#31 : int -> value#31 in
+let fromInt#6 : int -> int = \value#32 : int -> value#32 in
 let main#1 : bool = eq#2 (map#3 none#4 (\arg#5 : int -> let match#7 : int = arg#5 in
 fromInt#6 14)) (constr 0) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_12
-    [(lam eq_2
-      [(lam map_3
-        [(lam none_4
-          [(lam fromInt_6
-            [(lam main_1 main_1)
-              [[eq_2
-                [[map_3 none_4] (lam arg_5 [(lam match_7 [fromInt_6 (con integer 14)]) arg_5])]]
-                (constr 0)]])
-            (lam value_31 value_31)])
-          (constr 0)])
-        (lam opt_25
-          (lam f_26
-            [(lam match_29
-              (case
-                match_29
-                (constr 0)
-                (lam field_30
-                  [(lam a_27 [(lam field_28 (constr 1 field_28)) [f_26 a_27]]) field_30])))
-              opt_25]))])
-      (lam a_8
-        (lam b_9
-          [(lam match_13
-            [(lam leaf_19
-              (case
-                match_13
-                (lam field_20
+  [(lam fromBool_10
+    [(lam eq_13
+      [(lam eq_2
+        [(lam map_3
+          [(lam none_4
+            [(lam fromInt_6
+              [(lam main_1 main_1)
+                [[eq_2
+                  [[map_3 none_4] (lam arg_5 [(lam match_7 [fromInt_6 (con integer 14)]) arg_5])]]
+                  (constr 0)]])
+              (lam value_32 value_32)])
+            (constr 0)])
+          (lam opt_26
+            (lam f_27
+              [(lam match_30
+                (case
+                  match_30
+                  (constr 0)
+                  (lam field_31
+                    [(lam a_28 [(lam field_29 (constr 1 field_29)) [f_27 a_28]]) field_31])))
+                opt_26]))])
+        (lam a_8
+          (lam b_9
+            [(lam match_14
+              [(lam leaf_20
+                (case
+                  match_14
                   (lam field_21
-                    (case
-                      field_20
-                      (case field_21 (con bool True) (lam field_22 (force leaf_19)))
-                      (lam field_23
-                        (case
-                          field_21
-                          (force leaf_19)
-                          (lam field_24 [(lam x_10 [(lam y_11 [[eq_12 x_10] y_11]) field_24]) field_23]))))))))
-              (delay (con bool False))])
-            (constr 0 a_8 b_9)]))])
-    (builtin equalsInteger)])
+                    (lam field_22
+                      (case
+                        field_21
+                        (case field_22 [fromBool_10 (con bool True)] (lam field_23 (force leaf_20)))
+                        (lam field_24
+                          (case
+                            field_22
+                            (force leaf_20)
+                            (lam field_25 [(lam x_11 [(lam y_12 [[eq_13 x_11] y_12]) field_25]) field_24]))))))))
+                (delay [fromBool_10 (con bool False)])])
+              (constr 0 a_8 b_9)]))])
+      (builtin equalsInteger)])
+    (lam value_33 value_33)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 832100, memory: 5300
+cpu: 928100, memory: 5900

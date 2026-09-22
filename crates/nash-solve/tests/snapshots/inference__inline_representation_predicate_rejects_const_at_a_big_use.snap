@@ -1,14 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nidentity : ('a : Big) -> 'a\nidentity x = x\nrejected = identity ()\n"
+description: "module Main exposing (..)\nunitValue : unit\nunitValue = ()\nidentity : ('a : Big) -> 'a\nidentity x = x\nrejected = identity unitValue\n"
 info: diagnostic
 ---
 nash::type::missing_impl
 
   × Unsatisfied representation constraint `Primitive.Big unit`.
-   ╭─[Main.nash:4:12]
- 3 │ identity x = x
- 4 │ rejected = identity ()
+   ╭─[Main.nash:6:12]
+ 5 │ identity x = x
+ 6 │ rejected = identity unitValue
    ·            ────┬───
    ·                ╰── required by `identity`
    ╰────

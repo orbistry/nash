@@ -3,47 +3,54 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype choice = First unit | Second\nloop : bool -> unit\nloop =\n    case trace \"choose\" (First ()) of\n        First captured -> trace \"selected\" (\\flag -> if flag then captured else loop True)\n        Second -> \\flag -> loop flag\nmain = loop False\n"
 ---
 --- core
-let message#11 : string = "choose" in
-let message#12 : string = "selected" in
-let fromString#4 : string -> string = \value#10 : string -> value#10 in
-let match#8 : Main.choice = trace (fromString#4 message#11) in (\field#3 : unit -> constr 0 field#3) () in
-case@Tag match#8 of
-  0 field#9 -> let captured#5 : unit = field#9 in
-  trace (fromString#4 message#12) in let loop#2 : bool -> unit = (\self#13 : 'erased -> self#13 self#13) (\self#13 : 'erased flag#6 : bool -> case@Bool flag#6 of
-    True -> captured#5
-    False -> self#13 self#13 true) in
-  let main#1 : unit = loop#2 false in
+let message#15 : string = "choose" in
+let message#16 : string = "selected" in
+let fromBool#3 : bool -> bool = \value#12 : bool -> value#12 in
+let fromUnit#5 : unit -> unit = \value#13 : unit -> value#13 in
+let fromString#6 : string -> string = \value#14 : string -> value#14 in
+let match#10 : Main.choice = trace (fromString#6 message#15) in (\field#4 : unit -> constr 0 field#4) (fromUnit#5 ()) in
+case@Tag match#10 of
+  0 field#11 -> let captured#7 : unit = field#11 in
+  trace (fromString#6 message#16) in let loop#2 : bool -> unit = (\self#17 : 'erased -> self#17 self#17) (\self#17 : 'erased flag#8 : bool -> case@Bool flag#8 of
+    True -> captured#7
+    False -> self#17 self#17 (fromBool#3 true)) in
+  let main#1 : unit = loop#2 (fromBool#3 false) in
   main#1
-  1 -> let loop#2 : bool -> unit = \flag#7 : bool -> force ((\self#15 : 'erased -> self#15 self#15) (\self#15 : 'erased -> delay force (self#15 self#15))) in
-  let main#1 : unit = loop#2 false in
+  1 -> let loop#2 : bool -> unit = \flag#9 : bool -> force ((\self#19 : 'erased -> self#19 self#19) (\self#19 : 'erased -> delay force (self#19 self#19))) in
+  let main#1 : unit = loop#2 (fromBool#3 false) in
   main#1
 --- uplc
 (program 1.1.0
-  [(lam message_11
-    [(lam message_12
-      [(lam fromString_4
-        [(lam match_8
-          (case
-            match_8
-            (lam field_9
-              [(lam captured_5
-                (force
-                  [[(force (builtin trace)) [fromString_4 message_12]]
-                    (delay
-                      [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
-                        [(lam self_13 [self_13 self_13])
-                          (lam self_13
-                            (lam flag_6 (case flag_6 [[self_13 self_13] (con bool True)] captured_5)))]])]))
-                field_9])
-            [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
-              (lam flag_7
-                (force
-                  [(lam self_15 [self_15 self_15])
-                    (lam self_15 (delay (force [self_15 self_15])))]))]))
-          (force
-            [[(force (builtin trace)) [fromString_4 message_11]]
-              (delay [(lam field_3 (constr 0 field_3)) (con unit ())])])])
-        (lam value_10 value_10)])
+  [(lam message_15
+    [(lam message_16
+      [(lam fromBool_3
+        [(lam fromUnit_5
+          [(lam fromString_6
+            [(lam match_10
+              (case
+                match_10
+                (lam field_11
+                  [(lam captured_7
+                    (force
+                      [[(force (builtin trace)) [fromString_6 message_16]]
+                        (delay
+                          [(lam loop_2 [(lam main_1 main_1) [loop_2 [fromBool_3 (con bool False)]]])
+                            [(lam self_17 [self_17 self_17])
+                              (lam self_17
+                                (lam flag_8
+                                  (case flag_8 [[self_17 self_17] [fromBool_3 (con bool True)]] captured_7)))]])]))
+                    field_11])
+                [(lam loop_2 [(lam main_1 main_1) [loop_2 [fromBool_3 (con bool False)]]])
+                  (lam flag_9
+                    (force
+                      [(lam self_19 [self_19 self_19])
+                        (lam self_19 (delay (force [self_19 self_19])))]))]))
+              (force
+                [[(force (builtin trace)) [fromString_6 message_15]]
+                  (delay [(lam field_4 (constr 0 field_4)) [fromUnit_5 (con unit ())]])])])
+            (lam value_14 value_14)])
+          (lam value_13 value_13)])
+        (lam value_12 value_12)])
       (con string "selected")])
     (con string "choose")])
 --- result
@@ -51,4 +58,4 @@ case@Tag match#8 of
 --- logs
 ["choose", "selected"]
 --- budget
-cpu: 1207096, memory: 6964
+cpu: 1447096, memory: 8464

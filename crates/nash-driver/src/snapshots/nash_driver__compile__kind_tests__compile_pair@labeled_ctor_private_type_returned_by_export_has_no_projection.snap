@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (make)\ntype box = Box { value : unit }\nmake = Box ()\n\nmodule Main exposing (..)\nimport Types\nbad = Types.make.value\n"
+description: "module Types exposing (make)\ntype box = Box { value : bool }\nmake = Box Primitive.True\n\nmodule Main exposing (..)\nimport Types\nbad = Types.make.value\n"
 ---
 nash::type::not_a_record
 

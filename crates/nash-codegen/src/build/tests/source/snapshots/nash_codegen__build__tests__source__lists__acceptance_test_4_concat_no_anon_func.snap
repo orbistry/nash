@@ -3,96 +3,99 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfoldr xs f zero =\n    case xs of\n        [] -> zero\n        x :: rest -> f x (foldr rest f zero)\nprepend x xs = mkCons x xs\nconcat left right = foldr left prepend right\nmain = eq (concat [1, 2, 3] [4, 5, 6]) [1, 2, 3, 4, 5, 6]\n"
 ---
 --- core
-let eq#7 : int -> int -> bool = equalsInteger in
-let eq#2 : list 'erased -> list 'erased -> bool = (\self#28 : 'erased -> self#28 self#28) (\self#28 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
+let fromBool#7 : bool -> bool = \value#14 : bool -> value#14 in
+let eq#8 : int -> int -> bool = equalsInteger in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#30 : 'erased -> self#30 self#30) (\self#30 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
   True -> nullList ys#6
   False -> case@Bool nullList ys#6 of
-    True -> false
-    False -> let projection#23 : 'erased = headList xs#5 in
-    let projection#24 : 'erased = headList ys#6 in
-    case@Bool eq#7 projection#23 projection#24 of
-      True -> let projection#25 : list 'erased = tailList xs#5 in
-      let projection#26 : list 'erased = tailList ys#6 in
-      self#28 self#28 projection#25 projection#26
-      False -> false) in
-let foldr#10 : list 'erased -> ('erased -> 'erased -> 'erased) -> 'erased -> 'erased = \xs#13 : list 'erased (f#14 : 'erased -> 'erased -> 'erased) zero#15 : 'erased -> (\self#27 : 'erased -> self#27 self#27) (\self#27 : 'erased xs#13 : list 'erased -> let match#18 : list 'erased = xs#13 in
-case@List match#18 of
-  Nil -> zero#15
-  Cons field#19 field#20 -> let x#16 : 'erased = field#19 in
-  let rest#17 : list 'erased = field#20 in
-  f#14 x#16 (self#27 self#27 rest#17)) xs#13 in
-let prepend#11 : 'erased -> list 'erased -> list 'erased = \x#21 : 'erased xs#22 : list 'erased -> mkCons x#21 xs#22 in
-let concat#3 : list 'erased -> list 'erased -> list 'erased = \left#8 : list 'erased right#9 : list 'erased -> foldr#10 left#8 prepend#11 right#9 in
-let fromInt#4 : int -> int = \value#12 : int -> value#12 in
+    True -> fromBool#7 false
+    False -> let projection#25 : 'erased = headList xs#5 in
+    let projection#26 : 'erased = headList ys#6 in
+    case@Bool eq#8 projection#25 projection#26 of
+      True -> let projection#27 : list 'erased = tailList xs#5 in
+      let projection#28 : list 'erased = tailList ys#6 in
+      self#30 self#30 projection#27 projection#28
+      False -> fromBool#7 false) in
+let foldr#11 : list 'erased -> ('erased -> 'erased -> 'erased) -> 'erased -> 'erased = \xs#15 : list 'erased (f#16 : 'erased -> 'erased -> 'erased) zero#17 : 'erased -> (\self#29 : 'erased -> self#29 self#29) (\self#29 : 'erased xs#15 : list 'erased -> let match#20 : list 'erased = xs#15 in
+case@List match#20 of
+  Nil -> zero#17
+  Cons field#21 field#22 -> let x#18 : 'erased = field#21 in
+  let rest#19 : list 'erased = field#22 in
+  f#16 x#18 (self#29 self#29 rest#19)) xs#15 in
+let prepend#12 : 'erased -> list 'erased -> list 'erased = \x#23 : 'erased xs#24 : list 'erased -> mkCons x#23 xs#24 in
+let concat#3 : list 'erased -> list 'erased -> list 'erased = \left#9 : list 'erased right#10 : list 'erased -> foldr#11 left#9 prepend#12 right#10 in
+let fromInt#4 : int -> int = \value#13 : int -> value#13 in
 let main#1 : bool = eq#2 (concat#3 (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (con (list integer) [])))) (mkCons (fromInt#4 4) (mkCons (fromInt#4 5) (mkCons (fromInt#4 6) (con (list integer) []))))) (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (mkCons (fromInt#4 4) (mkCons (fromInt#4 5) (mkCons (fromInt#4 6) (con (list integer) []))))))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_7
-    [(lam eq_2
-      [(lam foldr_10
-        [(lam prepend_11
-          [(lam concat_3
-            [(lam fromInt_4
-              [(lam main_1 main_1)
-                [[eq_2
-                  [[concat_3
+  [(lam fromBool_7
+    [(lam eq_8
+      [(lam eq_2
+        [(lam foldr_11
+          [(lam prepend_12
+            [(lam concat_3
+              [(lam fromInt_4
+                [(lam main_1 main_1)
+                  [[eq_2
+                    [[concat_3
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
+                          [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
+                          [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]
                     [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
                       [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
-                        [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]
-                    [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
-                      [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
-                        [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]
-                  [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
-                    [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
-                      [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
-                        [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
-                          [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
-                            [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]]]])
-              (lam value_12 value_12)])
-            (lam left_8 (lam right_9 [[[foldr_10 left_8] prepend_11] right_9]))])
-          (lam x_21 (lam xs_22 [[(force (builtin mkCons)) x_21] xs_22]))])
-        (lam xs_13
-          (lam f_14
-            (lam zero_15
-              [[(lam self_27 [self_27 self_27])
-                (lam self_27
-                  (lam xs_13
-                    [(lam match_18
-                      (case
-                        match_18
-                        (lam field_19
-                          (lam field_20
-                            [(lam x_16 [(lam rest_17 [[f_14 x_16] [[self_27 self_27] rest_17]]) field_20])
-                              field_19]))
-                        zero_15))
-                      xs_13]))]
-                xs_13])))])
-      [(lam self_28 [self_28 self_28])
-        (lam self_28
-          (lam xs_5
-            (lam ys_6
-              (case
-                [(force (builtin nullList)) xs_5]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
+                          [[(force (builtin mkCons)) [fromInt_4 (con integer 4)]]
+                            [[(force (builtin mkCons)) [fromInt_4 (con integer 5)]]
+                              [[(force (builtin mkCons)) [fromInt_4 (con integer 6)]] (con (list integer) [])]]]]]]]])
+                (lam value_13 value_13)])
+              (lam left_9 (lam right_10 [[[foldr_11 left_9] prepend_12] right_10]))])
+            (lam x_23 (lam xs_24 [[(force (builtin mkCons)) x_23] xs_24]))])
+          (lam xs_15
+            (lam f_16
+              (lam zero_17
+                [[(lam self_29 [self_29 self_29])
+                  (lam self_29
+                    (lam xs_15
+                      [(lam match_20
+                        (case
+                          match_20
+                          (lam field_21
+                            (lam field_22
+                              [(lam x_18 [(lam rest_19 [[f_16 x_18] [[self_29 self_29] rest_19]]) field_22])
+                                field_21]))
+                          zero_17))
+                        xs_15]))]
+                  xs_15])))])
+        [(lam self_30 [self_30 self_30])
+          (lam self_30
+            (lam xs_5
+              (lam ys_6
                 (case
-                  [(force (builtin nullList)) ys_6]
-                  [(lam projection_23
-                    [(lam projection_24
-                      (case
-                        [[eq_7 projection_23] projection_24]
-                        (con bool False)
-                        [(lam projection_25
-                          [(lam projection_26 [[[self_28 self_28] projection_25] projection_26])
-                            [(force (builtin tailList)) ys_6]])
-                          [(force (builtin tailList)) xs_5]]))
-                      [(force (builtin headList)) ys_6]])
-                    [(force (builtin headList)) xs_5]]
-                  (con bool False))
-                [(force (builtin nullList)) ys_6]))))]])
-    (builtin equalsInteger)])
+                  [(force (builtin nullList)) xs_5]
+                  (case
+                    [(force (builtin nullList)) ys_6]
+                    [(lam projection_25
+                      [(lam projection_26
+                        (case
+                          [[eq_8 projection_25] projection_26]
+                          [fromBool_7 (con bool False)]
+                          [(lam projection_27
+                            [(lam projection_28 [[[self_30 self_30] projection_27] projection_28])
+                              [(force (builtin tailList)) ys_6]])
+                            [(force (builtin tailList)) xs_5]]))
+                        [(force (builtin headList)) ys_6]])
+                      [(force (builtin headList)) xs_5]]
+                    [fromBool_7 (con bool False)])
+                  [(force (builtin nullList)) ys_6]))))]])
+      (builtin equalsInteger)])
+    (lam value_14 value_14)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 13235346, memory: 56902
+cpu: 13283346, memory: 57202

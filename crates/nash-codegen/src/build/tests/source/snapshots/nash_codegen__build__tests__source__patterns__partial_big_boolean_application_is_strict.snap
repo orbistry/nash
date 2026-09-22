@@ -3,60 +3,64 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    let\n        partial : Bool.Bool -> bool\n        partial = Bool.or Bool.True\n    in\n    partial (bad ())\n"
 ---
 --- core
-let message#15 : string = "incomplete pattern match" in
-let bad#3 : unit -> nash/base:Bool.Bool = \arg#5 : unit -> let match#6 : unit = arg#5 in
+let message#17 : string = "incomplete pattern match" in
+let bad#3 : unit -> nash/base:Bool.Bool = \arg#6 : unit -> let match#7 : unit = arg#6 in
 error in
-let lower#9 : nash/base:Bool.Bool -> bool = \value#10 : nash/base:Bool.Bool -> let match#11 : nash/base:Bool.Bool = value#10 in
-case@Data match#11 of
-  DataConstr pair#14 -> case@Pair pair#14 of
-    Pair tag#12 fields#13 -> case@Int tag#12 of
+let fromUnit#4 : unit -> unit = \value#8 : unit -> value#8 in
+let lower#11 : nash/base:Bool.Bool -> bool = \value#12 : nash/base:Bool.Bool -> let match#13 : nash/base:Bool.Bool = value#12 in
+case@Data match#13 of
+  DataConstr pair#16 -> case@Pair pair#16 of
+    Pair tag#14 fields#15 -> case@Int tag#14 of
       0 -> false
       1 -> true
-      _ -> trace message#15 in error
-  _ -> trace message#15 in error in
-let or#4 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> case@Bool lower#9 a#7 of
+      _ -> trace message#17 in error
+  _ -> trace message#17 in error in
+let or#5 : 'erased -> 'erased -> bool = \a#9 : 'erased b#10 : 'erased -> case@Bool lower#11 a#9 of
   True -> true
-  False -> lower#9 b#8 in
-let partial#2 : nash/base:Bool.Bool -> bool = or#4 (constrData 1 (con (list data) [])) in
-let main#1 : bool = partial#2 (bad#3 ()) in
+  False -> lower#11 b#10 in
+let partial#2 : nash/base:Bool.Bool -> bool = or#5 (constrData 1 (con (list data) [])) in
+let main#1 : bool = partial#2 (bad#3 (fromUnit#4 ())) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_15
+  [(lam message_17
     [(lam bad_3
-      [(lam lower_9
-        [(lam or_4
-          [(lam partial_2 [(lam main_1 main_1) [partial_2 [bad_3 (con unit ())]]])
-            [or_4 [[(builtin constrData) (con integer 1)] (con (list data) [])]]])
-          (lam a_7 (lam b_8 (case [lower_9 a_7] [lower_9 b_8] (con bool True))))])
-        (lam value_10
-          [(lam match_11
-            [(lam generated_16
-              (force
-                [[[[[[(force (builtin chooseData)) generated_16]
-                  (delay
-                    [(lam pair_14
-                      (case
-                        pair_14
-                        (lam tag_12
-                          (lam fields_13
-                            [(lam generated_17
-                              (case
-                                [[(builtin equalsInteger) generated_17] (con integer 0)]
+      [(lam fromUnit_4
+        [(lam lower_11
+          [(lam or_5
+            [(lam partial_2
+              [(lam main_1 main_1) [partial_2 [bad_3 [fromUnit_4 (con unit ())]]]])
+              [or_5 [[(builtin constrData) (con integer 1)] (con (list data) [])]]])
+            (lam a_9 (lam b_10 (case [lower_11 a_9] [lower_11 b_10] (con bool True))))])
+          (lam value_12
+            [(lam match_13
+              [(lam generated_18
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_18]
+                    (delay
+                      [(lam pair_16
+                        (case
+                          pair_16
+                          (lam tag_14
+                            (lam fields_15
+                              [(lam generated_19
                                 (case
-                                  [[(builtin equalsInteger) generated_17] (con integer 1)]
-                                  (force [[(force (builtin trace)) message_15] (delay (error))])
-                                  (con bool True))
-                                (con bool False)))
-                              tag_12]))))
-                      [(builtin unConstrData) generated_16]])]
-                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]
-                  (delay (force [[(force (builtin trace)) message_15] (delay (error))]))]))
-              match_11])
-            value_10])])
-      (lam arg_5 [(lam match_6 (error)) arg_5])])
+                                  [[(builtin equalsInteger) generated_19] (con integer 0)]
+                                  (case
+                                    [[(builtin equalsInteger) generated_19] (con integer 1)]
+                                    (force [[(force (builtin trace)) message_17] (delay (error))])
+                                    (con bool True))
+                                  (con bool False)))
+                                tag_14]))))
+                        [(builtin unConstrData) generated_18]])]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_17] (delay (error))]))]))
+                match_13])
+              value_12])])
+        (lam value_8 value_8)])
+      (lam arg_6 [(lam match_7 (error)) arg_6])])
     (con string "incomplete pattern match")])
 --- result
 error: ExplicitErrorTerm

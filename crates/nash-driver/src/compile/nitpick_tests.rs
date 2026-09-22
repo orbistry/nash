@@ -6,7 +6,7 @@ fn url(name: &str) -> Url {
 
 fn rejected(source: &str) -> String {
     let bump = Bump::new();
-    let interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(&bump))]);
+    let interfaces = super::nitpick_source_tests::core_interfaces(&bump);
     let (output, compiled) = compile_module(
         &url("Main"),
         None,
@@ -149,7 +149,7 @@ fn type_errors_precede_nitpick() {
         import Primitive exposing (type bool(..))
         import Builtin
         f : bool -> unit
-        f True = True
+        f True = Primitive.True
     "#
     );
     let message = rejected(source);

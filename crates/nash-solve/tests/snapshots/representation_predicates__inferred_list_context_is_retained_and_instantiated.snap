@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/representation_predicates.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nsingleton x = [x]\ngood = singleton True\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nsingleton x = [x]\ngood = singleton Primitive.True\n"
 ---
 {
     "good": Annotation {

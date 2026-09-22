@@ -3,76 +3,82 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype curveInt = ECI { ec : (int, int) } | Infinity\nequivalence ec1 ec2 =\n    let\n        input = (ec1, ec2)\n    in\n    case input of\n        (ECI (x1, y1), ECI (x2, y2)) ->\n            if equalsInteger (subtractInteger x2 x1) 0 then\n                equalsInteger (subtractInteger y2 y1) 0\n            else False\n        (Infinity, Infinity) -> True\n        (Infinity, ECI _) -> False\n        (ECI _, Infinity) -> False\nmain = equivalence Infinity Infinity\n"
 ---
 --- core
-let fromInt#10 : int -> int = \value#21 : int -> value#21 in
+let fromBool#10 : bool -> bool = \value#22 : bool -> value#22 in
+let fromInt#11 : int -> int = \value#23 : int -> value#23 in
 let equivalence#2 : Main.curveInt -> Main.curveInt -> bool = \ec1#3 : Main.curveInt ec2#4 : Main.curveInt -> let input#5 : (Main.curveInt, Main.curveInt) = constr 0 ec1#3 ec2#4 in
-let match#11 : (Main.curveInt, Main.curveInt) = input#5 in
-case@Tag match#11 of
-  0 field#12 field#13 -> case@Tag field#12 of
-    0 field#14 -> case@Tag field#14 of
-      0 field#15 field#16 -> case@Tag field#13 of
-        0 field#17 -> case@Tag field#17 of
-          0 field#18 field#19 -> let x1#6 : int = field#15 in
-          let y1#7 : int = field#16 in
-          let x2#8 : int = field#18 in
-          let y2#9 : int = field#19 in
-          case@Bool equalsInteger (subtractInteger x2#8 x1#6) (fromInt#10 0) of
-            True -> equalsInteger (subtractInteger y2#9 y1#7) (fromInt#10 0)
-            False -> false
-        1 -> false
-    1 -> case@Tag field#13 of
-      0 field#20 -> false
-      1 -> true in
+let match#12 : (Main.curveInt, Main.curveInt) = input#5 in
+case@Tag match#12 of
+  0 field#13 field#14 -> case@Tag field#13 of
+    0 field#15 -> case@Tag field#15 of
+      0 field#16 field#17 -> case@Tag field#14 of
+        0 field#18 -> case@Tag field#18 of
+          0 field#19 field#20 -> let x1#6 : int = field#16 in
+          let y1#7 : int = field#17 in
+          let x2#8 : int = field#19 in
+          let y2#9 : int = field#20 in
+          case@Bool equalsInteger (subtractInteger x2#8 x1#6) (fromInt#11 0) of
+            True -> equalsInteger (subtractInteger y2#9 y1#7) (fromInt#11 0)
+            False -> fromBool#10 false
+        1 -> fromBool#10 false
+    1 -> case@Tag field#14 of
+      0 field#21 -> fromBool#10 false
+      1 -> fromBool#10 true in
 let main#1 : bool = equivalence#2 (constr 1) (constr 1) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_10
-    [(lam equivalence_2
-      [(lam main_1 main_1) [[equivalence_2 (constr 1)] (constr 1)]])
-      (lam ec1_3
-        (lam ec2_4
-          [(lam input_5
-            [(lam match_11
-              (case
-                match_11
-                (lam field_12
+  [(lam fromBool_10
+    [(lam fromInt_11
+      [(lam equivalence_2
+        [(lam main_1 main_1) [[equivalence_2 (constr 1)] (constr 1)]])
+        (lam ec1_3
+          (lam ec2_4
+            [(lam input_5
+              [(lam match_12
+                (case
+                  match_12
                   (lam field_13
-                    (case
-                      field_12
-                      (lam field_14
+                    (lam field_14
+                      (case
+                        field_13
+                        (lam field_15
+                          (case
+                            field_15
+                            (lam field_16
+                              (lam field_17
+                                (case
+                                  field_14
+                                  (lam field_18
+                                    (case
+                                      field_18
+                                      (lam field_19
+                                        (lam field_20
+                                          [(lam x1_6
+                                            [(lam y1_7
+                                              [(lam x2_8
+                                                [(lam y2_9
+                                                  (case
+                                                    [[(builtin equalsInteger) [[(builtin subtractInteger) x2_8] x1_6]]
+                                                      [fromInt_11 (con integer 0)]]
+                                                    [fromBool_10 (con bool False)]
+                                                    [[(builtin equalsInteger) [[(builtin subtractInteger) y2_9] y1_7]]
+                                                      [fromInt_11 (con integer 0)]]))
+                                                  field_20])
+                                                field_19])
+                                              field_17])
+                                            field_16]))))
+                                  [fromBool_10 (con bool False)])))))
                         (case
                           field_14
-                          (lam field_15
-                            (lam field_16
-                              (case
-                                field_13
-                                (lam field_17
-                                  (case
-                                    field_17
-                                    (lam field_18
-                                      (lam field_19
-                                        [(lam x1_6
-                                          [(lam y1_7
-                                            [(lam x2_8
-                                              [(lam y2_9
-                                                (case
-                                                  [[(builtin equalsInteger) [[(builtin subtractInteger) x2_8] x1_6]]
-                                                    [fromInt_10 (con integer 0)]]
-                                                  (con bool False)
-                                                  [[(builtin equalsInteger) [[(builtin subtractInteger) y2_9] y1_7]]
-                                                    [fromInt_10 (con integer 0)]]))
-                                                field_19])
-                                              field_18])
-                                            field_16])
-                                          field_15]))))
-                                (con bool False))))))
-                      (case field_13 (lam field_20 (con bool False)) (con bool True)))))))
-              input_5])
-            (constr 0 ec1_3 ec2_4)]))])
-    (lam value_21 value_21)])
+                          (lam field_21 [fromBool_10 (con bool False)])
+                          [fromBool_10 (con bool True)]))))))
+                input_5])
+              (constr 0 ec1_3 ec2_4)]))])
+      (lam value_23 value_23)])
+    (lam value_22 value_22)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 512100, memory: 3300
+cpu: 608100, memory: 3900

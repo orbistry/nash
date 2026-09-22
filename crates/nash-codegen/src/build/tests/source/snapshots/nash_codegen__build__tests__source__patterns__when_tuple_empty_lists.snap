@@ -3,55 +3,58 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        bucket1 : list int\n        bucket1 = [1, 2, 3]\n        bucket2 : list int\n        bucket2 = [1, 5, 6]\n        bye =\n            case (bucket1, bucket2) of\n                ([], _) -> False\n                (_, []) -> False\n                (a :: _, b :: _) -> equalsInteger a b\n    in\n    bye\n"
 ---
 --- core
-let fromInt#14 : int -> int = \value#15 : int -> value#15 in
-let bucket2#2 : list int = mkCons (fromInt#14 1) (mkCons (fromInt#14 5) (mkCons (fromInt#14 6) (con (list integer) []))) in
-let bucket1#3 : list int = mkCons (fromInt#14 1) (mkCons (fromInt#14 2) (mkCons (fromInt#14 3) (con (list integer) []))) in
-let match#7 : (list int, list int) = constr 0 bucket1#3 bucket2#2 in
-let bye#4 : bool = case@Tag match#7 of
-  0 field#8 field#9 -> case@List field#8 of
-    Nil -> false
-    Cons field#10 field#11 -> case@List field#9 of
-      Nil -> false
-      Cons field#12 field#13 -> let a#5 : int = field#10 in
-      let b#6 : int = field#12 in
-      equalsInteger a#5 b#6 in
+let fromBool#5 : bool -> bool = \value#16 : bool -> value#16 in
+let fromInt#15 : int -> int = \value#17 : int -> value#17 in
+let bucket2#2 : list int = mkCons (fromInt#15 1) (mkCons (fromInt#15 5) (mkCons (fromInt#15 6) (con (list integer) []))) in
+let bucket1#3 : list int = mkCons (fromInt#15 1) (mkCons (fromInt#15 2) (mkCons (fromInt#15 3) (con (list integer) []))) in
+let match#8 : (list int, list int) = constr 0 bucket1#3 bucket2#2 in
+let bye#4 : bool = case@Tag match#8 of
+  0 field#9 field#10 -> case@List field#9 of
+    Nil -> fromBool#5 false
+    Cons field#11 field#12 -> case@List field#10 of
+      Nil -> fromBool#5 false
+      Cons field#13 field#14 -> let a#6 : int = field#11 in
+      let b#7 : int = field#13 in
+      equalsInteger a#6 b#7 in
 let main#1 : bool = bye#4 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_14
-    [(lam bucket2_2
-      [(lam bucket1_3
-        [(lam match_7
-          [(lam bye_4 [(lam main_1 main_1) bye_4])
-            (case
-              match_7
-              (lam field_8
+  [(lam fromBool_5
+    [(lam fromInt_15
+      [(lam bucket2_2
+        [(lam bucket1_3
+          [(lam match_8
+            [(lam bye_4 [(lam main_1 main_1) bye_4])
+              (case
+                match_8
                 (lam field_9
-                  (case
-                    field_8
-                    (lam field_10
+                  (lam field_10
+                    (case
+                      field_9
                       (lam field_11
-                        (case
-                          field_9
-                          (lam field_12
+                        (lam field_12
+                          (case
+                            field_10
                             (lam field_13
-                              [(lam a_5 [(lam b_6 [[(builtin equalsInteger) a_5] b_6]) field_12]) field_10]))
-                          (con bool False))))
-                    (con bool False)))))])
-          (constr 0 bucket1_3 bucket2_2)])
-        [[(force (builtin mkCons)) [fromInt_14 (con integer 1)]]
-          [[(force (builtin mkCons)) [fromInt_14 (con integer 2)]]
-            [[(force (builtin mkCons)) [fromInt_14 (con integer 3)]]
+                              (lam field_14
+                                [(lam a_6 [(lam b_7 [[(builtin equalsInteger) a_6] b_7]) field_13]) field_11]))
+                            [fromBool_5 (con bool False)])))
+                      [fromBool_5 (con bool False)]))))])
+            (constr 0 bucket1_3 bucket2_2)])
+          [[(force (builtin mkCons)) [fromInt_15 (con integer 1)]]
+            [[(force (builtin mkCons)) [fromInt_15 (con integer 2)]]
+              [[(force (builtin mkCons)) [fromInt_15 (con integer 3)]]
+                (con (list integer) [])]]]])
+        [[(force (builtin mkCons)) [fromInt_15 (con integer 1)]]
+          [[(force (builtin mkCons)) [fromInt_15 (con integer 5)]]
+            [[(force (builtin mkCons)) [fromInt_15 (con integer 6)]]
               (con (list integer) [])]]]])
-      [[(force (builtin mkCons)) [fromInt_14 (con integer 1)]]
-        [[(force (builtin mkCons)) [fromInt_14 (con integer 5)]]
-          [[(force (builtin mkCons)) [fromInt_14 (con integer 6)]]
-            (con (list integer) [])]]]])
-    (lam value_15 value_15)])
+      (lam value_17 value_17)])
+    (lam value_16 value_16)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 1942605, memory: 9393
+cpu: 1990605, memory: 9693

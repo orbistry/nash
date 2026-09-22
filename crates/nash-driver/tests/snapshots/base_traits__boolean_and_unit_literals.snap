@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/tests/base_traits.rs
+description: "module Main exposing (..)\n\nbigTrue : Bool\nbigTrue = True\nbigFalse : Bool\nbigFalse = False\nbigUnit : Unit\nbigUnit = ()\nsmallTrue : bool\nsmallTrue = True\nsmallUnit : unit\nsmallUnit = ()\n\ntype token = Yes | No | Empty\nimpl FromBool token where\n    fromBool value = if value then Yes else No\nimpl FromUnit token where\n    fromUnit _ = Empty\ncustomTrue : token\ncustomTrue = True\ncustomFalse : token\ncustomFalse = False\ncustomUnit : token\ncustomUnit = ()\ncheckToken : token -> int\ncheckToken value = case value of\n    Yes -> 1\n    No -> 2\n    Empty -> 3\n\nbooleanPattern : bool -> int\nbooleanPattern value = case value of\n    True -> 1\n    False -> 0\nunitPattern : unit -> int\nunitPattern () = 4\n\ntests\n    test \"Big literals\" = do\n        assert (bigTrue == Bool.True)\n        assert (bigFalse == Bool.False)\n        assert (bigUnit == Unit.Unit)\n    test \"little literals and patterns\" = do\n        assert smallTrue\n        assert (unitPattern smallUnit == 4)\n        assert (booleanPattern True == 1)\n        assert (booleanPattern False == 0)\n    test \"custom literal implementations\" = do\n        assert (checkToken customTrue == 1)\n        assert (checkToken customFalse == 2)\n        assert (checkToken customUnit == 3)\n    test \"qualified constructors\" = do\n        assert (booleanPattern Primitive.True == 1)\n        assert (Bool.and Bool.True Primitive.True)\n"
+---
+Big literals: Pass; traces: []
+little literals and patterns: Pass; traces: []
+custom literal implementations: Pass; traces: []
+qualified constructors: Pass; traces: []

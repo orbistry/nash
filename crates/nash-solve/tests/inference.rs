@@ -13,49 +13,7 @@ use nash_constrain::UnionFind;
 use nash_constrain::error::Error;
 use nash_region::Located;
 
-const LITERAL_SOURCE: &str = indoc!(
-    "
-        module Literal exposing (..)
-        import Primitive exposing (..)
-        import Builtin exposing (..)
-        trait FromInt 'a where
-            fromInt : int -> 'a
-        trait FromString 'a where
-            fromString : string -> 'a
-        trait FromBytes 'a where
-            fromBytes : bytes -> 'a
-        impl FromInt int where
-            fromInt x = x
-        impl FromString string where
-            fromString x = x
-        impl FromBytes bytes where
-            fromBytes x = x
-    "
-);
-
-fn literal_interfaces(bump: &Bump) -> std::collections::BTreeMap<&str, nash_can::Interface<'_>> {
-    let mut interfaces =
-        std::collections::BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
-    let source = bump.alloc_str(LITERAL_SOURCE);
-    let module = nash_parse::Parser::new(bump, source).module().unwrap();
-    let can = nash_can::canonicalize(
-        bump,
-        Context {
-            package: Some(nash_ast::primitives::BASE),
-            interfaces: Some(&interfaces),
-        },
-        &module,
-    )
-    .unwrap();
-    let mut uf = UnionFind::new();
-    let module = &can.module;
-    let (annotations, _) = nash_solve::run(bump, &mut uf, module, &can.tables).unwrap();
-    interfaces.insert(
-        "Literal",
-        nash_can::from_module(bump, &can.module, &annotations),
-    );
-    interfaces
-}
+use snapshot_support::literals::literal_interfaces;
 
 fn infer<'a>(bump: &'a Bump, input: &str) -> Result<Annotations<'a>, Vec<Error<'a>>> {
     let src = bump.alloc_str(input);
@@ -237,10 +195,10 @@ fn recovery_reports_an_independent_escaping_annotation_and_blocks_its_uses() {
 #[test]
 fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
     for broken in [
-        "broken = if True then () else (\\x -> x)\n",
+        "broken = if True then (assert Primitive.True) else (\\x -> x)\n",
         "broken x = x x\n",
-        "broken x = if True then recurse x else (\\y -> y)\nrecurse x = if True then broken x else ()\n",
-        "trait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing ()\n",
+        "broken x = if True then recurse x else (\\y -> y)\nrecurse x = if True then broken x else (assert Primitive.True)\n",
+        "trait Missing 'a where\n    missing : 'a -> 'a\nbroken = missing (assert Primitive.True)\n",
     ] {
         let bump = Bump::new();
         let source = format!(
@@ -347,7 +305,7 @@ fn recovery_resolution_limit_keeps_unrelated_obligations() {
             missing : 'a -> 'a
         impl Keep (list (list 'a)) => Keep (list 'a) where
             keep xs = xs
-        value = (keep [()], missing ())
+        value = (keep [(assert Primitive.True)], missing (assert Primitive.True))
         sibling : ()
         sibling = \x -> x
     "#
@@ -376,15 +334,15 @@ fn recovery_resolution_limit_keeps_unrelated_obligations() {
 #[test]
 fn recovery_field_failures_block_dependent_traits_and_keep_independent_traits() {
     for body in [
-        "bad : ()\nbad = missing (().field)",
-        "type alias record = { a : () }\nbad : ()\nbad = missing ({ a = () }.field)",
+        "bad : ()\nbad = missing ((assert Primitive.True).field)",
+        "type alias record = { a : () }\nbad : ()\nbad = missing ({ a = (assert Primitive.True) }.field)",
         "type thing = Thing { a : () }\nbad : thing -> ()\nbad record = missing record.absent",
-        "type thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = () }",
-        "bad : () -> ()\nbad record = missing { record | a = () }",
+        "type thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = (assert Primitive.True) }",
+        "bad : () -> ()\nbad record = missing { record | a = (assert Primitive.True) }",
     ] {
         let bump = Bump::new();
         let source = format!(
-            "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\n{body}\nsibling = missing ()\n"
+            "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\n{body}\nsibling = missing (assert Primitive.True)\n"
         );
         let errors = infer_output_snapshot!(&bump, &source)
             .expect_err("field failure and independent missing impl");
@@ -404,9 +362,21 @@ fn recovery_field_failures_block_dependent_traits_and_keep_independent_traits() 
 fn recovery_keeps_independent_tuple_siblings_in_both_orders() {
     let header = "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\n";
     for (first, second, expected) in [
-        ("() ()", "missing ()", ["mismatch", "impl"]),
-        ("() ()", "discard (create ())", ["mismatch", "ambiguity"]),
-        ("idfa (Higher [])", "missing ()", ["kind", "impl"]),
+        (
+            "(assert Primitive.True) (assert Primitive.True)",
+            "missing (assert Primitive.True)",
+            ["mismatch", "impl"],
+        ),
+        (
+            "(assert Primitive.True) (assert Primitive.True)",
+            "discard (create ())",
+            ["mismatch", "ambiguity"],
+        ),
+        (
+            "idfa (Higher [])",
+            "missing (assert Primitive.True)",
+            ["kind", "impl"],
+        ),
         ("idfa (Higher [])", "idfa (Higher [])", ["kind", "kind"]),
     ] {
         for reverse in [false, true] {
@@ -439,7 +409,10 @@ fn recovery_keeps_independent_tuple_siblings_in_both_orders() {
 
 #[test]
 fn recovery_annotated_tuple_keeps_independent_obligations() {
-    for body in ["(\\x -> x, missing ())", "(missing (), \\x -> x)"] {
+    for body in [
+        "(\\x -> x, missing (assert Primitive.True))",
+        "(missing (assert Primitive.True), \\x -> x)",
+    ] {
         let bump = Bump::new();
         let source = format!(
             "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ((), ())\nbad = {body}\n"
@@ -465,14 +438,38 @@ fn recovery_annotated_tuple_keeps_independent_obligations() {
 #[test]
 fn recovery_poisoned_tuple_child_keeps_independent_type_mismatches() {
     for (annotation, body, field_errors) in [
-        ("((), ())", "(().field, \\x -> x)", 1),
-        ("((), ())", "(\\x -> x, ().field)", 1),
-        ("((), ())", "(() (), \\x -> x)", 0),
-        ("((), ())", "(\\x -> x, () ())", 0),
-        ("((), ((), ()))", "((), (().field, \\x -> x))", 1),
-        ("(((), ()), ())", "((\\x -> x, ().field), ())", 1),
-        ("(((), ()), ())", "((().field, ()), \\x -> x)", 1),
-        ("((), ((), ()))", "(\\x -> x, ((), ().field))", 1),
+        ("((), ())", "((assert Primitive.True).field, \\x -> x)", 1),
+        ("((), ())", "(\\x -> x, (assert Primitive.True).field)", 1),
+        (
+            "((), ())",
+            "((assert Primitive.True) (assert Primitive.True), \\x -> x)",
+            0,
+        ),
+        (
+            "((), ())",
+            "(\\x -> x, (assert Primitive.True) (assert Primitive.True))",
+            0,
+        ),
+        (
+            "((), ((), ()))",
+            "((), ((assert Primitive.True).field, \\x -> x))",
+            1,
+        ),
+        (
+            "(((), ()), ())",
+            "((\\x -> x, (assert Primitive.True).field), ())",
+            1,
+        ),
+        (
+            "(((), ()), ())",
+            "(((assert Primitive.True).field, ()), \\x -> x)",
+            1,
+        ),
+        (
+            "((), ((), ()))",
+            "(\\x -> x, ((), (assert Primitive.True).field))",
+            1,
+        ),
     ] {
         let bump = Bump::new();
         let source = format!("module Main exposing (..)\nbad : {annotation}\nbad = {body}\n");
@@ -501,8 +498,8 @@ fn recovery_poisoned_tuple_child_keeps_independent_type_mismatches() {
 #[test]
 fn recovery_field_selection_keeps_errors_independent_of_other_fields() {
     for body in [
-        "{ a = ().field, b = (\\x -> x) }.b",
-        "{ a = (\\x -> x), b = ().field }.a",
+        "{ a = (assert Primitive.True).field, b = (\\x -> x) }.b",
+        "{ a = (\\x -> x), b = (assert Primitive.True).field }.a",
     ] {
         let bump = Bump::new();
         let source = format!(
@@ -525,8 +522,14 @@ fn recovery_field_selection_keeps_errors_independent_of_other_fields() {
         );
     }
     for (body, independent) in [
-        ("missing ({ a = ().field, b = () }.b)", true),
-        ("missing ({ a = (), b = ().field }.b)", false),
+        (
+            "missing ({ a = (assert Primitive.True).field, b = (assert Primitive.True) }.b)",
+            true,
+        ),
+        (
+            "missing ({ a = (assert Primitive.True), b = (assert Primitive.True).field }.b)",
+            false,
+        ),
     ] {
         let bump = Bump::new();
         let source = format!(
@@ -565,17 +568,29 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
             let
                 local y = (x, y)
             in
-            (local (), local x)
+            (local Primitive.True, local x)
     "#
     );
     let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
-    let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            interfaces: Some(&literal_interfaces(&bump)),
+            ..Context::default()
+        },
+        &parsed,
+    )
+    .unwrap();
     let mut uf = UnionFind::new();
     let module = &canonical.module;
     let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
     assert_eq!(solved.schemes.len(), 2);
     assert_eq!(
-        solved.instances.len(),
+        solved
+            .instances
+            .values()
+            .filter(|instance| !instance.type_args.is_empty())
+            .count(),
         2,
         "both local calls need type arguments even with no evidence"
     );
@@ -612,6 +627,7 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
     let mut rendered = solved
         .instances
         .values()
+        .filter(|instance| !instance.type_args.is_empty())
         .map(|instance| {
             assert!(instance.evidence.is_empty());
             assert_eq!(instance.type_args.len(), 1);
@@ -619,7 +635,7 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
         })
         .collect::<Vec<_>>();
     rendered.sort();
-    let mut expected = vec!["unit".to_owned(), outer_var.to_owned()];
+    let mut expected = vec!["bool".to_owned(), outer_var.to_owned()];
     expected.sort();
     assert_eq!(rendered, expected);
 }
@@ -829,6 +845,8 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
         ("int", "FromInt", "fromInt"),
         ("string", "FromString", "fromString"),
         ("bytes", "FromBytes", "fromBytes"),
+        ("bool", "FromBool", "fromBool"),
+        ("unit", "FromUnit", "fromUnit"),
     ] {
         for trusted in [true, false] {
             let snapshot_inputs = SnapshotInputs::default();
@@ -892,12 +910,12 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
         trait Permit 'a where
             permit : 'a -> 'a
         trait Gate 'a 'b where
-            gate : 'a -> 'b -> ()
+            gate : 'a -> 'b -> int
         impl Permit 'a => Gate int (Box 'a) where
-            gate x box = ()
+            gate x box = x
         same : 'a -> 'a -> 'a
         same x y = x
-        run : Permit 'a => int -> Box 'a -> ()
+        run : Permit 'a => int -> Box 'a -> int
         run n box = gate (same (fromInt n) (fromInt n)) box
         type option 'a = None | Some 'a
         trait Seed 'a where
@@ -905,9 +923,9 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
         impl Seed int where
             seed n = n
         trait Step 'a 'b where
-            step : 'a -> 'b -> ()
+            step : 'a -> 'b -> int
         impl FromInt 'a => Step int (option 'a) where
-            step x box = ()
+            step x box = x
         chain n = step (fromInt n) (Some (seed n))
     "#
             )
@@ -1223,6 +1241,7 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
         forward x = x
         monomorphic : Keep () => ()
         monomorphic = ()
+        use : (unit, unit)
         use = (forward (), monomorphic)
         recursive : Keep 'a => 'a -> 'a
         recursive x = helper x
@@ -1256,6 +1275,7 @@ fn inferred_context_is_instantiated_independently_at_each_local_use() {
         impl Keep Color where
             keep x = x
         forward x = keep x
+        pair : (unit, Color)
         pair = (forward (), forward Red)
     "#
     );
@@ -1425,6 +1445,7 @@ fn nominal_record_trait_argument_has_no_impl() {
         trait Keep 'a 'b where
             keep : 'a -> 'b -> 'a
         type alias item = { item : unit }
+        value : unit
         value = keep () { item = () }
     "#
     );
@@ -1514,7 +1535,15 @@ fn recursive_definition_metadata_preserves_names_types_and_given_variables() {
     "
     );
     let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
-    let canonical = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            interfaces: Some(&literal_interfaces(&bump)),
+            ..Context::default()
+        },
+        &parsed,
+    )
+    .unwrap();
     let mut definitions = std::collections::BTreeMap::new();
     let mut inferred_group_first = None;
     let mut decls = canonical.module.decls;
@@ -1717,7 +1746,7 @@ fn type_variable_names_do_not_imply_constraints() {
         "compappendish",
     ] {
         let source = format!(
-            "module Main exposing (..)\nidentity : '{name} -> '{name}\nidentity x = x\nmain = identity ()\n"
+            "module Main exposing (..)\nidentity : '{name} -> '{name}\nidentity x = x\nmain : unit\nmain = identity ()\n"
         );
         let annotations =
             infer_output_snapshot!(&bump, &source).expect("ordinary type variable accepts unit");
@@ -2174,11 +2203,19 @@ fn destructured_bindings_preserve_contexts_and_polymorphism() {
             let
                 (identity, unused) = (\x -> x, \y -> y)
             in
-            (identity (), identity (\x -> x))
+            (identity Primitive.True, identity (\x -> x))
     "#
     ));
     let parsed = nash_parse::Parser::new(&bump, input).module().unwrap();
-    let can = nash_can::canonicalize(&bump, Context::default(), &parsed).unwrap();
+    let can = nash_can::canonicalize(
+        &bump,
+        Context {
+            interfaces: Some(&literal_interfaces(&bump)),
+            ..Context::default()
+        },
+        &parsed,
+    )
+    .unwrap();
     let mut uf = UnionFind::new();
     let module = &can.module;
     let (polymorphic, solved) = nash_solve::run(&bump, &mut uf, module, &can.tables)
@@ -2576,7 +2613,7 @@ fn operator_methods_preserve_provider_and_backing_method() {
     let sources = [
         (
             "Methods",
-            "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select () where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n",
+            "module Methods exposing (..)\ninfix left 5 (<+>) = select\ntrait Select 'a where\n    select : 'a -> 'a -> 'a\nimpl Select bool where\n    select x _ = x\nplain : 'a -> 'a -> 'a\nplain x _ = x\n",
         ),
         (
             "Operators",
@@ -2584,11 +2621,11 @@ fn operator_methods_preserve_provider_and_backing_method() {
         ),
         (
             "Main",
-            "module Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = () <+> ()\nright = () <*> ()\nsection = (() <*>)\noperator = (<*>)\n",
+            "module Main exposing (..)\nimport Methods exposing ((<+>))\nimport Operators exposing ((<*>))\npick x y = x <*> y\nleft = Primitive.True <+> Primitive.True\nright = Primitive.True <*> Primitive.True\nsection = (Primitive.True <*>)\noperator = (<*>)\n",
         ),
         (
             "OnlyOperators",
-            "module OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = () <*> ()\nordinary = () <|> ()\n",
+            "module OnlyOperators exposing (..)\nimport Operators exposing ((<*>), (<|>))\nvalue = Primitive.True <*> Primitive.True\nordinary = Primitive.True <|> Primitive.True\n",
         ),
     ];
     let mut output = Vec::new();
@@ -2784,9 +2821,11 @@ fn inline_representation_predicate_rejects_const_at_a_big_use() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        unitValue : unit
+        unitValue = ()
         identity : ('a : Big) -> 'a
         identity x = x
-        rejected = identity ()
+        rejected = identity unitValue
     "#
     );
 }
@@ -2797,7 +2836,9 @@ fn list_data_rejects_const_elements() {
         r#"
         module Main exposing (..)
         import Builtin
-        badList = Builtin.listData [()]
+        unitValue : unit
+        unitValue = ()
+        badList = Builtin.listData [unitValue]
     "#
     );
 }
@@ -2842,13 +2883,15 @@ fn repeated_impl_variables_reject_distinct_inferred_types() {
     assert_inference_error_snapshot!(
         r#"
         module Main exposing (..)
+        unitValue : unit
+        unitValue = ()
         type pairish 'a 'b = Both 'a 'b
         trait Keep 'a where
             keep : 'a -> 'a
         impl Keep (pairish 'a 'a) where
             keep x = x
         route x y = keep (Both x y)
-        rejected = route () ((), ())
+        rejected = route unitValue (unitValue, unitValue)
     "#
     );
 }
@@ -2914,7 +2957,15 @@ fn nested_operator_sections_apply() {
     let module = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
         .module()
         .unwrap();
-    let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            interfaces: Some(&literal_interfaces(&bump)),
+            ..Context::default()
+        },
+        &module,
+    )
+    .unwrap();
     let interface = nash_can::from_module(&bump, &canonical.module, &annotations);
     let mut interfaces = literal_interfaces(&bump);
     interfaces.insert("Operators", interface);
@@ -2925,6 +2976,7 @@ fn nested_operator_sections_apply() {
         import Operators exposing (..)
 
         right = (+ ((+ 1) 2)) "right"
+        left : unit
         left = (((() +) 2) +) "left"
     "#
     );
@@ -4222,7 +4274,15 @@ fn deferred_captured_field_preserves_trait_evidence() {
     "#
     );
     let module = nash_parse::Parser::new(&bump, source).module().unwrap();
-    let canonical = nash_can::canonicalize(&bump, Context::default(), &module).unwrap();
+    let canonical = nash_can::canonicalize(
+        &bump,
+        Context {
+            interfaces: Some(&literal_interfaces(&bump)),
+            ..Context::default()
+        },
+        &module,
+    )
+    .unwrap();
     let mut uf = UnionFind::new();
     let module = &canonical.module;
     let (annotations, solved) = nash_solve::run(&bump, &mut uf, module, &canonical.tables).unwrap();
@@ -4825,7 +4885,7 @@ fn solved_metadata_covers_original_nodes_in_recursive_and_annotated_bodies() {
             if True then
                 let
                     captured y = (alias, y)
-                    (a, b) = captured ()
+                    (a, b) = captured Primitive.True
                 in
                 a
             else
@@ -4894,6 +4954,7 @@ fn solved_metadata_names_captures_consistently_with_schemes_and_instances() {
         indoc!(
             r#"
         module Main exposing (..)
+        outer : 'a -> (('a, unit), 'a)
         outer captured =
             let
                 local argument = (captured, argument)
@@ -5009,9 +5070,16 @@ fn keyword_expressions_infer_messages_and_preserve_result_types() {
 
 #[test]
 fn keyword_expressions_reject_wrong_message_and_condition_types() {
-    for expression in ["assert ()", "trace () ()", "fail ()", "todo ()"] {
+    for expression in [
+        "assert unitValue",
+        "trace unitValue unitValue",
+        "fail unitValue",
+        "todo unitValue",
+    ] {
         let bump = Bump::new();
-        let source = format!("module Main exposing (..)\nvalue = {expression}\n");
+        let source = format!(
+            "module Main exposing (..)\nunitValue : unit\nunitValue = ()\nvalue = {expression}\n"
+        );
         let errors = infer_output_snapshot!(&bump, &source)
             .expect_err("keyword argument has its required builtin type");
         assert!(
@@ -5112,4 +5180,73 @@ fn builtin_pair_pattern_rejects_tuple() {
 #[test]
 fn builtin_pair_pattern_rejects_term_field() {
     assert_inference_error_snapshot!("module Main exposing (..)\nf pair((a, b), _) = a\n");
+}
+
+#[test]
+fn boolean_and_unit_literals_infer_and_default_like_integers() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (type bool(..))
+        truth = True
+        falsehood = False
+        nothing = ()
+        nativeBool : bool
+        nativeBool = True
+        nativeUnit : unit
+        nativeUnit = ()
+        qualified = Primitive.True
+        choose value = if value then True else False
+    "#
+    );
+}
+
+#[test]
+fn boolean_and_unit_literal_constraints_support_custom_types() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (type bool(..))
+        import Literal exposing (FromBool, FromUnit)
+        type marker = Present | Absent
+        impl FromBool marker where
+            fromBool value = if value then Present else Absent
+        impl FromUnit marker where
+            fromUnit _ = Present
+        yes : marker
+        yes = True
+        empty : marker
+        empty = ()
+        genericBool : FromBool 'a => 'a
+        genericBool = False
+        genericUnit : FromUnit 'a => 'a
+        genericUnit = ()
+    "#
+    );
+}
+
+#[test]
+fn boolean_and_unit_literals_require_matching_implementations() {
+    for value in ["True", "False", "()"] {
+        let bump = Bump::new();
+        let source = format!(
+            "module Main exposing (..)\nimport Primitive exposing (type bool(..))\ntype token = Token\nvalue : token\nvalue = {value}\n"
+        );
+        let errors = infer_output_snapshot!(&bump, &source).unwrap_err();
+        assert!(matches!(errors.as_slice(), [Error::MissingImpl { .. }]));
+    }
+}
+
+#[test]
+fn unit_literal_conversion_preserves_nominal_alias_identity() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\ntype alias identity 'a = 'a\nvalue : identity unit\nvalue = ()\n"
+    );
+}
+
+#[test]
+fn user_boolean_constructor_names_are_not_literals() {
+    assert_inference_snapshot!(
+        "module Main exposing (..)\ntype flag = True | False\ntruth = True\nfalsehood = False\n"
+    );
 }

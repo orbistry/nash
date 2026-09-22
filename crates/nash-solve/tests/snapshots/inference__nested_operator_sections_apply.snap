@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n\n\nmodule Main exposing (..)\n\nimport Operators exposing (..)\n\nright = (+ ((+ 1) 2)) \"right\"\nleft = (((() +) 2) +) \"left\"\n"
+description: "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n\n\nmodule Main exposing (..)\n\nimport Operators exposing (..)\n\nright = (+ ((+ 1) 2)) \"right\"\nleft : unit\nleft = (((() +) 2) +) \"left\"\n"
 ---
 left : unit
 right : forall a. FromString a => a

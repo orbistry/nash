@@ -1,6 +1,6 @@
 ---
 source: crates/nash-driver/src/compile.rs
-description: "module Types exposing (type box(..))\ntype box 'a = Box { z : 'a, a : unit }\n\nmodule Main exposing (..)\nimport Types\nmake x = Types.Box { a = (), z = x }\nget : Types.box 'a -> 'a\nget x = x.z\npattern (Types.Box { z }) = z\n"
+description: "module Types exposing (type box(..))\ntype box 'a = Box { z : 'a, a : bool }\n\nmodule Main exposing (..)\nimport Types\nmake x = Types.Box { a = Primitive.True, z = x }\nget : Types.box 'a -> 'a\nget x = x.z\npattern (Types.Box { z }) = z\n"
 ---
 {
     "Main": [

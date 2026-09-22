@@ -172,6 +172,7 @@ case!(
     import Primitive exposing (..)
     import Builtin exposing (..)
     import Eq exposing (..)
+    main : bool
     main =
         let
             x = 1

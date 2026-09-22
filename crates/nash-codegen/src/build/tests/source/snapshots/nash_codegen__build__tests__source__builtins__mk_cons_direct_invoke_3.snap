@@ -3,35 +3,38 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nmain : bool\nmain = equalsData\n    (toData (Builtin.mapData (Builtin.mkCons (Builtin.mkPairData (I 1) (I 1)) (Builtin.mkNilPairData ()))))\n    (toData (Builtin.mapData [Builtin.mkPairData (I 1) (I 1)]))\n"
 ---
 --- core
-let toData#2 : 'erased -> Data = \coerce#8 : 'erased -> coerce#8 in
-let fromInt#4 : int -> int = \value#9 : int -> value#9 in
-let main#1 : bool = equalsData (toData#2 (mapData (mkCons (mkPairData ((\field#3 : int -> iData field#3) (fromInt#4 1)) ((\field#5 : int -> iData field#5) (fromInt#4 1))) (mkNilPairData ())))) (toData#2 (mapData (mkCons (mkPairData ((\field#6 : int -> iData field#6) (fromInt#4 1)) ((\field#7 : int -> iData field#7) (fromInt#4 1))) (con (list (pair data data)) [])))) in
+let toData#2 : 'erased -> Data = \coerce#9 : 'erased -> coerce#9 in
+let fromInt#4 : int -> int = \value#10 : int -> value#10 in
+let fromUnit#6 : unit -> unit = \value#11 : unit -> value#11 in
+let main#1 : bool = equalsData (toData#2 (mapData (mkCons (mkPairData ((\field#3 : int -> iData field#3) (fromInt#4 1)) ((\field#5 : int -> iData field#5) (fromInt#4 1))) (mkNilPairData (fromUnit#6 ()))))) (toData#2 (mapData (mkCons (mkPairData ((\field#7 : int -> iData field#7) (fromInt#4 1)) ((\field#8 : int -> iData field#8) (fromInt#4 1))) (con (list (pair data data)) [])))) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam toData_2
     [(lam fromInt_4
-      [(lam main_1 main_1)
-        [[(builtin equalsData)
-          [toData_2
-            [(builtin mapData)
-              [[(force (builtin mkCons))
-                [[(builtin mkPairData)
-                  [(lam field_3 [(builtin iData) field_3]) [fromInt_4 (con integer 1)]]]
-                  [(lam field_5 [(builtin iData) field_5]) [fromInt_4 (con integer 1)]]]]
-                [(builtin mkNilPairData) (con unit ())]]]]]
-          [toData_2
-            [(builtin mapData)
-              [[(force (builtin mkCons))
-                [[(builtin mkPairData)
-                  [(lam field_6 [(builtin iData) field_6]) [fromInt_4 (con integer 1)]]]
-                  [(lam field_7 [(builtin iData) field_7]) [fromInt_4 (con integer 1)]]]]
-                (con (list (pair data data)) [])]]]]])
-      (lam value_9 value_9)])
-    (lam coerce_8 coerce_8)])
+      [(lam fromUnit_6
+        [(lam main_1 main_1)
+          [[(builtin equalsData)
+            [toData_2
+              [(builtin mapData)
+                [[(force (builtin mkCons))
+                  [[(builtin mkPairData)
+                    [(lam field_3 [(builtin iData) field_3]) [fromInt_4 (con integer 1)]]]
+                    [(lam field_5 [(builtin iData) field_5]) [fromInt_4 (con integer 1)]]]]
+                  [(builtin mkNilPairData) [fromUnit_6 (con unit ())]]]]]]
+            [toData_2
+              [(builtin mapData)
+                [[(force (builtin mkCons))
+                  [[(builtin mkPairData)
+                    [(lam field_7 [(builtin iData) field_7]) [fromInt_4 (con integer 1)]]]
+                    [(lam field_8 [(builtin iData) field_8]) [fromInt_4 (con integer 1)]]]]
+                  (con (list (pair data data)) [])]]]]])
+        (lam value_11 value_11)])
+      (lam value_10 value_10)])
+    (lam coerce_9 coerce_9)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2869049, memory: 8053
+cpu: 2965049, memory: 8653

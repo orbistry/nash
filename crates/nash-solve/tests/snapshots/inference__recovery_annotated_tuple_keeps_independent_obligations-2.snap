@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ((), ())\nbad = (missing (), \\x -> x)\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\nbad : ((), ())\nbad = (missing (assert Primitive.True), \\x -> x)\n"
 info: diagnostic
 ---
 nash::type::missing_impl
@@ -8,7 +8,7 @@ nash::type::missing_impl
   × No impl for `Missing unit`.
    ╭─[Main.nash:5:8]
  4 │ bad : ((), ())
- 5 │ bad = (missing (), \x -> x)
+ 5 │ bad = (missing (assert Primitive.True), \x -> x)
    ·        ───┬───
    ·           ╰── required by `missing`
    ╰────
@@ -23,7 +23,7 @@ nash::type::mismatch
  4 │ bad : ((), ())
    ·       ────┬───
    ·           ╰── declared type
- 5 │ bad = (missing (), \x -> x)
-   ·       ──────────┬──────────
-   ·                 ╰── body of `bad`
+ 5 │ bad = (missing (assert Primitive.True), \x -> x)
+   ·       ─────────────────────┬────────────────────
+   ·                            ╰── body of `bad`
    ╰────

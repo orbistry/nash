@@ -3,37 +3,42 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nchoose : bool -> int\nchoose flag =\n    if trace \"condition\" flag then trace \"true\" 42\n    else trace \"false\" 7\nmain = (choose True, choose False)\n"
 ---
 --- core
-let message#8 : string = "condition" in
-let message#9 : string = "true" in
-let message#10 : string = "false" in
-let fromInt#4 : int -> int = \value#6 : int -> value#6 in
-let fromString#5 : string -> string = \value#7 : string -> value#7 in
-let choose#2 : bool -> int = \flag#3 : bool -> case@Bool (trace (fromString#5 message#8) in flag#3) of
-  True -> trace (fromString#5 message#9) in fromInt#4 42
-  False -> trace (fromString#5 message#10) in fromInt#4 7 in
-let main#1 : (int, int) = constr 0 (choose#2 true) (choose#2 false) in
+let message#10 : string = "condition" in
+let message#11 : string = "true" in
+let message#12 : string = "false" in
+let fromInt#5 : int -> int = \value#8 : int -> value#8 in
+let fromString#6 : string -> string = \value#9 : string -> value#9 in
+let choose#2 : bool -> int = \flag#4 : bool -> case@Bool (trace (fromString#6 message#10) in flag#4) of
+  True -> trace (fromString#6 message#11) in fromInt#5 42
+  False -> trace (fromString#6 message#12) in fromInt#5 7 in
+let fromBool#3 : bool -> bool = \value#7 : bool -> value#7 in
+let main#1 : (int, int) = constr 0 (choose#2 (fromBool#3 true)) (choose#2 (fromBool#3 false)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_8
-    [(lam message_9
-      [(lam message_10
-        [(lam fromInt_4
-          [(lam fromString_5
+  [(lam message_10
+    [(lam message_11
+      [(lam message_12
+        [(lam fromInt_5
+          [(lam fromString_6
             [(lam choose_2
-              [(lam main_1 main_1)
-                (constr 0 [choose_2 (con bool True)] [choose_2 (con bool False)])])
-              (lam flag_3
+              [(lam fromBool_3
+                [(lam main_1 main_1)
+                  (constr 0
+                    [choose_2 [fromBool_3 (con bool True)]]
+                    [choose_2 [fromBool_3 (con bool False)]])])
+                (lam value_7 value_7)])
+              (lam flag_4
                 (case
-                  (force [[(force (builtin trace)) [fromString_5 message_8]] (delay flag_3)])
+                  (force [[(force (builtin trace)) [fromString_6 message_10]] (delay flag_4)])
                   (force
-                    [[(force (builtin trace)) [fromString_5 message_10]]
-                      (delay [fromInt_4 (con integer 7)])])
+                    [[(force (builtin trace)) [fromString_6 message_12]]
+                      (delay [fromInt_5 (con integer 7)])])
                   (force
-                    [[(force (builtin trace)) [fromString_5 message_9]]
-                      (delay [fromInt_4 (con integer 42)])])))])
-            (lam value_7 value_7)])
-          (lam value_6 value_6)])
+                    [[(force (builtin trace)) [fromString_6 message_11]]
+                      (delay [fromInt_5 (con integer 42)])])))])
+            (lam value_9 value_9)])
+          (lam value_8 value_8)])
         (con string "false")])
       (con string "true")])
     (con string "condition")])
@@ -42,4 +47,4 @@ main#1
 --- logs
 ["condition", "true", "condition", "false"]
 --- budget
-cpu: 1518092, memory: 8228
+cpu: 1662092, memory: 9128

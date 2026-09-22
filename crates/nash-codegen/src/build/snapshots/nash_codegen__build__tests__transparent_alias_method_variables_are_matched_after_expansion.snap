@@ -1,19 +1,25 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias identity 'b = 'b\ntrait Keep 'a where\n    keep : 'a -> identity 'b -> identity 'b\nimpl Keep unit where\n    keep _ x = x\nmain = keep () ()\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias identity 'b = 'b\ntrait Keep 'a where\n    keep : 'a -> identity 'b -> identity 'b\nimpl Keep unit where\n    keep _ x = x\nraw : unit\nraw = ()\nmain : unit\nmain = keep () raw\n"
 ---
 --- core
-let keep#2 : unit -> 'erased -> 'erased = \arg#3 : unit x#4 : 'erased -> let match#5 : unit = arg#3 in
-x#4 in
-let main#1 : unit = keep#2 () () in
+let keep#2 : unit -> 'erased -> 'erased = \arg#5 : unit x#6 : 'erased -> let match#7 : unit = arg#5 in
+x#6 in
+let fromUnit#3 : unit -> unit = \value#8 : unit -> value#8 in
+let raw#4 : unit = fromUnit#3 () in
+let main#1 : unit = keep#2 (fromUnit#3 ()) raw#4 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam keep_2 [(lam main_1 main_1) [[keep_2 (con unit ())] (con unit ())]])
-    (lam arg_3 (lam x_4 [(lam match_5 x_4) arg_3]))])
+  [(lam keep_2
+    [(lam fromUnit_3
+      [(lam raw_4 [(lam main_1 main_1) [[keep_2 [fromUnit_3 (con unit ())]] raw_4]])
+        [fromUnit_3 (con unit ())]])
+      (lam value_8 value_8)])
+    (lam arg_5 (lam x_6 [(lam match_7 x_6) arg_5]))])
 --- result
 (con unit ())
 --- logs
 []
 --- budget
-cpu: 256100, memory: 1700
+cpu: 448100, memory: 2900

@@ -1,25 +1,33 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfirst x =\n    let\n        helper y = x\n    in\n    helper ()\nsecond x =\n    let\n        helper y = y\n    in\n    helper x\nmain = (first True, second ())\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfirst x =\n    let\n        helper y = x\n    in\n    helper ()\nsecond x =\n    let\n        helper y = y\n    in\n    helper x\nmain : (bool, unit)\nmain = (first True, second ())\n"
 ---
 --- core
-let first#2 : 'erased -> 'erased = \x#4 : 'erased -> let helper#5 : 'erased -> 'erased = \y#6 : 'erased -> x#4 in
-helper#5 () in
-let second#3 : 'erased -> 'erased = \x#7 : 'erased -> let helper#8 : 'erased -> 'erased = \y#9 : 'erased -> y#9 in
-helper#8 x#7 in
-let main#1 : (bool, unit) = constr 0 (first#2 true) (second#3 ()) in
+let fromUnit#5 : unit -> unit = \value#13 : unit -> value#13 in
+let first#2 : 'erased -> 'erased = \x#6 : 'erased -> let helper#7 : 'erased -> 'erased = \y#8 : 'erased -> x#6 in
+helper#7 (fromUnit#5 ()) in
+let fromBool#3 : bool -> bool = \value#9 : bool -> value#9 in
+let second#4 : 'erased -> 'erased = \x#10 : 'erased -> let helper#11 : 'erased -> 'erased = \y#12 : 'erased -> y#12 in
+helper#11 x#10 in
+let main#1 : (bool, unit) = constr 0 (first#2 (fromBool#3 true)) (second#4 (fromUnit#5 ())) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam first_2
-    [(lam second_3
-      [(lam main_1 main_1)
-        (constr 0 [first_2 (con bool True)] [second_3 (con unit ())])])
-      (lam x_7 [(lam helper_8 [helper_8 x_7]) (lam y_9 y_9)])])
-    (lam x_4 [(lam helper_5 [helper_5 (con unit ())]) (lam y_6 x_4)])])
+  [(lam fromUnit_5
+    [(lam first_2
+      [(lam fromBool_3
+        [(lam second_4
+          [(lam main_1 main_1)
+            (constr 0
+              [first_2 [fromBool_3 (con bool True)]]
+              [second_4 [fromUnit_5 (con unit ())]])])
+          (lam x_10 [(lam helper_11 [helper_11 x_10]) (lam y_12 y_12)])])
+        (lam value_9 value_9)])
+      (lam x_6 [(lam helper_7 [helper_7 [fromUnit_5 (con unit ())]]) (lam y_8 x_6)])])
+    (lam value_13 value_13)])
 --- result
 (constr 0 (con bool True) (con unit ()))
 --- logs
 []
 --- budget
-cpu: 480100, memory: 3100
+cpu: 720100, memory: 4600

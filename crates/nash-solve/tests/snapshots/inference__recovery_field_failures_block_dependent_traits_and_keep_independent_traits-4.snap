@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = () }\nsibling = missing ()\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntype thing = Thing { a : () }\nbad : thing -> thing\nbad record = missing { record | a = (assert Primitive.True) }\nsibling = missing (assert Primitive.True)\n"
 info: diagnostic
 ---
 nash::type::update_not_record
@@ -8,9 +8,9 @@ nash::type::update_not_record
   × Cannot update fields of `thing`.
    ╭─[Main.nash:6:33]
  5 │ bad : thing -> thing
- 6 │ bad record = missing { record | a = () }
+ 6 │ bad record = missing { record | a = (assert Primitive.True) }
    ·                                 ─
- 7 │ sibling = missing ()
+ 7 │ sibling = missing (assert Primitive.True)
    ╰────
   help: Rebuild the value with its constructor.
 
@@ -19,8 +19,8 @@ nash::type::missing_impl
 
   × No impl for `Missing unit`.
    ╭─[Main.nash:7:11]
- 6 │ bad record = missing { record | a = () }
- 7 │ sibling = missing ()
+ 6 │ bad record = missing { record | a = (assert Primitive.True) }
+ 7 │ sibling = missing (assert Primitive.True)
    ·           ───┬───
    ·              ╰── required by `missing`
    ╰────

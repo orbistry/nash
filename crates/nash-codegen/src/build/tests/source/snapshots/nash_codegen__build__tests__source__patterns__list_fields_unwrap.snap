@@ -3,106 +3,112 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Lift exposing (lower)\ntype Fields = Fields { a : Bytes, b : Int }\ndataFields : unit -> list Fields\ndataFields _ = [Fields { a = #\"\", b = 14 }, Fields { a = #\"AA\", b = 0 }]\nmain =\n    case dataFields () of\n        (Fields { b }) :: _ -> lessThanInteger 0 (lower b)\n        _ -> False\n"
 ---
 --- core
-let message#28 : string = "incomplete pattern match" in
-let fromBytes#19 : bytes -> Bytes = bData in
-let fromInt#20 : int -> Int = iData in
-let dataFields#2 : unit -> list Main.Fields = \arg#16 : unit -> let match#23 : unit = arg#16 in
-mkCons ((\field#17 : Bytes field#18 : Int -> constrData 0 (mkCons field#17 (mkCons field#18 (con (list data) [])))) (fromBytes#19 (con bytestring #)) (fromInt#20 14)) (mkCons ((\field#21 : Bytes field#22 : Int -> constrData 0 (mkCons field#21 (mkCons field#22 (con (list data) [])))) (fromBytes#19 (con bytestring #aa)) (fromInt#20 0)) (con (list data) [])) in
-let fromInt#4 : int -> int = \value#24 : int -> value#24 in
-let lower#5 : Int -> int = unIData in
-let match#6 : list Main.Fields = dataFields#2 () in
-let main#1 : bool = case@List match#6 of
-  Nil -> false
-  Cons field#7 field#8 -> case@Data field#7 of
-    DataConstr pair#15 -> case@Pair pair#15 of
-      Pair tag#11 fields#12 -> case@Int tag#11 of
-        0 -> let fieldList#13 : list Data = fields#12 in
-        let projection#25 : Data = headList fieldList#13 in
-        let field#9 : Bytes = projection#25 in
-        let projection#26 : list Data = tailList fieldList#13 in
-        let fieldList#14 : list Data = projection#26 in
-        let projection#27 : Data = headList fieldList#14 in
-        let field#10 : Int = projection#27 in
-        let b#3 : Int = field#10 in
-        lessThanInteger (fromInt#4 0) (lower#5 b#3)
-        _ -> trace message#28 in error
-    _ -> trace message#28 in error in
+let message#32 : string = "incomplete pattern match" in
+let fromBytes#21 : bytes -> Bytes = bData in
+let fromInt#22 : int -> Int = iData in
+let dataFields#2 : unit -> list Main.Fields = \arg#18 : unit -> let match#25 : unit = arg#18 in
+mkCons ((\field#19 : Bytes field#20 : Int -> constrData 0 (mkCons field#19 (mkCons field#20 (con (list data) [])))) (fromBytes#21 (con bytestring #)) (fromInt#22 14)) (mkCons ((\field#23 : Bytes field#24 : Int -> constrData 0 (mkCons field#23 (mkCons field#24 (con (list data) [])))) (fromBytes#21 (con bytestring #aa)) (fromInt#22 0)) (con (list data) [])) in
+let fromUnit#3 : unit -> unit = \value#26 : unit -> value#26 in
+let fromInt#5 : int -> int = \value#27 : int -> value#27 in
+let lower#6 : Int -> int = unIData in
+let fromBool#7 : bool -> bool = \value#28 : bool -> value#28 in
+let match#8 : list Main.Fields = dataFields#2 (fromUnit#3 ()) in
+let main#1 : bool = case@List match#8 of
+  Nil -> fromBool#7 false
+  Cons field#9 field#10 -> case@Data field#9 of
+    DataConstr pair#17 -> case@Pair pair#17 of
+      Pair tag#13 fields#14 -> case@Int tag#13 of
+        0 -> let fieldList#15 : list Data = fields#14 in
+        let projection#29 : Data = headList fieldList#15 in
+        let field#11 : Bytes = projection#29 in
+        let projection#30 : list Data = tailList fieldList#15 in
+        let fieldList#16 : list Data = projection#30 in
+        let projection#31 : Data = headList fieldList#16 in
+        let field#12 : Int = projection#31 in
+        let b#4 : Int = field#12 in
+        lessThanInteger (fromInt#5 0) (lower#6 b#4)
+        _ -> trace message#32 in error
+    _ -> trace message#32 in error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_28
-    [(lam fromBytes_19
-      [(lam fromInt_20
+  [(lam message_32
+    [(lam fromBytes_21
+      [(lam fromInt_22
         [(lam dataFields_2
-          [(lam fromInt_4
-            [(lam lower_5
-              [(lam match_6
-                [(lam main_1 main_1)
-                  (case
-                    match_6
-                    (lam field_7
-                      (lam field_8
-                        [(lam generated_29
-                          (force
-                            [[[[[[(force (builtin chooseData)) generated_29]
-                              (delay
-                                [(lam pair_15
-                                  (case
-                                    pair_15
-                                    (lam tag_11
-                                      (lam fields_12
-                                        [(lam generated_30
-                                          (case
-                                            [[(builtin equalsInteger) generated_30] (con integer 0)]
-                                            (force [[(force (builtin trace)) message_28] (delay (error))])
-                                            [(lam fieldList_13
-                                              [(lam projection_25
-                                                [(lam field_9
-                                                  [(lam projection_26
-                                                    [(lam fieldList_14
-                                                      [(lam projection_27
-                                                        [(lam field_10
-                                                          [(lam b_3
-                                                            [[(builtin lessThanInteger) [fromInt_4 (con integer 0)]] [lower_5 b_3]])
-                                                            field_10])
-                                                          projection_27])
-                                                        [(force (builtin headList)) fieldList_14]])
-                                                      projection_26])
-                                                    [(force (builtin tailList)) fieldList_13]])
-                                                  projection_25])
-                                                [(force (builtin headList)) fieldList_13]])
-                                              fields_12]))
-                                          tag_11]))))
-                                  [(builtin unConstrData) generated_29]])]
-                              (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_28] (delay (error))]))]))
-                          field_7]))
-                    (con bool False))])
-                [dataFields_2 (con unit ())]])
-              (builtin unIData)])
-            (lam value_24 value_24)])
-          (lam arg_16
-            [(lam match_23
+          [(lam fromUnit_3
+            [(lam fromInt_5
+              [(lam lower_6
+                [(lam fromBool_7
+                  [(lam match_8
+                    [(lam main_1 main_1)
+                      (case
+                        match_8
+                        (lam field_9
+                          (lam field_10
+                            [(lam generated_33
+                              (force
+                                [[[[[[(force (builtin chooseData)) generated_33]
+                                  (delay
+                                    [(lam pair_17
+                                      (case
+                                        pair_17
+                                        (lam tag_13
+                                          (lam fields_14
+                                            [(lam generated_34
+                                              (case
+                                                [[(builtin equalsInteger) generated_34] (con integer 0)]
+                                                (force [[(force (builtin trace)) message_32] (delay (error))])
+                                                [(lam fieldList_15
+                                                  [(lam projection_29
+                                                    [(lam field_11
+                                                      [(lam projection_30
+                                                        [(lam fieldList_16
+                                                          [(lam projection_31
+                                                            [(lam field_12
+                                                              [(lam b_4
+                                                                [[(builtin lessThanInteger) [fromInt_5 (con integer 0)]] [lower_6 b_4]])
+                                                                field_12])
+                                                              projection_31])
+                                                            [(force (builtin headList)) fieldList_16]])
+                                                          projection_30])
+                                                        [(force (builtin tailList)) fieldList_15]])
+                                                      projection_29])
+                                                    [(force (builtin headList)) fieldList_15]])
+                                                  fields_14]))
+                                              tag_13]))))
+                                      [(builtin unConstrData) generated_33]])]
+                                  (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
+                                  (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
+                              field_9]))
+                        [fromBool_7 (con bool False)])])
+                    [dataFields_2 [fromUnit_3 (con unit ())]]])
+                  (lam value_28 value_28)])
+                (builtin unIData)])
+              (lam value_27 value_27)])
+            (lam value_26 value_26)])
+          (lam arg_18
+            [(lam match_25
               [[(force (builtin mkCons))
-                [[(lam field_17
-                  (lam field_18
+                [[(lam field_19
+                  (lam field_20
                     [[(builtin constrData) (con integer 0)]
-                      [[(force (builtin mkCons)) field_17]
-                        [[(force (builtin mkCons)) field_18] (con (list data) [])]]]))
-                  [fromBytes_19 (con bytestring #)]]
-                  [fromInt_20 (con integer 14)]]]
+                      [[(force (builtin mkCons)) field_19]
+                        [[(force (builtin mkCons)) field_20] (con (list data) [])]]]))
+                  [fromBytes_21 (con bytestring #)]]
+                  [fromInt_22 (con integer 14)]]]
                 [[(force (builtin mkCons))
-                  [[(lam field_21
-                    (lam field_22
+                  [[(lam field_23
+                    (lam field_24
                       [[(builtin constrData) (con integer 0)]
-                        [[(force (builtin mkCons)) field_21]
-                          [[(force (builtin mkCons)) field_22] (con (list data) [])]]]))
-                    [fromBytes_19 (con bytestring #aa)]]
-                    [fromInt_20 (con integer 0)]]]
+                        [[(force (builtin mkCons)) field_23]
+                          [[(force (builtin mkCons)) field_24] (con (list data) [])]]]))
+                    [fromBytes_21 (con bytestring #aa)]]
+                    [fromInt_22 (con integer 0)]]]
                   (con (list data) [])]])
-              arg_16])])
+              arg_18])])
         (builtin iData)])
       (builtin bData)])
     (con string "incomplete pattern match")])
@@ -111,4 +117,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 3752831, memory: 17778
+cpu: 3896831, memory: 18678

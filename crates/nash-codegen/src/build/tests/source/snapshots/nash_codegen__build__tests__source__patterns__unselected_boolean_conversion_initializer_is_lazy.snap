@@ -3,34 +3,37 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..), coerce)\nimport Bool\nimport Lift exposing (Lift)\ntype alias flag = bool\nimpl Lift bool flag where\n    lift item = coerce item\n    lower = (fail \"unselected conversion\")\nvalue : flag\nvalue = coerce False\nmain : bool\nmain = Bool.or True value\n"
 ---
 --- core
-let message#8 : string = "unselected conversion" in
-let value#2 : bool = (\coerce#7 : 'erased -> coerce#7) false in
-let main#1 : bool = case@Bool true of
+let message#10 : string = "unselected conversion" in
+let fromBool#2 : bool -> bool = \value#8 : bool -> value#8 in
+let value#3 : bool = (\coerce#9 : 'erased -> coerce#9) (fromBool#2 false) in
+let main#1 : bool = case@Bool fromBool#2 true of
   True -> true
-  False -> let message#6 : string = message#8 in
-  let fromString#4 : string -> string = \value#5 : string -> value#5 in
-  let lower#3 : bool -> bool = trace (fromString#4 message#6) in error in
-  lower#3 value#2 in
+  False -> let message#7 : string = message#10 in
+  let fromString#5 : string -> string = \value#6 : string -> value#6 in
+  let lower#4 : bool -> bool = trace (fromString#5 message#7) in error in
+  lower#4 value#3 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_8
-    [(lam value_2
-      [(lam main_1 main_1)
-        (case
-          (con bool True)
-          [(lam message_6
-            [(lam fromString_4
-              [(lam lower_3 [lower_3 value_2])
-                (force [[(force (builtin trace)) [fromString_4 message_6]] (delay (error))])])
-              (lam value_5 value_5)])
-            message_8]
-          (con bool True))])
-      [(lam coerce_7 coerce_7) (con bool False)]])
+  [(lam message_10
+    [(lam fromBool_2
+      [(lam value_3
+        [(lam main_1 main_1)
+          (case
+            [fromBool_2 (con bool True)]
+            [(lam message_7
+              [(lam fromString_5
+                [(lam lower_4 [lower_4 value_3])
+                  (force [[(force (builtin trace)) [fromString_5 message_7]] (delay (error))])])
+                (lam value_6 value_6)])
+              message_10]
+            (con bool True))])
+        [(lam coerce_9 coerce_9) [fromBool_2 (con bool False)]]])
+      (lam value_8 value_8)])
     (con string "unselected conversion")])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 240100, memory: 1600
+cpu: 384100, memory: 2500

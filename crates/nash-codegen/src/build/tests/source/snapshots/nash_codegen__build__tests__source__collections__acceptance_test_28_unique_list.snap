@@ -3,120 +3,128 @@ source: crates/nash-codegen/src/build/tests/source/collections.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nfilter xs f =\n    case xs of\n        [] -> []\n        x :: rest ->\n            if f x then mkCons x (filter rest f)\n            else filter rest f\nunique xs =\n    case xs of\n        [] -> []\n        x :: rest -> mkCons x (unique (filter rest (\\y -> neq y x)))\nmain = eq (unique [1, 2, 3, 1]) [1, 2, 3]\n"
 ---
 --- core
-let eq#7 : int -> int -> bool = equalsInteger in
-let eq#2 : list 'erased -> list 'erased -> bool = (\self#34 : 'erased -> self#34 self#34) (\self#34 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
+let fromBool#7 : bool -> bool = \value#19 : bool -> value#19 in
+let eq#8 : int -> int -> bool = equalsInteger in
+let eq#2 : list 'erased -> list 'erased -> bool = (\self#36 : 'erased -> self#36 self#36) (\self#36 : 'erased xs#5 : list 'erased ys#6 : list 'erased -> case@Bool nullList xs#5 of
   True -> nullList ys#6
   False -> case@Bool nullList ys#6 of
-    True -> false
-    False -> let projection#27 : 'erased = headList xs#5 in
-    let projection#28 : 'erased = headList ys#6 in
-    case@Bool eq#7 projection#27 projection#28 of
-      True -> let projection#29 : list 'erased = tailList xs#5 in
-      let projection#30 : list 'erased = tailList ys#6 in
-      self#34 self#34 projection#29 projection#30
-      False -> false) in
-let filter#11 : list int -> (int -> bool) -> list int = \xs#18 : list int (f#19 : int -> bool) -> (\self#33 : 'erased -> self#33 self#33) (\self#33 : 'erased xs#18 : list int -> let match#22 : list int = xs#18 in
-case@List match#22 of
+    True -> fromBool#7 false
+    False -> let projection#29 : 'erased = headList xs#5 in
+    let projection#30 : 'erased = headList ys#6 in
+    case@Bool eq#8 projection#29 projection#30 of
+      True -> let projection#31 : list 'erased = tailList xs#5 in
+      let projection#32 : list 'erased = tailList ys#6 in
+      self#36 self#36 projection#31 projection#32
+      False -> fromBool#7 false) in
+let filter#12 : list int -> (int -> bool) -> list int = \xs#20 : list int (f#21 : int -> bool) -> (\self#35 : 'erased -> self#35 self#35) (\self#35 : 'erased xs#20 : list int -> let match#24 : list int = xs#20 in
+case@List match#24 of
   Nil -> (con (list integer) [])
-  Cons field#23 field#24 -> let x#20 : int = field#23 in
-  let rest#21 : list int = field#24 in
-  case@Bool f#19 x#20 of
-    True -> mkCons x#20 (self#33 self#33 rest#21)
-    False -> self#33 self#33 rest#21) xs#18 in
-let neq#13 : 'erased -> 'erased -> bool = \a#25 : 'erased b#26 : 'erased -> case@Bool eq#7 a#25 b#26 of
-  True -> false
-  False -> true in
-let unique#3 : list int -> list int = (\self#31 : 'erased -> self#31 self#31) (\self#31 : 'erased xs#8 : list int -> let match#14 : list int = xs#8 in
-case@List match#14 of
+  Cons field#25 field#26 -> let x#22 : int = field#25 in
+  let rest#23 : list int = field#26 in
+  case@Bool f#21 x#22 of
+    True -> mkCons x#22 (self#35 self#35 rest#23)
+    False -> self#35 self#35 rest#23) xs#20 in
+let neq#14 : 'erased -> 'erased -> bool = \a#27 : 'erased b#28 : 'erased -> case@Bool eq#8 a#27 b#28 of
+  True -> fromBool#7 false
+  False -> fromBool#7 true in
+let unique#3 : list int -> list int = (\self#33 : 'erased -> self#33 self#33) (\self#33 : 'erased xs#9 : list int -> let match#15 : list int = xs#9 in
+case@List match#15 of
   Nil -> (con (list integer) [])
-  Cons field#15 field#16 -> let x#9 : int = field#15 in
-  let rest#10 : list int = field#16 in
-  mkCons x#9 (self#31 self#31 (filter#11 rest#10 (\y#12 : int -> neq#13 y#12 x#9)))) in
-let fromInt#4 : int -> int = \value#17 : int -> value#17 in
+  Cons field#16 field#17 -> let x#10 : int = field#16 in
+  let rest#11 : list int = field#17 in
+  mkCons x#10 (self#33 self#33 (filter#12 rest#11 (\y#13 : int -> neq#14 y#13 x#10)))) in
+let fromInt#4 : int -> int = \value#18 : int -> value#18 in
 let main#1 : bool = eq#2 (unique#3 (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (mkCons (fromInt#4 1) (con (list integer) [])))))) (mkCons (fromInt#4 1) (mkCons (fromInt#4 2) (mkCons (fromInt#4 3) (con (list integer) [])))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_7
-    [(lam eq_2
-      [(lam filter_11
-        [(lam neq_13
-          [(lam unique_3
-            [(lam fromInt_4
-              [(lam main_1 main_1)
-                [[eq_2
-                  [unique_3
+  [(lam fromBool_7
+    [(lam eq_8
+      [(lam eq_2
+        [(lam filter_12
+          [(lam neq_14
+            [(lam unique_3
+              [(lam fromInt_4
+                [(lam main_1 main_1)
+                  [[eq_2
+                    [unique_3
+                      [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
+                          [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
+                            [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]] (con (list integer) [])]]]]]]
                     [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
                       [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
-                        [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]]
-                          [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]] (con (list integer) [])]]]]]]
-                  [[(force (builtin mkCons)) [fromInt_4 (con integer 1)]]
-                    [[(force (builtin mkCons)) [fromInt_4 (con integer 2)]]
-                      [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]])
-              (lam value_17 value_17)])
-            [(lam self_31 [self_31 self_31])
-              (lam self_31
-                (lam xs_8
-                  [(lam match_14
-                    (case
-                      match_14
-                      (lam field_15
-                        (lam field_16
-                          [(lam x_9
-                            [(lam rest_10
-                              [[(force (builtin mkCons)) x_9]
-                                [[self_31 self_31] [[filter_11 rest_10] (lam y_12 [[neq_13 y_12] x_9])]]])
-                              field_16])
-                            field_15]))
-                      (con (list integer) [])))
-                    xs_8]))]])
-          (lam a_25 (lam b_26 (case [[eq_7 a_25] b_26] (con bool True) (con bool False))))])
-        (lam xs_18
-          (lam f_19
-            [[(lam self_33 [self_33 self_33])
-              (lam self_33
-                (lam xs_18
-                  [(lam match_22
-                    (case
-                      match_22
-                      (lam field_23
-                        (lam field_24
-                          [(lam x_20
-                            [(lam rest_21
-                              (case
-                                [f_19 x_20]
-                                [[self_33 self_33] rest_21]
-                                [[(force (builtin mkCons)) x_20] [[self_33 self_33] rest_21]]))
-                              field_24])
-                            field_23]))
-                      (con (list integer) [])))
-                    xs_18]))]
-              xs_18]))])
-      [(lam self_34 [self_34 self_34])
-        (lam self_34
-          (lam xs_5
-            (lam ys_6
-              (case
-                [(force (builtin nullList)) xs_5]
-                (case
-                  [(force (builtin nullList)) ys_6]
-                  [(lam projection_27
-                    [(lam projection_28
+                        [[(force (builtin mkCons)) [fromInt_4 (con integer 3)]] (con (list integer) [])]]]]])
+                (lam value_18 value_18)])
+              [(lam self_33 [self_33 self_33])
+                (lam self_33
+                  (lam xs_9
+                    [(lam match_15
                       (case
-                        [[eq_7 projection_27] projection_28]
-                        (con bool False)
-                        [(lam projection_29
-                          [(lam projection_30 [[[self_34 self_34] projection_29] projection_30])
-                            [(force (builtin tailList)) ys_6]])
-                          [(force (builtin tailList)) xs_5]]))
-                      [(force (builtin headList)) ys_6]])
-                    [(force (builtin headList)) xs_5]]
-                  (con bool False))
-                [(force (builtin nullList)) ys_6]))))]])
-    (builtin equalsInteger)])
+                        match_15
+                        (lam field_16
+                          (lam field_17
+                            [(lam x_10
+                              [(lam rest_11
+                                [[(force (builtin mkCons)) x_10]
+                                  [[self_33 self_33] [[filter_12 rest_11] (lam y_13 [[neq_14 y_13] x_10])]]])
+                                field_17])
+                              field_16]))
+                        (con (list integer) [])))
+                      xs_9]))]])
+            (lam a_27
+              (lam b_28
+                (case
+                  [[eq_8 a_27] b_28]
+                  [fromBool_7 (con bool True)]
+                  [fromBool_7 (con bool False)])))])
+          (lam xs_20
+            (lam f_21
+              [[(lam self_35 [self_35 self_35])
+                (lam self_35
+                  (lam xs_20
+                    [(lam match_24
+                      (case
+                        match_24
+                        (lam field_25
+                          (lam field_26
+                            [(lam x_22
+                              [(lam rest_23
+                                (case
+                                  [f_21 x_22]
+                                  [[self_35 self_35] rest_23]
+                                  [[(force (builtin mkCons)) x_22] [[self_35 self_35] rest_23]]))
+                                field_26])
+                              field_25]))
+                        (con (list integer) [])))
+                      xs_20]))]
+                xs_20]))])
+        [(lam self_36 [self_36 self_36])
+          (lam self_36
+            (lam xs_5
+              (lam ys_6
+                (case
+                  [(force (builtin nullList)) xs_5]
+                  (case
+                    [(force (builtin nullList)) ys_6]
+                    [(lam projection_29
+                      [(lam projection_30
+                        (case
+                          [[eq_8 projection_29] projection_30]
+                          [fromBool_7 (con bool False)]
+                          [(lam projection_31
+                            [(lam projection_32 [[[self_36 self_36] projection_31] projection_32])
+                              [(force (builtin tailList)) ys_6]])
+                            [(force (builtin tailList)) xs_5]]))
+                        [(force (builtin headList)) ys_6]])
+                      [(force (builtin headList)) xs_5]]
+                    [fromBool_7 (con bool False)])
+                  [(force (builtin nullList)) ys_6]))))]])
+      (builtin equalsInteger)])
+    (lam value_19 value_19)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 11691479, memory: 56163
+cpu: 11931479, memory: 57663

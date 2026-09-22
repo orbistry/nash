@@ -1306,8 +1306,12 @@ fn collect_from_expr<'a>(
             collect_from_expr(&message.value, home, used);
             collect_from_expr(&body.value, home, used);
         }
-        VarLocal(_) | Accessor(_) | Unit => {}
-        Str(_) | Bytes(_) | Int(_) => {
+        VarLocal(_) | Accessor(_) => {}
+        Bool(_) => {
+            add_if_foreign(home, nash_ast::primitives::primitive_home(), used);
+            add_if_foreign(home, nash_ast::primitives::literal_home(), used);
+        }
+        Str(_) | Bytes(_) | Int(_) | Unit => {
             add_if_foreign(home, nash_ast::primitives::literal_home(), used);
         }
         VarTopLevel(q) => add_if_foreign(home, q.home, used),

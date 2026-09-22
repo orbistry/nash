@@ -3,14 +3,15 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nempty _ = []\nints : unit -> list int\nints = empty\nbigInts : unit -> list Int\nbigInts = empty\nbigBytes : unit -> list Bytes\nbigBytes = empty\nmain = (ints (), bigInts (), bigBytes ())\n"
 ---
 --- core
-let empty#5 : 'erased -> list int = \arg#7 : 'erased -> let match#8 : 'erased = arg#7 in
+let empty#6 : 'erased -> list int = \arg#9 : 'erased -> let match#10 : 'erased = arg#9 in
 (con (list integer) []) in
-let ints#2 : unit -> list int = empty#5 in
-let empty#6 : 'erased -> list Data = \arg#9 : 'erased -> let match#10 : 'erased = arg#9 in
+let ints#2 : unit -> list int = empty#6 in
+let fromUnit#3 : unit -> unit = \value#7 : unit -> value#7 in
+let empty#8 : 'erased -> list Data = \arg#11 : 'erased -> let match#12 : 'erased = arg#11 in
 (con (list data) []) in
-let bigInts#3 : unit -> list Int = empty#6 in
-let bigBytes#4 : unit -> list Bytes = empty#6 in
-let main#1 : (list int, list Int, list Bytes) = constr 0 (ints#2 ()) (bigInts#3 ()) (bigBytes#4 ()) in
+let bigInts#4 : unit -> list Int = empty#8 in
+let bigBytes#5 : unit -> list Bytes = empty#8 in
+let main#1 : (list int, list Int, list Bytes) = constr 0 (ints#2 (fromUnit#3 ())) (bigInts#4 (fromUnit#3 ())) (bigBytes#5 (fromUnit#3 ())) in
 main#1
 --- uplc
 (program 1.1.0
@@ -19,10 +20,15 @@ main#1
       [(lam i2
         [(lam i3
           [(lam i4
-            [(lam i5 i5)
-              (constr 0 [i1 (con unit ())] [i3 (con unit ())] [i4 (con unit ())])])
-            i2])
-          i2])
-        (lam i2 [(lam i3 (con (list data) [])) i2])])
+            [(lam i5
+              [(lam i6 i6)
+                (constr 0
+                  [i1 [i2 (con unit ())]]
+                  [i4 [i2 (con unit ())]]
+                  [i5 [i2 (con unit ())]])])
+              i3])
+            i3])
+          (lam i3 [(lam i4 (con (list data) [])) i3])])
+        (lam i2 i2)])
       i0])
     (lam i0 [(lam i1 (con (list integer) [])) i0])])

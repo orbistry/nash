@@ -3,13 +3,18 @@ source: crates/nash-solve/tests/testing.rs
 description: "module Main exposing (public)\npublic = ()\ntests\n    prop \"type\" =\n        let x via () in\n        do\n            x\n"
 info: diagnostic
 ---
-nash::type::mismatch
+nash::type::missing_impl
 
-  × Type mismatch: expected `Prop.generator 'a`, found `unit`.
+  × No impl for `Literal.FromUnit (Prop.generator unit)`.
    ╭─[Main.nash:5:19]
  4 │     prop "type" =
  5 │         let x via () in
    ·                   ─┬
-   ·                    ╰── property generator (which must be a generator)
+   ·                    ╰── required by `fromUnit`
  6 │         do
    ╰────
+  help: Available impl heads:
+
+            unit
+
+        Import or define an impl for `Literal.FromUnit (Prop.generator unit)`.

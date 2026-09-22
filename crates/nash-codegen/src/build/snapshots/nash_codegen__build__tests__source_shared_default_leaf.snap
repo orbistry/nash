@@ -3,38 +3,45 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    case (False, False) of\n        (True, True) -> True\n        _ -> trace \"default\" False\n"
 ---
 --- core
-let message#10 : string = "default" in
-let fromString#2 : string -> string = \value#9 : string -> value#9 in
-let match#3 : (bool, bool) = constr 0 false false in
-let leaf#6 : 'erased = delay (trace (fromString#2 message#10) in false) in
-let main#1 : bool = case@Tag match#3 of
-  0 field#7 field#8 -> case@Bool field#7 of
-    False -> force leaf#6
-    True -> case@Bool field#8 of
-      False -> force leaf#6
-      True -> true in
+let message#12 : string = "default" in
+let fromBool#2 : bool -> bool = \value#10 : bool -> value#10 in
+let fromString#3 : string -> string = \value#11 : string -> value#11 in
+let match#4 : (bool, bool) = constr 0 (fromBool#2 false) (fromBool#2 false) in
+let leaf#7 : 'erased = delay (trace (fromString#3 message#12) in fromBool#2 false) in
+let main#1 : bool = case@Tag match#4 of
+  0 field#8 field#9 -> case@Bool field#8 of
+    False -> force leaf#7
+    True -> case@Bool field#9 of
+      False -> force leaf#7
+      True -> fromBool#2 true in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_10
-    [(lam fromString_2
-      [(lam match_3
-        [(lam leaf_6
-          [(lam main_1 main_1)
-            (case
-              match_3
-              (lam field_7
+  [(lam message_12
+    [(lam fromBool_2
+      [(lam fromString_3
+        [(lam match_4
+          [(lam leaf_7
+            [(lam main_1 main_1)
+              (case
+                match_4
                 (lam field_8
-                  (case field_7 (force leaf_6) (case field_8 (force leaf_6) (con bool True))))))])
-          (delay
-            (force
-              [[(force (builtin trace)) [fromString_2 message_10]] (delay (con bool False))]))])
-        (constr 0 (con bool False) (con bool False))])
-      (lam value_9 value_9)])
+                  (lam field_9
+                    (case
+                      field_8
+                      (force leaf_7)
+                      (case field_9 (force leaf_7) [fromBool_2 (con bool True)])))))])
+            (delay
+              (force
+                [[(force (builtin trace)) [fromString_3 message_12]]
+                  (delay [fromBool_2 (con bool False)])]))])
+          (constr 0 [fromBool_2 (con bool False)] [fromBool_2 (con bool False)])])
+        (lam value_11 value_11)])
+      (lam value_10 value_10)])
     (con string "default")])
 --- result
 (con bool False)
 --- logs
 ["default"]
 --- budget
-cpu: 635598, memory: 3732
+cpu: 827598, memory: 4932

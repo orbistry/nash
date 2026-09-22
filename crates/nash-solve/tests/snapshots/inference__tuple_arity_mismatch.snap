@@ -6,7 +6,7 @@ info: diagnostic
 nash::type::mismatch
 
   × Type mismatch: expected `( unit, unit, unit, unit )`,
-  │ found `( unit, unit, unit, unit, unit )`.
+  │ found `( 'a4, 'a3, 'a2, 'a1, 'a )`.
    ╭─[Main.nash:3:9]
  1 │ module Main exposing (..)
  2 │ value : (unit, unit, unit, unit)

@@ -8,7 +8,7 @@ wrapper : forall a. Storable a => a -> list a -> a
 first:
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable (option unit)`.
+  × Unsatisfied representation constraint `Primitive.Storable (option 'a)`.
    ╭─[Main.nash:4:10]
  3 │ type option 'a = Some 'a
  4 │ bad xs = first (Some ()) xs
@@ -17,14 +17,14 @@ nash::type::missing_impl
    ╰────
   help: Requirement chain:
 
-            forming list (option unit)
+            forming list (option 'a)
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable (option unit)`.
+  × Unsatisfied representation constraint `Primitive.Storable (option 'a)`.
    ╭─[Main.nash:4:10]
  3 │ type option 'a = Some 'a
  4 │ bad xs = first (Some ()) xs
@@ -37,7 +37,7 @@ nash::type::missing_impl
 wrapper:
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable (option unit)`.
+  × Unsatisfied representation constraint `Primitive.Storable (option 'a)`.
    ╭─[Main.nash:4:10]
  3 │ type option 'a = Some 'a
  4 │ bad xs = wrapper (Some ()) xs
@@ -46,14 +46,14 @@ nash::type::missing_impl
    ╰────
   help: Requirement chain:
 
-            forming list (option unit)
+            forming list (option 'a)
 
         Use a type with Big or Const representation; an impl cannot change representation.
 
 
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable (option unit)`.
+  × Unsatisfied representation constraint `Primitive.Storable (option 'a)`.
    ╭─[Main.nash:4:10]
  3 │ type option 'a = Some 'a
  4 │ bad xs = wrapper (Some ()) xs

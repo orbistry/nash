@@ -3,35 +3,44 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nouter : Eq 'a => 'a -> bool\nouter x =\n    let\n        same y = eq x y\n    in\n    same x\nmain = (outer 42, outer ())\n"
 ---
 --- core
-let eq#8 : int -> int -> bool = equalsInteger in
-let outer#2 : 'erased -> bool = \x#5 : 'erased -> let same#6 : 'erased -> bool = \y#7 : 'erased -> eq#8 x#5 y#7 in
-same#6 x#5 in
-let fromInt#3 : int -> int = \value#9 : int -> value#9 in
-let eq#13 : unit -> unit -> bool = \arg#14 : unit arg#15 : unit -> let match#17 : unit = arg#14 in
-let match#16 : unit = arg#15 in
-true in
-let outer#4 : 'erased -> bool = \x#10 : 'erased -> let same#11 : 'erased -> bool = \y#12 : 'erased -> eq#13 x#10 y#12 in
-same#11 x#10 in
-let main#1 : (bool, bool) = constr 0 (outer#2 (fromInt#3 42)) (outer#4 ()) in
+let eq#9 : int -> int -> bool = equalsInteger in
+let outer#2 : 'erased -> bool = \x#6 : 'erased -> let same#7 : 'erased -> bool = \y#8 : 'erased -> eq#9 x#6 y#8 in
+same#7 x#6 in
+let fromInt#3 : int -> int = \value#10 : int -> value#10 in
+let fromBool#18 : bool -> bool = \value#21 : bool -> value#21 in
+let eq#14 : unit -> unit -> bool = \arg#16 : unit arg#17 : unit -> let match#20 : unit = arg#16 in
+let match#19 : unit = arg#17 in
+fromBool#18 true in
+let outer#4 : 'erased -> bool = \x#11 : 'erased -> let same#12 : 'erased -> bool = \y#13 : 'erased -> eq#14 x#11 y#13 in
+same#12 x#11 in
+let fromUnit#5 : unit -> unit = \value#15 : unit -> value#15 in
+let main#1 : (bool, bool) = constr 0 (outer#2 (fromInt#3 42)) (outer#4 (fromUnit#5 ())) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_8
+  [(lam eq_9
     [(lam outer_2
       [(lam fromInt_3
-        [(lam eq_13
-          [(lam outer_4
-            [(lam main_1 main_1)
-              (constr 0 [outer_2 [fromInt_3 (con integer 42)]] [outer_4 (con unit ())])])
-            (lam x_10 [(lam same_11 [same_11 x_10]) (lam y_12 [[eq_13 x_10] y_12])])])
-          (lam arg_14
-            (lam arg_15 [(lam match_17 [(lam match_16 (con bool True)) arg_15]) arg_14]))])
-        (lam value_9 value_9)])
-      (lam x_5 [(lam same_6 [same_6 x_5]) (lam y_7 [[eq_8 x_5] y_7])])])
+        [(lam fromBool_18
+          [(lam eq_14
+            [(lam outer_4
+              [(lam fromUnit_5
+                [(lam main_1 main_1)
+                  (constr 0
+                    [outer_2 [fromInt_3 (con integer 42)]]
+                    [outer_4 [fromUnit_5 (con unit ())]])])
+                (lam value_15 value_15)])
+              (lam x_11 [(lam same_12 [same_12 x_11]) (lam y_13 [[eq_14 x_11] y_13])])])
+            (lam arg_16
+              (lam arg_17
+                [(lam match_20 [(lam match_19 [fromBool_18 (con bool True)]) arg_17]) arg_16]))])
+          (lam value_21 value_21)])
+        (lam value_10 value_10)])
+      (lam x_6 [(lam same_7 [same_7 x_6]) (lam y_8 [[eq_9 x_6] y_8])])])
     (builtin equalsInteger)])
 --- result
 (constr 0 (con bool True) (con bool True))
 --- logs
 []
 --- budget
-cpu: 980433, memory: 5901
+cpu: 1172433, memory: 7101

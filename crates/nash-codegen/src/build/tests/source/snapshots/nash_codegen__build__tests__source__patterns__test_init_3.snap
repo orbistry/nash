@@ -3,142 +3,145 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\ninit self =\n    case self of\n        [] -> None\n        _ -> Some (doInit self)\ndoInit self =\n    case self of\n        [] -> trace \"unreachable\" fail\n        [_] -> []\n        x :: xs -> mkCons x (doInit xs)\nvalues : list int\nvalues = [1, 2, 3, 4]\nmain = eq (init values) (Some [1, 2, 3])\n"
 ---
 --- core
-let message#48 : string = "unreachable" in
-let eq#33 : int -> int -> bool = equalsInteger in
-let eq#11 : list 'erased -> list 'erased -> bool = (\self#15 : 'erased -> self#15 self#15) (\self#15 : 'erased xs#31 : list 'erased ys#32 : list 'erased -> case@Bool nullList xs#31 of
-  True -> nullList ys#32
-  False -> case@Bool nullList ys#32 of
-    True -> false
-    False -> let projection#44 : 'erased = headList xs#31 in
-    let projection#45 : 'erased = headList ys#32 in
-    case@Bool eq#33 projection#44 projection#45 of
-      True -> let projection#46 : list 'erased = tailList xs#31 in
-      let projection#47 : list 'erased = tailList ys#32 in
-      self#15 self#15 projection#46 projection#47
-      False -> false) in
-let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#7 : Main.option 'erased b#8 : Main.option 'erased -> let match#12 : (Main.option 'erased, Main.option 'erased) = constr 0 a#7 b#8 in
-let leaf#18 : 'erased = delay false in
-case@Tag match#12 of
-  0 field#19 field#20 -> case@Tag field#19 of
-    0 -> case@Tag field#20 of
-      0 -> true
-      1 field#21 -> force leaf#18
-    1 field#22 -> case@Tag field#20 of
-      0 -> force leaf#18
-      1 field#23 -> let x#9 : 'erased = field#22 in
-      let y#10 : 'erased = field#23 in
-      eq#11 x#9 y#10 in
-let fromString#35 : string -> string = \value#43 : string -> value#43 in
-let doInit#26 : list int -> list int = (\self#13 : 'erased -> self#13 self#13) (\self#13 : 'erased self#34 : list int -> let match#38 : list int = self#34 in
-case@List match#38 of
-  Nil -> trace (fromString#35 message#48) in error
-  Cons field#39 field#40 -> case@List field#40 of
+let message#50 : string = "unreachable" in
+let fromBool#9 : bool -> bool = \value#32 : bool -> value#32 in
+let eq#35 : int -> int -> bool = equalsInteger in
+let eq#12 : list 'erased -> list 'erased -> bool = (\self#16 : 'erased -> self#16 self#16) (\self#16 : 'erased xs#33 : list 'erased ys#34 : list 'erased -> case@Bool nullList xs#33 of
+  True -> nullList ys#34
+  False -> case@Bool nullList ys#34 of
+    True -> fromBool#9 false
+    False -> let projection#46 : 'erased = headList xs#33 in
+    let projection#47 : 'erased = headList ys#34 in
+    case@Bool eq#35 projection#46 projection#47 of
+      True -> let projection#48 : list 'erased = tailList xs#33 in
+      let projection#49 : list 'erased = tailList ys#34 in
+      self#16 self#16 projection#48 projection#49
+      False -> fromBool#9 false) in
+let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#7 : Main.option 'erased b#8 : Main.option 'erased -> let match#13 : (Main.option 'erased, Main.option 'erased) = constr 0 a#7 b#8 in
+let leaf#19 : 'erased = delay (fromBool#9 false) in
+case@Tag match#13 of
+  0 field#20 field#21 -> case@Tag field#20 of
+    0 -> case@Tag field#21 of
+      0 -> fromBool#9 true
+      1 field#22 -> force leaf#19
+    1 field#23 -> case@Tag field#21 of
+      0 -> force leaf#19
+      1 field#24 -> let x#10 : 'erased = field#23 in
+      let y#11 : 'erased = field#24 in
+      eq#12 x#10 y#11 in
+let fromString#37 : string -> string = \value#45 : string -> value#45 in
+let doInit#27 : list int -> list int = (\self#14 : 'erased -> self#14 self#14) (\self#14 : 'erased self#36 : list int -> let match#40 : list int = self#36 in
+case@List match#40 of
+  Nil -> trace (fromString#37 message#50) in error
+  Cons field#41 field#42 -> case@List field#42 of
     Nil -> (con (list integer) [])
-    Cons field#41 field#42 -> let x#36 : int = field#39 in
-    let xs#37 : list int = field#40 in
-    mkCons x#36 (self#13 self#13 xs#37)) in
-let init#3 : list int -> Main.option (list int) = \self#24 : list int -> let match#27 : list int = self#24 in
-case@List match#27 of
+    Cons field#43 field#44 -> let x#38 : int = field#41 in
+    let xs#39 : list int = field#42 in
+    mkCons x#38 (self#14 self#14 xs#39)) in
+let init#3 : list int -> Main.option (list int) = \self#25 : list int -> let match#28 : list int = self#25 in
+case@List match#28 of
   Nil -> constr 0
-  Cons field#28 field#29 -> (\field#25 : list int -> constr 1 field#25) (doInit#26 self#24) in
-let fromInt#6 : int -> int = \value#30 : int -> value#30 in
+  Cons field#29 field#30 -> (\field#26 : list int -> constr 1 field#26) (doInit#27 self#25) in
+let fromInt#6 : int -> int = \value#31 : int -> value#31 in
 let values#4 : list int = mkCons (fromInt#6 1) (mkCons (fromInt#6 2) (mkCons (fromInt#6 3) (mkCons (fromInt#6 4) (con (list integer) [])))) in
 let main#1 : bool = eq#2 (init#3 values#4) ((\field#5 : list int -> constr 1 field#5) (mkCons (fromInt#6 1) (mkCons (fromInt#6 2) (mkCons (fromInt#6 3) (con (list integer) []))))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_48
-    [(lam eq_33
-      [(lam eq_11
-        [(lam eq_2
-          [(lam fromString_35
-            [(lam doInit_26
-              [(lam init_3
-                [(lam fromInt_6
-                  [(lam values_4
-                    [(lam main_1 main_1)
-                      [[eq_2 [init_3 values_4]]
-                        [(lam field_5 (constr 1 field_5))
-                          [[(force (builtin mkCons)) [fromInt_6 (con integer 1)]]
-                            [[(force (builtin mkCons)) [fromInt_6 (con integer 2)]]
-                              [[(force (builtin mkCons)) [fromInt_6 (con integer 3)]] (con (list integer) [])]]]]]])
-                    [[(force (builtin mkCons)) [fromInt_6 (con integer 1)]]
-                      [[(force (builtin mkCons)) [fromInt_6 (con integer 2)]]
-                        [[(force (builtin mkCons)) [fromInt_6 (con integer 3)]]
-                          [[(force (builtin mkCons)) [fromInt_6 (con integer 4)]] (con (list integer) [])]]]]])
-                  (lam value_30 value_30)])
-                (lam self_24
-                  [(lam match_27
-                    (case
-                      match_27
-                      (lam field_28
-                        (lam field_29 [(lam field_25 (constr 1 field_25)) [doInit_26 self_24]]))
-                      (constr 0)))
-                    self_24])])
-              [(lam self_13 [self_13 self_13])
-                (lam self_13
-                  (lam self_34
-                    [(lam match_38
+  [(lam message_50
+    [(lam fromBool_9
+      [(lam eq_35
+        [(lam eq_12
+          [(lam eq_2
+            [(lam fromString_37
+              [(lam doInit_27
+                [(lam init_3
+                  [(lam fromInt_6
+                    [(lam values_4
+                      [(lam main_1 main_1)
+                        [[eq_2 [init_3 values_4]]
+                          [(lam field_5 (constr 1 field_5))
+                            [[(force (builtin mkCons)) [fromInt_6 (con integer 1)]]
+                              [[(force (builtin mkCons)) [fromInt_6 (con integer 2)]]
+                                [[(force (builtin mkCons)) [fromInt_6 (con integer 3)]] (con (list integer) [])]]]]]])
+                      [[(force (builtin mkCons)) [fromInt_6 (con integer 1)]]
+                        [[(force (builtin mkCons)) [fromInt_6 (con integer 2)]]
+                          [[(force (builtin mkCons)) [fromInt_6 (con integer 3)]]
+                            [[(force (builtin mkCons)) [fromInt_6 (con integer 4)]] (con (list integer) [])]]]]])
+                    (lam value_31 value_31)])
+                  (lam self_25
+                    [(lam match_28
                       (case
-                        match_38
-                        (lam field_39
-                          (lam field_40
-                            (case
-                              field_40
-                              (lam field_41
-                                (lam field_42
-                                  [(lam x_36
-                                    [(lam xs_37 [[(force (builtin mkCons)) x_36] [[self_13 self_13] xs_37]])
-                                      field_40])
-                                    field_39]))
-                              (con (list integer) []))))
-                        (force [[(force (builtin trace)) [fromString_35 message_48]] (delay (error))])))
-                      self_34]))]])
-            (lam value_43 value_43)])
-          (lam a_7
-            (lam b_8
-              [(lam match_12
-                [(lam leaf_18
-                  (case
-                    match_12
-                    (lam field_19
+                        match_28
+                        (lam field_29
+                          (lam field_30 [(lam field_26 (constr 1 field_26)) [doInit_27 self_25]]))
+                        (constr 0)))
+                      self_25])])
+                [(lam self_14 [self_14 self_14])
+                  (lam self_14
+                    (lam self_36
+                      [(lam match_40
+                        (case
+                          match_40
+                          (lam field_41
+                            (lam field_42
+                              (case
+                                field_42
+                                (lam field_43
+                                  (lam field_44
+                                    [(lam x_38
+                                      [(lam xs_39 [[(force (builtin mkCons)) x_38] [[self_14 self_14] xs_39]])
+                                        field_42])
+                                      field_41]))
+                                (con (list integer) []))))
+                          (force [[(force (builtin trace)) [fromString_37 message_50]] (delay (error))])))
+                        self_36]))]])
+              (lam value_45 value_45)])
+            (lam a_7
+              (lam b_8
+                [(lam match_13
+                  [(lam leaf_19
+                    (case
+                      match_13
                       (lam field_20
-                        (case
-                          field_19
-                          (case field_20 (con bool True) (lam field_21 (force leaf_18)))
-                          (lam field_22
-                            (case
-                              field_20
-                              (force leaf_18)
-                              (lam field_23 [(lam x_9 [(lam y_10 [[eq_11 x_9] y_10]) field_23]) field_22]))))))))
-                  (delay (con bool False))])
-                (constr 0 a_7 b_8)]))])
-        [(lam self_15 [self_15 self_15])
-          (lam self_15
-            (lam xs_31
-              (lam ys_32
-                (case
-                  [(force (builtin nullList)) xs_31]
+                        (lam field_21
+                          (case
+                            field_20
+                            (case field_21 [fromBool_9 (con bool True)] (lam field_22 (force leaf_19)))
+                            (lam field_23
+                              (case
+                                field_21
+                                (force leaf_19)
+                                (lam field_24 [(lam x_10 [(lam y_11 [[eq_12 x_10] y_11]) field_24]) field_23]))))))))
+                    (delay [fromBool_9 (con bool False)])])
+                  (constr 0 a_7 b_8)]))])
+          [(lam self_16 [self_16 self_16])
+            (lam self_16
+              (lam xs_33
+                (lam ys_34
                   (case
-                    [(force (builtin nullList)) ys_32]
-                    [(lam projection_44
-                      [(lam projection_45
-                        (case
-                          [[eq_33 projection_44] projection_45]
-                          (con bool False)
-                          [(lam projection_46
-                            [(lam projection_47 [[[self_15 self_15] projection_46] projection_47])
-                              [(force (builtin tailList)) ys_32]])
-                            [(force (builtin tailList)) xs_31]]))
-                        [(force (builtin headList)) ys_32]])
-                      [(force (builtin headList)) xs_31]]
-                    (con bool False))
-                  [(force (builtin nullList)) ys_32]))))]])
-      (builtin equalsInteger)])
+                    [(force (builtin nullList)) xs_33]
+                    (case
+                      [(force (builtin nullList)) ys_34]
+                      [(lam projection_46
+                        [(lam projection_47
+                          (case
+                            [[eq_35 projection_46] projection_47]
+                            [fromBool_9 (con bool False)]
+                            [(lam projection_48
+                              [(lam projection_49 [[[self_16 self_16] projection_48] projection_49])
+                                [(force (builtin tailList)) ys_34]])
+                              [(force (builtin tailList)) xs_33]]))
+                          [(force (builtin headList)) ys_34]])
+                        [(force (builtin headList)) xs_33]]
+                      [fromBool_9 (con bool False)])
+                    [(force (builtin nullList)) ys_34]))))]])
+        (builtin equalsInteger)])
+      (lam value_32 value_32)])
     (con string "unreachable")])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 8929061, memory: 41463
+cpu: 8977061, memory: 41763

@@ -1,67 +1,71 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype thing = Thing { idx : int }\ntype datum = A thing | B\ntype redSpend = Spend int | Buy\nmain =\n    case (A (Thing { idx = 42 }), Buy) of\n        (A a, Spend x) ->\n            if equalsInteger a.idx x then True\n            else trace \"a.idx == x ? False\" False\n        (_, _) -> True\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype thing = Thing { idx : int }\ntype datum = A thing | B\ntype redSpend = Spend int | Buy\nmain : bool\nmain =\n    case (A (Thing { idx = 42 }), Buy) of\n        (A a, Spend x) ->\n            if equalsInteger a.idx x then True\n            else trace \"a.idx == x ? False\" False\n        (_, _) -> True\n"
 ---
 --- core
-let message#21 : string = "a.idx == x ? False" in
-let fromInt#4 : int -> int = \value#18 : int -> value#18 in
-let fromString#7 : string -> string = \value#19 : string -> value#19 in
-let match#8 : (Main.datum, Main.redSpend) = constr 0 ((\field#2 : Main.thing -> constr 0 field#2) ((\field#3 : int -> constr 0 field#3) (fromInt#4 42))) (constr 1) in
-let leaf#13 : 'erased = delay true in
-let main#1 : bool = case@Tag match#8 of
-  0 field#14 field#15 -> case@Tag field#14 of
-    0 field#16 -> case@Tag field#15 of
-      0 field#17 -> let a#5 : Main.thing = field#16 in
-      let x#6 : int = field#17 in
-      let projection#20 : 'erased = field@0/1 a#5 in
-      case@Bool equalsInteger projection#20 x#6 of
-        True -> true
-        False -> trace (fromString#7 message#21) in false
-      1 -> force leaf#13
-    1 -> force leaf#13 in
+let message#23 : string = "a.idx == x ? False" in
+let fromInt#4 : int -> int = \value#19 : int -> value#19 in
+let fromBool#7 : bool -> bool = \value#20 : bool -> value#20 in
+let fromString#8 : string -> string = \value#21 : string -> value#21 in
+let match#9 : (Main.datum, Main.redSpend) = constr 0 ((\field#2 : Main.thing -> constr 0 field#2) ((\field#3 : int -> constr 0 field#3) (fromInt#4 42))) (constr 1) in
+let leaf#14 : 'erased = delay (fromBool#7 true) in
+let main#1 : bool = case@Tag match#9 of
+  0 field#15 field#16 -> case@Tag field#15 of
+    0 field#17 -> case@Tag field#16 of
+      0 field#18 -> let a#5 : Main.thing = field#17 in
+      let x#6 : int = field#18 in
+      let projection#22 : 'erased = field@0/1 a#5 in
+      case@Bool equalsInteger projection#22 x#6 of
+        True -> fromBool#7 true
+        False -> trace (fromString#8 message#23) in fromBool#7 false
+      1 -> force leaf#14
+    1 -> force leaf#14 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_21
+  [(lam message_23
     [(lam fromInt_4
-      [(lam fromString_7
-        [(lam match_8
-          [(lam leaf_13
-            [(lam main_1 main_1)
-              (case
-                match_8
-                (lam field_14
+      [(lam fromBool_7
+        [(lam fromString_8
+          [(lam match_9
+            [(lam leaf_14
+              [(lam main_1 main_1)
+                (case
+                  match_9
                   (lam field_15
-                    (case
-                      field_14
-                      (lam field_16
-                        (case
-                          field_15
-                          (lam field_17
-                            [(lam a_5
-                              [(lam x_6
-                                [(lam projection_20
-                                  (case
-                                    [[(builtin equalsInteger) projection_20] x_6]
-                                    (force
-                                      [[(force (builtin trace)) [fromString_7 message_21]] (delay (con bool False))])
-                                    (con bool True)))
-                                  (case a_5 (lam generated_22 generated_22))])
+                    (lam field_16
+                      (case
+                        field_15
+                        (lam field_17
+                          (case
+                            field_16
+                            (lam field_18
+                              [(lam a_5
+                                [(lam x_6
+                                  [(lam projection_22
+                                    (case
+                                      [[(builtin equalsInteger) projection_22] x_6]
+                                      (force
+                                        [[(force (builtin trace)) [fromString_8 message_23]]
+                                          (delay [fromBool_7 (con bool False)])])
+                                      [fromBool_7 (con bool True)]))
+                                    (case a_5 (lam generated_24 generated_24))])
+                                  field_18])
                                 field_17])
-                              field_16])
-                          (force leaf_13)))
-                      (force leaf_13)))))])
-            (delay (con bool True))])
-          (constr 0
-            [(lam field_2 (constr 0 field_2))
-              [(lam field_3 (constr 0 field_3)) [fromInt_4 (con integer 42)]]]
-            (constr 1))])
-        (lam value_19 value_19)])
-      (lam value_18 value_18)])
+                            (force leaf_14)))
+                        (force leaf_14)))))])
+              (delay [fromBool_7 (con bool True)])])
+            (constr 0
+              [(lam field_2 (constr 0 field_2))
+                [(lam field_3 (constr 0 field_3)) [fromInt_4 (con integer 42)]]]
+              (constr 1))])
+          (lam value_21 value_21)])
+        (lam value_20 value_20)])
+      (lam value_19 value_19)])
     (con string "a.idx == x ? False")])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 688100, memory: 4400
+cpu: 784100, memory: 5000

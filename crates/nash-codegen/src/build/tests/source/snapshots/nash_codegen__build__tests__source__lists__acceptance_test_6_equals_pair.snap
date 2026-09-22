@@ -3,56 +3,59 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nempty : list Data\nempty = []\nsame a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False\nmain = same (mkPairData (iData 1) (listData empty)) (mkPairData (iData 1) (listData empty))\n"
 ---
 --- core
-let toData#7 : 'erased -> Data = \coerce#9 : 'erased -> coerce#9 in
-let same#2 : pair 'erased 'erased -> pair 'erased 'erased -> bool = \a#5 : pair 'erased 'erased b#6 : pair 'erased 'erased -> let projection#10 : 'erased = fstPair a#5 in
-let evaluated#12 : 'erased = toData#7 projection#10 in
-let projection#11 : 'erased = fstPair b#6 in
-case@Bool equalsData evaluated#12 (toData#7 projection#11) of
-  True -> let projection#13 : 'erased = sndPair a#5 in
-  let evaluated#15 : 'erased = toData#7 projection#13 in
-  let projection#14 : 'erased = sndPair b#6 in
-  equalsData evaluated#15 (toData#7 projection#14)
-  False -> false in
-let fromInt#3 : int -> int = \value#8 : int -> value#8 in
+let fromBool#7 : bool -> bool = \value#10 : bool -> value#10 in
+let toData#8 : 'erased -> Data = \coerce#11 : 'erased -> coerce#11 in
+let same#2 : pair 'erased 'erased -> pair 'erased 'erased -> bool = \a#5 : pair 'erased 'erased b#6 : pair 'erased 'erased -> let projection#12 : 'erased = fstPair a#5 in
+let evaluated#14 : 'erased = toData#8 projection#12 in
+let projection#13 : 'erased = fstPair b#6 in
+case@Bool equalsData evaluated#14 (toData#8 projection#13) of
+  True -> let projection#15 : 'erased = sndPair a#5 in
+  let evaluated#17 : 'erased = toData#8 projection#15 in
+  let projection#16 : 'erased = sndPair b#6 in
+  equalsData evaluated#17 (toData#8 projection#16)
+  False -> fromBool#7 false in
+let fromInt#3 : int -> int = \value#9 : int -> value#9 in
 let empty#4 : list Data = (con (list data) []) in
 let main#1 : bool = same#2 (mkPairData (iData (fromInt#3 1)) (listData empty#4)) (mkPairData (iData (fromInt#3 1)) (listData empty#4)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam toData_7
-    [(lam same_2
-      [(lam fromInt_3
-        [(lam empty_4
-          [(lam main_1 main_1)
-            [[same_2
-              [[(builtin mkPairData) [(builtin iData) [fromInt_3 (con integer 1)]]]
-                [(builtin listData) empty_4]]]
-              [[(builtin mkPairData) [(builtin iData) [fromInt_3 (con integer 1)]]]
-                [(builtin listData) empty_4]]]])
-          (con (list data) [])])
-        (lam value_8 value_8)])
-      (lam a_5
-        (lam b_6
-          [(lam projection_10
-            [(lam evaluated_12
-              [(lam projection_11
-                (case
-                  [[(builtin equalsData) evaluated_12] [toData_7 projection_11]]
-                  (con bool False)
-                  [(lam projection_13
-                    [(lam evaluated_15
-                      [(lam projection_14
-                        [[(builtin equalsData) evaluated_15] [toData_7 projection_14]])
-                        [(force (force (builtin sndPair))) b_6]])
-                      [toData_7 projection_13]])
-                    [(force (force (builtin sndPair))) a_5]]))
-                [(force (force (builtin fstPair))) b_6]])
-              [toData_7 projection_10]])
-            [(force (force (builtin fstPair))) a_5]]))])
-    (lam coerce_9 coerce_9)])
+  [(lam fromBool_7
+    [(lam toData_8
+      [(lam same_2
+        [(lam fromInt_3
+          [(lam empty_4
+            [(lam main_1 main_1)
+              [[same_2
+                [[(builtin mkPairData) [(builtin iData) [fromInt_3 (con integer 1)]]]
+                  [(builtin listData) empty_4]]]
+                [[(builtin mkPairData) [(builtin iData) [fromInt_3 (con integer 1)]]]
+                  [(builtin listData) empty_4]]]])
+            (con (list data) [])])
+          (lam value_9 value_9)])
+        (lam a_5
+          (lam b_6
+            [(lam projection_12
+              [(lam evaluated_14
+                [(lam projection_13
+                  (case
+                    [[(builtin equalsData) evaluated_14] [toData_8 projection_13]]
+                    [fromBool_7 (con bool False)]
+                    [(lam projection_15
+                      [(lam evaluated_17
+                        [(lam projection_16
+                          [[(builtin equalsData) evaluated_17] [toData_8 projection_16]])
+                          [(force (force (builtin sndPair))) b_6]])
+                        [toData_8 projection_15]])
+                      [(force (force (builtin sndPair))) a_5]]))
+                  [(force (force (builtin fstPair))) b_6]])
+                [toData_8 projection_12]])
+              [(force (force (builtin fstPair))) a_5]]))])
+      (lam coerce_11 coerce_11)])
+    (lam value_10 value_10)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 4331075, memory: 10422
+cpu: 4379075, memory: 10722

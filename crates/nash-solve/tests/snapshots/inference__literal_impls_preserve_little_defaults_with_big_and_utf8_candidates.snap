@@ -5,9 +5,9 @@ description: "module Literal exposing (..)\nimport Builtin\ntrait FromInt 'a whe
 bigBytes : Bytes
 bigInteger : Int
 bytes : forall a. FromBytes a => a
-discardedBytes : unit
-discardedInteger : unit
-discardedString : unit
+discardedBytes : forall a. FromUnit a => a
+discardedInteger : forall a. FromUnit a => a
+discardedString : forall a. FromUnit a => a
 integer : forall a. FromInt a => a
 string : forall a. FromString a => a
 utf8 : bytes

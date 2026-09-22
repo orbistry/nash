@@ -3,33 +3,42 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nisEmpty bytes = equalsInteger (lengthOfByteString bytes) 0\nmain = eq (isEmpty #\"\") True\n"
 ---
 --- core
-let eq#2 : bool -> bool -> bool = \a#5 : bool b#6 : bool -> case@Bool a#5 of
-  True -> b#6
-  False -> case@Bool b#6 of
-    True -> false
-    False -> true in
-let fromInt#8 : int -> int = \value#10 : int -> value#10 in
-let isEmpty#3 : bytes -> bool = \bytes#7 : bytes -> equalsInteger (lengthOfByteString bytes#7) (fromInt#8 0) in
-let fromBytes#4 : bytes -> bytes = \value#9 : bytes -> value#9 in
-let main#1 : bool = eq#2 (isEmpty#3 (fromBytes#4 (con bytestring #))) true in
+let fromBool#5 : bool -> bool = \value#11 : bool -> value#11 in
+let eq#2 : bool -> bool -> bool = \a#6 : bool b#7 : bool -> case@Bool a#6 of
+  True -> b#7
+  False -> case@Bool b#7 of
+    True -> fromBool#5 false
+    False -> fromBool#5 true in
+let fromInt#9 : int -> int = \value#12 : int -> value#12 in
+let isEmpty#3 : bytes -> bool = \bytes#8 : bytes -> equalsInteger (lengthOfByteString bytes#8) (fromInt#9 0) in
+let fromBytes#4 : bytes -> bytes = \value#10 : bytes -> value#10 in
+let main#1 : bool = eq#2 (isEmpty#3 (fromBytes#4 (con bytestring #))) (fromBool#5 true) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_2
-    [(lam fromInt_8
-      [(lam isEmpty_3
-        [(lam fromBytes_4
-          [(lam main_1 main_1)
-            [[eq_2 [isEmpty_3 [fromBytes_4 (con bytestring #)]]] (con bool True)]])
-          (lam value_9 value_9)])
-        (lam bytes_7
-          [[(builtin equalsInteger) [(builtin lengthOfByteString) bytes_7]]
-            [fromInt_8 (con integer 0)]])])
-      (lam value_10 value_10)])
-    (lam a_5 (lam b_6 (case a_5 (case b_6 (con bool True) (con bool False)) b_6)))])
+  [(lam fromBool_5
+    [(lam eq_2
+      [(lam fromInt_9
+        [(lam isEmpty_3
+          [(lam fromBytes_4
+            [(lam main_1 main_1)
+              [[eq_2 [isEmpty_3 [fromBytes_4 (con bytestring #)]]]
+                [fromBool_5 (con bool True)]]])
+            (lam value_10 value_10)])
+          (lam bytes_8
+            [[(builtin equalsInteger) [(builtin lengthOfByteString) bytes_8]]
+              [fromInt_9 (con integer 0)]])])
+        (lam value_12 value_12)])
+      (lam a_6
+        (lam b_7
+          (case
+            a_6
+            (case b_7 [fromBool_5 (con bool True)] [fromBool_5 (con bool False)])
+            b_7)))])
+    (lam value_11 value_11)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 698533, memory: 4011
+cpu: 794533, memory: 4611

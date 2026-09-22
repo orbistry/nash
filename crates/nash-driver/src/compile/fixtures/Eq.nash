@@ -1,5 +1,6 @@
 module Eq exposing (Eq)
 
+import Literal
 import Primitive exposing (..)
 import Builtin exposing (..)
 

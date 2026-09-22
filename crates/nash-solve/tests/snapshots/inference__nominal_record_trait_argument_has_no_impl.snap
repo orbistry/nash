@@ -1,14 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Keep 'a 'b where\n    keep : 'a -> 'b -> 'a\ntype alias item = { item : unit }\nvalue = keep () { item = () }\n"
+description: "module Main exposing (..)\ntrait Keep 'a 'b where\n    keep : 'a -> 'b -> 'a\ntype alias item = { item : unit }\nvalue : unit\nvalue = keep () { item = () }\n"
 info: diagnostic
 ---
 nash::type::missing_impl
 
   × No impl for `Keep unit item`.
-   ╭─[Main.nash:5:9]
- 4 │ type alias item = { item : unit }
- 5 │ value = keep () { item = () }
+   ╭─[Main.nash:6:9]
+ 5 │ value : unit
+ 6 │ value = keep () { item = () }
    ·         ──┬─
    ·           ╰── required by `keep`
    ╰────

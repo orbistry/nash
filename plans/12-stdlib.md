@@ -139,6 +139,9 @@ Further helper functions and trait API coverage belong to chunks 5–6.
 
 - [x] Ship the trait modules, literal instances, Prelude operators/helpers,
   tuple Eq/Ord/Show instances through arity four, and lazy boolean lowering.
+- [x] Overload boolean and unit expressions through FromBool/FromUnit, with
+  little defaults and Big twin instances. Keep qualified constructors and
+  boolean/unit patterns fixed. Snapshot inference, custom conversions, and execution.
 - [x] Ship Lift instances, blanket Big ToData/FromData, and opt-in Validate.
   Map Lift explicitly requires Big keys and values; native pair components
   are rejected. Pair destructuring uses native UPLC case.
@@ -171,7 +174,9 @@ functions. Tests verify returned values, trace ordering before failure,
 and silent trace removal. Builtin contains only actual Plutus builtins.
 
 Base modules use explicit imports. Preserve the acyclic bootstrap chain:
-`Bool`, `Unit`, and `Ordering` import `Lift`; `Ordering` also imports `Eq`. `Prelude` imports its required
+`Bool`, `Unit`, and `Ordering` import `Lift`; `Bool` and `Unit` also import
+`Literal` for their literal instances. `Eq` imports `Literal` for its boolean
+expressions. `Ordering` also imports `Eq`. `Prelude` imports its required
 traits and `Bool`; the application default-import catalog independently
 exposes all shipped traits. Later type modules may import `Prelude` for
 operators without adding reverse dependencies.

@@ -403,8 +403,8 @@ fn ground_reflexive_lift_requires_exact_core_identity() {
         type Phantom 'a = Phantom
         wrap : 'a -> Phantom 'a
         wrap _ = Phantom
-        type alias record = { field : unit }
-        record = wrap { field = () }
+        type alias record = { field : bool }
+        record = wrap { field = Primitive.True }
     "
         ),
     );

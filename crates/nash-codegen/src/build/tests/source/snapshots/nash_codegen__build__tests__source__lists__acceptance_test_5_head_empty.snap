@@ -3,60 +3,63 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nhead : list int -> option int\nhead xs =\n    case xs of\n        [] -> None\n        _ -> Some (headList xs)\nmain = eq (head []) None\n"
 ---
 --- core
-let eq#8 : int -> int -> bool = equalsInteger in
-let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#4 : Main.option 'erased b#5 : Main.option 'erased -> let match#9 : (Main.option 'erased, Main.option 'erased) = constr 0 a#4 b#5 in
-let leaf#15 : 'erased = delay false in
-case@Tag match#9 of
-  0 field#16 field#17 -> case@Tag field#16 of
-    0 -> case@Tag field#17 of
-      0 -> true
-      1 field#18 -> force leaf#15
-    1 field#19 -> case@Tag field#17 of
-      0 -> force leaf#15
-      1 field#20 -> let x#6 : 'erased = field#19 in
-      let y#7 : 'erased = field#20 in
-      eq#8 x#6 y#7 in
-let head#3 : list int -> Main.option int = \xs#21 : list int -> let match#23 : list int = xs#21 in
-case@List match#23 of
+let fromBool#6 : bool -> bool = \value#27 : bool -> value#27 in
+let eq#9 : int -> int -> bool = equalsInteger in
+let eq#2 : Main.option 'erased -> Main.option 'erased -> bool = \a#4 : Main.option 'erased b#5 : Main.option 'erased -> let match#10 : (Main.option 'erased, Main.option 'erased) = constr 0 a#4 b#5 in
+let leaf#16 : 'erased = delay (fromBool#6 false) in
+case@Tag match#10 of
+  0 field#17 field#18 -> case@Tag field#17 of
+    0 -> case@Tag field#18 of
+      0 -> fromBool#6 true
+      1 field#19 -> force leaf#16
+    1 field#20 -> case@Tag field#18 of
+      0 -> force leaf#16
+      1 field#21 -> let x#7 : 'erased = field#20 in
+      let y#8 : 'erased = field#21 in
+      eq#9 x#7 y#8 in
+let head#3 : list int -> Main.option int = \xs#22 : list int -> let match#24 : list int = xs#22 in
+case@List match#24 of
   Nil -> constr 0
-  Cons field#24 field#25 -> (\field#22 : int -> constr 1 field#22) field#24 in
+  Cons field#25 field#26 -> (\field#23 : int -> constr 1 field#23) field#25 in
 let main#1 : bool = eq#2 (head#3 (con (list integer) [])) (constr 0) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_8
-    [(lam eq_2
-      [(lam head_3
-        [(lam main_1 main_1) [[eq_2 [head_3 (con (list integer) [])]] (constr 0)]])
-        (lam xs_21
-          [(lam match_23
-            (case
-              match_23
-              (lam field_24 (lam field_25 [(lam field_22 (constr 1 field_22)) field_24]))
-              (constr 0)))
-            xs_21])])
-      (lam a_4
-        (lam b_5
-          [(lam match_9
-            [(lam leaf_15
+  [(lam fromBool_6
+    [(lam eq_9
+      [(lam eq_2
+        [(lam head_3
+          [(lam main_1 main_1) [[eq_2 [head_3 (con (list integer) [])]] (constr 0)]])
+          (lam xs_22
+            [(lam match_24
               (case
-                match_9
-                (lam field_16
+                match_24
+                (lam field_25 (lam field_26 [(lam field_23 (constr 1 field_23)) field_25]))
+                (constr 0)))
+              xs_22])])
+        (lam a_4
+          (lam b_5
+            [(lam match_10
+              [(lam leaf_16
+                (case
+                  match_10
                   (lam field_17
-                    (case
-                      field_16
-                      (case field_17 (con bool True) (lam field_18 (force leaf_15)))
-                      (lam field_19
-                        (case
-                          field_17
-                          (force leaf_15)
-                          (lam field_20 [(lam x_6 [(lam y_7 [[eq_8 x_6] y_7]) field_20]) field_19]))))))))
-              (delay (con bool False))])
-            (constr 0 a_4 b_5)]))])
-    (builtin equalsInteger)])
+                    (lam field_18
+                      (case
+                        field_17
+                        (case field_18 [fromBool_6 (con bool True)] (lam field_19 (force leaf_16)))
+                        (lam field_20
+                          (case
+                            field_18
+                            (force leaf_16)
+                            (lam field_21 [(lam x_7 [(lam y_8 [[eq_9 x_7] y_8]) field_21]) field_20]))))))))
+                (delay [fromBool_6 (con bool False)])])
+              (constr 0 a_4 b_5)]))])
+      (builtin equalsInteger)])
+    (lam value_27 value_27)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 688100, memory: 4400
+cpu: 784100, memory: 5000

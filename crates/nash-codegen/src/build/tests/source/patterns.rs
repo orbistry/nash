@@ -42,6 +42,7 @@ case!(
     module Main exposing (..)
     import Primitive exposing (..)
     import Builtin exposing (..)
+    main : bool
     main =
         case True of
             True -> True
@@ -56,6 +57,7 @@ case!(
     module Main exposing (..)
     import Primitive exposing (..)
     import Builtin exposing (..)
+    main : bool
     main =
         case True of
             False -> fail
@@ -70,6 +72,7 @@ case!(
     module Main exposing (..)
     import Primitive exposing (..)
     import Builtin exposing (..)
+    main : bool
     main =
         case False of
             False -> fail
@@ -87,6 +90,7 @@ case!(
     type thing = Thing { idx : int }
     type datum = A thing | B
     type redSpend = Spend int | Buy
+    main : bool
     main =
         case (A (Thing { idx = 42 }), Buy) of
             (A a, Spend x) ->
@@ -271,6 +275,7 @@ case!(
     import Primitive exposing (..)
     import Builtin exposing (..)
     type option = Some int | None
+    main : bool
     main =
         let
             x = None

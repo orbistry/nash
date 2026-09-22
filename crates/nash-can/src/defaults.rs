@@ -21,7 +21,10 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Monad", &["Monad"]),
     ("Lift", &["Lift"]),
     ("Data", &["ToData", "FromData", "Validate"]),
-    ("Literal", &["FromInt", "FromString", "FromBytes"]),
+    (
+        "Literal",
+        &["FromInt", "FromString", "FromBytes", "FromBool", "FromUnit"],
+    ),
     ("Bool", &["Bool", "not", "and", "or", "xor"]),
     ("Unit", &["Unit"]),
     ("Option", &["Option", "type option"]),

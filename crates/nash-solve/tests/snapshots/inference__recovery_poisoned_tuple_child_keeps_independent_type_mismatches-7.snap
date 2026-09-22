@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nbad : (((), ()), ())\nbad = ((().field, ()), \\x -> x)\n"
+description: "module Main exposing (..)\nbad : (((), ()), ())\nbad = (((assert Primitive.True).field, ()), \\x -> x)\n"
 info: diagnostic
 ---
 nash::type::mismatch
@@ -12,9 +12,9 @@ nash::type::mismatch
  2 │ bad : (((), ()), ())
    ·       ───────┬──────
    ·              ╰── declared type
- 3 │ bad = ((().field, ()), \x -> x)
-   ·       ────────────┬────────────
-   ·                   ╰── body of `bad`
+ 3 │ bad = (((assert Primitive.True).field, ()), \x -> x)
+   ·       ───────────────────────┬──────────────────────
+   ·                              ╰── body of `bad`
    ╰────
 
 
@@ -23,7 +23,7 @@ nash::type::not_a_record
   × Expected a record, found `unit`.
    ╭─[Main.nash:3:9]
  2 │ bad : (((), ()), ())
- 3 │ bad = ((().field, ()), \x -> x)
-   ·         ────┬───
-   ·             ╰── field `field` access
+ 3 │ bad = (((assert Primitive.True).field, ()), \x -> x)
+   ·         ──────────────┬──────────────
+   ·                       ╰── field `field` access
    ╰────

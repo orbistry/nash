@@ -3,52 +3,55 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\ntype pairs = Pairs { inner : list (pair Data Data) }\nnew () = Pairs { inner = [] }\nsame (Pairs a) (Pairs b) = equalsData (toData (mapData a)) (toData (mapData b))\nmain = same (new ()) (Pairs { inner = [] })\n"
 ---
 --- core
-let toData#9 : 'erased -> Data = \coerce#17 : 'erased -> coerce#17 in
-let same#2 : Main.pairs -> Main.pairs -> bool = \arg#5 : Main.pairs arg#7 : Main.pairs -> let match#12 : Main.pairs = arg#5 in
-case@Tag match#12 of
-  0 field#13 -> let a#6 : list (pair Data Data) = field#13 in
-  let match#10 : Main.pairs = arg#7 in
-  case@Tag match#10 of
-    0 field#11 -> let b#8 : list (pair Data Data) = field#11 in
-    equalsData (toData#9 (mapData a#6)) (toData#9 (mapData b#8)) in
-let new#3 : unit -> Main.pairs = \arg#14 : unit -> let match#16 : unit = arg#14 in
-(\field#15 : list (pair Data Data) -> constr 0 field#15) (con (list (pair data data)) []) in
-let main#1 : bool = same#2 (new#3 ()) ((\field#4 : list (pair Data Data) -> constr 0 field#4) (con (list (pair data data)) [])) in
+let toData#10 : 'erased -> Data = \coerce#19 : 'erased -> coerce#19 in
+let same#2 : Main.pairs -> Main.pairs -> bool = \arg#6 : Main.pairs arg#8 : Main.pairs -> let match#13 : Main.pairs = arg#6 in
+case@Tag match#13 of
+  0 field#14 -> let a#7 : list (pair Data Data) = field#14 in
+  let match#11 : Main.pairs = arg#8 in
+  case@Tag match#11 of
+    0 field#12 -> let b#9 : list (pair Data Data) = field#12 in
+    equalsData (toData#10 (mapData a#7)) (toData#10 (mapData b#9)) in
+let new#3 : unit -> Main.pairs = \arg#15 : unit -> let match#17 : unit = arg#15 in
+(\field#16 : list (pair Data Data) -> constr 0 field#16) (con (list (pair data data)) []) in
+let fromUnit#4 : unit -> unit = \value#18 : unit -> value#18 in
+let main#1 : bool = same#2 (new#3 (fromUnit#4 ())) ((\field#5 : list (pair Data Data) -> constr 0 field#5) (con (list (pair data data)) [])) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam toData_9
+  [(lam toData_10
     [(lam same_2
       [(lam new_3
-        [(lam main_1 main_1)
-          [[same_2 [new_3 (con unit ())]]
-            [(lam field_4 (constr 0 field_4)) (con (list (pair data data)) [])]]])
-        (lam arg_14
-          [(lam match_16
-            [(lam field_15 (constr 0 field_15)) (con (list (pair data data)) [])])
-            arg_14])])
-      (lam arg_5
-        (lam arg_7
-          [(lam match_12
+        [(lam fromUnit_4
+          [(lam main_1 main_1)
+            [[same_2 [new_3 [fromUnit_4 (con unit ())]]]
+              [(lam field_5 (constr 0 field_5)) (con (list (pair data data)) [])]]])
+          (lam value_18 value_18)])
+        (lam arg_15
+          [(lam match_17
+            [(lam field_16 (constr 0 field_16)) (con (list (pair data data)) [])])
+            arg_15])])
+      (lam arg_6
+        (lam arg_8
+          [(lam match_13
             (case
-              match_12
-              (lam field_13
-                [(lam a_6
-                  [(lam match_10
+              match_13
+              (lam field_14
+                [(lam a_7
+                  [(lam match_11
                     (case
-                      match_10
-                      (lam field_11
-                        [(lam b_8
-                          [[(builtin equalsData) [toData_9 [(builtin mapData) a_6]]]
-                            [toData_9 [(builtin mapData) b_8]]])
-                          field_11])))
-                    arg_7])
-                  field_13])))
-            arg_5]))])
-    (lam coerce_17 coerce_17)])
+                      match_11
+                      (lam field_12
+                        [(lam b_9
+                          [[(builtin equalsData) [toData_10 [(builtin mapData) a_7]]]
+                            [toData_10 [(builtin mapData) b_9]]])
+                          field_12])))
+                    arg_8])
+                  field_14])))
+            arg_6]))])
+    (lam coerce_19 coerce_19)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2183856, memory: 6665
+cpu: 2279856, memory: 7265

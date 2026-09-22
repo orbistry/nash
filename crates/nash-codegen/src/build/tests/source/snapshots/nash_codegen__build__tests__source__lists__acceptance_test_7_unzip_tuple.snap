@@ -3,198 +3,202 @@ source: crates/nash-codegen/src/build/tests/source/lists.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nunzip xs =\n    case xs of\n        Nil -> ([], [])\n        Cons (a, b) rest ->\n            let\n                (aTail, bTail) = unzip rest\n            in\n            (mkCons a aTail, mkCons b bTail)\nsame (a, b) (c, d) = if eq a c then eq b d else False\nmain =\n    let\n        x = Cons (3, #\"55\") (Cons (4, #\"7799\") Nil)\n    in\n    same (unzip x) ([3, 4], [#\"55\", #\"7799\"])\n"
 ---
 --- core
-let eq#49 : int -> int -> bool = equalsInteger in
-let eq#17 : list 'erased -> list 'erased -> bool = (\self#67 : 'erased -> self#67 self#67) (\self#67 : 'erased xs#47 : list 'erased ys#48 : list 'erased -> case@Bool nullList xs#47 of
-  True -> nullList ys#48
-  False -> case@Bool nullList ys#48 of
-    True -> false
-    False -> let projection#53 : 'erased = headList xs#47 in
-    let projection#54 : 'erased = headList ys#48 in
-    case@Bool eq#49 projection#53 projection#54 of
-      True -> let projection#55 : list 'erased = tailList xs#47 in
-      let projection#56 : list 'erased = tailList ys#48 in
-      self#67 self#67 projection#55 projection#56
-      False -> false) in
-let eq#52 : bytes -> bytes -> bool = equalsByteString in
-let eq#18 : list 'erased -> list 'erased -> bool = (\self#64 : 'erased -> self#64 self#64) (\self#64 : 'erased xs#50 : list 'erased ys#51 : list 'erased -> case@Bool nullList xs#50 of
-  True -> nullList ys#51
-  False -> case@Bool nullList ys#51 of
-    True -> false
-    False -> let projection#57 : 'erased = headList xs#50 in
-    let projection#58 : 'erased = headList ys#51 in
-    case@Bool eq#52 projection#57 projection#58 of
-      True -> let projection#59 : list 'erased = tailList xs#50 in
-      let projection#60 : list 'erased = tailList ys#51 in
-      self#64 self#64 projection#59 projection#60
-      False -> false) in
-let same#2 : ('erased, 'erased) -> ('erased, 'erased) -> bool = \arg#11 : ('erased, 'erased) arg#14 : ('erased, 'erased) -> let match#22 : ('erased, 'erased) = arg#11 in
-case@Tag match#22 of
-  0 field#23 field#24 -> let a#12 : 'erased = field#23 in
-  let b#13 : 'erased = field#24 in
-  let match#19 : ('erased, 'erased) = arg#14 in
-  case@Tag match#19 of
-    0 field#20 field#21 -> let c#15 : 'erased = field#20 in
-    let d#16 : 'erased = field#21 in
-    case@Bool eq#17 a#12 c#15 of
-      True -> eq#18 b#13 d#16
-      False -> false in
-let unzip#3 : Main.sequence (int, bytes) -> (list int, list bytes) = (\self#62 : 'erased -> self#62 self#62) (\self#62 : 'erased xs#25 : Main.sequence (int, bytes) -> let match#40 : Main.sequence (int, bytes) = xs#25 in
-case@Tag match#40 of
+let fromBool#17 : bool -> bool = \value#48 : bool -> value#48 in
+let eq#51 : int -> int -> bool = equalsInteger in
+let eq#18 : list 'erased -> list 'erased -> bool = (\self#69 : 'erased -> self#69 self#69) (\self#69 : 'erased xs#49 : list 'erased ys#50 : list 'erased -> case@Bool nullList xs#49 of
+  True -> nullList ys#50
+  False -> case@Bool nullList ys#50 of
+    True -> fromBool#17 false
+    False -> let projection#55 : 'erased = headList xs#49 in
+    let projection#56 : 'erased = headList ys#50 in
+    case@Bool eq#51 projection#55 projection#56 of
+      True -> let projection#57 : list 'erased = tailList xs#49 in
+      let projection#58 : list 'erased = tailList ys#50 in
+      self#69 self#69 projection#57 projection#58
+      False -> fromBool#17 false) in
+let eq#54 : bytes -> bytes -> bool = equalsByteString in
+let eq#19 : list 'erased -> list 'erased -> bool = (\self#66 : 'erased -> self#66 self#66) (\self#66 : 'erased xs#52 : list 'erased ys#53 : list 'erased -> case@Bool nullList xs#52 of
+  True -> nullList ys#53
+  False -> case@Bool nullList ys#53 of
+    True -> fromBool#17 false
+    False -> let projection#59 : 'erased = headList xs#52 in
+    let projection#60 : 'erased = headList ys#53 in
+    case@Bool eq#54 projection#59 projection#60 of
+      True -> let projection#61 : list 'erased = tailList xs#52 in
+      let projection#62 : list 'erased = tailList ys#53 in
+      self#66 self#66 projection#61 projection#62
+      False -> fromBool#17 false) in
+let same#2 : ('erased, 'erased) -> ('erased, 'erased) -> bool = \arg#11 : ('erased, 'erased) arg#14 : ('erased, 'erased) -> let match#23 : ('erased, 'erased) = arg#11 in
+case@Tag match#23 of
+  0 field#24 field#25 -> let a#12 : 'erased = field#24 in
+  let b#13 : 'erased = field#25 in
+  let match#20 : ('erased, 'erased) = arg#14 in
+  case@Tag match#20 of
+    0 field#21 field#22 -> let c#15 : 'erased = field#21 in
+    let d#16 : 'erased = field#22 in
+    case@Bool eq#18 a#12 c#15 of
+      True -> eq#19 b#13 d#16
+      False -> fromBool#17 false in
+let unzip#3 : Main.sequence (int, bytes) -> (list int, list bytes) = (\self#64 : 'erased -> self#64 self#64) (\self#64 : 'erased xs#26 : Main.sequence (int, bytes) -> let match#41 : Main.sequence (int, bytes) = xs#26 in
+case@Tag match#41 of
   0 -> constr 0 (con (list integer) []) (con (list bytestring) [])
-  1 field#41 field#42 -> case@Tag field#41 of
-    0 field#43 field#44 -> let rest#28 : Main.sequence (int, bytes) = field#42 in
-    let a#26 : int = field#43 in
-    let b#27 : bytes = field#44 in
-    let destruct#29 : (list int, list bytes) = self#62 self#62 rest#28 in
-    let match#32 : (list int, list bytes) = destruct#29 in
-    let evaluated#61 : 'erased = mkCons a#26 (case@Tag match#32 of
-      0 field#33 field#34 -> let aTail#30 : list int = field#33 in
-      let bTail#31 : list bytes = field#34 in
-      aTail#30) in
-    let match#37 : (list int, list bytes) = destruct#29 in
-    constr 0 evaluated#61 (mkCons b#27 (case@Tag match#37 of
-      0 field#38 field#39 -> let aTail#35 : list int = field#38 in
-      let bTail#36 : list bytes = field#39 in
-      bTail#36))) in
-let fromInt#5 : int -> int = \value#45 : int -> value#45 in
-let fromBytes#6 : bytes -> bytes = \value#46 : bytes -> value#46 in
+  1 field#42 field#43 -> case@Tag field#42 of
+    0 field#44 field#45 -> let rest#29 : Main.sequence (int, bytes) = field#43 in
+    let a#27 : int = field#44 in
+    let b#28 : bytes = field#45 in
+    let destruct#30 : (list int, list bytes) = self#64 self#64 rest#29 in
+    let match#33 : (list int, list bytes) = destruct#30 in
+    let evaluated#63 : 'erased = mkCons a#27 (case@Tag match#33 of
+      0 field#34 field#35 -> let aTail#31 : list int = field#34 in
+      let bTail#32 : list bytes = field#35 in
+      aTail#31) in
+    let match#38 : (list int, list bytes) = destruct#30 in
+    constr 0 evaluated#63 (mkCons b#28 (case@Tag match#38 of
+      0 field#39 field#40 -> let aTail#36 : list int = field#39 in
+      let bTail#37 : list bytes = field#40 in
+      bTail#37))) in
+let fromInt#5 : int -> int = \value#46 : int -> value#46 in
+let fromBytes#6 : bytes -> bytes = \value#47 : bytes -> value#47 in
 let x#4 : Main.sequence ('erased, 'erased) = (\field#7 : ('erased, 'erased) field#8 : Main.sequence ('erased, 'erased) -> constr 1 field#7 field#8) (constr 0 (fromInt#5 3) (fromBytes#6 (con bytestring #55))) ((\field#9 : ('erased, 'erased) field#10 : Main.sequence ('erased, 'erased) -> constr 1 field#9 field#10) (constr 0 (fromInt#5 4) (fromBytes#6 (con bytestring #7799))) (constr 0)) in
 let main#1 : bool = same#2 (unzip#3 x#4) (constr 0 (mkCons (fromInt#5 3) (mkCons (fromInt#5 4) (con (list integer) []))) (mkCons (fromBytes#6 (con bytestring #55)) (mkCons (fromBytes#6 (con bytestring #7799)) (con (list bytestring) [])))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam eq_49
-    [(lam eq_17
-      [(lam eq_52
-        [(lam eq_18
-          [(lam same_2
-            [(lam unzip_3
-              [(lam fromInt_5
-                [(lam fromBytes_6
-                  [(lam x_4
-                    [(lam main_1 main_1)
-                      [[same_2 [unzip_3 x_4]]
-                        (constr 0
-                          [[(force (builtin mkCons)) [fromInt_5 (con integer 3)]]
-                            [[(force (builtin mkCons)) [fromInt_5 (con integer 4)]] (con (list integer) [])]]
-                          [[(force (builtin mkCons)) [fromBytes_6 (con bytestring #55)]]
-                            [[(force (builtin mkCons)) [fromBytes_6 (con bytestring #7799)]]
-                              (con (list bytestring) [])]])]])
-                    [[(lam field_7 (lam field_8 (constr 1 field_7 field_8)))
-                      (constr 0 [fromInt_5 (con integer 3)] [fromBytes_6 (con bytestring #55)])]
-                      [[(lam field_9 (lam field_10 (constr 1 field_9 field_10)))
-                        (constr 0 [fromInt_5 (con integer 4)] [fromBytes_6 (con bytestring #7799)])]
-                        (constr 0)]]])
+  [(lam fromBool_17
+    [(lam eq_51
+      [(lam eq_18
+        [(lam eq_54
+          [(lam eq_19
+            [(lam same_2
+              [(lam unzip_3
+                [(lam fromInt_5
+                  [(lam fromBytes_6
+                    [(lam x_4
+                      [(lam main_1 main_1)
+                        [[same_2 [unzip_3 x_4]]
+                          (constr 0
+                            [[(force (builtin mkCons)) [fromInt_5 (con integer 3)]]
+                              [[(force (builtin mkCons)) [fromInt_5 (con integer 4)]] (con (list integer) [])]]
+                            [[(force (builtin mkCons)) [fromBytes_6 (con bytestring #55)]]
+                              [[(force (builtin mkCons)) [fromBytes_6 (con bytestring #7799)]]
+                                (con (list bytestring) [])]])]])
+                      [[(lam field_7 (lam field_8 (constr 1 field_7 field_8)))
+                        (constr 0 [fromInt_5 (con integer 3)] [fromBytes_6 (con bytestring #55)])]
+                        [[(lam field_9 (lam field_10 (constr 1 field_9 field_10)))
+                          (constr 0 [fromInt_5 (con integer 4)] [fromBytes_6 (con bytestring #7799)])]
+                          (constr 0)]]])
+                    (lam value_47 value_47)])
                   (lam value_46 value_46)])
-                (lam value_45 value_45)])
-              [(lam self_62 [self_62 self_62])
-                (lam self_62
-                  (lam xs_25
-                    [(lam match_40
-                      (case
-                        match_40
-                        (constr 0 (con (list integer) []) (con (list bytestring) []))
-                        (lam field_41
+                [(lam self_64 [self_64 self_64])
+                  (lam self_64
+                    (lam xs_26
+                      [(lam match_41
+                        (case
+                          match_41
+                          (constr 0 (con (list integer) []) (con (list bytestring) []))
                           (lam field_42
-                            (case
-                              field_41
-                              (lam field_43
-                                (lam field_44
-                                  [(lam rest_28
-                                    [(lam a_26
-                                      [(lam b_27
-                                        [(lam destruct_29
-                                          [(lam match_32
-                                            [(lam evaluated_61
-                                              [(lam match_37
-                                                (constr 0
-                                                  evaluated_61
-                                                  [[(force (builtin mkCons)) b_27]
-                                                    (case
-                                                      match_37
-                                                      (lam field_38
-                                                        (lam field_39 [(lam aTail_35 [(lam bTail_36 bTail_36) field_39]) field_38])))]))
-                                                destruct_29])
-                                              [[(force (builtin mkCons)) a_26]
-                                                (case
-                                                  match_32
-                                                  (lam field_33
-                                                    (lam field_34 [(lam aTail_30 [(lam bTail_31 aTail_30) field_34]) field_33])))]])
-                                            destruct_29])
-                                          [[self_62 self_62] rest_28]])
-                                        field_44])
-                                      field_43])
-                                    field_42])))))))
-                      xs_25]))]])
-            (lam arg_11
-              (lam arg_14
-                [(lam match_22
-                  (case
-                    match_22
-                    (lam field_23
-                      (lam field_24
-                        [(lam a_12
-                          [(lam b_13
-                            [(lam match_19
+                            (lam field_43
                               (case
-                                match_19
-                                (lam field_20
-                                  (lam field_21
-                                    [(lam c_15
-                                      [(lam d_16 (case [[eq_17 a_12] c_15] (con bool False) [[eq_18 b_13] d_16]))
-                                        field_21])
-                                      field_20]))))
-                              arg_14])
-                            field_24])
-                          field_23]))))
-                  arg_11]))])
-          [(lam self_64 [self_64 self_64])
-            (lam self_64
-              (lam xs_50
-                (lam ys_51
-                  (case
-                    [(force (builtin nullList)) xs_50]
+                                field_42
+                                (lam field_44
+                                  (lam field_45
+                                    [(lam rest_29
+                                      [(lam a_27
+                                        [(lam b_28
+                                          [(lam destruct_30
+                                            [(lam match_33
+                                              [(lam evaluated_63
+                                                [(lam match_38
+                                                  (constr 0
+                                                    evaluated_63
+                                                    [[(force (builtin mkCons)) b_28]
+                                                      (case
+                                                        match_38
+                                                        (lam field_39
+                                                          (lam field_40 [(lam aTail_36 [(lam bTail_37 bTail_37) field_40]) field_39])))]))
+                                                  destruct_30])
+                                                [[(force (builtin mkCons)) a_27]
+                                                  (case
+                                                    match_33
+                                                    (lam field_34
+                                                      (lam field_35 [(lam aTail_31 [(lam bTail_32 aTail_31) field_35]) field_34])))]])
+                                              destruct_30])
+                                            [[self_64 self_64] rest_29]])
+                                          field_45])
+                                        field_44])
+                                      field_43])))))))
+                        xs_26]))]])
+              (lam arg_11
+                (lam arg_14
+                  [(lam match_23
                     (case
-                      [(force (builtin nullList)) ys_51]
-                      [(lam projection_57
-                        [(lam projection_58
-                          (case
-                            [[eq_52 projection_57] projection_58]
-                            (con bool False)
-                            [(lam projection_59
-                              [(lam projection_60 [[[self_64 self_64] projection_59] projection_60])
-                                [(force (builtin tailList)) ys_51]])
-                              [(force (builtin tailList)) xs_50]]))
-                          [(force (builtin headList)) ys_51]])
-                        [(force (builtin headList)) xs_50]]
-                      (con bool False))
-                    [(force (builtin nullList)) ys_51]))))]])
-        (builtin equalsByteString)])
-      [(lam self_67 [self_67 self_67])
-        (lam self_67
-          (lam xs_47
-            (lam ys_48
-              (case
-                [(force (builtin nullList)) xs_47]
-                (case
-                  [(force (builtin nullList)) ys_48]
-                  [(lam projection_53
-                    [(lam projection_54
+                      match_23
+                      (lam field_24
+                        (lam field_25
+                          [(lam a_12
+                            [(lam b_13
+                              [(lam match_20
+                                (case
+                                  match_20
+                                  (lam field_21
+                                    (lam field_22
+                                      [(lam c_15
+                                        [(lam d_16
+                                          (case [[eq_18 a_12] c_15] [fromBool_17 (con bool False)] [[eq_19 b_13] d_16]))
+                                          field_22])
+                                        field_21]))))
+                                arg_14])
+                              field_25])
+                            field_24]))))
+                    arg_11]))])
+            [(lam self_66 [self_66 self_66])
+              (lam self_66
+                (lam xs_52
+                  (lam ys_53
+                    (case
+                      [(force (builtin nullList)) xs_52]
                       (case
-                        [[eq_49 projection_53] projection_54]
-                        (con bool False)
-                        [(lam projection_55
-                          [(lam projection_56 [[[self_67 self_67] projection_55] projection_56])
-                            [(force (builtin tailList)) ys_48]])
-                          [(force (builtin tailList)) xs_47]]))
-                      [(force (builtin headList)) ys_48]])
-                    [(force (builtin headList)) xs_47]]
-                  (con bool False))
-                [(force (builtin nullList)) ys_48]))))]])
-    (builtin equalsInteger)])
+                        [(force (builtin nullList)) ys_53]
+                        [(lam projection_59
+                          [(lam projection_60
+                            (case
+                              [[eq_54 projection_59] projection_60]
+                              [fromBool_17 (con bool False)]
+                              [(lam projection_61
+                                [(lam projection_62 [[[self_66 self_66] projection_61] projection_62])
+                                  [(force (builtin tailList)) ys_53]])
+                                [(force (builtin tailList)) xs_52]]))
+                            [(force (builtin headList)) ys_53]])
+                          [(force (builtin headList)) xs_52]]
+                        [fromBool_17 (con bool False)])
+                      [(force (builtin nullList)) ys_53]))))]])
+          (builtin equalsByteString)])
+        [(lam self_69 [self_69 self_69])
+          (lam self_69
+            (lam xs_49
+              (lam ys_50
+                (case
+                  [(force (builtin nullList)) xs_49]
+                  (case
+                    [(force (builtin nullList)) ys_50]
+                    [(lam projection_55
+                      [(lam projection_56
+                        (case
+                          [[eq_51 projection_55] projection_56]
+                          [fromBool_17 (con bool False)]
+                          [(lam projection_57
+                            [(lam projection_58 [[[self_69 self_69] projection_57] projection_58])
+                              [(force (builtin tailList)) ys_50]])
+                            [(force (builtin tailList)) xs_49]]))
+                        [(force (builtin headList)) ys_50]])
+                      [(force (builtin headList)) xs_49]]
+                    [fromBool_17 (con bool False)])
+                  [(force (builtin nullList)) ys_50]))))]])
+      (builtin equalsInteger)])
+    (lam value_48 value_48)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 11322434, memory: 53556
+cpu: 11370434, memory: 53856

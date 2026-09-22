@@ -1,45 +1,51 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        (identity, second) = (\\x -> x, \\x -> x)\n    in\n    (identity (), second True)\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : (unit, bool)\nmain =\n    let\n        (identity, second) = (\\x -> x, \\x -> x)\n    in\n    (identity (), second True)\n"
 ---
 --- core
-let destruct#2 : ('erased -> 'erased, 'erased -> 'erased) = constr 0 (\x#13 : 'erased -> x#13) (\x#14 : 'erased -> x#14) in
+let fromUnit#8 : unit -> unit = \value#17 : unit -> value#17 in
+let fromBool#14 : bool -> bool = \value#18 : bool -> value#18 in
+let destruct#2 : ('erased -> 'erased, 'erased -> 'erased) = constr 0 (\x#15 : 'erased -> x#15) (\x#16 : 'erased -> x#16) in
 let match#5 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
-let evaluated#15 : 'erased = (case@Tag match#5 of
+let evaluated#19 : 'erased = (case@Tag match#5 of
   0 field#6 field#7 -> let identity#3 : 'erased -> 'erased = field#6 in
   let second#4 : 'erased -> 'erased = field#7 in
-  identity#3) () in
-let match#10 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
-let main#1 : (unit, bool) = constr 0 evaluated#15 ((case@Tag match#10 of
-  0 field#11 field#12 -> let identity#8 : 'erased -> 'erased = field#11 in
-  let second#9 : 'erased -> 'erased = field#12 in
-  second#9) true) in
+  identity#3) (fromUnit#8 ()) in
+let match#11 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
+let main#1 : (unit, bool) = constr 0 evaluated#19 ((case@Tag match#11 of
+  0 field#12 field#13 -> let identity#9 : 'erased -> 'erased = field#12 in
+  let second#10 : 'erased -> 'erased = field#13 in
+  second#10) (fromBool#14 true)) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam destruct_2
-    [(lam match_5
-      [(lam evaluated_15
-        [(lam match_10
-          [(lam main_1 main_1)
-            (constr 0
-              evaluated_15
-              [(case
-                match_10
-                (lam field_11
-                  (lam field_12 [(lam identity_8 [(lam second_9 second_9) field_12]) field_11])))
-                (con bool True)])])
+  [(lam fromUnit_8
+    [(lam fromBool_14
+      [(lam destruct_2
+        [(lam match_5
+          [(lam evaluated_19
+            [(lam match_11
+              [(lam main_1 main_1)
+                (constr 0
+                  evaluated_19
+                  [(case
+                    match_11
+                    (lam field_12
+                      (lam field_13 [(lam identity_9 [(lam second_10 second_10) field_13]) field_12])))
+                    [fromBool_14 (con bool True)]])])
+              destruct_2])
+            [(case
+              match_5
+              (lam field_6
+                (lam field_7 [(lam identity_3 [(lam second_4 identity_3) field_7]) field_6])))
+              [fromUnit_8 (con unit ())]]])
           destruct_2])
-        [(case
-          match_5
-          (lam field_6
-            (lam field_7 [(lam identity_3 [(lam second_4 identity_3) field_7]) field_6])))
-          (con unit ())]])
-      destruct_2])
-    (constr 0 (lam x_13 x_13) (lam x_14 x_14))])
+        (constr 0 (lam x_15 x_15) (lam x_16 x_16))])
+      (lam value_18 value_18)])
+    (lam value_17 value_17)])
 --- result
 (constr 0 (con unit ()) (con bool True))
 --- logs
 []
 --- budget
-cpu: 736100, memory: 4700
+cpu: 928100, memory: 5900

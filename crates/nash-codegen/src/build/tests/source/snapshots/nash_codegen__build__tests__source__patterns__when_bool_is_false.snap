@@ -1,17 +1,21 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    case False of\n        False -> fail\n        True -> True\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    case False of\n        False -> fail\n        True -> True\n"
 ---
 --- core
-let match#2 : bool = false in
-let main#1 : bool = case@Bool match#2 of
+let fromBool#2 : bool -> bool = \value#4 : bool -> value#4 in
+let match#3 : bool = fromBool#2 false in
+let main#1 : bool = case@Bool match#3 of
   False -> error
-  True -> true in
+  True -> fromBool#2 true in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam match_2 [(lam main_1 main_1) (case match_2 (error) (con bool True))])
-    (con bool False)])
+  [(lam fromBool_2
+    [(lam match_3
+      [(lam main_1 main_1) (case match_3 (error) [fromBool_2 (con bool True)])])
+      [fromBool_2 (con bool False)]])
+    (lam value_4 value_4)])
 --- result
 error: ExplicitErrorTerm
 --- logs

@@ -1,14 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Builtin\nbadList = Builtin.listData [()]\n"
+description: "module Main exposing (..)\nimport Builtin\nunitValue : unit\nunitValue = ()\nbadList = Builtin.listData [unitValue]\n"
 info: diagnostic
 ---
 nash::type::missing_impl
 
   × Unsatisfied representation constraint `Primitive.Big unit`.
-   ╭─[Main.nash:3:11]
- 2 │ import Builtin
- 3 │ badList = Builtin.listData [()]
+   ╭─[Main.nash:5:11]
+ 4 │ unitValue = ()
+ 5 │ badList = Builtin.listData [unitValue]
    ·           ────────┬───────
    ·                   ╰── required by `type application`
    ╰────
@@ -22,9 +22,9 @@ nash::type::missing_impl
 nash::type::missing_impl
 
   × Unsatisfied representation constraint `Primitive.Big unit`.
-   ╭─[Main.nash:3:11]
- 2 │ import Builtin
- 3 │ badList = Builtin.listData [()]
+   ╭─[Main.nash:5:11]
+ 4 │ unitValue = ()
+ 5 │ badList = Builtin.listData [unitValue]
    ·           ────────┬───────
    ·                   ╰── required by `listData`
    ╰────

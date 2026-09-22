@@ -1,28 +1,31 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmain =\n    let\n        x = 1\n    in\n    if equalsInteger x 1 then True else False\n"
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmain : bool\nmain =\n    let\n        x = 1\n    in\n    if equalsInteger x 1 then True else False\n"
 ---
 --- core
-let fromInt#3 : int -> int = \value#4 : int -> value#4 in
-let x#2 : 'erased = fromInt#3 1 in
-let main#1 : bool = case@Bool equalsInteger x#2 (fromInt#3 1) of
-  True -> true
-  False -> false in
+let fromBool#2 : bool -> bool = \value#5 : bool -> value#5 in
+let fromInt#4 : int -> int = \value#6 : int -> value#6 in
+let x#3 : 'erased = fromInt#4 1 in
+let main#1 : bool = case@Bool equalsInteger x#3 (fromInt#4 1) of
+  True -> fromBool#2 true
+  False -> fromBool#2 false in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_3
-    [(lam x_2
-      [(lam main_1 main_1)
-        (case
-          [[(builtin equalsInteger) x_2] [fromInt_3 (con integer 1)]]
-          (con bool False)
-          (con bool True))])
-      [fromInt_3 (con integer 1)]])
-    (lam value_4 value_4)])
+  [(lam fromBool_2
+    [(lam fromInt_4
+      [(lam x_3
+        [(lam main_1 main_1)
+          (case
+            [[(builtin equalsInteger) x_3] [fromInt_4 (con integer 1)]]
+            [fromBool_2 (con bool False)]
+            [fromBool_2 (con bool True)])])
+        [fromInt_4 (con integer 1)]])
+      (lam value_6 value_6)])
+    (lam value_5 value_5)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 404433, memory: 2301
+cpu: 500433, memory: 2901

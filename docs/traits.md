@@ -309,9 +309,11 @@ int)`.
   `C`.
 - An integer literal is typed as a use of `fromInt : FromInt 'a => 'a`;
   a string literal as `fromString : FromString 'a => 'a`; a bytes literal
-  as `fromBytes : FromBytes 'a => 'a`.
-- A literal in a pattern additionally wants `Eq 'a` (matching needs
-  equality).
+  as `fromBytes : FromBytes 'a => 'a`. Bare boolean expressions similarly
+  require `FromBool 'a`, and unit expressions require `FromUnit 'a`.
+- Integer, string, and bytes patterns additionally want `Eq 'a` (matching
+  needs equality). Boolean and unit patterns retain their fixed constructor
+  types and do not create literal predicates.
 - A resolved impl's context produces sub-wanteds tagged with the parent
   predicate.
 
@@ -375,8 +377,9 @@ definition and list equal requirements once.
 For each ambiguous variable, in order:
 
 - If its predicates include exactly one distinct literal trait from package
-  `nash/base`, module `Literal` (`FromInt`, `FromString`, `FromBytes`), unify
-  it with `Primitive.int`, `Primitive.string`, or `Primitive.bytes` respectively.
+  `nash/base`, module `Literal` (`FromInt`, `FromString`, `FromBytes`,
+  `FromBool`, `FromUnit`), unify it with `Primitive.int`, `Primitive.string`,
+  `Primitive.bytes`, `Primitive.bool`, or `Primitive.unit` respectively.
   The predicate's sole argument must be that variable, not a type containing
   it. Repeated requirements of the same trait still select one default.
 - Otherwise report an ambiguous type error listing the predicates.
@@ -537,11 +540,12 @@ region supplies diagnostics.
 Decision: shipped in `nash/base` as one module per trait (`Eq`, `Ord`,
 `Show`, `Num`, `Integral`, `Semigroup`, `Monoid`, `Functor`,
 `Applicative`, `Monad`, `Lift`, `Data` for `ToData`/`FromData`/`Validate`, and
-`Literal` for the three literal traits), all imported implicitly with the
+`Literal` for the five literal traits), all imported implicitly with the
 trait and its methods exposed (like Elm's default imports of `Basics`).
 `Prelude` holds the `infix` declarations that bind operators to methods and
 the impls for the prelude types. The compiler recognizes these core identities:
-`Literal.FromInt`, `Literal.FromString`, `Literal.FromBytes`, `Eq.Eq`
+`Literal.FromInt`, `Literal.FromString`, `Literal.FromBytes`,
+`Literal.FromBool`, `Literal.FromUnit`, `Eq.Eq`
 (literal patterns), `Num.Num` (prefix negation), `Monad.Monad` (`do`), and
 `Lift.Lift` (reflexive identity evidence). Negation uses the checked `Num.negate`
 method annotation, independent of lexical values named `negate`. The declarations match
@@ -610,14 +614,25 @@ trait FromString 'a where
     fromString : string -> 'a
 trait FromBytes 'a where
     fromBytes : bytes -> 'a
+trait FromBool 'a where
+    fromBool : bool -> 'a
+trait FromUnit 'a where
+    fromUnit : unit -> 'a
 ```
 
 Notes:
 
 - `fromInt : int -> 'a` takes a UPLC integer constant. The compiler types
   the literal `42` as `fromInt 42` where the inner `42` is the raw `int`
-  constant, so `impl FromInt int` is `fromInt x = x` and specialization
-  inlines it away. Same for `string` and `bytes`.
+  constant, so `impl FromInt int` is `fromInt x = x`. The same conversion
+  path applies to `string`, `bytes`, `bool`, and `unit`.
+  Primitive identity implementations return their argument; writing a literal
+  in those bodies would call the conversion again.
+- `FromBool Bool` selects `Bool.True` or `Bool.False`; `FromUnit Unit` returns
+  `Unit.Unit`. These implementations live in the respective type modules so
+  `Literal` remains independent of them. Qualified constructors keep their
+  declared types, and user-defined constructors named `True` or `False` are
+  not rewritten.
 - `impl FromInt Int` builds `I n`; `impl FromString bytes` is a
   compile-time UTF-8 encode. Users may add impls for their own types
   (`impl FromInt Lovelace`).

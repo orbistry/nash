@@ -3,32 +3,35 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : unit\nmain = trace \"foo\" (trace \"bar\" (assert True))\n"
 ---
 --- core
-let message#4 : string = "foo" in
-let message#5 : string = "bar" in
-let message#6 : string = "assertion failed" in
-let fromString#2 : string -> string = \value#3 : string -> value#3 in
-let main#1 : unit = trace (fromString#2 message#4) in trace (fromString#2 message#5) in case@Bool true of
+let message#6 : string = "foo" in
+let message#7 : string = "bar" in
+let message#8 : string = "assertion failed" in
+let fromBool#2 : bool -> bool = \value#4 : bool -> value#4 in
+let fromString#3 : string -> string = \value#5 : string -> value#5 in
+let main#1 : unit = trace (fromString#3 message#6) in trace (fromString#3 message#7) in case@Bool fromBool#2 true of
   True -> ()
-  False -> trace message#6 in error in
+  False -> trace message#8 in error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_4
-    [(lam message_5
-      [(lam message_6
-        [(lam fromString_2
-          [(lam main_1 main_1)
-            (force
-              [[(force (builtin trace)) [fromString_2 message_4]]
-                (delay
-                  (force
-                    [[(force (builtin trace)) [fromString_2 message_5]]
-                      (delay
-                        (case
-                          (con bool True)
-                          (force [[(force (builtin trace)) message_6] (delay (error))])
-                          (con unit ())))]))])])
-          (lam value_3 value_3)])
+  [(lam message_6
+    [(lam message_7
+      [(lam message_8
+        [(lam fromBool_2
+          [(lam fromString_3
+            [(lam main_1 main_1)
+              (force
+                [[(force (builtin trace)) [fromString_3 message_6]]
+                  (delay
+                    (force
+                      [[(force (builtin trace)) [fromString_3 message_7]]
+                        (delay
+                          (case
+                            [fromBool_2 (con bool True)]
+                            (force [[(force (builtin trace)) message_8] (delay (error))])
+                            (con unit ())))]))])])
+            (lam value_5 value_5)])
+          (lam value_4 value_4)])
         (con string "assertion failed")])
       (con string "bar")])
     (con string "foo")])
@@ -37,4 +40,4 @@ main#1
 --- logs
 ["foo", "bar"]
 --- budget
-cpu: 727096, memory: 3964
+cpu: 823096, memory: 4564

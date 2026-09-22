@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Literal exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait FromUnit 'a where\n    fromUnit : unit -> 'a\nimpl FromUnit unit where\n    fromUnit x = x\n\n\nmodule Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (FromUnit, fromUnit)\ntype Box 'a = Box 'a\ntrait Permit 'a where\n    permit : 'a -> 'a\ntrait Gate 'a 'b where\n    gate : 'a -> 'b -> unit\nimpl Permit 'a => Gate unit (Box 'a) where\n    gate x box = x\nsame : 'a -> 'a -> 'a\nsame x y = x\nrun : Permit 'a => unit -> Box 'a -> unit\nrun n box = gate (same (fromUnit n) (fromUnit n)) box\ntype option 'a = None | Some 'a\ntrait Seed 'a where\n    seed : unit -> 'a\nimpl Seed unit where\n    seed n = n\ntrait Step 'a 'b where\n    step : 'a -> 'b -> unit\nimpl FromUnit 'a => Step unit (option 'a) where\n    step x box = x\nchain n = step (fromUnit n) (Some (seed n))\n"
+---
+chain : unit -> unit
+run : forall a. (Permit a, Big a) => unit -> Box a -> unit
+same : forall a. a -> a -> a

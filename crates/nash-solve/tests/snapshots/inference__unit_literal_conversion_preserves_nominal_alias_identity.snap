@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias identity 'a = 'a\nvalue : identity unit\nvalue = ()\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Literal.FromUnit (identity unit)`.
+   ╭─[Main.nash:4:9]
+ 3 │ value : identity unit
+ 4 │ value = ()
+   ·         ─┬
+   ·          ╰── required by `fromUnit`
+   ╰────
+  help: Available impl heads:
+
+            unit
+
+        Import or define an impl for `Literal.FromUnit (identity unit)`.

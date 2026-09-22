@@ -3,30 +3,33 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : unit\nmain =\n    let\n        predicate = True\n    in\n    trace \"foo\" (assert predicate)\n"
 ---
 --- core
-let message#5 : string = "foo" in
-let message#6 : string = "assertion failed" in
-let fromString#3 : string -> string = \value#4 : string -> value#4 in
-let predicate#2 : bool = true in
-let main#1 : unit = trace (fromString#3 message#5) in case@Bool predicate#2 of
+let message#7 : string = "foo" in
+let message#8 : string = "assertion failed" in
+let fromString#3 : string -> string = \value#5 : string -> value#5 in
+let fromBool#4 : bool -> bool = \value#6 : bool -> value#6 in
+let predicate#2 : 'erased = fromBool#4 true in
+let main#1 : unit = trace (fromString#3 message#7) in case@Bool predicate#2 of
   True -> ()
-  False -> trace message#6 in error in
+  False -> trace message#8 in error in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_5
-    [(lam message_6
+  [(lam message_7
+    [(lam message_8
       [(lam fromString_3
-        [(lam predicate_2
-          [(lam main_1 main_1)
-            (force
-              [[(force (builtin trace)) [fromString_3 message_5]]
-                (delay
-                  (case
-                    predicate_2
-                    (force [[(force (builtin trace)) message_6] (delay (error))])
-                    (con unit ())))])])
-          (con bool True)])
-        (lam value_4 value_4)])
+        [(lam fromBool_4
+          [(lam predicate_2
+            [(lam main_1 main_1)
+              (force
+                [[(force (builtin trace)) [fromString_3 message_7]]
+                  (delay
+                    (case
+                      predicate_2
+                      (force [[(force (builtin trace)) message_8] (delay (error))])
+                      (con unit ())))])])
+            [fromBool_4 (con bool True)]])
+          (lam value_6 value_6)])
+        (lam value_5 value_5)])
       (con string "assertion failed")])
     (con string "foo")])
 --- result
@@ -34,4 +37,4 @@ main#1
 --- logs
 ["foo"]
 --- budget
-cpu: 507598, memory: 2932
+cpu: 603598, memory: 3532

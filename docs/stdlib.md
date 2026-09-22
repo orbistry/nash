@@ -38,7 +38,7 @@ crates/nash-driver/base/
     Monad.nash            trait Monad
     Lift.nash             trait Lift + impls for compiler-known types
     Data.nash             traits ToData/FromData/Validate; functions over Data
-    Literal.nash          traits FromInt, FromString, FromBytes
+    Literal.nash          traits FromInt, FromString, FromBytes, FromBool, FromUnit
     Bool.nash             bool functions; Big Bool
     Unit.nash             Big Unit
     Option.nash           option / Option
@@ -101,7 +101,7 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
 import Data exposing (ToData, FromData, Validate)
-import Literal exposing (FromInt, FromString, FromBytes)
+import Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
@@ -257,7 +257,8 @@ not repeated here. What each module adds beyond its trait:
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | Outer-only conversions in representation.md; reflexive identity for every type. |
 | `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
-| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes` |
+| `Literal` | `FromInt int`, `FromInt Int`, `FromString string`, `FromString bytes` (UTF-8), `FromBytes bytes`, `FromBytes Bytes`, `FromBool bool`, `FromUnit unit` |
+| `Bool`, `Unit` | `FromBool Bool`, `FromUnit Unit` |
 
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
@@ -477,7 +478,7 @@ Their Lift instances preserve payloads, including errors, without mapping.
 | `Primitive.Data` and its constructors | pattern-matchable Big type (data.md) |
 | `Primitive.list`, `[..]`, `::` patterns | list literals and patterns; element predicate `Storable` |
 | `Bool.and`, `Bool.or` | second argument delayed (`&&`, `||` are lazy) |
-| `Literal.FromInt`, `FromString`, `FromBytes` | literal desugaring and defaulting to `int`, `string`, `bytes` |
+| `Literal.FromInt`, `FromString`, `FromBytes`, `FromBool`, `FromUnit` | expression literal desugaring and defaulting to `int`, `string`, `bytes`, `bool`, `unit` |
 | `Eq.Eq` | literal patterns |
 | `Monad.Monad` | `do` desugaring target |
 | `Show.Show` | power-assert rendering of operands |

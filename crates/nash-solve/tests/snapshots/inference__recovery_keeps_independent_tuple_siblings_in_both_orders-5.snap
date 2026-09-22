@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\nbad = (idfa (Higher []), missing ())\n"
+description: "module Main exposing (..)\ntrait Missing 'a where\n    missing : 'a -> 'a\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\ntype higher 'f = Higher ('f ())\nidfa : 'f 'a -> 'f 'a\nidfa x = x\nbad = (idfa (Higher []), missing (assert Primitive.True))\n"
 info: diagnostic
 ---
 nash::type::bad_kind
@@ -10,7 +10,7 @@ nash::type::bad_kind
   8 │ idfa : 'f 'a -> 'f 'a
   9 │ idfa x = x
     · ────
- 10 │ bad = (idfa (Higher []), missing ())
+ 10 │ bad = (idfa (Higher []), missing (assert Primitive.True))
     ╰────
   help: Type arguments:
 
@@ -22,7 +22,7 @@ nash::type::missing_impl
   × No impl for `Missing unit`.
     ╭─[Main.nash:10:26]
   9 │ idfa x = x
- 10 │ bad = (idfa (Higher []), missing ())
+ 10 │ bad = (idfa (Higher []), missing (assert Primitive.True))
     ·                          ───┬───
     ·                             ╰── required by `missing`
     ╰────

@@ -3,22 +3,31 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\npass f x = f x\nmain = pass eq () ()\n"
 ---
 --- core
-let pass#2 : ('erased -> 'erased) -> 'erased -> 'erased = \(f#4 : 'erased -> 'erased) x#5 : 'erased -> f#4 x#5 in
-let eq#3 : unit -> unit -> bool = \arg#6 : unit arg#7 : unit -> let match#9 : unit = arg#6 in
-let match#8 : unit = arg#7 in
-true in
-let main#1 : bool = pass#2 eq#3 () () in
+let pass#2 : ('erased -> 'erased) -> 'erased -> 'erased = \(f#5 : 'erased -> 'erased) x#6 : 'erased -> f#5 x#6 in
+let fromBool#9 : bool -> bool = \value#13 : bool -> value#13 in
+let eq#3 : unit -> unit -> bool = \arg#7 : unit arg#8 : unit -> let match#11 : unit = arg#7 in
+let match#10 : unit = arg#8 in
+fromBool#9 true in
+let fromUnit#4 : unit -> unit = \value#12 : unit -> value#12 in
+let main#1 : bool = pass#2 eq#3 (fromUnit#4 ()) (fromUnit#4 ()) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam pass_2
-    [(lam eq_3 [(lam main_1 main_1) [[[pass_2 eq_3] (con unit ())] (con unit ())]])
-      (lam arg_6
-        (lam arg_7 [(lam match_9 [(lam match_8 (con bool True)) arg_7]) arg_6]))])
-    (lam f_4 (lam x_5 [f_4 x_5]))])
+    [(lam fromBool_9
+      [(lam eq_3
+        [(lam fromUnit_4
+          [(lam main_1 main_1)
+            [[[pass_2 eq_3] [fromUnit_4 (con unit ())]] [fromUnit_4 (con unit ())]]])
+          (lam value_12 value_12)])
+        (lam arg_7
+          (lam arg_8
+            [(lam match_11 [(lam match_10 [fromBool_9 (con bool True)]) arg_8]) arg_7]))])
+      (lam value_13 value_13)])
+    (lam f_5 (lam x_6 [f_5 x_6]))])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 448100, memory: 2900
+cpu: 688100, memory: 4400

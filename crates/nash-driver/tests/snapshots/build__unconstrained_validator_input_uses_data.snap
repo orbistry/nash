@@ -1,6 +1,9 @@
 ---
 source: crates/nash-driver/tests/build.rs
-description: "validator module Main exposing (main)\nmain _ = ()\n"
+description: "validator module Main exposing (main)\nmain : 'a -> unit\nmain _ = ()\n"
 ---
 (program 1.1.0
-  [(lam main_1 main_1) (lam arg_2 [(lam match_3 (con unit ())) arg_2])])
+  [(lam fromUnit_3
+    [(lam main_1 main_1)
+      (lam arg_2 [(lam match_4 [fromUnit_3 (con unit ())]) arg_2])])
+    (lam value_5 value_5)])

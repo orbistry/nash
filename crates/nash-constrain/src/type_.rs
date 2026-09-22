@@ -203,6 +203,8 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<FlatType<'
         "FromInt" => "int",
         "FromString" => "string",
         "FromBytes" => "bytes",
+        "FromBool" => "bool",
+        "FromUnit" => "unit",
         _ => return None,
     };
     Some(FlatType::App1(

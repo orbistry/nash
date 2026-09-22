@@ -100,7 +100,14 @@ impl<'a> Engine<'a, '_, '_> {
             return Ok(value);
         }
         Ok(match &expr.value {
-            Expr::Unit => self.ir.lit(Constant::unit(self.ir.arena)),
+            Expr::Unit => {
+                let value = self.ir.lit(Constant::unit(self.ir.arena));
+                self.literal("FromUnit", "fromUnit", node, value, ctx, 0)?
+            }
+            Expr::Bool(value) => {
+                let value = self.ir.lit(Constant::bool(self.ir.arena, *value));
+                self.literal("FromBool", "fromBool", node, value, ctx, 0)?
+            }
             Expr::Int(n) => {
                 let value = self.ir.int(*n);
                 self.literal("FromInt", "fromInt", node, value, ctx, 0)?

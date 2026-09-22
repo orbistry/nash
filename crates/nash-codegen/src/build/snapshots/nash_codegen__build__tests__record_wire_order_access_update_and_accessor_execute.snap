@@ -3,35 +3,38 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias person = { age : int, active : bool }\nread : person -> int\nread = .age\noriginal : person\noriginal = { active = True, age = 1 }\nmain : int\nmain = read { original | age = 42 }\n"
 ---
 --- core
-let read#2 : { _0 : int, _1 : bool } -> int = \record#6 : { _0 : int, _1 : bool } -> let projection#8 : int = field@0/2 record#6 in
-projection#8 in
-let fromInt#5 : int -> int = \value#7 : int -> value#7 in
-let original#3 : { _0 : int, _1 : bool } = constr 0 (fromInt#5 1) true in
+let read#2 : { _0 : int, _1 : bool } -> int = \record#6 : { _0 : int, _1 : bool } -> let projection#10 : int = field@0/2 record#6 in
+projection#10 in
+let fromInt#5 : int -> int = \value#8 : int -> value#8 in
+let fromBool#7 : bool -> bool = \value#9 : bool -> value#9 in
+let original#3 : { _0 : int, _1 : bool } = constr 0 (fromInt#5 1) (fromBool#7 true) in
 let base#4 : { _0 : int, _1 : bool } = original#3 in
-let evaluated#10 : 'erased = fromInt#5 42 in
-let projection#9 : bool = field@1/2 base#4 in
-let main#1 : int = read#2 (constr 0 evaluated#10 projection#9) in
+let evaluated#12 : 'erased = fromInt#5 42 in
+let projection#11 : bool = field@1/2 base#4 in
+let main#1 : int = read#2 (constr 0 evaluated#12 projection#11) in
 main#1
 --- uplc
 (program 1.1.0
   [(lam read_2
     [(lam fromInt_5
-      [(lam original_3
-        [(lam base_4
-          [(lam evaluated_10
-            [(lam projection_9
-              [(lam main_1 main_1) [read_2 (constr 0 evaluated_10 projection_9)]])
-              (case base_4 (lam generated_11 (lam generated_12 generated_12)))])
-            [fromInt_5 (con integer 42)]])
-          original_3])
-        (constr 0 [fromInt_5 (con integer 1)] (con bool True))])
-      (lam value_7 value_7)])
+      [(lam fromBool_7
+        [(lam original_3
+          [(lam base_4
+            [(lam evaluated_12
+              [(lam projection_11
+                [(lam main_1 main_1) [read_2 (constr 0 evaluated_12 projection_11)]])
+                (case base_4 (lam generated_13 (lam generated_14 generated_14)))])
+              [fromInt_5 (con integer 42)]])
+            original_3])
+          (constr 0 [fromInt_5 (con integer 1)] [fromBool_7 (con bool True)])])
+        (lam value_9 value_9)])
+      (lam value_8 value_8)])
     (lam record_6
-      [(lam projection_8 projection_8)
-        (case record_6 (lam generated_13 (lam generated_14 generated_13)))])])
+      [(lam projection_10 projection_10)
+        (case record_6 (lam generated_15 (lam generated_16 generated_15)))])])
 --- result
 (con integer 42)
 --- logs
 []
 --- budget
-cpu: 736100, memory: 4700
+cpu: 832100, memory: 5300

@@ -1,0 +1,54 @@
+module Main exposing (..)
+
+bigTrue : Bool
+bigTrue = True
+bigFalse : Bool
+bigFalse = False
+bigUnit : Unit
+bigUnit = ()
+smallTrue : bool
+smallTrue = True
+smallUnit : unit
+smallUnit = ()
+
+type token = Yes | No | Empty
+impl FromBool token where
+    fromBool value = if value then Yes else No
+impl FromUnit token where
+    fromUnit _ = Empty
+customTrue : token
+customTrue = True
+customFalse : token
+customFalse = False
+customUnit : token
+customUnit = ()
+checkToken : token -> int
+checkToken value = case value of
+    Yes -> 1
+    No -> 2
+    Empty -> 3
+
+booleanPattern : bool -> int
+booleanPattern value = case value of
+    True -> 1
+    False -> 0
+unitPattern : unit -> int
+unitPattern () = 4
+
+tests
+    test "Big literals" = do
+        assert (bigTrue == Bool.True)
+        assert (bigFalse == Bool.False)
+        assert (bigUnit == Unit.Unit)
+    test "little literals and patterns" = do
+        assert smallTrue
+        assert (unitPattern smallUnit == 4)
+        assert (booleanPattern True == 1)
+        assert (booleanPattern False == 0)
+    test "custom literal implementations" = do
+        assert (checkToken customTrue == 1)
+        assert (checkToken customFalse == 2)
+        assert (checkToken customUnit == 3)
+    test "qualified constructors" = do
+        assert (booleanPattern Primitive.True == 1)
+        assert (Bool.and Bool.True Primitive.True)

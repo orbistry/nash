@@ -3,40 +3,43 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    let\n        bytes : bytes\n        bytes = \"foo\"\n    in\n    case bytes of\n        \"bar\" -> False\n        #\"666f6f\" -> True\n        _ -> False\n"
 ---
 --- core
-let message#10 : string = "foo" in
-let message#11 : string = "bar" in
+let message#12 : string = "foo" in
+let message#13 : string = "bar" in
 let fromString#3 : string -> bytes = encodeUtf8 in
 let eq#4 : bytes -> bytes -> bool = equalsByteString in
-let fromBytes#6 : bytes -> bytes = \value#9 : bytes -> value#9 in
-let bytes#2 : bytes = fromString#3 message#10 in
-let match#8 : bytes = bytes#2 in
-let main#1 : bool = case@Bool (\literal#5 : bytes -> eq#4 literal#5 (fromString#3 message#11)) match#8 of
-  True -> false
-  False -> case@Bool (\literal#7 : bytes -> eq#4 literal#7 (fromBytes#6 (con bytestring #666f6f))) match#8 of
-    True -> true
-    False -> false in
+let fromBool#6 : bool -> bool = \value#10 : bool -> value#10 in
+let fromBytes#7 : bytes -> bytes = \value#11 : bytes -> value#11 in
+let bytes#2 : bytes = fromString#3 message#12 in
+let match#9 : bytes = bytes#2 in
+let main#1 : bool = case@Bool (\literal#5 : bytes -> eq#4 literal#5 (fromString#3 message#13)) match#9 of
+  True -> fromBool#6 false
+  False -> case@Bool (\literal#8 : bytes -> eq#4 literal#8 (fromBytes#7 (con bytestring #666f6f))) match#9 of
+    True -> fromBool#6 true
+    False -> fromBool#6 false in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_10
-    [(lam message_11
+  [(lam message_12
+    [(lam message_13
       [(lam fromString_3
         [(lam eq_4
-          [(lam fromBytes_6
-            [(lam bytes_2
-              [(lam match_8
-                [(lam main_1 main_1)
-                  (case
-                    [(lam literal_5 [[eq_4 literal_5] [fromString_3 message_11]]) match_8]
+          [(lam fromBool_6
+            [(lam fromBytes_7
+              [(lam bytes_2
+                [(lam match_9
+                  [(lam main_1 main_1)
                     (case
-                      [(lam literal_7 [[eq_4 literal_7] [fromBytes_6 (con bytestring #666f6f)]])
-                        match_8]
-                      (con bool False)
-                      (con bool True))
-                    (con bool False))])
-                bytes_2])
-              [fromString_3 message_10]])
-            (lam value_9 value_9)])
+                      [(lam literal_5 [[eq_4 literal_5] [fromString_3 message_13]]) match_9]
+                      (case
+                        [(lam literal_8 [[eq_4 literal_8] [fromBytes_7 (con bytestring #666f6f)]])
+                          match_9]
+                        [fromBool_6 (con bool False)]
+                        [fromBool_6 (con bool True)])
+                      [fromBool_6 (con bool False)])])
+                  bytes_2])
+                [fromString_3 message_12]])
+              (lam value_11 value_11)])
+            (lam value_10 value_10)])
           (builtin equalsByteString)])
         (builtin encodeUtf8)])
       (con string "bar")])
@@ -46,4 +49,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 861172, memory: 5110
+cpu: 957172, memory: 5710

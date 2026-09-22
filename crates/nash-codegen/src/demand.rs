@@ -402,10 +402,12 @@ impl<'a> Analysis<'a> {
             Expr::VarMethod { trait_, method, .. } => {
                 self.method(*trait_, method, node, owner, solved)
             }
-            Expr::Str(_) | Expr::Bytes(_) | Expr::Int(_) => {
+            Expr::Str(_) | Expr::Bytes(_) | Expr::Int(_) | Expr::Bool(_) | Expr::Unit => {
                 let (name, method) = match expr.value {
                     Expr::Str(_) => ("FromString", "fromString"),
                     Expr::Bytes(_) => ("FromBytes", "fromBytes"),
+                    Expr::Bool(_) => ("FromBool", "fromBool"),
+                    Expr::Unit => ("FromUnit", "fromUnit"),
                     _ => ("FromInt", "fromInt"),
                 };
                 self.method(
@@ -540,7 +542,7 @@ impl<'a> Analysis<'a> {
                     self.expr(e, owner, env, solved);
                 }
             }
-            Expr::Accessor(_) | Expr::VarConstructor { .. } | Expr::Unit => {}
+            Expr::Accessor(_) | Expr::VarConstructor { .. } => {}
         }
     }
 }

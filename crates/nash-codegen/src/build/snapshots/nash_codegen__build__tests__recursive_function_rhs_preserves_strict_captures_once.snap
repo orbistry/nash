@@ -3,30 +3,38 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nloop : bool -> unit\nloop =\n    let\n        captured = trace \"capture\" ()\n    in\n    \\flag -> if flag then captured else loop True\nmain = loop False\n"
 ---
 --- core
-let message#7 : string = "capture" in
-let fromString#5 : string -> string = \value#6 : string -> value#6 in
-let captured#3 : unit = trace (fromString#5 message#7) in () in
-let loop#2 : bool -> unit = (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased flag#4 : bool -> case@Bool flag#4 of
-  True -> captured#3
-  False -> self#8 self#8 true) in
-let main#1 : unit = loop#2 false in
+let message#11 : string = "capture" in
+let fromBool#3 : bool -> bool = \value#8 : bool -> value#8 in
+let fromUnit#6 : unit -> unit = \value#9 : unit -> value#9 in
+let fromString#7 : string -> string = \value#10 : string -> value#10 in
+let captured#5 : 'erased = trace (fromString#7 message#11) in fromUnit#6 () in
+let loop#2 : bool -> unit = (\self#12 : 'erased -> self#12 self#12) (\self#12 : 'erased flag#4 : bool -> case@Bool flag#4 of
+  True -> captured#5
+  False -> self#12 self#12 (fromBool#3 true)) in
+let main#1 : unit = loop#2 (fromBool#3 false) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_7
-    [(lam fromString_5
-      [(lam captured_3
-        [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
-          [(lam self_8 [self_8 self_8])
-            (lam self_8
-              (lam flag_4 (case flag_4 [[self_8 self_8] (con bool True)] captured_3)))]])
-        (force
-          [[(force (builtin trace)) [fromString_5 message_7]] (delay (con unit ()))])])
-      (lam value_6 value_6)])
+  [(lam message_11
+    [(lam fromBool_3
+      [(lam fromUnit_6
+        [(lam fromString_7
+          [(lam captured_5
+            [(lam loop_2 [(lam main_1 main_1) [loop_2 [fromBool_3 (con bool False)]]])
+              [(lam self_12 [self_12 self_12])
+                (lam self_12
+                  (lam flag_4
+                    (case flag_4 [[self_12 self_12] [fromBool_3 (con bool True)]] captured_5)))]])
+            (force
+              [[(force (builtin trace)) [fromString_7 message_11]]
+                (delay [fromUnit_6 (con unit ())])])])
+          (lam value_10 value_10)])
+        (lam value_9 value_9)])
+      (lam value_8 value_8)])
     (con string "capture")])
 --- result
 (con unit ())
 --- logs
 ["capture"]
 --- budget
-cpu: 779598, memory: 4632
+cpu: 1019598, memory: 6132

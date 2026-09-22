@@ -3,65 +3,68 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (ToData)\ntype Option = Some Int | None\ntype never = Never\ndecodeNever : Data -> never\ndecodeNever value =\n    case value of\n        Constr pair(1, []) -> Never\n        _ -> fail\nmain : unit\nmain =\n    case decodeNever (toData None) of\n        Never -> ()\n"
 ---
 --- core
-let fromInt#6 : int -> int = \value#30 : int -> value#30 in
-let eq#7 : int -> int -> bool = equalsInteger in
-let decodeNever#2 : Data -> Main.never = \value#5 : Data -> let match#9 : Data = value#5 in
-let leaf#19 : 'erased = delay error in
-case@Data match#9 of
-  DataConstr field#20 -> case@Pair field#20 of
-    Pair field#21 field#22 -> case@Bool (\literal#8 : int -> eq#7 literal#8 (fromInt#6 1)) field#21 of
-      True -> case@List field#22 of
+let fromInt#7 : int -> int = \value#32 : int -> value#32 in
+let eq#8 : int -> int -> bool = equalsInteger in
+let decodeNever#2 : Data -> Main.never = \value#6 : Data -> let match#10 : Data = value#6 in
+let leaf#20 : 'erased = delay error in
+case@Data match#10 of
+  DataConstr field#21 -> case@Pair field#21 of
+    Pair field#22 field#23 -> case@Bool (\literal#9 : int -> eq#8 literal#9 (fromInt#7 1)) field#22 of
+      True -> case@List field#23 of
         Nil -> constr 0
-        Cons field#23 field#24 -> force leaf#19
-      False -> force leaf#19
-  DataMap field#25 -> force leaf#19
-  DataList field#26 -> force leaf#19
-  DataI field#27 -> force leaf#19
-  DataB field#28 -> force leaf#19 in
-let toData#3 : 'erased -> Data = \coerce#29 : 'erased -> coerce#29 in
-let match#4 : Main.never = decodeNever#2 (toData#3 (constrData 1 (con (list data) []))) in
-let main#1 : unit = case@Tag match#4 of
-  0 -> () in
+        Cons field#24 field#25 -> force leaf#20
+      False -> force leaf#20
+  DataMap field#26 -> force leaf#20
+  DataList field#27 -> force leaf#20
+  DataI field#28 -> force leaf#20
+  DataB field#29 -> force leaf#20 in
+let toData#3 : 'erased -> Data = \coerce#30 : 'erased -> coerce#30 in
+let fromUnit#4 : unit -> unit = \value#31 : unit -> value#31 in
+let match#5 : Main.never = decodeNever#2 (toData#3 (constrData 1 (con (list data) []))) in
+let main#1 : unit = case@Tag match#5 of
+  0 -> fromUnit#4 () in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam fromInt_6
-    [(lam eq_7
+  [(lam fromInt_7
+    [(lam eq_8
       [(lam decodeNever_2
         [(lam toData_3
-          [(lam match_4 [(lam main_1 main_1) (case match_4 (con unit ()))])
-            [decodeNever_2
-              [toData_3 [[(builtin constrData) (con integer 1)] (con (list data) [])]]]])
-          (lam coerce_29 coerce_29)])
-        (lam value_5
-          [(lam match_9
-            [(lam leaf_19
-              [(lam generated_31
+          [(lam fromUnit_4
+            [(lam match_5 [(lam main_1 main_1) (case match_5 [fromUnit_4 (con unit ())])])
+              [decodeNever_2
+                [toData_3 [[(builtin constrData) (con integer 1)] (con (list data) [])]]]])
+            (lam value_31 value_31)])
+          (lam coerce_30 coerce_30)])
+        (lam value_6
+          [(lam match_10
+            [(lam leaf_20
+              [(lam generated_33
                 (force
-                  [[[[[[(force (builtin chooseData)) generated_31]
+                  [[[[[[(force (builtin chooseData)) generated_33]
                     (delay
-                      [(lam field_20
+                      [(lam field_21
                         (case
-                          field_20
-                          (lam field_21
-                            (lam field_22
+                          field_21
+                          (lam field_22
+                            (lam field_23
                               (case
-                                [(lam literal_8 [[eq_7 literal_8] [fromInt_6 (con integer 1)]]) field_21]
-                                (force leaf_19)
-                                (case field_22 (lam field_23 (lam field_24 (force leaf_19))) (constr 0)))))))
-                        [(builtin unConstrData) generated_31]])]
-                    (delay [(lam field_25 (force leaf_19)) [(builtin unMapData) generated_31]])]
-                    (delay [(lam field_26 (force leaf_19)) [(builtin unListData) generated_31]])]
-                    (delay [(lam field_27 (force leaf_19)) [(builtin unIData) generated_31]])]
-                    (delay [(lam field_28 (force leaf_19)) [(builtin unBData) generated_31]])]))
-                match_9])
+                                [(lam literal_9 [[eq_8 literal_9] [fromInt_7 (con integer 1)]]) field_22]
+                                (force leaf_20)
+                                (case field_23 (lam field_24 (lam field_25 (force leaf_20))) (constr 0)))))))
+                        [(builtin unConstrData) generated_33]])]
+                    (delay [(lam field_26 (force leaf_20)) [(builtin unMapData) generated_33]])]
+                    (delay [(lam field_27 (force leaf_20)) [(builtin unListData) generated_33]])]
+                    (delay [(lam field_28 (force leaf_20)) [(builtin unIData) generated_33]])]
+                    (delay [(lam field_29 (force leaf_20)) [(builtin unBData) generated_33]])]))
+                match_10])
               (delay (error))])
-            value_5])])
+            value_6])])
       (builtin equalsInteger)])
-    (lam value_30 value_30)])
+    (lam value_32 value_32)])
 --- result
 (con unit ())
 --- logs
 []
 --- budget
-cpu: 1441547, memory: 7997
+cpu: 1537547, memory: 8597
