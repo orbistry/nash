@@ -5,7 +5,9 @@ struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-        Self(std::env::temp_dir().join(format!(
+        // macOS reports canonical `/private/var/...` in errors; match it.
+        let temp = std::env::temp_dir().canonicalize().unwrap();
+        Self(temp.join(format!(
             "nash-driver-tests-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)

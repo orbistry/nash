@@ -16,7 +16,7 @@ import Cons exposing (type cons(..))
 type prng = Seeded bytes (list int) | Replayed (list int)
 type alias generator 'a = prng -> option ('a, prng)
 
-run : generator 'a -> prng -> option ('a, prng)
+run : generator 'a -> generator 'a
 run f = f
 
 -- The runner stores each primitive choice in a u64.

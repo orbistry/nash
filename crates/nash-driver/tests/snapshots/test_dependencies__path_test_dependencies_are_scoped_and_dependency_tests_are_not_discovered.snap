@@ -2,4 +2,4 @@
 source: crates/nash-driver/tests/test_dependencies.rs
 description: "module Main exposing (..)\nimport Helper\nvalue = Helper.identity ()\n"
 ---
-cannot resolve dependency Helper: /private<project>/app/src/Main.nash imports a test-only dependency outside its tests block; move the import into tests or declare a production dependency
+cannot resolve dependency Helper: <project>/app/src/Main.nash imports a test-only dependency outside its tests block; move the import into tests or declare a production dependency
