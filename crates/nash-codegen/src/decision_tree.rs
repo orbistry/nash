@@ -365,7 +365,14 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 None,
             ));
         }
+        if let [(Shape::Tag(_), fields, body)] = branches.as_slice()
+            && fields.is_empty()
+            && matches!(ty, Ty::Big(BigTy::Adt(_)) | Ty::Term(TermTy::Adt(_)))
+        {
+            return Ok(body);
+        }
         if matches!(ty, Ty::Big(BigTy::Adt(_))) {
+            let unwrapped = self.build.builtin(DefaultFunction::UnConstrData, &[value]);
             let tag = Binder {
                 name: self.build.fresh("tag"),
                 ty: Ty::Const(&ConstTy::Int),
@@ -374,33 +381,34 @@ impl<'a> Matrix<'a, '_, '_, '_> {
                 name: self.build.fresh("fields"),
                 ty: data_list(self.build),
             };
-            let arms = branches
-                .into_iter()
-                .map(|(shape, fields, body)| {
-                    let Shape::Tag(index) = shape else {
-                        return Err(Error::PatternType);
-                    };
-                    Ok(Branch {
-                        test: Test::Int(nash_plutus::constant::integer_from(
-                            self.build.arena,
-                            i128::from(index),
-                        )),
-                        binders: &[],
-                        body: self.list_fields(self.build.var(list.name), &fields, body),
+            let body = if let [(Shape::Tag(_), fields, body)] = branches.as_slice() {
+                self.list_fields(self.build.var(list.name), fields, body)
+            } else {
+                let arms = branches
+                    .into_iter()
+                    .map(|(shape, fields, body)| {
+                        let Shape::Tag(index) = shape else {
+                            return Err(Error::PatternType);
+                        };
+                        Ok(Branch {
+                            test: Test::Tag(index),
+                            binders: &[],
+                            body: self.list_fields(self.build.var(list.name), &fields, body),
+                        })
                     })
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
-            let body = self.build.case(
-                CaseKind::Int,
-                self.build.var(tag.name),
-                &arms,
-                Some(self.fallback),
-            );
+                    .collect::<Result<Vec<_>, Error>>()?;
+                self.build
+                    .case(CaseKind::Tag, self.build.var(tag.name), &arms, None)
+            };
             return Ok(self.build.case(
-                CaseKind::Data,
-                value,
-                &[self.data_constructor_branch(&[tag, list], body)],
-                Some(self.fallback),
+                CaseKind::Pair,
+                unwrapped,
+                &[Branch {
+                    test: Test::Pair,
+                    binders: self.build.arena.alloc_slice_copy(&[tag, list]),
+                    body,
+                }],
+                None,
             ));
         }
         if matches!(ty, Ty::Big(BigTy::Record(_))) {
@@ -443,30 +451,6 @@ impl<'a> Matrix<'a, '_, '_, '_> {
         Ok(self
             .build
             .case(kind.ok_or(Error::PatternType)?, value, &arms, None))
-    }
-    fn data_constructor_branch(&self, fields: &[Binder<'a>], body: &'a Core<'a>) -> Branch<'a> {
-        let pair = Binder {
-            name: self.build.fresh("pair"),
-            ty: Ty::Const(
-                self.build
-                    .arena
-                    .alloc(ConstTy::Pair(fields[0].ty, fields[1].ty)),
-            ),
-        };
-        Branch {
-            test: Test::DataConstr,
-            binders: self.build.arena.alloc_slice_copy(&[pair]),
-            body: self.build.case(
-                CaseKind::Pair,
-                self.build.var(pair.name),
-                &[Branch {
-                    test: Test::Pair,
-                    binders: self.build.arena.alloc_slice_copy(fields),
-                    body,
-                }],
-                None,
-            ),
-        }
     }
     fn list_fields(
         &self,

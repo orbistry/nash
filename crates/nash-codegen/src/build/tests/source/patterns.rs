@@ -872,3 +872,96 @@ case!(
 "#,
     Ok("(con bool True)")
 );
+
+case!(
+    big_boolean_lift_and_lower,
+    r#"
+    module Main exposing (..)
+    import Bool
+    import Lift exposing (Lift)
+    make : bool -> Bool.Bool
+    make = lift
+    main : (bool, bool)
+    main = (lower (make Primitive.False), lower (make Primitive.True))
+    "#,
+    Ok("(constr 0 (con bool False) (con bool True))")
+);
+
+case!(
+    big_unit_pattern_keeps_scrutinee_effects,
+    r#"
+    module Main exposing (..)
+    import Unit
+    consume : Unit.Unit -> unit
+    consume value = case value of
+        Unit.Unit -> ()
+    main : unit
+    main = consume (trace "unit input" Unit.Unit)
+    "#,
+    Ok("(con unit ())")
+);
+
+case!(
+    big_single_constructor_nested_fields,
+    r#"
+    module Main exposing (..)
+    type Box = Box Int Int
+    type Choice = First Box | Second Int | Third
+    select : Choice -> int
+    select value = case value of
+        First (Box first second) -> Builtin.addInteger (Builtin.unIData first) (Builtin.unIData second)
+        Second number -> Builtin.unIData number
+        Third -> 0
+    main : (int, int, int)
+    main = (select (First (Box 20 22)), select (Second 7), select Third)
+    "#,
+    Ok("(constr 0 (con integer 42) (con integer 7) (con integer 0))")
+);
+
+case!(
+    big_unit_pattern_keeps_scrutinee_failure,
+    r#"
+    module Main exposing (..)
+    import Unit
+    consume : Unit.Unit -> unit
+    consume value = case value of
+        Unit.Unit -> ()
+    main : unit
+    main = consume (fail "unit input")
+    "#,
+    Err(())
+);
+
+case!(
+    little_single_constructor_keeps_scrutinee_effects,
+    r#"
+    module Main exposing (..)
+    type token = Token
+    consume : token -> int
+    consume value = case value of
+        Token -> 42
+    main : int
+    main = consume (trace "token input" Token)
+    "#,
+    Ok("(con integer 42)")
+);
+
+case!(
+    general_data_keeps_variant_dispatch,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    classify : Data -> int
+    classify value = case value of
+        Constr _ -> 0
+        Map _ -> 1
+        List _ -> 2
+        I _ -> 3
+        B _ -> 4
+    main : (int, int, int, int, int)
+    main = (classify (Builtin.constrData 0 []), classify (Map []), classify (List []), classify (I 42), classify (B #"aa"))
+    "#,
+    Ok(
+        "(constr 0\n  (con integer 0)\n  (con integer 1)\n  (con integer 2)\n  (con integer 3)\n  (con integer 4))"
+    )
+);

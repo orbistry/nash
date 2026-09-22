@@ -21,8 +21,7 @@ case@Data match#10 of
 let toData#3 : 'erased -> Data = \coerce#30 : 'erased -> coerce#30 in
 let fromUnit#4 : unit -> unit = \value#31 : unit -> value#31 in
 let match#5 : Main.never = decodeNever#2 (toData#3 (constrData 1 (con (list data) []))) in
-let main#1 : unit = case@Tag match#5 of
-  0 -> fromUnit#4 () in
+let main#1 : unit = fromUnit#4 () in
 main#1
 --- uplc
 (program 1.1.0
@@ -31,7 +30,7 @@ main#1
       [(lam decodeNever_2
         [(lam toData_3
           [(lam fromUnit_4
-            [(lam match_5 [(lam main_1 main_1) (case match_5 [fromUnit_4 (con unit ())])])
+            [(lam match_5 [(lam main_1 main_1) [fromUnit_4 (con unit ())]])
               [decodeNever_2
                 [toData_3 [[(builtin constrData) (con integer 1)] (con (list data) [])]]]])
             (lam value_31 value_31)])
@@ -67,4 +66,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 1537547, memory: 8597
+cpu: 1505547, memory: 8397

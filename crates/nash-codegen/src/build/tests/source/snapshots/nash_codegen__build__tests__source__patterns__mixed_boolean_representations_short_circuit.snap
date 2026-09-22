@@ -3,161 +3,95 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nimport Lift exposing (Lift)\nboth : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool\nboth a b = Bool.and a b\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    if Bool.or Bool.True (bad ()) then\n        both Bool.True True\n    else False\n"
 ---
 --- core
-let message#33 : string = "incomplete pattern match" in
-let fromBool#2 : bool -> bool = \value#20 : bool -> value#20 in
-let bad#10 : unit -> nash/base:Bool.Bool = \arg#21 : unit -> let match#22 : unit = arg#21 in
+let fromBool#2 : bool -> bool = \value#18 : bool -> value#18 in
+let bad#9 : unit -> nash/base:Bool.Bool = \arg#19 : unit -> let match#20 : unit = arg#19 in
 error in
-let fromUnit#11 : unit -> unit = \value#23 : unit -> value#23 in
-let both#19 : 'erased -> 'erased -> bool = \a#24 : 'erased b#25 : 'erased -> let message#32 : string = message#33 in
-let lower#26 : nash/base:Bool.Bool -> bool = \value#27 : nash/base:Bool.Bool -> let match#28 : nash/base:Bool.Bool = value#27 in
-case@Data match#28 of
-  DataConstr pair#31 -> case@Pair pair#31 of
-    Pair tag#29 fields#30 -> case@Int tag#29 of
-      0 -> false
-      1 -> true
-      _ -> trace message#32 in error
-  _ -> trace message#32 in error in
-case@Bool lower#26 a#24 of
-  True -> b#25
+let fromUnit#10 : unit -> unit = \value#21 : unit -> value#21 in
+let both#17 : 'erased -> 'erased -> bool = \a#22 : 'erased b#23 : 'erased -> let lower#24 : nash/base:Bool.Bool -> bool = \value#25 : nash/base:Bool.Bool -> let match#26 : nash/base:Bool.Bool = value#25 in
+let projection#30 : pair int (list Data) = unConstrData match#26 in
+let projection#29 : pair int (list Data) = projection#30 in
+case@Pair projection#29 of
+  Pair tag#27 fields#28 -> case@Tag tag#27 of
+    0 -> false
+    1 -> true in
+case@Bool lower#24 a#22 of
+  True -> b#23
   False -> false in
-let message#9 : string = message#33 in
 let lower#3 : nash/base:Bool.Bool -> bool = \value#4 : nash/base:Bool.Bool -> let match#5 : nash/base:Bool.Bool = value#4 in
-case@Data match#5 of
-  DataConstr pair#8 -> case@Pair pair#8 of
-    Pair tag#6 fields#7 -> case@Int tag#6 of
-      0 -> false
-      1 -> true
-      _ -> trace message#9 in error
-  _ -> trace message#9 in error in
+let projection#31 : pair int (list Data) = unConstrData match#5 in
+let projection#8 : pair int (list Data) = projection#31 in
+case@Pair projection#8 of
+  Pair tag#6 fields#7 -> case@Tag tag#6 of
+    0 -> false
+    1 -> true in
 let main#1 : bool = case@Bool (case@Bool lower#3 (constrData 1 (con (list data) [])) of
   True -> true
-  False -> let message#18 : string = message#33 in
-  let lower#12 : nash/base:Bool.Bool -> bool = \value#13 : nash/base:Bool.Bool -> let match#14 : nash/base:Bool.Bool = value#13 in
-  case@Data match#14 of
-    DataConstr pair#17 -> case@Pair pair#17 of
-      Pair tag#15 fields#16 -> case@Int tag#15 of
-        0 -> false
-        1 -> true
-        _ -> trace message#18 in error
-    _ -> trace message#18 in error in
-  lower#12 (bad#10 (fromUnit#11 ()))) of
-  True -> both#19 (constrData 1 (con (list data) [])) (fromBool#2 true)
+  False -> let lower#11 : nash/base:Bool.Bool -> bool = \value#12 : nash/base:Bool.Bool -> let match#13 : nash/base:Bool.Bool = value#12 in
+  let projection#32 : pair int (list Data) = unConstrData match#13 in
+  let projection#16 : pair int (list Data) = projection#32 in
+  case@Pair projection#16 of
+    Pair tag#14 fields#15 -> case@Tag tag#14 of
+      0 -> false
+      1 -> true in
+  lower#11 (bad#9 (fromUnit#10 ()))) of
+  True -> both#17 (constrData 1 (con (list data) [])) (fromBool#2 true)
   False -> fromBool#2 false in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_33
-    [(lam fromBool_2
-      [(lam bad_10
-        [(lam fromUnit_11
-          [(lam both_19
-            [(lam message_9
-              [(lam lower_3
-                [(lam main_1 main_1)
-                  (case
+  [(lam fromBool_2
+    [(lam bad_9
+      [(lam fromUnit_10
+        [(lam both_17
+          [(lam lower_3
+            [(lam main_1 main_1)
+              (case
+                (case
+                  [lower_3 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+                  [(lam lower_11 [lower_11 [bad_9 [fromUnit_10 (con unit ())]]])
+                    (lam value_12
+                      [(lam match_13
+                        [(lam projection_32
+                          [(lam projection_16
+                            (case
+                              projection_16
+                              (lam tag_14 (lam fields_15 (case tag_14 (con bool False) (con bool True))))))
+                            projection_32])
+                          [(builtin unConstrData) match_13]])
+                        value_12])]
+                  (con bool True))
+                [fromBool_2 (con bool False)]
+                [[both_17 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
+                  [fromBool_2 (con bool True)]])])
+            (lam value_4
+              [(lam match_5
+                [(lam projection_31
+                  [(lam projection_8
                     (case
-                      [lower_3 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
-                      [(lam message_18
-                        [(lam lower_12 [lower_12 [bad_10 [fromUnit_11 (con unit ())]]])
-                          (lam value_13
-                            [(lam match_14
-                              [(lam generated_34
-                                (force
-                                  [[[[[[(force (builtin chooseData)) generated_34]
-                                    (delay
-                                      [(lam pair_17
-                                        (case
-                                          pair_17
-                                          (lam tag_15
-                                            (lam fields_16
-                                              [(lam generated_35
-                                                (case
-                                                  [[(builtin equalsInteger) generated_35] (con integer 0)]
-                                                  (case
-                                                    [[(builtin equalsInteger) generated_35] (con integer 1)]
-                                                    (force [[(force (builtin trace)) message_18] (delay (error))])
-                                                    (con bool True))
-                                                  (con bool False)))
-                                                tag_15]))))
-                                        [(builtin unConstrData) generated_34]])]
-                                    (delay (force [[(force (builtin trace)) message_18] (delay (error))]))]
-                                    (delay (force [[(force (builtin trace)) message_18] (delay (error))]))]
-                                    (delay (force [[(force (builtin trace)) message_18] (delay (error))]))]
-                                    (delay (force [[(force (builtin trace)) message_18] (delay (error))]))]))
-                                match_14])
-                              value_13])])
-                        message_33]
-                      (con bool True))
-                    [fromBool_2 (con bool False)]
-                    [[both_19 [[(builtin constrData) (con integer 1)] (con (list data) [])]]
-                      [fromBool_2 (con bool True)]])])
-                (lam value_4
-                  [(lam match_5
-                    [(lam generated_36
-                      (force
-                        [[[[[[(force (builtin chooseData)) generated_36]
-                          (delay
-                            [(lam pair_8
-                              (case
-                                pair_8
-                                (lam tag_6
-                                  (lam fields_7
-                                    [(lam generated_37
-                                      (case
-                                        [[(builtin equalsInteger) generated_37] (con integer 0)]
-                                        (case
-                                          [[(builtin equalsInteger) generated_37] (con integer 1)]
-                                          (force [[(force (builtin trace)) message_9] (delay (error))])
-                                          (con bool True))
-                                        (con bool False)))
-                                      tag_6]))))
-                              [(builtin unConstrData) generated_36]])]
-                          (delay (force [[(force (builtin trace)) message_9] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) message_9] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) message_9] (delay (error))]))]
-                          (delay (force [[(force (builtin trace)) message_9] (delay (error))]))]))
-                      match_5])
-                    value_4])])
-              message_33])
-            (lam a_24
-              (lam b_25
-                [(lam message_32
-                  [(lam lower_26 (case [lower_26 a_24] (con bool False) b_25))
-                    (lam value_27
-                      [(lam match_28
-                        [(lam generated_38
-                          (force
-                            [[[[[[(force (builtin chooseData)) generated_38]
-                              (delay
-                                [(lam pair_31
-                                  (case
-                                    pair_31
-                                    (lam tag_29
-                                      (lam fields_30
-                                        [(lam generated_39
-                                          (case
-                                            [[(builtin equalsInteger) generated_39] (con integer 0)]
-                                            (case
-                                              [[(builtin equalsInteger) generated_39] (con integer 1)]
-                                              (force [[(force (builtin trace)) message_32] (delay (error))])
-                                              (con bool True))
-                                            (con bool False)))
-                                          tag_29]))))
-                                  [(builtin unConstrData) generated_38]])]
-                              (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]
-                              (delay (force [[(force (builtin trace)) message_32] (delay (error))]))]))
-                          match_28])
-                        value_27])])
-                  message_33]))])
-          (lam value_23 value_23)])
-        (lam arg_21 [(lam match_22 (error)) arg_21])])
-      (lam value_20 value_20)])
-    (con string "incomplete pattern match")])
+                      projection_8
+                      (lam tag_6 (lam fields_7 (case tag_6 (con bool False) (con bool True))))))
+                    projection_31])
+                  [(builtin unConstrData) match_5]])
+                value_4])])
+          (lam a_22
+            (lam b_23
+              [(lam lower_24 (case [lower_24 a_22] (con bool False) b_23))
+                (lam value_25
+                  [(lam match_26
+                    [(lam projection_30
+                      [(lam projection_29
+                        (case
+                          projection_29
+                          (lam tag_27 (lam fields_28 (case tag_27 (con bool False) (con bool True))))))
+                        projection_30])
+                      [(builtin unConstrData) match_26]])
+                    value_25])]))])
+        (lam value_21 value_21)])
+      (lam arg_19 [(lam match_20 (error)) arg_19])])
+    (lam value_18 value_18)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 2891660, memory: 15296
+cpu: 1453578, memory: 8728

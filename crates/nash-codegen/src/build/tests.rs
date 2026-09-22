@@ -1110,7 +1110,7 @@ fn big_constructor_pattern_and_access_share_the_constructor_decoder() {
                 .unwrap();
             insta::assert_snapshot!(compiled_output(arena, compiled.core));
             let pretty = nash_ir::pretty::pretty(compiled.core);
-            assert_eq!(pretty.matches("unConstrData").count(), 0, "{pretty}");
+            assert_eq!(pretty.matches("unConstrData").count(), 1, "{pretty}");
             assert_eq!(pretty.matches("sndPair").count(), 0, "{pretty}");
             let assembled = crate::program::assemble_core(arena, compiled.core).unwrap();
             let uplc = nash_plutus::pretty::program(assembled.program);

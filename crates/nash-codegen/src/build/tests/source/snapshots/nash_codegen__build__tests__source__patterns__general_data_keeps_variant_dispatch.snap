@@ -1,0 +1,63 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nclassify : Data -> int\nclassify value = case value of\n    Constr _ -> 0\n    Map _ -> 1\n    List _ -> 2\n    I _ -> 3\n    B _ -> 4\nmain : (int, int, int, int, int)\nmain = (classify (Builtin.constrData 0 []), classify (Map []), classify (List []), classify (I 42), classify (B #\"aa\"))\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#16 : int -> value#16 in
+let classify#2 : Data -> int = \value#9 : Data -> let match#10 : Data = value#9 in
+case@Data match#10 of
+  DataConstr field#11 -> fromInt#3 0
+  DataMap field#12 -> fromInt#3 1
+  DataList field#13 -> fromInt#3 2
+  DataI field#14 -> fromInt#3 3
+  DataB field#15 -> fromInt#3 4 in
+let fromBytes#8 : bytes -> bytes = \value#17 : bytes -> value#17 in
+let main#1 : (int, int, int, int, int) = constr 0 (classify#2 (constrData (fromInt#3 0) (con (list data) []))) (classify#2 ((\field#4 : list (pair Data Data) -> mapData field#4) (con (list (pair data data)) []))) (classify#2 ((\field#5 : list Data -> listData field#5) (con (list data) []))) (classify#2 ((\field#6 : int -> iData field#6) (fromInt#3 42))) (classify#2 ((\field#7 : bytes -> bData field#7) (fromBytes#8 (con bytestring #aa)))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam classify_2
+      [(lam fromBytes_8
+        [(lam main_1 main_1)
+          (constr 0
+            [classify_2
+              [[(builtin constrData) [fromInt_3 (con integer 0)]] (con (list data) [])]]
+            [classify_2
+              [(lam field_4 [(builtin mapData) field_4]) (con (list (pair data data)) [])]]
+            [classify_2 [(lam field_5 [(builtin listData) field_5]) (con (list data) [])]]
+            [classify_2
+              [(lam field_6 [(builtin iData) field_6]) [fromInt_3 (con integer 42)]]]
+            [classify_2
+              [(lam field_7 [(builtin bData) field_7]) [fromBytes_8 (con bytestring #aa)]]])])
+        (lam value_17 value_17)])
+      (lam value_9
+        [(lam match_10
+          [(lam generated_18
+            (force
+              [[[[[[(force (builtin chooseData)) generated_18]
+                (delay
+                  [(lam field_11 [fromInt_3 (con integer 0)])
+                    [(builtin unConstrData) generated_18]])]
+                (delay
+                  [(lam field_12 [fromInt_3 (con integer 1)]) [(builtin unMapData) generated_18]])]
+                (delay
+                  [(lam field_13 [fromInt_3 (con integer 2)]) [(builtin unListData) generated_18]])]
+                (delay
+                  [(lam field_14 [fromInt_3 (con integer 3)]) [(builtin unIData) generated_18]])]
+                (delay
+                  [(lam field_15 [fromInt_3 (con integer 4)]) [(builtin unBData) generated_18]])]))
+            match_10])
+          value_9])])
+    (lam value_16 value_16)])
+--- result
+(constr 0
+  (con integer 0)
+  (con integer 1)
+  (con integer 2)
+  (con integer 3)
+  (con integer 4))
+--- logs
+[]
+--- budget
+cpu: 4114736, memory: 21680

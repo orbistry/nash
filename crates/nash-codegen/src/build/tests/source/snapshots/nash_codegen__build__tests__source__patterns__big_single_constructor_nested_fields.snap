@@ -1,0 +1,116 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\ntype Box = Box Int Int\ntype Choice = First Box | Second Int | Third\nselect : Choice -> int\nselect value = case value of\n    First (Box first second) -> Builtin.addInteger (Builtin.unIData first) (Builtin.unIData second)\n    Second number -> Builtin.unIData number\n    Third -> 0\nmain : (int, int, int)\nmain = (select (First (Box 20 22)), select (Second 7), select Third)\n"
+---
+--- core
+let fromInt#12 : int -> int = \value#26 : int -> value#26 in
+let select#2 : Main.Choice -> int = \value#8 : Main.Choice -> let match#13 : Main.Choice = value#8 in
+let projection#27 : pair int (list Data) = unConstrData match#13 in
+case@Pair projection#27 of
+  Pair tag#22 fields#23 -> case@Tag tag#22 of
+    0 -> let fieldList#24 : list Data = fields#23 in
+    let projection#28 : Data = headList fieldList#24 in
+    let field#14 : Main.Box = projection#28 in
+    let projection#29 : pair int (list Data) = unConstrData field#14 in
+    case@Pair projection#29 of
+      Pair tag#17 fields#18 -> let fieldList#19 : list Data = fields#18 in
+      let projection#30 : Data = headList fieldList#19 in
+      let field#15 : Int = projection#30 in
+      let projection#31 : list Data = tailList fieldList#19 in
+      let fieldList#20 : list Data = projection#31 in
+      let projection#32 : Data = headList fieldList#20 in
+      let field#16 : Int = projection#32 in
+      let first#9 : Int = field#15 in
+      let second#10 : Int = field#16 in
+      addInteger (unIData first#9) (unIData second#10)
+    1 -> let fieldList#25 : list Data = fields#23 in
+    let projection#33 : Data = headList fieldList#25 in
+    let field#21 : Int = projection#33 in
+    let number#11 : Int = field#21 in
+    unIData number#11
+    2 -> fromInt#12 0 in
+let fromInt#6 : int -> Int = iData in
+let main#1 : (int, int, int) = constr 0 (select#2 ((\field#3 : Main.Box -> constrData 0 (mkCons field#3 (con (list data) []))) ((\field#4 : Int field#5 : Int -> constrData 0 (mkCons field#4 (mkCons field#5 (con (list data) [])))) (fromInt#6 20) (fromInt#6 22)))) (select#2 ((\field#7 : Int -> constrData 1 (mkCons field#7 (con (list data) []))) (fromInt#6 7))) (select#2 (constrData 2 (con (list data) []))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_12
+    [(lam select_2
+      [(lam fromInt_6
+        [(lam main_1 main_1)
+          (constr 0
+            [select_2
+              [(lam field_3
+                [[(builtin constrData) (con integer 0)]
+                  [[(force (builtin mkCons)) field_3] (con (list data) [])]])
+                [[(lam field_4
+                  (lam field_5
+                    [[(builtin constrData) (con integer 0)]
+                      [[(force (builtin mkCons)) field_4]
+                        [[(force (builtin mkCons)) field_5] (con (list data) [])]]]))
+                  [fromInt_6 (con integer 20)]]
+                  [fromInt_6 (con integer 22)]]]]
+            [select_2
+              [(lam field_7
+                [[(builtin constrData) (con integer 1)]
+                  [[(force (builtin mkCons)) field_7] (con (list data) [])]])
+                [fromInt_6 (con integer 7)]]]
+            [select_2 [[(builtin constrData) (con integer 2)] (con (list data) [])]])])
+        (builtin iData)])
+      (lam value_8
+        [(lam match_13
+          [(lam projection_27
+            (case
+              projection_27
+              (lam tag_22
+                (lam fields_23
+                  (case
+                    tag_22
+                    [(lam fieldList_24
+                      [(lam projection_28
+                        [(lam field_14
+                          [(lam projection_29
+                            (case
+                              projection_29
+                              (lam tag_17
+                                (lam fields_18
+                                  [(lam fieldList_19
+                                    [(lam projection_30
+                                      [(lam field_15
+                                        [(lam projection_31
+                                          [(lam fieldList_20
+                                            [(lam projection_32
+                                              [(lam field_16
+                                                [(lam first_9
+                                                  [(lam second_10
+                                                    [[(builtin addInteger) [(builtin unIData) first_9]]
+                                                      [(builtin unIData) second_10]])
+                                                    field_16])
+                                                  field_15])
+                                                projection_32])
+                                              [(force (builtin headList)) fieldList_20]])
+                                            projection_31])
+                                          [(force (builtin tailList)) fieldList_19]])
+                                        projection_30])
+                                      [(force (builtin headList)) fieldList_19]])
+                                    fields_18]))))
+                            [(builtin unConstrData) field_14]])
+                          projection_28])
+                        [(force (builtin headList)) fieldList_24]])
+                      fields_23]
+                    [(lam fieldList_25
+                      [(lam projection_33
+                        [(lam field_21 [(lam number_11 [(builtin unIData) number_11]) field_21])
+                          projection_33])
+                        [(force (builtin headList)) fieldList_25]])
+                      fields_23]
+                    [fromInt_12 (con integer 0)])))))
+            [(builtin unConstrData) match_13]])
+          value_8])])
+    (lam value_26 value_26)])
+--- result
+(constr 0 (con integer 42) (con integer 7) (con integer 0))
+--- logs
+[]
+--- budget
+cpu: 4396104, memory: 21438

@@ -3,195 +3,175 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lift, lower)\ntype Pair 'v = Pair Bytes 'v\ntype Dict 'v = Dict { inner : List (Pair 'v) }\ntype Value = Value { inner : Dict (Dict Int) }\ntype Dat = Dat { c : Int, a : Value }\ndat : Dat\ndat =\n    let\n        innerEntries : list (Pair Int)\n        innerEntries = [Pair #\"aa\" 4]\n        innerDict : Dict Int\n        innerDict = Dict { inner = (lift innerEntries) }\n        v = Value { inner = (Dict { inner = (lift [Pair #\"\" innerDict]) }) }\n    in\n    Dat { c = 0, a = v }\nmain =\n    let\n        val = dat.a\n        entries : list (Pair (Dict Int))\n        entries = lower val.inner.inner\n        finalEntries : list (Pair Int)\n        finalEntries = [Pair #\"AA\" 4]\n        finalAmount : Dict Int\n        finalAmount = Dict { inner = (lift finalEntries) }\n    in\n    case entries of\n        [Pair _ amount] -> eq finalAmount amount\n        _ -> fail\n"
 ---
 --- core
-let message#70 : string = "incomplete pattern match" in
-let lower#31 : List 'erased -> list 'erased = unListData in
-let lift#37 : list 'erased -> List 'erased = listData in
-let fromBytes#40 : bytes -> Bytes = bData in
-let fromInt#41 : int -> Int = iData in
-let innerEntries#45 : list (Main.Pair Int) = mkCons ((\field#55 : Bytes field#56 : Int -> constrData 0 (mkCons field#55 (mkCons field#56 (con (list data) [])))) (fromBytes#40 (con bytestring #aa)) (fromInt#41 4)) (con (list data) []) in
-let innerDict#46 : Main.Dict Int = (\field#54 : List (Main.Pair Int) -> constrData 0 (mkCons field#54 (con (list data) []))) (lift#37 innerEntries#45) in
-let v#47 : Main.Value = (\field#50 : Main.Dict (Main.Dict Int) -> constrData 0 (mkCons field#50 (con (list data) []))) ((\field#51 : List (Main.Pair (Main.Dict Int)) -> constrData 0 (mkCons field#51 (con (list data) []))) (lift#37 (mkCons ((\field#52 : Bytes field#53 : Main.Dict Int -> constrData 0 (mkCons field#52 (mkCons field#53 (con (list data) [])))) (fromBytes#40 (con bytestring #)) innerDict#46) (con (list data) [])))) in
-let dat#42 : Main.Dat = (\field#48 : Int field#49 : Main.Value -> constrData 0 (mkCons field#48 (mkCons field#49 (con (list data) [])))) (fromInt#41 0) v#47 in
-let projection#57 : pair int (list Data) = unConstrData dat#42 in
-let evaluated#58 : 'erased = case@Pair projection#57 of
-  Pair tag#43 fields#44 -> fields#44 in
-let projection#59 : 'erased = tailList evaluated#58 in
-let projection#60 : 'erased = headList projection#59 in
-let val#2 : Main.Value = projection#60 in
-let finalEntries#3 : list (Main.Pair Int) = mkCons ((\field#38 : Bytes field#39 : Int -> constrData 0 (mkCons field#38 (mkCons field#39 (con (list data) [])))) (fromBytes#40 (con bytestring #aa)) (fromInt#41 4)) (con (list data) []) in
-let finalAmount#4 : Main.Dict Int = (\field#36 : List (Main.Pair Int) -> constrData 0 (mkCons field#36 (con (list data) []))) (lift#37 finalEntries#3) in
-let projection#61 : pair int (list Data) = unConstrData val#2 in
-let evaluated#62 : 'erased = case@Pair projection#61 of
+let lower#29 : List 'erased -> list 'erased = unListData in
+let lift#35 : list 'erased -> List 'erased = listData in
+let fromBytes#38 : bytes -> Bytes = bData in
+let fromInt#39 : int -> Int = iData in
+let innerEntries#43 : list (Main.Pair Int) = mkCons ((\field#53 : Bytes field#54 : Int -> constrData 0 (mkCons field#53 (mkCons field#54 (con (list data) [])))) (fromBytes#38 (con bytestring #aa)) (fromInt#39 4)) (con (list data) []) in
+let innerDict#44 : Main.Dict Int = (\field#52 : List (Main.Pair Int) -> constrData 0 (mkCons field#52 (con (list data) []))) (lift#35 innerEntries#43) in
+let v#45 : Main.Value = (\field#48 : Main.Dict (Main.Dict Int) -> constrData 0 (mkCons field#48 (con (list data) []))) ((\field#49 : List (Main.Pair (Main.Dict Int)) -> constrData 0 (mkCons field#49 (con (list data) []))) (lift#35 (mkCons ((\field#50 : Bytes field#51 : Main.Dict Int -> constrData 0 (mkCons field#50 (mkCons field#51 (con (list data) [])))) (fromBytes#38 (con bytestring #)) innerDict#44) (con (list data) [])))) in
+let dat#40 : Main.Dat = (\field#46 : Int field#47 : Main.Value -> constrData 0 (mkCons field#46 (mkCons field#47 (con (list data) [])))) (fromInt#39 0) v#45 in
+let projection#55 : pair int (list Data) = unConstrData dat#40 in
+let evaluated#56 : 'erased = case@Pair projection#55 of
+  Pair tag#41 fields#42 -> fields#42 in
+let projection#57 : 'erased = tailList evaluated#56 in
+let projection#58 : 'erased = headList projection#57 in
+let val#2 : Main.Value = projection#58 in
+let finalEntries#3 : list (Main.Pair Int) = mkCons ((\field#36 : Bytes field#37 : Int -> constrData 0 (mkCons field#36 (mkCons field#37 (con (list data) [])))) (fromBytes#38 (con bytestring #aa)) (fromInt#39 4)) (con (list data) []) in
+let finalAmount#4 : Main.Dict Int = (\field#34 : List (Main.Pair Int) -> constrData 0 (mkCons field#34 (con (list data) []))) (lift#35 finalEntries#3) in
+let projection#59 : pair int (list Data) = unConstrData val#2 in
+let evaluated#60 : 'erased = case@Pair projection#59 of
+  Pair tag#30 fields#31 -> fields#31 in
+let projection#61 : 'erased = headList evaluated#60 in
+let projection#62 : pair int (list Data) = unConstrData projection#61 in
+let evaluated#63 : 'erased = case@Pair projection#62 of
   Pair tag#32 fields#33 -> fields#33 in
-let projection#63 : 'erased = headList evaluated#62 in
-let projection#64 : pair int (list Data) = unConstrData projection#63 in
-let evaluated#65 : 'erased = case@Pair projection#64 of
-  Pair tag#34 fields#35 -> fields#35 in
-let projection#66 : 'erased = headList evaluated#65 in
-let entries#5 : list (Main.Pair (Main.Dict Int)) = lower#31 projection#66 in
+let projection#64 : 'erased = headList evaluated#63 in
+let entries#5 : list (Main.Pair (Main.Dict Int)) = lower#29 projection#64 in
 let match#7 : list (Main.Pair (Main.Dict Int)) = entries#5 in
-let leaf#19 : 'erased = delay error in
+let leaf#18 : 'erased = delay error in
 let main#1 : bool = case@List match#7 of
-  Nil -> force leaf#19
-  Cons field#20 field#21 -> case@Data field#20 of
-    DataConstr pair#30 -> case@Pair pair#30 of
-      Pair tag#26 fields#27 -> case@Int tag#26 of
-        0 -> let fieldList#28 : list Data = fields#27 in
-        let projection#67 : Data = headList fieldList#28 in
-        let field#22 : Bytes = projection#67 in
-        let projection#68 : list Data = tailList fieldList#28 in
-        let fieldList#29 : list Data = projection#68 in
-        let projection#69 : Data = headList fieldList#29 in
-        let field#23 : Main.Dict Int = projection#69 in
-        case@List field#21 of
-          Nil -> let amount#6 : Main.Dict Int = field#23 in
-          equalsData finalAmount#4 amount#6
-          Cons field#24 field#25 -> force leaf#19
-        _ -> trace message#70 in error
-    _ -> trace message#70 in error in
+  Nil -> force leaf#18
+  Cons field#19 field#20 -> let projection#65 : pair int (list Data) = unConstrData field#19 in
+  case@Pair projection#65 of
+    Pair tag#25 fields#26 -> let fieldList#27 : list Data = fields#26 in
+    let projection#66 : Data = headList fieldList#27 in
+    let field#21 : Bytes = projection#66 in
+    let projection#67 : list Data = tailList fieldList#27 in
+    let fieldList#28 : list Data = projection#67 in
+    let projection#68 : Data = headList fieldList#28 in
+    let field#22 : Main.Dict Int = projection#68 in
+    case@List field#20 of
+      Nil -> let amount#6 : Main.Dict Int = field#22 in
+      equalsData finalAmount#4 amount#6
+      Cons field#23 field#24 -> force leaf#18 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_70
-    [(lam lower_31
-      [(lam lift_37
-        [(lam fromBytes_40
-          [(lam fromInt_41
-            [(lam innerEntries_45
-              [(lam innerDict_46
-                [(lam v_47
-                  [(lam dat_42
-                    [(lam projection_57
-                      [(lam evaluated_58
-                        [(lam projection_59
-                          [(lam projection_60
-                            [(lam val_2
-                              [(lam finalEntries_3
-                                [(lam finalAmount_4
-                                  [(lam projection_61
-                                    [(lam evaluated_62
-                                      [(lam projection_63
-                                        [(lam projection_64
-                                          [(lam evaluated_65
-                                            [(lam projection_66
-                                              [(lam entries_5
-                                                [(lam match_7
-                                                  [(lam leaf_19
-                                                    [(lam main_1 main_1)
-                                                      (case
-                                                        match_7
+  [(lam lower_29
+    [(lam lift_35
+      [(lam fromBytes_38
+        [(lam fromInt_39
+          [(lam innerEntries_43
+            [(lam innerDict_44
+              [(lam v_45
+                [(lam dat_40
+                  [(lam projection_55
+                    [(lam evaluated_56
+                      [(lam projection_57
+                        [(lam projection_58
+                          [(lam val_2
+                            [(lam finalEntries_3
+                              [(lam finalAmount_4
+                                [(lam projection_59
+                                  [(lam evaluated_60
+                                    [(lam projection_61
+                                      [(lam projection_62
+                                        [(lam evaluated_63
+                                          [(lam projection_64
+                                            [(lam entries_5
+                                              [(lam match_7
+                                                [(lam leaf_18
+                                                  [(lam main_1 main_1)
+                                                    (case
+                                                      match_7
+                                                      (lam field_19
                                                         (lam field_20
-                                                          (lam field_21
-                                                            [(lam generated_71
-                                                              (force
-                                                                [[[[[[(force (builtin chooseData)) generated_71]
-                                                                  (delay
-                                                                    [(lam pair_30
-                                                                      (case
-                                                                        pair_30
-                                                                        (lam tag_26
-                                                                          (lam fields_27
-                                                                            [(lam generated_72
-                                                                              (case
-                                                                                [[(builtin equalsInteger) generated_72] (con integer 0)]
-                                                                                (force [[(force (builtin trace)) message_70] (delay (error))])
-                                                                                [(lam fieldList_28
-                                                                                  [(lam projection_67
-                                                                                    [(lam field_22
-                                                                                      [(lam projection_68
-                                                                                        [(lam fieldList_29
-                                                                                          [(lam projection_69
-                                                                                            [(lam field_23
-                                                                                              (case
-                                                                                                field_21
-                                                                                                (lam field_24 (lam field_25 (force leaf_19)))
-                                                                                                [(lam amount_6 [[(builtin equalsData) finalAmount_4] amount_6]) field_23]))
-                                                                                              projection_69])
-                                                                                            [(force (builtin headList)) fieldList_29]])
-                                                                                          projection_68])
-                                                                                        [(force (builtin tailList)) fieldList_28]])
-                                                                                      projection_67])
-                                                                                    [(force (builtin headList)) fieldList_28]])
-                                                                                  fields_27]))
-                                                                              tag_26]))))
-                                                                      [(builtin unConstrData) generated_71]])]
-                                                                  (delay (force [[(force (builtin trace)) message_70] (delay (error))]))]
-                                                                  (delay (force [[(force (builtin trace)) message_70] (delay (error))]))]
-                                                                  (delay (force [[(force (builtin trace)) message_70] (delay (error))]))]
-                                                                  (delay (force [[(force (builtin trace)) message_70] (delay (error))]))]))
-                                                              field_20]))
-                                                        (force leaf_19))])
-                                                    (delay (error))])
-                                                  entries_5])
-                                                [lower_31 projection_66]])
-                                              [(force (builtin headList)) evaluated_65]])
-                                            (case projection_64 (lam tag_34 (lam fields_35 fields_35)))])
-                                          [(builtin unConstrData) projection_63]])
-                                        [(force (builtin headList)) evaluated_62]])
-                                      (case projection_61 (lam tag_32 (lam fields_33 fields_33)))])
-                                    [(builtin unConstrData) val_2]])
-                                  [(lam field_36
+                                                          [(lam projection_65
+                                                            (case
+                                                              projection_65
+                                                              (lam tag_25
+                                                                (lam fields_26
+                                                                  [(lam fieldList_27
+                                                                    [(lam projection_66
+                                                                      [(lam field_21
+                                                                        [(lam projection_67
+                                                                          [(lam fieldList_28
+                                                                            [(lam projection_68
+                                                                              [(lam field_22
+                                                                                (case
+                                                                                  field_20
+                                                                                  (lam field_23 (lam field_24 (force leaf_18)))
+                                                                                  [(lam amount_6 [[(builtin equalsData) finalAmount_4] amount_6]) field_22]))
+                                                                                projection_68])
+                                                                              [(force (builtin headList)) fieldList_28]])
+                                                                            projection_67])
+                                                                          [(force (builtin tailList)) fieldList_27]])
+                                                                        projection_66])
+                                                                      [(force (builtin headList)) fieldList_27]])
+                                                                    fields_26]))))
+                                                            [(builtin unConstrData) field_19]]))
+                                                      (force leaf_18))])
+                                                  (delay (error))])
+                                                entries_5])
+                                              [lower_29 projection_64]])
+                                            [(force (builtin headList)) evaluated_63]])
+                                          (case projection_62 (lam tag_32 (lam fields_33 fields_33)))])
+                                        [(builtin unConstrData) projection_61]])
+                                      [(force (builtin headList)) evaluated_60]])
+                                    (case projection_59 (lam tag_30 (lam fields_31 fields_31)))])
+                                  [(builtin unConstrData) val_2]])
+                                [(lam field_34
+                                  [[(builtin constrData) (con integer 0)]
+                                    [[(force (builtin mkCons)) field_34] (con (list data) [])]])
+                                  [lift_35 finalEntries_3]]])
+                              [[(force (builtin mkCons))
+                                [[(lam field_36
+                                  (lam field_37
                                     [[(builtin constrData) (con integer 0)]
-                                      [[(force (builtin mkCons)) field_36] (con (list data) [])]])
-                                    [lift_37 finalEntries_3]]])
-                                [[(force (builtin mkCons))
-                                  [[(lam field_38
-                                    (lam field_39
-                                      [[(builtin constrData) (con integer 0)]
-                                        [[(force (builtin mkCons)) field_38]
-                                          [[(force (builtin mkCons)) field_39] (con (list data) [])]]]))
-                                    [fromBytes_40 (con bytestring #aa)]]
-                                    [fromInt_41 (con integer 4)]]]
-                                  (con (list data) [])]])
-                              projection_60])
-                            [(force (builtin headList)) projection_59]])
-                          [(force (builtin tailList)) evaluated_58]])
-                        (case projection_57 (lam tag_43 (lam fields_44 fields_44)))])
-                      [(builtin unConstrData) dat_42]])
-                    [[(lam field_48
-                      (lam field_49
-                        [[(builtin constrData) (con integer 0)]
-                          [[(force (builtin mkCons)) field_48]
-                            [[(force (builtin mkCons)) field_49] (con (list data) [])]]]))
-                      [fromInt_41 (con integer 0)]]
-                      v_47]])
-                  [(lam field_50
-                    [[(builtin constrData) (con integer 0)]
-                      [[(force (builtin mkCons)) field_50] (con (list data) [])]])
-                    [(lam field_51
+                                      [[(force (builtin mkCons)) field_36]
+                                        [[(force (builtin mkCons)) field_37] (con (list data) [])]]]))
+                                  [fromBytes_38 (con bytestring #aa)]]
+                                  [fromInt_39 (con integer 4)]]]
+                                (con (list data) [])]])
+                            projection_58])
+                          [(force (builtin headList)) projection_57]])
+                        [(force (builtin tailList)) evaluated_56]])
+                      (case projection_55 (lam tag_41 (lam fields_42 fields_42)))])
+                    [(builtin unConstrData) dat_40]])
+                  [[(lam field_46
+                    (lam field_47
                       [[(builtin constrData) (con integer 0)]
-                        [[(force (builtin mkCons)) field_51] (con (list data) [])]])
-                      [lift_37
-                        [[(force (builtin mkCons))
-                          [[(lam field_52
-                            (lam field_53
-                              [[(builtin constrData) (con integer 0)]
-                                [[(force (builtin mkCons)) field_52]
-                                  [[(force (builtin mkCons)) field_53] (con (list data) [])]]]))
-                            [fromBytes_40 (con bytestring #)]]
-                            innerDict_46]]
-                          (con (list data) [])]]]]])
-                [(lam field_54
+                        [[(force (builtin mkCons)) field_46]
+                          [[(force (builtin mkCons)) field_47] (con (list data) [])]]]))
+                    [fromInt_39 (con integer 0)]]
+                    v_45]])
+                [(lam field_48
                   [[(builtin constrData) (con integer 0)]
-                    [[(force (builtin mkCons)) field_54] (con (list data) [])]])
-                  [lift_37 innerEntries_45]]])
-              [[(force (builtin mkCons))
-                [[(lam field_55
-                  (lam field_56
+                    [[(force (builtin mkCons)) field_48] (con (list data) [])]])
+                  [(lam field_49
                     [[(builtin constrData) (con integer 0)]
-                      [[(force (builtin mkCons)) field_55]
-                        [[(force (builtin mkCons)) field_56] (con (list data) [])]]]))
-                  [fromBytes_40 (con bytestring #aa)]]
-                  [fromInt_41 (con integer 4)]]]
-                (con (list data) [])]])
-            (builtin iData)])
-          (builtin bData)])
-        (builtin listData)])
-      (builtin unListData)])
-    (con string "incomplete pattern match")])
+                      [[(force (builtin mkCons)) field_49] (con (list data) [])]])
+                    [lift_35
+                      [[(force (builtin mkCons))
+                        [[(lam field_50
+                          (lam field_51
+                            [[(builtin constrData) (con integer 0)]
+                              [[(force (builtin mkCons)) field_50]
+                                [[(force (builtin mkCons)) field_51] (con (list data) [])]]]))
+                          [fromBytes_38 (con bytestring #)]]
+                          innerDict_44]]
+                        (con (list data) [])]]]]])
+              [(lam field_52
+                [[(builtin constrData) (con integer 0)]
+                  [[(force (builtin mkCons)) field_52] (con (list data) [])]])
+                [lift_35 innerEntries_43]]])
+            [[(force (builtin mkCons))
+              [[(lam field_53
+                (lam field_54
+                  [[(builtin constrData) (con integer 0)]
+                    [[(force (builtin mkCons)) field_53]
+                      [[(force (builtin mkCons)) field_54] (con (list data) [])]]]))
+                [fromBytes_38 (con bytestring #aa)]]
+                [fromInt_39 (con integer 4)]]]
+              (con (list data) [])]])
+          (builtin iData)])
+        (builtin bData)])
+      (builtin listData)])
+    (builtin unListData)])
 --- result
 (con bool True)
 --- logs
 []
 --- budget
-cpu: 9408095, memory: 36642
+cpu: 8781387, memory: 33609

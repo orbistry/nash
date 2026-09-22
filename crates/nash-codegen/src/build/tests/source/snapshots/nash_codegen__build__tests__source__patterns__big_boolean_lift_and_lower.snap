@@ -1,0 +1,46 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Bool\nimport Lift exposing (Lift)\nmake : bool -> Bool.Bool\nmake = lift\nmain : (bool, bool)\nmain = (lower (make Primitive.False), lower (make Primitive.True))\n"
+---
+--- core
+let lower#2 : nash/base:Bool.Bool -> bool = \value#4 : nash/base:Bool.Bool -> let match#5 : nash/base:Bool.Bool = value#4 in
+let projection#10 : pair int (list Data) = unConstrData match#5 in
+case@Pair projection#10 of
+  Pair tag#6 fields#7 -> case@Tag tag#6 of
+    0 -> false
+    1 -> true in
+let lift#8 : bool -> nash/base:Bool.Bool = \value#9 : bool -> case@Bool value#9 of
+  True -> constrData 1 (con (list data) [])
+  False -> constrData 0 (con (list data) []) in
+let make#3 : bool -> nash/base:Bool.Bool = lift#8 in
+let main#1 : (bool, bool) = constr 0 (lower#2 (make#3 false)) (lower#2 (make#3 true)) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam lower_2
+    [(lam lift_8
+      [(lam make_3
+        [(lam main_1 main_1)
+          (constr 0
+            [lower_2 [make_3 (con bool False)]]
+            [lower_2 [make_3 (con bool True)]])])
+        lift_8])
+      (lam value_9
+        (case
+          value_9
+          [[(builtin constrData) (con integer 0)] (con (list data) [])]
+          [[(builtin constrData) (con integer 1)] (con (list data) [])]))])
+    (lam value_4
+      [(lam match_5
+        [(lam projection_10
+          (case
+            projection_10
+            (lam tag_6 (lam fields_7 (case tag_6 (con bool False) (con bool True))))))
+          [(builtin unConstrData) match_5]])
+        value_4])])
+--- result
+(constr 0 (con bool False) (con bool True))
+--- logs
+[]
+--- budget
+cpu: 1165578, memory: 6928

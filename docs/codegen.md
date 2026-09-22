@@ -76,7 +76,7 @@ literals can be built (`crates/nash-plutus/src/typ.rs`).
 | `App(f, as)` | n-ary application | nested `Term::Apply` |
 | `Let(b, v, e)` | strict binding | `(\b -> e) v` |
 | `LetRec` | recursive function group | self-application, see Recursion |
-| `Case(Tag, s, bs, d)` | match on a `Term` constr tag; branch `i` binds the fields | `Term::Case` |
+| `Case(Tag, s, bs, d)` | exhaustive consecutive tags: a `Term` constr binds its fields; a decoded integer tag binds none | `Term::Case` |
 | `Case(Bool, s, [t, e], _)` | `if` | `case s [e, t]` (false tag 0, true tag 1) |
 | `Case(Int, s, bs, d)` | switch on integer literals | chain of `equalsInteger` + boolean `Term::Case` |
 | `Case(Bytes, s, bs, d)` | switch on bytestring literals | chain of `equalsByteString` + boolean `Term::Case` |
@@ -254,9 +254,10 @@ The `Switch` node lowers to the `Case` kind matching the scrutinee's `Ty`:
 | `bool` | `Bool` | native `case` (false 0, true 1) |
 | `int`, `bytes` literals | `Int`, `Bytes` | equality chain |
 | `list 'a` | `List` | native `case` (cons 0, nil 1) |
-| Big ADT | `Int` on `fstPair (unConstrData s)` | equality chain on the tag |
+| Big ADT | `Tag` on the integer decoded by `unConstrData` and pair destructuring | native `case`; no dispatch for single-constructor types |
 | `Data` | `Data` | `chooseData` with delayed branches |
-| Big record, `List 'a`, `Map 'k 'v` | none (irrefutable) | projection only |
+| `List 'a` | `List` after `unListData` | native `case` (cons 0, nil 1) |
+| Big record | none (irrefutable) | `unListData` and field projection |
 
 Exhaustiveness is checked earlier by `nash-nitpick` (Elm's
 `Nitpick/PatternMatches`), so `default` is `None` for a complete match and the
@@ -387,7 +388,7 @@ pass has usually already replaced the head with a variable.
 | `Data` | Big | `data` | any | `chooseData` with delayed branches |
 | `List 'a` | Big | `data (List xs)` | `listData` | `unListData` |
 | `Map 'k 'v` | Big | `data (Map kvs)` | `mapData` | `unMapData` |
-| Big ADT `type Foo = A .. \| B ..` | Big | `data (Constr i fields)` | `constrData i fields` | `unConstrData`, `fstPair`, `sndPair`, list indexing |
+| Big ADT `type Foo = A .. \| B ..` | Big | `data (Constr i fields)` | `constrData i fields` | `unConstrData`, pair case, tag case, list indexing |
 | Big labeled ctor `type Datum = Datum { owner : Bytes, deadline : Int }` | Big | `data (Constr i [owner, deadline])` | `constrData i fields` | same as a Big ADT |
 | Big record `type alias Foo = {..}` | Big | `data (List fields)` | `listData` | `unListData`, list indexing |
 | little ADT `type foo = ..` | Term | `constr i [fields]` | `Constr` | `Case(Tag)` |
@@ -420,23 +421,31 @@ case datum of
     Datum { owner, deadline } -> deadline
 ```
 
-produces, before optimization,
+produces a direct constructor decode and pair destructuring, with no Data
+variant check or constructor-tag test:
 
 ```
-let p      = unConstrData datum          -- pair int (list data)
-let tag    = fstPair p
-case tag of
-  0 -> let fields   = sndPair p
-       let deadline = headList (tailList fields)
-       deadline
+case@Pair (unConstrData datum) of
+  Pair tag fields ->
+    let deadline = headList (tailList fields)
+    deadline
 ```
 
-The `Int` case on `tag` disappears when the type has one constructor (the
-front end guarantees exhaustiveness, so a single-constructor match needs no
-test). Field extraction is lazy in the sense that `headList`/`tailList`
-chains are emitted at the leaf that needs them, shared through the memoized
-accessor set; unused fields are never touched. The pair projection and the
-`unConstrData` are shared across constructors of the same match.
+The solved Big ADT type establishes that its representation is constructor
+Data. Codegen therefore calls `unConstrData` directly; only matching the
+unrestricted `Data` type uses `chooseData`. For multiple constructors, the
+extracted integer tag dispatches with native `Term::case`, with all declared
+tags represented. Single-constructor types require no tag dispatch. A
+single-constructor type with no fields, including Big `Unit`, requires no
+destructuring at all; the scrutinee is still evaluated strictly.
+
+Unchecked casts do not add validation obligations to typed pattern matching.
+Explicit `Validate` implementations and source matches on `Data` retain their
+checks. Native casing directly on `Data.Constr` requires protocol 12 and is
+not emitted by this protocol-11-compatible lowering.
+
+Field extraction follows the selected branch and shares the decoded pair,
+list tails, and field projections with subsequent accesses.
 
 ## Case on a little ADT
 

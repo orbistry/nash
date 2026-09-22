@@ -3,68 +3,48 @@ source: crates/nash-codegen/src/build/tests/source/builtins.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (FromData)\ntype Datum = Datum Int\ndecoded : Datum\ndecoded = fromData (Builtin.constrData 0 [I 42])\nmain =\n    case decoded of\n        Datum number -> unIData number\n"
 ---
 --- core
-let message#16 : string = "incomplete pattern match" in
-let fromData#10 : Data -> 'erased = \coerce#13 : 'erased -> coerce#13 in
-let fromInt#11 : int -> int = \value#14 : int -> value#14 in
-let decoded#2 : Main.Datum = fromData#10 (constrData (fromInt#11 0) (mkCons ((\field#12 : int -> iData field#12) (fromInt#11 42)) (con (list data) []))) in
+let fromData#9 : Data -> 'erased = \coerce#12 : 'erased -> coerce#12 in
+let fromInt#10 : int -> int = \value#13 : int -> value#13 in
+let decoded#2 : Main.Datum = fromData#9 (constrData (fromInt#10 0) (mkCons ((\field#11 : int -> iData field#11) (fromInt#10 42)) (con (list data) []))) in
 let match#4 : Main.Datum = decoded#2 in
-let main#1 : int = case@Data match#4 of
-  DataConstr pair#9 -> case@Pair pair#9 of
-    Pair tag#6 fields#7 -> case@Int tag#6 of
-      0 -> let fieldList#8 : list Data = fields#7 in
-      let projection#15 : Data = headList fieldList#8 in
-      let field#5 : Int = projection#15 in
-      let number#3 : Int = field#5 in
-      unIData number#3
-      _ -> trace message#16 in error
-  _ -> trace message#16 in error in
+let projection#14 : pair int (list Data) = unConstrData match#4 in
+let main#1 : int = case@Pair projection#14 of
+  Pair tag#6 fields#7 -> let fieldList#8 : list Data = fields#7 in
+  let projection#15 : Data = headList fieldList#8 in
+  let field#5 : Int = projection#15 in
+  let number#3 : Int = field#5 in
+  unIData number#3 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam message_16
-    [(lam fromData_10
-      [(lam fromInt_11
-        [(lam decoded_2
-          [(lam match_4
+  [(lam fromData_9
+    [(lam fromInt_10
+      [(lam decoded_2
+        [(lam match_4
+          [(lam projection_14
             [(lam main_1 main_1)
-              [(lam generated_17
-                (force
-                  [[[[[[(force (builtin chooseData)) generated_17]
-                    (delay
-                      [(lam pair_9
-                        (case
-                          pair_9
-                          (lam tag_6
-                            (lam fields_7
-                              [(lam generated_18
-                                (case
-                                  [[(builtin equalsInteger) generated_18] (con integer 0)]
-                                  (force [[(force (builtin trace)) message_16] (delay (error))])
-                                  [(lam fieldList_8
-                                    [(lam projection_15
-                                      [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
-                                        projection_15])
-                                      [(force (builtin headList)) fieldList_8]])
-                                    fields_7]))
-                                tag_6]))))
-                        [(builtin unConstrData) generated_17]])]
-                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
-                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]))
-                match_4]])
-            decoded_2])
-          [fromData_10
-            [[(builtin constrData) [fromInt_11 (con integer 0)]]
-              [[(force (builtin mkCons))
-                [(lam field_12 [(builtin iData) field_12]) [fromInt_11 (con integer 42)]]]
-                (con (list data) [])]]]])
-        (lam value_14 value_14)])
-      (lam coerce_13 coerce_13)])
-    (con string "incomplete pattern match")])
+              (case
+                projection_14
+                (lam tag_6
+                  (lam fields_7
+                    [(lam fieldList_8
+                      [(lam projection_15
+                        [(lam field_5 [(lam number_3 [(builtin unIData) number_3]) field_5])
+                          projection_15])
+                        [(force (builtin headList)) fieldList_8]])
+                      fields_7])))])
+            [(builtin unConstrData) match_4]])
+          decoded_2])
+        [fromData_9
+          [[(builtin constrData) [fromInt_10 (con integer 0)]]
+            [[(force (builtin mkCons))
+              [(lam field_11 [(builtin iData) field_11]) [fromInt_10 (con integer 42)]]]
+              (con (list data) [])]]]])
+      (lam value_13 value_13)])
+    (lam coerce_12 coerce_12)])
 --- result
 (con integer 42)
 --- logs
 []
 --- budget
-cpu: 1905102, memory: 9825
+cpu: 1278394, memory: 6792

@@ -1,0 +1,31 @@
+---
+source: crates/nash-codegen/src/build/tests/source/patterns.rs
+description: "module Main exposing (..)\nimport Unit\nconsume : Unit.Unit -> unit\nconsume value = case value of\n    Unit.Unit -> ()\nmain : unit\nmain = consume (fail \"unit input\")\n"
+---
+--- core
+let message#9 : string = "unit input" in
+let fromUnit#5 : unit -> unit = \value#8 : unit -> value#8 in
+let consume#2 : nash/base:Unit.Unit -> unit = \value#4 : nash/base:Unit.Unit -> let match#6 : nash/base:Unit.Unit = value#4 in
+fromUnit#5 () in
+let fromString#3 : string -> string = \value#7 : string -> value#7 in
+let main#1 : unit = consume#2 (trace (fromString#3 message#9) in error) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_9
+    [(lam fromUnit_5
+      [(lam consume_2
+        [(lam fromString_3
+          [(lam main_1 main_1)
+            [consume_2
+              (force [[(force (builtin trace)) [fromString_3 message_9]] (delay (error))])]])
+          (lam value_7 value_7)])
+        (lam value_4 [(lam match_6 [fromUnit_5 (con unit ())]) value_4])])
+      (lam value_8 value_8)])
+    (con string "unit input")])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["unit input"]
+--- budget
+cpu: 59598, memory: 132
