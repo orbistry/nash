@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Literal exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait FromInt 'a where\n    fromInt : int -> 'a\ntrait FromString 'a where\n    fromString : string -> 'a\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\nimpl FromInt int where\n    fromInt x = x\nimpl FromString string where\n    fromString x = x\nimpl FromBytes bytes where\n    fromBytes x = x\n\n\nmodule Casts exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.iData\nlower : Int -> int\nlower = Builtin.unIData\nerase : Int -> Data\nerase value = Primitive.I (Builtin.unIData value)\ndecode : Data -> Int\ndecode value =\n    case value of\n        Primitive.I n -> Builtin.iData n\n        _ -> fail\nvalidate : Data -> Int\nvalidate = decode\n"
+description: "module Casts exposing (..)\nimport Builtin\nlift : int -> Int\nlift = Builtin.iData\nlower : Int -> int\nlower = Builtin.unIData\nerase : Int -> Data\nerase value = Primitive.I (Builtin.unIData value)\ndecode : Data -> Int\ndecode value =\n    case value of\n        Primitive.I n -> Builtin.iData n\n        _ -> fail\nvalidate : Data -> Int\nvalidate = decode\n"
 ---
 decode : Data -> Int
 erase : Int -> Data

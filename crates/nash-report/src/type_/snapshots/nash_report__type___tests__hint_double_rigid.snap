@@ -1,4 +1,0 @@
----
-source: crates/nash-report/src/type_/tests.rs
----
-The annotation keeps `'a` and `'b` independent; use one variable if they must be equal.

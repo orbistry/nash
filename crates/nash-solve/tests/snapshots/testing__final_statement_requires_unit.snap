@@ -1,6 +1,6 @@
 ---
 source: crates/nash-solve/tests/testing.rs
-description: "module Prop exposing (..)\ntype generator 'a = Generator 'a\nunit = Generator ()\n\nmodule Main exposing (public)\npublic = ()\ntests\n    test \"type\" = do\n        \\x -> x\n"
+description: "module Main exposing (public)\npublic = ()\ntests\n    test \"type\" = do\n        \\x -> x\n"
 info: diagnostic
 ---
 nash::type::mismatch

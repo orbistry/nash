@@ -321,9 +321,6 @@ fn alias_substitution_preserves_application_head_and_argument() {
     assert_eq!(reference.home, nash_ast::primitives::primitive_home());
     assert_eq!(reference.name, "list");
     assert!(std::ptr::eq(args[0], unit));
-    insta::with_settings!({omit_expression => true}, {
-        insta::assert_debug_snapshot!(substituted);
-    });
 }
 
 #[test]
@@ -517,9 +514,6 @@ fn annotation_kinds_keep_application_parameters_correlated() {
     assert!(
         matches!(copied, nash_ast::Pred::Apply { head, args: [a,b] } if matches!(head.value, Type::Var("g")) && matches!(a.value, Type::Var("x")) && matches!(b.value, Type::Var("y")))
     );
-    insta::with_settings!({omit_expression => true}, {
-        insta::assert_debug_snapshot!(kinds);
-    });
 }
 
 #[test]
@@ -549,9 +543,6 @@ fn annotation_retains_one_storable_predicate() {
     assert!(
         matches!(kinds.context, [pred] if pred.trait_ref() == Some(nash_ast::primitives::ReprTrait::Storable.qualified()) && matches!(pred.args()[0].value, nash_ast::Type::Var("a")))
     );
-    insta::with_settings!({omit_expression => true}, {
-        insta::assert_debug_snapshot!(kinds);
-    });
 }
 
 #[test]

@@ -185,7 +185,13 @@ mod tests {
             Pattern::Literal(Literal::Bytes(&[0, 255])),
         ];
         let doc = unhandled_patterns_to_doc_block(&patterns);
-        insta::assert_snapshot!(doc.render(80, false));
+        assert_eq!(
+            doc.render(80, false),
+            r###"    _
+    -7
+    "a\n\"b"
+    #"00ff""###
+        );
         assert!(doc.chunks(80).iter().any(|c| matches!(c,crate::doc::Chunk::Styled{style,..} if style.color == Some(crate::doc::Color{base:crate::doc::BaseColor::Yellow,vivid:false}))));
     }
 }

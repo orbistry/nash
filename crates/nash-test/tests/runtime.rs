@@ -453,13 +453,12 @@ fn terminal_and_json_reports_snapshot() {
     settings.set_description(&outcome.test.source);
     settings.set_omit_expression(true);
     let _guard = settings.bind_to_scope();
-    insta::assert_snapshot!(report::terminal::render(std::slice::from_ref(&outcome),Coverage::Labels,42,std::time::Duration::from_millis(810)), @r###"
-    Testing Example (Example.nash)
-
-    PASS fixture  [mem:     1.2K, cpu:   345.1K]
-
-    Summary 1 passed, 0 failed, 0 skipped   seed 42   0.81s
-    "###);
+    insta::assert_snapshot!(report::terminal::render(
+        std::slice::from_ref(&outcome),
+        Coverage::Labels,
+        42,
+        std::time::Duration::from_millis(810)
+    ));
     outcome.status = Status::Fail(Failure::BudgetExceeded {
         limit: Budget::Both {
             cpu: i128::MAX,

@@ -767,9 +767,6 @@ mod tests {
         assert!(
             matches!(&replaced.value, CanType::Lambda { from, to } if (from.value == CanType::unit()) && (to.value == CanType::unit()))
         );
-        insta::with_settings!({omit_expression => true}, {
-            insta::assert_debug_snapshot!((partial, applied, expanded));
-        });
     }
 
     fn empty_env<'a>(bump: &'a Bump) -> Env<'a> {

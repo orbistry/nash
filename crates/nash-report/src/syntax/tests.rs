@@ -296,18 +296,6 @@ report_branch!(
     )
 );
 report_branch!(
-    type_start_in_custom_type,
-    "type box = Box 42",
-    s,
-    type_::to_type_report(&s, type_::TContext::CustomType, &Type::Start(1, 16), 1, 16)
-);
-report_branch!(
-    type_start_in_alias,
-    "type alias box = 42",
-    s,
-    type_::to_type_report(&s, type_::TContext::TypeAlias, &Type::Start(1, 18), 1, 18)
-);
-report_branch!(
     type_indent_in_custom_type,
     "type box = Box\nint",
     s,

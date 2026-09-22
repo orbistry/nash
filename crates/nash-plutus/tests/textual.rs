@@ -260,7 +260,7 @@ fn pretty_short_and_multiline_layout() {
     let arena = Arena::new();
     let source = "(lam x (lam y [x y]))";
     let term = syn::parse_term(&arena, source).into_result().unwrap();
-    insta::assert_snapshot!(pretty::term(term), @"(lam i0 (lam i1 [i0 i1]))");
+    assert_eq!(pretty::term(term), "(lam i0 (lam i1 [i0 i1]))");
     let source =
         "(lam x [(builtin addInteger) (con integer 1234567890123456789012345678901234567890) x])";
     let term = syn::parse_term(&arena, source).into_result().unwrap();

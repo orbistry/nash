@@ -64,7 +64,7 @@ fn missing(matrix: &[Row<'_>], columns: usize) -> String {
 
 #[test]
 fn empty_matrix() {
-    insta::assert_snapshot!(missing(&[], 2), @"_ | _");
+    assert_eq!(missing(&[], 2), "_ | _");
 }
 
 #[test]
@@ -83,12 +83,12 @@ fn nil_and_cons() {
         name: CONS_NAME,
         args: &[ANY, ANY],
     };
-    insta::assert_snapshot!(missing(&[vec![NIL], vec![cons]], 1), @"");
+    assert_eq!(missing(&[vec![NIL], vec![cons]], 1), "");
 }
 
 #[test]
 fn only_nil() {
-    insta::assert_snapshot!(missing(&[vec![NIL]], 1), @"_ :: _");
+    assert_eq!(missing(&[vec![NIL]], 1), "_ :: _");
 }
 
 #[test]
@@ -98,12 +98,21 @@ fn nested_cons() {
         name: CONS_NAME,
         args: &[ANY, NIL],
     };
-    insta::assert_snapshot!(missing(&[vec![NIL], vec![singleton]], 1), @"_ :: _ :: _");
+    assert_eq!(missing(&[vec![NIL], vec![singleton]], 1), "_ :: _ :: _");
 }
 
 #[test]
 fn literal_domain_needs_wildcard() {
-    insta::assert_snapshot!(missing(&[vec![Pattern::Literal(Literal::Int(1))], vec![Pattern::Literal(Literal::Int(2))]], 1), @"_");
+    assert_eq!(
+        missing(
+            &[
+                vec![Pattern::Literal(Literal::Int(1))],
+                vec![Pattern::Literal(Literal::Int(2))]
+            ],
+            1
+        ),
+        "_"
+    );
 }
 
 #[test]
@@ -113,7 +122,7 @@ fn pair_partial() {
         name: PAIR_NAME,
         args: &[T, ANY],
     };
-    insta::assert_snapshot!(missing(&[vec![pair]], 1), @"( False, _ )");
+    assert_eq!(missing(&[vec![pair]], 1), "( False, _ )");
 }
 
 #[test]
@@ -164,7 +173,7 @@ fn overloaded_literal_can_overlap_a_constructor() {
     let literal = Pattern::Literal(Literal::Int(0));
     assert!(is_useful(&[vec![T]], &[literal]));
     assert!(is_useful(&[vec![literal]], &[T]));
-    insta::assert_snapshot!(missing(&[vec![T], vec![literal]], 1), @"False");
+    assert_eq!(missing(&[vec![T], vec![literal]], 1), "False");
 }
 
 #[test]
@@ -200,7 +209,10 @@ fn recovered_constructor_preserves_remaining_columns() {
         name: PAIR_NAME,
         args: &[T, ANY],
     };
-    insta::assert_snapshot!(missing(&[vec![pair, T], vec![ANY, F]], 2), @"( False, _ ) | True");
+    assert_eq!(
+        missing(&[vec![pair, T], vec![ANY, F]], 2),
+        "( False, _ ) | True"
+    );
 }
 
 // Independent finite-domain oracle: direct boolean membership, with no

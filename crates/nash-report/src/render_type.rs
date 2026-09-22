@@ -234,22 +234,29 @@ mod tests {
     use super::*;
     #[test]
     fn function_parentheses() {
-        insta::assert_snapshot!(lambda(Ctx::App,variable("a"),variable("b"),vec![]).render(80,false), @"('a -> 'b)");
+        assert_eq!(
+            lambda(Ctx::App, variable("a"), variable("b"), vec![]).render(80, false),
+            "('a -> 'b)"
+        );
     }
     #[test]
     fn narrow_application() {
-        insta::assert_snapshot!(apply(Ctx::None,Doc::text("Container"),vec![Doc::text("LongArgument")]).render(12,false), @r###"
-        Container
-            LongArgument
-        "###);
+        assert_eq!(
+            apply(
+                Ctx::None,
+                Doc::text("Container"),
+                vec![Doc::text("LongArgument")]
+            )
+            .render(12, false),
+            "Container\n    LongArgument"
+        );
     }
     #[test]
     fn vertical_snippet() {
-        insta::assert_snapshot!(vrecord_snippet((Doc::text("x"),variable("a")),vec![]).render(80,false), @r###"
-        { x : 'a
-        , ...
-        }
-        "###);
+        assert_eq!(
+            vrecord_snippet((Doc::text("x"), variable("a")), vec![]).render(80, false),
+            "{ x : 'a\n, ...\n}"
+        );
     }
     #[test]
     fn source_type_shapes() {
@@ -268,15 +275,21 @@ mod tests {
             name: "f",
             args: &args,
         });
-        insta::assert_snapshot!(src_to_doc(Ctx::None,&app).render(80,false), @"'f ('a -> A.Thing)");
+        assert_eq!(
+            src_to_doc(Ctx::None, &app).render(80, false),
+            "'f ('a -> A.Thing)"
+        );
         let repr = Located::at_zero(Repr::Big);
         let annotated = Located::at_zero(Type::Repr {
             typ: &a,
             repr: &repr,
         });
-        insta::assert_snapshot!(src_to_doc(Ctx::None,&annotated).render(80,false), @"('a : Big)");
+        assert_eq!(
+            src_to_doc(Ctx::None, &annotated).render(80, false),
+            "('a : Big)"
+        );
         let unit = Located::at_zero(Type::Unit);
-        insta::assert_snapshot!(src_to_doc(Ctx::None,&unit).render(80,false), @"()");
+        assert_eq!(src_to_doc(Ctx::None, &unit).render(80, false), "()");
     }
     #[test]
     fn source_record_and_tuple() {
@@ -289,14 +302,20 @@ mod tests {
         };
         let fields = [&field];
         let record = Located::at_zero(Type::Record(&fields));
-        insta::assert_snapshot!(src_to_doc(Ctx::None,&record).render(80,false), @"{ field : 'a }");
+        assert_eq!(
+            src_to_doc(Ctx::None, &record).render(80, false),
+            "{ field : 'a }"
+        );
         let rest = [&a, &a];
         let tuple = Located::at_zero(Type::Tuple {
             first: &a,
             second: &a,
             rest: &rest,
         });
-        insta::assert_snapshot!(src_to_doc(Ctx::None,&tuple).render(80,false), @"( 'a, 'a, 'a, 'a )");
+        assert_eq!(
+            src_to_doc(Ctx::None, &tuple).render(80, false),
+            "( 'a, 'a, 'a, 'a )"
+        );
     }
     #[test]
     fn canonical_record_preserves_declaration_order() {
@@ -314,7 +333,15 @@ mod tests {
                 typ: &a,
             },
         ];
-        insta::assert_snapshot!(can_to_doc(&Localizer::default(),Ctx::None,&Type::Record{fields:&fields}).render(80,false), @"{ zebra : 'a, first : 'a }");
+        assert_eq!(
+            can_to_doc(
+                &Localizer::default(),
+                Ctx::None,
+                &Type::Record { fields: &fields }
+            )
+            .render(80, false),
+            "{ zebra : 'a, first : 'a }"
+        );
     }
     #[test]
     fn canonical_alias_keeps_public_name() {
@@ -333,6 +360,9 @@ mod tests {
             remaining: &[],
             target: AliasType::Open(&a),
         };
-        insta::assert_snapshot!(can_to_doc(&Localizer::from_names(["A"]),Ctx::App,&alias).render(80,false), @"(Box 'a)");
+        assert_eq!(
+            can_to_doc(&Localizer::from_names(["A"]), Ctx::App, &alias).render(80, false),
+            "(Box 'a)"
+        );
     }
 }

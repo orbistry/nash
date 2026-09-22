@@ -68,7 +68,7 @@ fn test_nodes_retain_solved_types_without_exporting_tests() {
             .len(),
         1
     );
-    insta::with_settings!({description => format!("{PROP}\n{source}"), omit_expression => true}, {
+    insta::with_settings!({description => source, omit_expression => true}, {
         insta::assert_debug_snapshot!(can.module.tests.iter().map(|test| types.exprs[&NodeId::expr(test.body)]).collect::<Vec<_>>());
     });
 }
@@ -85,7 +85,7 @@ macro_rules! type_error {
             let localizer = nash_report::localizer::Localizer::from_module(&parsed, &[]);
             let text = nash_report::Source::new(source);
             let errors = errors.iter().map(|e| nash_report::render_plain(&nash_report::type_::to_report(&localizer, e), &text, "Main.nash")).collect::<Vec<_>>().join("\n");
-            insta::with_settings!({description => format!("{PROP}\n{source}"), omit_expression => true, info => &"diagnostic"}, {
+            insta::with_settings!({description => source, omit_expression => true, info => &"diagnostic"}, {
                 insta::assert_snapshot!(errors);
             });
         }

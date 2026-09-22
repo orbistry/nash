@@ -1018,12 +1018,28 @@ fn every_category() {
         Category::Local("local"),
         Category::Foreign("foreign"),
     ];
-    insta::assert_snapshot!(
+    assert_eq!(
         categories
             .into_iter()
             .map(|category| category_label(category))
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n"),
+        r###"list
+string
+if expression
+case expression
+result of `f`
+result of `Box`
+result of (+)
+result of this function
+function
+accessor `.field`
+field `field`
+record
+tuple
+unit
+`local`
+`foreign`"###
     );
 }
 #[test]
@@ -1042,12 +1058,21 @@ fn every_pattern_category() {
         PCategory::Str,
         PCategory::Bool,
     ];
-    insta::assert_snapshot!(
+    assert_eq!(
         categories
             .into_iter()
             .map(|category| pattern_label(category))
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n"),
+        r###"record pattern
+unit pattern
+tuple pattern
+list pattern
+`Box` pattern
+integer pattern
+bytes pattern
+string pattern
+boolean pattern"###
     );
 }
 #[test]
@@ -1397,9 +1422,25 @@ fn problem_hints() {
             Problem::BadRigidVar("a", &ErrorType::RigidVar("b")),
         ),
     ] {
-        insta::assert_snapshot!(
-            name,
-            Doc::stack(problem_to_hint(&problem)).render(80, false)
+        let expected = match name {
+            "hint_arity_fewer" => {
+                r###"Check the function's argument count: expected 3, found 1."###
+            }
+            "hint_arity_more" => r###"Check the function's argument count: expected 1, found 3."###,
+            "hint_big_little_need" => {
+                r###"Use `lift` to convert `int` to `Int` where a `Lift` impl is available."###
+            }
+            "hint_double_rigid" => {
+                r###"The annotation keeps `'a` and `'b` independent; use one variable if they must be equal."###
+            }
+            "hint_field_typo" => r###"Replace field `naem` with `name`."###,
+            "hint_missing_fields" => r###"Add the missing fields: `name`, `age`."###,
+            "hint_option" => r###"Use `case` to handle both option variants."###,
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            Doc::stack(problem_to_hint(&problem)).render(80, false),
+            expected
         );
     }
 }

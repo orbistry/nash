@@ -2472,11 +2472,11 @@ mod tests {
             options: CtorOpts::Enum,
             visibility: UnionVisibility::Open,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(union.to_public());
-        });
+        let public = union.to_public().unwrap();
+        assert_eq!(public.name, union.name);
+        assert_eq!(public.parameters, union.parameters);
+        assert_eq!(public.alternatives, union.alternatives);
+        assert!(std::ptr::eq(public.ctors, union.ctors));
     }
 
     #[test]
@@ -2499,11 +2499,7 @@ mod tests {
             options: CtorOpts::Enum,
             visibility: UnionVisibility::Closed,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(union.to_public());
-        });
+        assert!(union.to_public().unwrap().ctors.is_empty());
     }
 
     #[test]
@@ -2518,11 +2514,7 @@ mod tests {
             options: CtorOpts::Normal,
             visibility: UnionVisibility::Private,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(union.to_public());
-        });
+        assert!(union.to_public().is_none());
     }
 
     #[test]
@@ -2537,11 +2529,10 @@ mod tests {
             typ,
             visibility: AliasVisibility::Public,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(alias.to_public());
-        });
+        let public = alias.to_public().unwrap();
+        assert_eq!(public.name, alias.name);
+        assert_eq!(public.parameters, alias.parameters);
+        assert!(std::ptr::eq(public.typ, alias.typ));
     }
 
     #[test]
@@ -2556,11 +2547,7 @@ mod tests {
             typ,
             visibility: AliasVisibility::Private,
         };
-        insta::with_settings!({
-            omit_expression => true,
-        }, {
-            insta::assert_debug_snapshot!(alias.to_public());
-        });
+        assert!(alias.to_public().is_none());
     }
 
     // === Validation tests ===

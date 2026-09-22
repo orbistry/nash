@@ -181,8 +181,8 @@ mod tests {
             package: None,
             name: "Other",
         };
-        insta::assert_snapshot!(localizer.to_string(home,"little"), @"little");
-        insta::assert_snapshot!(localizer.to_string(home,"Thing"), @"O.Thing");
+        assert_eq!(localizer.to_string(home, "little"), "little");
+        assert_eq!(localizer.to_string(home, "Thing"), "O.Thing");
     }
     #[test]
     fn names() {
@@ -190,8 +190,11 @@ mod tests {
             package: None,
             name: "Other",
         };
-        insta::assert_snapshot!(Localizer::from_names(["Other"]).to_string(home,"Thing"), @"Thing");
-        insta::assert_snapshot!(Localizer::default().to_string(home,"Thing"), @"Other.Thing");
+        assert_eq!(
+            Localizer::from_names(["Other"]).to_string(home, "Thing"),
+            "Thing"
+        );
+        assert_eq!(Localizer::default().to_string(home, "Thing"), "Other.Thing");
     }
     #[test]
     fn source_module_does_not_invent_default_imports() {
@@ -200,8 +203,20 @@ mod tests {
             .module()
             .unwrap();
         let localizer = Localizer::from_module(&module, &[]);
-        insta::assert_snapshot!(localizer.to_string(ModuleName{package:None,name:"Local"},"Own"), @"Own");
-        insta::assert_snapshot!(localizer.to_string(nash_ast::primitives::primitive_home(),"Int"), @"Int");
+        assert_eq!(
+            localizer.to_string(
+                ModuleName {
+                    package: None,
+                    name: "Local"
+                },
+                "Own"
+            ),
+            "Own"
+        );
+        assert_eq!(
+            localizer.to_string(nash_ast::primitives::primitive_home(), "Int"),
+            "Int"
+        );
     }
     #[test]
     fn local_unions_are_not_imported_aliases_or_other_packages() {

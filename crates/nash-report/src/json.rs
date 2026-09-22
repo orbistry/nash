@@ -134,7 +134,60 @@ mod tests {
             Doc::text("Both names occur here:"),
             Doc::text("Choose another name."),
         );
-        insta::assert_snapshot!(serde_json::to_string_pretty(&report_to_json(&report)).unwrap());
+        assert_eq!(
+            report_to_json(&report),
+            serde_json::json!({
+              "code": "nash::diagnostic",
+              "labels": [
+                {
+                  "primary": true,
+                  "region": {
+                    "end": {
+                      "column": 2,
+                      "line": 2
+                    },
+                    "start": {
+                      "column": 1,
+                      "line": 2
+                    }
+                  },
+                  "text": "second"
+                },
+                {
+                  "primary": false,
+                  "region": {
+                    "end": {
+                      "column": 2,
+                      "line": 1
+                    },
+                    "start": {
+                      "column": 1,
+                      "line": 1
+                    }
+                  },
+                  "text": "first"
+                }
+              ],
+              "message": [
+                "Both names occur here:\n\nChoose another name."
+              ],
+              "region": {
+                "end": {
+                  "column": 2,
+                  "line": 2
+                },
+                "start": {
+                  "column": 1,
+                  "line": 2
+                }
+              },
+              "related": [],
+              "severity": "error",
+              "suggestions": [],
+              "title": "NAME CLASH"
+            }
+            )
+        );
     }
 
     #[test]

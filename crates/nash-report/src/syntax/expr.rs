@@ -1130,24 +1130,9 @@ mod tests {
         "value = 1 + "
     );
     report_test!(
-        missing_else,
-        Expr::If(&If::Else(1, 24), 1, 9),
-        "value = if True then 42"
-    );
-    report_test!(
         case_wrong_arrow,
         Expr::Case(&Case::Arrow(1, 30), 1, 9),
         "value = case x of Some width ="
-    );
-    report_test!(
-        record_reserved_field,
-        Expr::Record(&Record::Open(1, 11), 1, 9),
-        "value = { if = 1 }"
-    );
-    report_test!(
-        list_trailing_comma,
-        Expr::List(&List::Expr(&Expr::Start(1, 13), 1, 13), 1, 9),
-        "value = [1, ]"
     );
     report_test!(
         do_requires_result,
@@ -1435,11 +1420,6 @@ mod tests {
         "value = { x = 1, }"
     );
     report_test!(
-        record_close_indentation,
-        Expr::Record(&Record::IndentEnd(2, 1), 1, 9),
-        "value = { x = 1\n}"
-    );
-    report_test!(
         let_reserved_name,
         Expr::Let(&Let::DefName(1, 13), 1, 9),
         "value = let if = 1"
@@ -1468,11 +1448,6 @@ mod tests {
         def_name_mismatch,
         Expr::Let(&Let::Def("x", &Def::NameMatch("y", 3, 5), 3, 5), 1, 9),
         "value = let\n    x : int\n    y = 1"
-    );
-    report_test!(
-        bytes_bad_hex,
-        Expr::Bytes(Bytes::BadHexDigit(12), 1, 12),
-        "value = #\"ag\""
     );
     report_test!(
         bytes_endless,

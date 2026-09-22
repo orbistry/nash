@@ -1,0 +1,9 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: x == 2
+---
+  Testing Example (Example.nash)
+
+  PASS fixture  [mem:     1.2K, cpu:   345.1K]
+
+  Summary 1 passed, 0 failed, 0 skipped   seed 42   0.81s

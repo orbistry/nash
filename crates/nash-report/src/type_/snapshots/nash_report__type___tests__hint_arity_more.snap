@@ -1,4 +1,0 @@
----
-source: crates/nash-report/src/type_/tests.rs
----
-Check the function's argument count: expected 1, found 3.

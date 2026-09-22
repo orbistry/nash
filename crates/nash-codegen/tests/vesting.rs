@@ -219,15 +219,7 @@ fn vesting_const_parameter_four_ledger_outcomes() {
 
 fn snapshot_settings(source: &str) -> insta::Settings {
     let mut settings = insta::Settings::clone_current();
-    settings.set_description(
-        [
-            include_str!("fixtures/VestingLiteral.nash"),
-            include_str!("fixtures/VestingLift.nash"),
-            include_str!("fixtures/VestingTx.nash"),
-            source,
-        ]
-        .join("\n"),
-    );
+    settings.set_description([include_str!("fixtures/VestingTx.nash"), source].join("\n"));
     settings.set_omit_expression(true);
     settings
 }

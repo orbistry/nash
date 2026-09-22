@@ -89,7 +89,7 @@ fn recovery_collects_independent_mixed_errors_in_both_declaration_orders() {
     ];
     for reverse in [false, true] {
         let snapshot_inputs = SnapshotInputs::default();
-        snapshot_inputs.record(LITERAL_SOURCE);
+
         let bump = Bump::new();
         let mut definitions = definitions.to_vec();
         if reverse {
@@ -580,7 +580,7 @@ fn solved_output_records_empty_context_calls_and_preserves_capture_names() {
 #[test]
 fn builtin_list_annotations_match_literals_and_patterns() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let source = bump.alloc_str(indoc!(
         r#"
@@ -811,13 +811,13 @@ macro_rules! assert_inference_error_snapshot {
 
 #[test]
 fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
-    let snapshot_inputs = SnapshotInputs::default();
     for (primitive, trait_name, method) in [
         ("int", "FromInt", "fromInt"),
         ("string", "FromString", "fromString"),
         ("bytes", "FromBytes", "fromBytes"),
     ] {
         for trusted in [true, false] {
+            let snapshot_inputs = SnapshotInputs::default();
             let package = if trusted {
                 nash_ast::primitives::BASE
             } else {
@@ -961,7 +961,7 @@ fn literal_method_defaulting_retries_impls_with_the_enclosing_given() {
 #[test]
 fn ambiguous_predicates_keep_distinct_variable_names() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let input = indoc!(
         r#"
@@ -1187,7 +1187,7 @@ fn local_helper_reports_missing_constraint_on_its_annotated_owner() {
 #[test]
 fn declared_contexts_are_available_at_local_and_recursive_uses() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let source = indoc!(
         r#"
@@ -1229,7 +1229,7 @@ fn declared_contexts_are_available_at_local_and_recursive_uses() {
 #[test]
 fn inferred_context_is_instantiated_independently_at_each_local_use() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let source = indoc!(
         r#"
@@ -1279,7 +1279,7 @@ fn nested_contexts_defer_outer_variables_and_keep_mixed_scheme_sharing() {
 #[test]
 fn inferred_context_removes_duplicates_and_superclass_requirements() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let annotations = infer(
         &bump,
@@ -1478,9 +1478,10 @@ fn qualified_annotation_keeps_context_only_types_and_reserves_their_names() {
     let annotation = nash_solve::to_annotation_with_context(&bump, &mut uf, result, &context);
     assert_eq!(annotation.free_vars, ["a", "b"]);
     assert!(matches!(annotation.typ.value, CanType::Var("b")));
-    insta::with_settings!({omit_expression => true}, {
-        insta::assert_snapshot!(render_annotation(annotation));
-    });
+    assert_eq!(
+        render_annotation(annotation),
+        r###"forall a b. (Show (List b), Keep a, Ground unit) => b"###
+    );
 }
 
 #[test]
@@ -1713,7 +1714,7 @@ fn type_variable_names_do_not_imply_constraints() {
 #[test]
 fn negation_retains_num_evidence() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let num = nash_parse::Parser::new(
@@ -1814,14 +1815,10 @@ fn string_literal() {
 
 #[test]
 fn literal_syntax_records_impls_and_pattern_givens() {
-    let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let eq_source = bump.alloc_str("module Eq exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Eq 'a where eq : 'a -> 'a -> bool\n");
-    let eq_module = nash_parse::Parser::new(&bump, snapshot_inputs.record(eq_source))
-        .module()
-        .unwrap();
+    let eq_module = nash_parse::Parser::new(&bump, eq_source).module().unwrap();
     let eq = nash_can::canonicalize(
         &bump,
         Context {
@@ -1840,6 +1837,8 @@ fn literal_syntax_records_impls_and_pattern_givens() {
         ("string", "\"nash\"", "FromString"),
         ("bytes", "#\"00ff\"", "FromBytes"),
     ] {
+        let snapshot_inputs = SnapshotInputs::default();
+        snapshot_inputs.record(eq_source);
         let input = bump.alloc_str(&format!("module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfixed : {primitive}\nfixed = {literal}\nmatch value =\n    case value of\n        {literal} -> ()\n        _ -> ()\n"));
         let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(input))
             .module()
@@ -2890,7 +2889,7 @@ fn source_basics_bool_is_an_ordinary_union() {
 #[test]
 fn nested_operator_sections_apply() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let operators = "module Operators exposing (..)\n\ninfix left 6 (+) = first\n\nfirst x y = x\n";
     let annotations =
@@ -2941,7 +2940,7 @@ fn nested_operator_sections_apply() {
 #[test]
 fn solved_alias_retains_its_closed_parameterized_body() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let annotations = infer(
         &bump,
@@ -3157,7 +3156,7 @@ fn inferred_wrapper_preserves_the_callees_representation_requirement() {
 #[test]
 fn imported_values_retain_declared_and_inferred_representation_contexts() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let mut interfaces = literal_interfaces(&bump);
     let source = bump.alloc_str(indoc!(
@@ -3762,7 +3761,7 @@ fn imported_higher_kinded_value_preserves_application() {
 #[test]
 fn data_builtins_preserve_nominal_source_and_target_types() {
     let snapshot_inputs = SnapshotInputs::default();
-    snapshot_inputs.record(LITERAL_SOURCE);
+
     let bump = Bump::new();
     let source = indoc!(
         "

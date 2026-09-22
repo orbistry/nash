@@ -429,10 +429,12 @@ error-data assertions remain useful additional tests.
 
 Configuration and filesystem errors use their configuration or operation as
 the fixture description instead of invented Nash code. Pure tests built from
-Rust IR/type/formatting values have no Nash input. The exact reviewed exceptions
-are listed in `crates/nash-cli/tests/snapshot_hygiene.rs`; new snapshots default
-to requiring a description and suppressed Rust expression metadata. That test
-also rejects terminal escape codes and raw `Err(...)` output. Diagnostic
+IR/type values use the actual AST or Core input as their description. Small
+formatting and structural checks use ordinary assertions. No snapshot may
+capture a Rust expression, and there are no fixture exemptions. Injected Base
+sources must not appear in descriptions; explicit modules under test remain.
+`crates/nash-cli/tests/snapshot_hygiene.rs` enforces these metadata rules and
+rejects terminal escape codes and raw `Err(...)` output. Diagnostic
 snapshots set `info => &"diagnostic"`, which makes the rendered-output check
 apply across compiler crates. Error snapshot macros must use that metadata or
 forward to the shared diagnostic assertion macro; raw Debug error macros fail

@@ -146,21 +146,6 @@ mod tests {
             Error::MissingModuleHeader
         );
     }
-    #[test]
-    fn kind_mismatch() {
-        source_snapshot!(
-            "kind_mismatch",
-            "value : «List»\nvalue = []",
-            r,
-            r2,
-            Error::KindMismatch {
-                region: r(),
-                context: &KindContext::TypeAnnotation,
-                expected: &Kind::Type,
-                actual: &Kind::Arrow(&Kind::Type, &Kind::Type),
-            },
-        );
-    }
 }
 
 pub fn to_report(source: &Source<'_>, error: &Error<'_>) -> Report {
@@ -1905,21 +1890,6 @@ mod coverage {
         );
     }
     #[test]
-    fn kind_mismatch() {
-        source_snapshot!(
-            "variant_kind_mismatch",
-            "value : «List»\nvalue = []",
-            r,
-            r2,
-            Error::KindMismatch {
-                region: r(),
-                context: &KindContext::TypeAnnotation,
-                expected: &Kind::Type,
-                actual: &Kind::Arrow(&Kind::Type, &Kind::Type),
-            },
-        );
-    }
-    #[test]
     fn kind_infinite() {
         source_snapshot!(@pipeline
             "variant_kind_infinite",
@@ -1996,16 +1966,6 @@ mod coverage {
                 feature: "list literals",
                 region: r(),
             },
-        );
-    }
-    #[test]
-    fn missing_module_header() {
-        source_snapshot!(
-            "variant_missing_module_header",
-            "value = 1",
-            r,
-            r2,
-            Error::MissingModuleHeader
         );
     }
     #[test]

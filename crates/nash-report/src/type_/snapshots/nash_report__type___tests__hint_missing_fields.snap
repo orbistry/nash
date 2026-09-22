@@ -1,4 +1,0 @@
----
-source: crates/nash-report/src/type_/tests.rs
----
-Add the missing fields: `name`, `age`.

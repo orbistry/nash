@@ -14,22 +14,43 @@ fn text(pattern: Pattern<'_>) -> String {
 
 #[test]
 fn anything() {
-    insta::assert_snapshot!(text(Pattern::Anything), @"_");
+    assert_eq!(text(Pattern::Anything), "_");
 }
 
 #[test]
 fn unit() {
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &UNIT, name: UNIT_NAME, args: &[] }), @"()");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &UNIT,
+            name: UNIT_NAME,
+            args: &[]
+        }),
+        "()"
+    );
 }
 
 #[test]
 fn pair() {
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &PAIR, name: PAIR_NAME, args: &[Pattern::Anything; 2] }), @"( _, _ )");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &PAIR,
+            name: PAIR_NAME,
+            args: &[Pattern::Anything; 2]
+        }),
+        "( _, _ )"
+    );
 }
 
 #[test]
 fn triple() {
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &TRIPLE, name: TRIPLE_NAME, args: &[Pattern::Anything; 3] }), @"( _, _, _ )");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &TRIPLE,
+            name: TRIPLE_NAME,
+            args: &[Pattern::Anything; 3]
+        }),
+        "( _, _, _ )"
+    );
 }
 
 #[test]
@@ -48,7 +69,14 @@ fn finite_list_keeps_head_order() {
             args: &tail_args,
         },
     ];
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &LIST, name: CONS_NAME, args: &args }), @"[1,2]");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &LIST,
+            name: CONS_NAME,
+            args: &args
+        }),
+        "[1,2]"
+    );
 }
 
 #[test]
@@ -62,7 +90,14 @@ fn open_list_keeps_head_order() {
             args: &tail_args,
         },
     ];
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &LIST, name: CONS_NAME, args: &args }), @"1 :: 2 :: _");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &LIST,
+            name: CONS_NAME,
+            args: &args
+        }),
+        "1 :: 2 :: _"
+    );
 }
 
 #[test]
@@ -76,7 +111,14 @@ fn cons_head_is_parenthesized() {
         },
         Pattern::Anything,
     ];
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &LIST, name: CONS_NAME, args: &args }), @"(_ :: _) :: _");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &LIST,
+            name: CONS_NAME,
+            args: &args
+        }),
+        "(_ :: _) :: _"
+    );
 }
 
 #[test]
@@ -87,25 +129,42 @@ fn nested_constructor_argument() {
         name: "Just",
         args: &inner,
     }];
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &LIST, name: "Just", args: &args }), @"Just (Just _)");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &LIST,
+            name: "Just",
+            args: &args
+        }),
+        "Just (Just _)"
+    );
 }
 
 #[test]
 fn data_constructor() {
     let args = [Pattern::Literal(Literal::Int(0)), Pattern::Anything];
-    insta::assert_snapshot!(text(Pattern::Ctor { union: &LIST, name: "Constr", args: &args }), @"Constr 0 _");
+    assert_eq!(
+        text(Pattern::Ctor {
+            union: &LIST,
+            name: "Constr",
+            args: &args
+        }),
+        "Constr 0 _"
+    );
 }
 
 #[test]
 fn bytes() {
-    insta::assert_snapshot!(text(Pattern::Literal(Literal::Bytes(&[0, 255]))), @r###"#"00ff""###);
+    assert_eq!(
+        text(Pattern::Literal(Literal::Bytes(&[0, 255]))),
+        r###"#"00ff""###
+    );
 }
 
 #[test]
 fn simplify_record_is_irrefutable() {
     let bump = Bump::new();
     let pat = Located::at_zero(CanPattern::Record(&["x"]));
-    insta::assert_snapshot!(text(crate::pattern::simplify(&bump, &pat)), @"_");
+    assert_eq!(text(crate::pattern::simplify(&bump, &pat)), "_");
 }
 
 #[test]

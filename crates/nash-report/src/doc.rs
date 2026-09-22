@@ -353,39 +353,46 @@ mod tests {
 
     #[test]
     fn reflow_wraps_at_80() {
-        insta::assert_snapshot!(Doc::reflow(PARAGRAPH).render(80, false));
-    }
-    #[test]
-    fn reflow_inside_indent_keeps_indent() {
-        insta::assert_snapshot!(Doc::indent(4, Doc::reflow(PARAGRAPH)).render(80, false));
-    }
-    #[test]
-    fn stack_separates_with_blank_line() {
-        insta::assert_snapshot!(
-            Doc::stack([Doc::text("First."), Doc::text("Second.")]).render(80, false)
+        assert_eq!(
+            Doc::reflow(PARAGRAPH).render(80, false),
+            r###"I cannot find this variable in the current module. Check the spelling of its
+name and make sure that the module which defines it is imported. These
+suggestions may help you find the value you intended to use."###
         );
     }
     #[test]
-    fn sep_flat_when_fits() {
-        insta::assert_snapshot!(Doc::sep(["a", "->", "b"].map(Doc::text)).render(80, false));
-    }
-    #[test]
-    fn sep_breaks_when_too_wide() {
-        insta::assert_snapshot!(Doc::sep((0..30).map(|_| Doc::text("longword"))).render(80, false));
+    fn reflow_inside_indent_keeps_indent() {
+        assert_eq!(
+            Doc::indent(4, Doc::reflow(PARAGRAPH)).render(80, false),
+            r###"    I cannot find this variable in the current module. Check the spelling of its
+    name and make sure that the module which defines it is imported. These
+    suggestions may help you find the value you intended to use."###
+        );
     }
     #[test]
     fn hang_aligns_continuations() {
-        insta::assert_snapshot!(
+        assert_eq!(
             Doc::cat([
                 Doc::text("0123456789"),
                 Doc::hang(4, Doc::sep(["argument", "result"].map(Doc::text)))
             ])
-            .render(20, false)
+            .render(20, false),
+            r###"0123456789argument
+              result"###
         );
     }
     #[test]
     fn cycle_box() {
-        insta::assert_snapshot!(Doc::cycle(4, "a", &["b", "c"]).render(80, false));
+        assert_eq!(
+            Doc::cycle(4, "a", &["b", "c"]).render(80, false),
+            r###"    ┌─────┐
+    │    a
+    │     ↓
+    │    b
+    │     ↓
+    │    c
+    └─────┘"###
+        );
     }
     #[test]
     fn fancy_note_underlines_word() {
@@ -397,15 +404,19 @@ mod tests {
     }
     #[test]
     fn chunks_merge_plain_runs() {
-        insta::assert_debug_snapshot!(
-            Doc::cat([
-                Doc::text("a"),
-                Doc::text("b"),
-                Doc::text("c").dullyellow(),
-                Doc::text("d").dullyellow(),
-                Doc::text("e")
-            ])
-            .chunks(80)
+        let chunks = Doc::cat([
+            Doc::text("a"),
+            Doc::text("b"),
+            Doc::text("c").dullyellow(),
+            Doc::text("d").dullyellow(),
+            Doc::text("e"),
+        ])
+        .chunks(80);
+        assert!(
+            matches!(chunks.as_slice(), [Chunk::Plain(first), Chunk::Styled { style, text }, Chunk::Plain(last)]
+            if first == "ab" && text == "cd" && last == "e"
+                && style.color == Some(Color { base: BaseColor::Yellow, vivid: false })
+                && !style.bold && !style.underline)
         );
     }
     #[test]

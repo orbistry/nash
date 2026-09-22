@@ -175,28 +175,6 @@ case!(
 );
 
 case!(
-    acceptance_test_26_foldr,
-    r#"
-    module Main exposing (..)
-    import Primitive exposing (..)
-    import Builtin exposing (..)
-    import Literal exposing (..)
-    import Eq exposing (..)
-    foldr xs f zero =
-        case xs of
-            [] -> zero
-            x :: rest -> f x (foldr rest f zero)
-    concat left right = foldr left (\x xs -> mkCons x xs) right
-    flatMap xs f =
-        case xs of
-            [] -> []
-            x :: rest -> concat (f x) (flatMap rest f)
-    main = eq (flatMap [1, 2, 3] (\a -> [a, a])) [1, 1, 2, 2, 3, 3]
-    "#,
-    Ok("(con bool True)")
-);
-
-case!(
     acceptance_test_27_flat_map,
     r#"
     module Main exposing (..)

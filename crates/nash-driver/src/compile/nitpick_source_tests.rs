@@ -69,16 +69,12 @@ struct Diagnostics {
 }
 
 fn source_description(providers: &[(&str, &str)], source: &str) -> String {
-    [
-        include_str!("fixtures/Eq.nash"),
-        include_str!("fixtures/Literal.nash"),
-        include_str!("fixtures/Monad.nash"),
-    ]
-    .into_iter()
-    .chain(providers.iter().map(|(_, source)| *source))
-    .chain([source])
-    .collect::<Vec<_>>()
-    .join("\n")
+    providers
+        .iter()
+        .map(|(_, source)| *source)
+        .chain([source])
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 macro_rules! assert_diagnostics_snapshot {

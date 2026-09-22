@@ -1,8 +1,0 @@
----
-source: crates/nash-report/src/canonicalize.rs
-description: value = 1
----
-nash::names::missing_module_header
-
-  × Missing module declaration.
-  help: Add `module Main exposing (..)` at the start of the file.

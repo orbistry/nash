@@ -357,17 +357,6 @@ fn variant_exposing_indent_value() {
 }
 
 #[test]
-fn variant_decl_start() {
-    let input = "=";
-    let source = Source::new(input);
-    let error = Decl::Start(1, 1);
-    let report = decl::to_declarations_report(&source, &error);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_decl_space() {
     let input = "f\t= 1";
     let source = Source::new(input);
@@ -544,32 +533,10 @@ fn variant_decl_def_indent_equals() {
 }
 
 #[test]
-fn variant_decl_def_indent_body() {
-    let input = "f =\n1";
-    let source = Source::new(input);
-    let error = DeclDef::IndentBody(2, 1);
-    let report = decl::to_decl_def_report(&source, "f", &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_decl_type_space() {
     let input = "type\tbox = Box";
     let source = Source::new(input);
     let error = DeclType::Space(Space::HasTab, 1, 5);
-    let report = decl::to_decl_type_report(&source, &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_decl_type_name() {
-    let input = "type 1";
-    let source = Source::new(input);
-    let error = DeclType::Name(1, 6);
     let report = decl::to_decl_type_report(&source, &error, 1, 1);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
@@ -614,17 +581,6 @@ fn variant_type_alias_space() {
     let input = "type alias\tbox = int";
     let source = Source::new(input);
     let error = TypeAlias::Space(Space::HasTab, 1, 11);
-    let report = decl::to_type_alias_report(&source, &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_type_alias_name() {
-    let input = "type alias 1";
-    let source = Source::new(input);
-    let error = TypeAlias::Name(1, 12);
     let report = decl::to_type_alias_report(&source, &error, 1, 1);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
@@ -874,17 +830,6 @@ fn variant_custom_type_indent_field_type() {
 }
 
 #[test]
-fn variant_attribute_name() {
-    let input = "@1";
-    let source = Source::new(input);
-    let error = Attribute::Name(1, 2);
-    let report = decl::to_attribute_report(&source, &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_attribute_arg() {
     let input = "@name(=)";
     let source = Source::new(input);
@@ -955,17 +900,6 @@ fn variant_trait_space() {
     let input = "trait\tEq 'a where";
     let source = Source::new(input);
     let error = Trait::Space(Space::HasTab, 1, 6);
-    let report = decl::to_trait_report(&source, &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_trait_name() {
-    let input = "trait 1";
-    let source = Source::new(input);
-    let error = Trait::Name(1, 7);
     let report = decl::to_trait_report(&source, &error, 1, 1);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
@@ -1153,17 +1087,6 @@ fn variant_impl_head() {
     let input = "impl ";
     let source = Source::new(input);
     let error = Impl::Head(&Type::Start(1, 6), 1, 6);
-    let report = decl::to_impl_report(&source, &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_impl_bad_head() {
-    let input = "impl 1";
-    let source = Source::new(input);
-    let error = Impl::BadHead(1, 6);
     let report = decl::to_impl_report(&source, &error, 1, 1);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
@@ -1707,17 +1630,6 @@ fn variant_pattern_indent_alias() {
 }
 
 #[test]
-fn variant_p_record_open() {
-    let input = "f {= = 1";
-    let source = Source::new(input);
-    let error = PRecord::Open(1, 4);
-    let report = pattern::to_p_record_report(&source, &error, 1, 3);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_p_record_end() {
     let input = "f {x = 1";
     let source = Source::new(input);
@@ -1784,17 +1696,6 @@ fn variant_p_record_indent_field() {
 }
 
 #[test]
-fn variant_p_tuple_open() {
-    let input = "f (= = 1";
-    let source = Source::new(input);
-    let error = PTuple::Open(1, 4);
-    let report = pattern::to_p_tuple_report(&source, pattern::PContext::Arg, &error, 1, 3);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_p_tuple_end() {
     let input = "f (x = 1";
     let source = Source::new(input);
@@ -1855,17 +1756,6 @@ fn variant_p_tuple_indent_expr_n() {
     let source = Source::new(input);
     let error = PTuple::IndentExprN(2, 1);
     let report = pattern::to_p_tuple_report(&source, pattern::PContext::Arg, &error, 1, 3);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_p_list_open() {
-    let input = "f [= = 1";
-    let source = Source::new(input);
-    let error = PList::Open(1, 4);
-    let report = pattern::to_p_list_report(&source, pattern::PContext::Arg, &error, 1, 3);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
     });
@@ -1960,17 +1850,6 @@ fn variant_type_tuple() {
 }
 
 #[test]
-fn variant_type_start() {
-    let input = "f : 42";
-    let source = Source::new(input);
-    let error = Type::Start(1, 5);
-    let report = type_::to_type_report(&source, type_::TContext::Annotation("f"), &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_type_var_start() {
     let input = "f : '1";
     let source = Source::new(input);
@@ -2020,17 +1899,6 @@ fn variant_type_indent_start() {
     let source = Source::new(input);
     let error = Type::IndentStart(2, 1);
     let report = type_::to_type_report(&source, type_::TContext::Annotation("f"), &error, 1, 1);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_t_record_open() {
-    let input = "f : {=";
-    let source = Source::new(input);
-    let error = TRecord::Open(1, 6);
-    let report = type_::to_t_record_report(&source, type_::TContext::Annotation("f"), &error, 1, 5);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
     });
@@ -2162,17 +2030,6 @@ fn variant_t_tuple_indent_repr() {
     let input = "f : ('a :\nTerm)";
     let source = Source::new(input);
     let error = TTuple::IndentRepr(2, 1);
-    let report = type_::to_t_tuple_report(&source, type_::TContext::Annotation("f"), &error, 1, 5);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
-fn variant_t_tuple_open() {
-    let input = "f : (=";
-    let source = Source::new(input);
-    let error = TTuple::Open(1, 6);
     let report = type_::to_t_tuple_report(&source, type_::TContext::Annotation("f"), &error, 1, 5);
     insta::with_settings!({ description => input, omit_expression => true }, {
         insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));

@@ -501,8 +501,8 @@ mod tests {
             args: &bb,
         };
         let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
-        insta::assert_snapshot!(a.render(80,true), @"list [33mInt[0m");
-        insta::assert_snapshot!(b.render(80,false), @"list int");
+        assert_eq!(a.render(80, true), "list \u{1b}[33mInt\u{1b}[0m");
+        assert_eq!(b.render(80, false), "list int");
         assert!(matches!(
             p.as_slice(),
             [Problem::BigLittle {
@@ -518,7 +518,7 @@ mod tests {
         let fs = [("x", &t)];
         let b = ErrorType::Record { fields: &fs };
         let (_, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &a, &b);
-        insta::assert_snapshot!(b.render(80,false), @"{ x : int }");
+        assert_eq!(b.render(80, false), "{ x : int }");
         assert!(matches!(p.as_slice(),[Problem::FieldsMissing(f)] if f==&["x"]));
     }
     #[test]
@@ -544,14 +544,14 @@ mod tests {
         let b = typ("list");
         let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &a, &b);
         assert!(!is_similar(&d));
-        insta::assert_snapshot!(d.left.render(80,false), @"list int");
+        assert_eq!(d.left.render(80, false), "list int");
     }
     #[test]
     fn rigid_variable_hint() {
         let a = ErrorType::RigidVar("a");
         let b = typ("int");
         let (doc, _, p) = to_comparison(&Localizer::default(), &a, &b);
-        insta::assert_snapshot!(doc.render(80,false), @"'a");
+        assert_eq!(doc.render(80, false), "'a");
         assert!(matches!(p.as_slice(), [Problem::BadRigidVar("a", _)]));
     }
     #[test]
@@ -590,7 +590,7 @@ mod tests {
         let a = ErrorType::Tuple(&t, &t, &rest);
         let b = ErrorType::Tuple(&t, &t, &[]);
         let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &a, &b);
-        insta::assert_snapshot!(d.left.render(80,false), @"( int, int, int, int )");
+        assert_eq!(d.left.render(80, false), "( int, int, int, int )");
         assert!(!is_similar(&d));
     }
     #[test]
@@ -602,8 +602,8 @@ mod tests {
         let x = ErrorType::Record { fields: &xs };
         let y = ErrorType::Record { fields: &ys };
         let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
-        insta::assert_snapshot!(a.render(80,false), @"{ naem : Int, z : Int }");
-        insta::assert_snapshot!(b.render(80,false), @"{ name : int, z : int }");
+        assert_eq!(a.render(80, false), "{ naem : Int, z : Int }");
+        assert_eq!(b.render(80, false), "{ name : int, z : int }");
         assert!(matches!(
             p.as_slice(),
             [Problem::BigLittle { .. }, Problem::FieldTypo("naem", _)]
@@ -628,8 +628,8 @@ mod tests {
             args: &[],
         };
         let (a, b, _) = to_comparison(&Localizer::from_names(["A", "B"]), &a, &b);
-        insta::assert_snapshot!(a.render(80,false), @"A.Thing");
-        insta::assert_snapshot!(b.render(80,false), @"B.Thing");
+        assert_eq!(a.render(80, false), "A.Thing");
+        assert_eq!(b.render(80, false), "B.Thing");
     }
     #[test]
     fn alias_record_keeps_alias_and_field_hint() {
@@ -644,7 +644,7 @@ mod tests {
             real: &a,
         };
         let (a, _, p) = to_comparison(&Localizer::from_names(["Primitive"]), &alias, &b);
-        insta::assert_snapshot!(a.render(80,false), @"Empty");
+        assert_eq!(a.render(80, false), "Empty");
         assert!(matches!(p.as_slice(), [Problem::FieldsMissing(_)]));
     }
     #[test]
@@ -657,14 +657,20 @@ mod tests {
         let x = ErrorType::VarApp(&f, &xs);
         let y = ErrorType::VarApp(&f, &ys);
         let (a, _, p) = to_comparison(&Localizer::from_names(["Primitive"]), &x, &y);
-        insta::assert_snapshot!(a.render(80,false), @"'f Int");
+        assert_eq!(a.render(80, false), "'f Int");
         assert!(matches!(p.as_slice(), [Problem::BigLittle { .. }]));
     }
     #[test]
     fn sentinels_render_explicitly() {
         let l = Localizer::default();
-        insta::assert_snapshot!(to_doc(&l,Ctx::None,&ErrorType::Infinite).render(80,false), @"∞");
-        insta::assert_snapshot!(to_doc(&l,Ctx::None,&ErrorType::Error).render(80,false), @"?");
+        assert_eq!(
+            to_doc(&l, Ctx::None, &ErrorType::Infinite).render(80, false),
+            "∞"
+        );
+        assert_eq!(
+            to_doc(&l, Ctx::None, &ErrorType::Error).render(80, false),
+            "?"
+        );
     }
     #[test]
     fn map_representation_hint_requires_list_of_pairs() {
@@ -715,8 +721,8 @@ mod tests {
             args: &args,
         };
         let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive", "Option"]), &option, &t);
-        insta::assert_snapshot!(a.render(80,false), @"option int");
-        insta::assert_snapshot!(b.render(80,false), @"int");
+        assert_eq!(a.render(80, false), "option int");
+        assert_eq!(b.render(80, false), "int");
         assert!(matches!(p.as_slice(), [Problem::AnythingFromOption]));
     }
     #[test]
@@ -729,7 +735,7 @@ mod tests {
             real: &t,
         };
         let d = to_diff(&Localizer::from_names(["Primitive"]), Ctx::None, &alias, &t);
-        insta::assert_snapshot!(d.left.render(80,false), @"Count");
+        assert_eq!(d.left.render(80, false), "Count");
         assert!(!is_similar(&d));
     }
     #[test]
@@ -747,7 +753,7 @@ mod tests {
             args: &args,
         };
         let (a, _, _) = to_comparison(&Localizer::from_names(["Primitive"]), &a, &b);
-        insta::assert_snapshot!(a.render(80,true), @"[33mList[0m Data");
+        assert_eq!(a.render(80, true), "\u{1b}[33mList\u{1b}[0m Data");
     }
     #[test]
     fn distinct_nominal_records_are_not_similar() {
@@ -793,8 +799,8 @@ mod tests {
             real: &little,
         };
         let (a, b, p) = to_comparison(&Localizer::from_names(["Primitive"]), &big, &outer);
-        insta::assert_snapshot!(a.render(80,false), @"BigRecord");
-        insta::assert_snapshot!(b.render(80,false), @"MisleadingUppercase");
+        assert_eq!(a.render(80, false), "BigRecord");
+        assert_eq!(b.render(80, false), "MisleadingUppercase");
         assert!(matches!(
             p.as_slice(),
             [Problem::BigLittle {

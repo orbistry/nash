@@ -192,7 +192,10 @@ mod tests {
 
     macro_rules! assert_core_snapshot {
         ($core:expr) => {
-            insta::assert_snapshot!(pretty($core));
+            let core = $core;
+            insta::with_settings!({description => format!("{core:#?}"), omit_expression => true}, {
+                insta::assert_snapshot!(pretty(core));
+            });
         };
     }
 

@@ -1,6 +1,6 @@
 ---
 source: crates/nash-ir/src/pretty.rs
-expression: "pretty(b.let_(x, b.int(1), b.app(b.lam(&[y], sum), &[b.int(2)])))"
+description: "Let {\n    binder: Binder {\n        name: Name {\n            text: \"x\",\n            unique: 1,\n        },\n        ty: Const(\n            Int,\n        ),\n    },\n    value: Lit(\n        Integer(\n            1,\n        ),\n    ),\n    body: App {\n        func: Lam {\n            params: [\n                Binder {\n                    name: Name {\n                        text: \"y\",\n                        unique: 2,\n                    },\n                    ty: Const(\n                        Int,\n                    ),\n                },\n            ],\n            body: Builtin {\n                func: AddInteger,\n                args: [\n                    Var(\n                        Name {\n                            text: \"x\",\n                            unique: 1,\n                        },\n                    ),\n                    Var(\n                        Name {\n                            text: \"y\",\n                            unique: 2,\n                        },\n                    ),\n                ],\n            },\n        },\n        args: [\n            Lit(\n                Integer(\n                    2,\n                ),\n            ),\n        ],\n    },\n}"
 ---
 let x#1 : int = 1 in
 (\y#2 : int -> addInteger x#1 y#2) 2
