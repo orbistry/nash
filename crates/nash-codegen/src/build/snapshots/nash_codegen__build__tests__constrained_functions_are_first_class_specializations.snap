@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\npass f x = f x\nmain = pass eq () ()\n"
+---
+--- core
+let pass#2 : ('erased -> 'erased) -> 'erased -> 'erased = \(f#4 : 'erased -> 'erased) x#5 : 'erased -> f#4 x#5 in
+let eq#3 : unit -> unit -> bool = \arg#6 : unit arg#7 : unit -> let match#9 : unit = arg#6 in
+let match#8 : unit = arg#7 in
+true in
+let main#1 : bool = pass#2 eq#3 () () in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam pass_2
+    [(lam eq_3 [(lam main_1 main_1) [[[pass_2 eq_3] (con unit ())] (con unit ())]])
+      (lam arg_6
+        (lam arg_7 [(lam match_9 [(lam match_8 (con bool True)) arg_7]) arg_6]))])
+    (lam f_4 (lam x_5 [f_4 x_5]))])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 448100, memory: 2900

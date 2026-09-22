@@ -2,6 +2,11 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nmain : unit\nmain = trace \"before failure\" fail\n"
 ---
+--- core
+let message#4 : string = "before failure" in
+let fromString#2 : string -> string = \value#3 : string -> value#3 in
+let main#1 : unit = trace (fromString#2 message#4) in error in
+main#1
 --- uplc
 (program 1.1.0
   [(lam message_4

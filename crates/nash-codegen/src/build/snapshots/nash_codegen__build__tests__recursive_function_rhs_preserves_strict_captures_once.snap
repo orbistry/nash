@@ -1,0 +1,32 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nloop : bool -> unit\nloop =\n    let\n        captured = trace \"capture\" ()\n    in\n    \\flag -> if flag then captured else loop True\nmain = loop False\n"
+---
+--- core
+let message#7 : string = "capture" in
+let fromString#5 : string -> string = \value#6 : string -> value#6 in
+let captured#3 : unit = trace (fromString#5 message#7) in () in
+let loop#2 : bool -> unit = (\self#8 : 'erased -> self#8 self#8) (\self#8 : 'erased flag#4 : bool -> case@Bool flag#4 of
+  True -> captured#3
+  False -> self#8 self#8 true) in
+let main#1 : unit = loop#2 false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_7
+    [(lam fromString_5
+      [(lam captured_3
+        [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
+          [(lam self_8 [self_8 self_8])
+            (lam self_8
+              (lam flag_4 (case flag_4 [[self_8 self_8] (con bool True)] captured_3)))]])
+        (force
+          [[(force (builtin trace)) [fromString_5 message_7]] (delay (con unit ()))])])
+      (lam value_6 value_6)])
+    (con string "capture")])
+--- result
+(con unit ())
+--- logs
+["capture"]
+--- budget
+cpu: 779598, memory: 4632

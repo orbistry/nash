@@ -1,0 +1,17 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : int\nmain = comptime (Builtin.addInteger 20 22)\n"
+---
+--- core
+let main#1 : int = 42 in
+let fromInt#2 : int -> int = \value#3 : int -> value#3 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam main_1 [(lam fromInt_2 main_1) (lam value_3 value_3)]) (con integer 42)])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 112100, memory: 800

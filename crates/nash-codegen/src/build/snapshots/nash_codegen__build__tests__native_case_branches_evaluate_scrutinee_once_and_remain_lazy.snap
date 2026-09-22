@@ -2,6 +2,17 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nchoose : bool -> int\nchoose flag =\n    if trace \"condition\" flag then trace \"true\" 42\n    else trace \"false\" 7\nmain = (choose True, choose False)\n"
 ---
+--- core
+let message#8 : string = "condition" in
+let message#9 : string = "true" in
+let message#10 : string = "false" in
+let fromInt#4 : int -> int = \value#6 : int -> value#6 in
+let fromString#5 : string -> string = \value#7 : string -> value#7 in
+let choose#2 : bool -> int = \flag#3 : bool -> case@Bool (trace (fromString#5 message#8) in flag#3) of
+  True -> trace (fromString#5 message#9) in fromInt#4 42
+  False -> trace (fromString#5 message#10) in fromInt#4 7 in
+let main#1 : (int, int) = constr 0 (choose#2 true) (choose#2 false) in
+main#1
 --- uplc
 (program 1.1.0
   [(lam message_8

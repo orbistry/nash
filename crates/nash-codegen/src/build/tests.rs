@@ -36,7 +36,7 @@ fn fixture_in<'a>(
     (canonical, solved)
 }
 
-fn evaluate(source: &str) -> crate::harness::Evaluated {
+fn evaluate(name: &str, source: &str) -> crate::harness::Evaluated {
     let arena = Arena::new();
     let (module, solved) = fixture(&arena, source);
     let build = Build::new([Input {
@@ -57,13 +57,28 @@ fn evaluate(source: &str) -> crate::harness::Evaluated {
         .unwrap();
     let core =
         crate::recursion::rewrite(&nash_ir::build::Builder::new(&arena), compiled.core).unwrap();
-    crate::harness::eval_core(&arena, core)
+    let evaluated = crate::harness::eval_core(&arena, core);
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(name, format!("--- core\n{}\n{evaluated}", nash_ir::pretty::pretty(core)));
+    });
+    evaluated
+}
+
+fn compiled_output<'a>(arena: &'a Arena, core: &'a nash_ir::core::Core<'a>) -> String {
+    let assembled = crate::program::assemble_core(arena, core).unwrap();
+    format!(
+        "--- core\n{}\n--- uplc\n{}",
+        nash_ir::pretty::pretty(core),
+        nash_plutus::pretty::program(assembled.program)
+    )
 }
 
 #[test]
 fn source_identity_and_strict_local_capture() {
-    let evaluation = evaluate(indoc::indoc!(
-        r#"
+    let evaluation = evaluate(
+        "source_identity_and_strict_local_capture",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -76,14 +91,17 @@ fn source_identity_and_strict_local_capture() {
             in
             helper ()
     "#
-    ));
+        ),
+    );
     assert_eq!(evaluation.result, "(con unit ())");
 }
 
 #[test]
 fn source_little_constructor_patterns_and_tuples() {
-    let evaluation = evaluate(indoc::indoc!(
-        r#"
+    let evaluation = evaluate(
+        "source_little_constructor_patterns_and_tuples",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -94,17 +112,16 @@ fn source_little_constructor_patterns_and_tuples() {
                 Some x -> x
         main = unwrap () (Some ())
     "#
-    ));
+        ),
+    );
     assert_eq!(evaluation.result, "(con unit ())");
 }
 
 #[test]
 fn native_list_root_requires_an_explicit_element_instance() {
     let arena = Arena::new();
-    let (module, solved) = fixture(
-        &arena,
-        "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain = []\n",
-    );
+    let source = "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain = []\n";
+    let (module, solved) = fixture(&arena, source);
     let build = Build::new([Input {
         module: &module.module,
         types: &solved,
@@ -128,6 +145,9 @@ fn native_list_root_requires_an_explicit_element_instance() {
     let compiled = build
         .compile(&arena, root, Some(&[unit]), TraceConfig::default())
         .unwrap();
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(compiled_output(&arena, compiled.core));
+    });
     assert!(
         crate::harness::eval_core(&arena, compiled.core)
             .result
@@ -201,7 +221,7 @@ fn with_base_modules(
     }));
     check(&arena, &build, root);
 }
-fn core_eval(source: &str) -> crate::harness::Evaluated {
+fn core_eval(name: &str, source: &str) -> crate::harness::Evaluated {
     let mut evaluated = None;
     with_base(source, |arena, build, root| {
         let compiled = build
@@ -209,15 +229,22 @@ fn core_eval(source: &str) -> crate::harness::Evaluated {
             .unwrap();
         let core =
             crate::recursion::rewrite(&nash_ir::build::Builder::new(arena), compiled.core).unwrap();
-        evaluated = Some(crate::harness::eval_core(arena, core));
+        let result = crate::harness::eval_core(arena, core);
+        insta::assert_snapshot!(
+            name,
+            format!("--- core\n{}\n{result}", nash_ir::pretty::pretty(core))
+        );
+        evaluated = Some(result);
     });
     evaluated.unwrap()
 }
 
 #[test]
 fn native_literal_implementations_and_default_methods_execute() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "native_literal_implementations_and_default_methods_execute",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -226,14 +253,17 @@ fn native_literal_implementations_and_default_methods_execute() {
         same = eq
         main = if neq (Builtin.addInteger 20 21) 42 then same 42 42 else False
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
 #[test]
 fn literal_patterns_use_the_selected_conversion_and_eq_body() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "literal_patterns_use_the_selected_conversion_and_eq_body",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -251,14 +281,17 @@ fn literal_patterns_use_the_selected_conversion_and_eq_body() {
                 41 -> True
                 _ -> False
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
 #[test]
 fn constrained_functions_are_first_class_specializations() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "constrained_functions_are_first_class_specializations",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -266,7 +299,8 @@ fn constrained_functions_are_first_class_specializations() {
         pass f x = f x
         main = pass eq () ()
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
@@ -288,6 +322,7 @@ fn trait_free_polymorphic_recursion_reuses_the_opaque_body() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             assert_eq!(
                 compiled
                     .specializations
@@ -303,8 +338,10 @@ fn trait_free_polymorphic_recursion_reuses_the_opaque_body() {
 
 #[test]
 fn aggregate_destructuring_preserves_generalized_components() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "aggregate_destructuring_preserves_generalized_components",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -314,15 +351,18 @@ fn aggregate_destructuring_preserves_generalized_components() {
             in
             (identity (), second True)
     "#
-    ));
+        ),
+    );
     assert!(result.result.contains("con unit"));
     assert!(result.result.contains("con bool True"));
 }
 
 #[test]
 fn local_recursive_closure_keeps_its_capture() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "local_recursive_closure_keeps_its_capture",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -335,14 +375,17 @@ fn local_recursive_closure_keeps_its_capture() {
         main : int
         main = run 42
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con integer 42)");
 }
 
 #[test]
 fn closed_local_comptime_includes_its_reachable_helper() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "closed_local_comptime_includes_its_reachable_helper",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         main =
             let
@@ -350,14 +393,17 @@ fn closed_local_comptime_includes_its_reachable_helper() {
             in
             comptime (helper ())
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
 }
 
 #[test]
 fn unused_polymorphic_bottom_is_still_strict() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "unused_polymorphic_bottom_is_still_strict",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         main =
             let
@@ -365,7 +411,8 @@ fn unused_polymorphic_bottom_is_still_strict() {
             in
             ()
     "#
-    ));
+        ),
+    );
     assert!(result.result.starts_with("error:"));
 }
 
@@ -412,7 +459,10 @@ fn source_recursive_static_arguments_are_marked() {
                 .unwrap();
             let pretty = nash_ir::pretty::pretty(compiled.core);
             assert!(pretty.contains("static [0]"), "{pretty}");
-            insta::assert_snapshot!("source_recursion_static", pretty);
+            insta::assert_snapshot!(
+                "source_recursion_static",
+                compiled_output(arena, compiled.core)
+            );
             let result = crate::program::assemble_core(arena, compiled.core)
                 .unwrap()
                 .program
@@ -427,8 +477,10 @@ fn source_recursive_static_arguments_are_marked() {
 
 #[test]
 fn generic_impl_context_default_and_superclass_evidence_are_closed() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "generic_impl_context_default_and_superclass_evidence_are_closed",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -442,14 +494,17 @@ fn generic_impl_context_default_and_superclass_evidence_are_closed() {
         use x y = if same x y then neq x y else True
         main = use [1, 2] [1, 3]
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
 #[test]
 fn implementation_method_only_type_variables_match_by_type() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "implementation_method_only_type_variables_match_by_type",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -459,14 +514,17 @@ fn implementation_method_only_type_variables_match_by_type() {
             keep _ value = value
         main = keep [()] True
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
 #[test]
 fn record_wire_order_access_update_and_accessor_execute() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "record_wire_order_access_update_and_accessor_execute",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -478,14 +536,17 @@ fn record_wire_order_access_update_and_accessor_execute() {
         main : int
         main = read { original | age = 42 }
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con integer 42)");
 }
 
 #[test]
 fn big_record_and_labeled_constructor_keep_distinct_layouts() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "big_record_and_labeled_constructor_keep_distinct_layouts",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -498,7 +559,8 @@ fn big_record_and_labeled_constructor_keep_distinct_layouts() {
         datum = Datum { owner = #"bb", count = 2 }
         main = neq record.count datum.count
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
@@ -526,6 +588,10 @@ fn all_trace_configs_keep_compiler_and_user_messages_independent() {
                     )
                     .unwrap();
                     let result = crate::harness::eval_core(arena, core);
+                    insta::assert_snapshot!(
+                        format!("trace_config_{user:?}_{compiler}"),
+                        format!("--- core\n{}\n{result}", nash_ir::pretty::pretty(core))
+                    );
                     assert!(result.result.starts_with("error:"));
                     match user {
                         TraceLevel::Silent => assert!(result.logs.is_empty()),
@@ -558,15 +624,20 @@ fn repeated_trace_strings_are_hoisted_once() {
                 .unwrap();
             let core = nash_ir::pretty::pretty(compiled.core);
             assert_eq!(core.matches("\"hello\"").count(), 1, "{core}");
-            insta::assert_snapshot!("source_trace_hoisting", core);
+            insta::assert_snapshot!(
+                "source_trace_hoisting",
+                compiled_output(arena, compiled.core)
+            );
         },
     );
 }
 
 #[test]
 fn unused_overloaded_value_does_not_choose_an_arbitrary_instance() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "unused_overloaded_value_does_not_choose_an_arbitrary_instance",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         main =
             let
@@ -574,22 +645,26 @@ fn unused_overloaded_value_does_not_choose_an_arbitrary_instance() {
             in
             ()
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
     assert!(result.logs.is_empty());
 }
 
 #[test]
 fn comptime_evaluates_arithmetic_and_rejects_nonconstants() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "comptime_evaluates_arithmetic_and_rejects_nonconstants",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
         main : int
         main = comptime (Builtin.addInteger 20 22)
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con integer 42)");
     with_base(
         indoc::indoc!(
@@ -610,8 +685,10 @@ fn comptime_evaluates_arithmetic_and_rejects_nonconstants() {
 
 #[test]
 fn recursive_function_rhs_preserves_strict_captures_once() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "recursive_function_rhs_preserves_strict_captures_once",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -623,7 +700,8 @@ fn recursive_function_rhs_preserves_strict_captures_once() {
             \flag -> if flag then captured else loop True
         main = loop False
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
     assert_eq!(result.logs, ["capture"]);
 }
@@ -672,6 +750,7 @@ fn empty_lists_key_the_native_element_layout_and_erase_big_nominal_names() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             assert_eq!(
                 compiled
                     .specializations
@@ -708,7 +787,7 @@ fn source_trait_specialization_core() {
                 .unwrap();
             insta::assert_snapshot!(
                 "source_trait_default_specialization",
-                nash_ir::pretty::pretty(compiled.core)
+                compiled_output(arena, compiled.core)
             );
         },
     );
@@ -716,8 +795,10 @@ fn source_trait_specialization_core() {
 
 #[test]
 fn source_identity_accepts_a_function_and_overapplication() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "source_identity_accepts_a_function_and_overapplication",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -725,14 +806,17 @@ fn source_identity_accepts_a_function_and_overapplication() {
         main : int
         main = identity Builtin.addInteger 20 22
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con integer 42)");
 }
 
 #[test]
 fn transparent_alias_method_variables_are_matched_after_expansion() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "transparent_alias_method_variables_are_matched_after_expansion",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -743,14 +827,17 @@ fn transparent_alias_method_variables_are_matched_after_expansion() {
             keep _ x = x
         main = keep () ()
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
 }
 
 #[test]
 fn method_context_follows_the_renamed_method_only_variable() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "method_context_follows_the_renamed_method_only_variable",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -761,14 +848,17 @@ fn method_context_follows_the_renamed_method_only_variable() {
             keep _ x = eq x x
         main = keep [()] 42
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool True)");
 }
 
 #[test]
 fn captured_generic_evidence_is_local_to_each_outer_specialization() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "captured_generic_evidence_is_local_to_each_outer_specialization",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -781,14 +871,17 @@ fn captured_generic_evidence_is_local_to_each_outer_specialization() {
             same x
         main = (outer 42, outer ())
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result.matches("con bool True").count(), 2);
 }
 
 #[test]
 fn polymorphic_constants_evaluate_once_per_requested_evidence() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "polymorphic_constants_evaluate_once_per_requested_evidence",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -799,14 +892,17 @@ fn polymorphic_constants_evaluate_once_per_requested_evidence() {
         big = value
         main = (small, small, big)
     "#
-    ));
+        ),
+    );
     assert_eq!(result.logs, ["instance", "instance"]);
 }
 
 #[test]
 fn generalized_destructuring_evaluates_its_aggregate_once() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "generalized_destructuring_evaluates_its_aggregate_once",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -816,14 +912,17 @@ fn generalized_destructuring_evaluates_its_aggregate_once() {
             in
             (first (), second True)
     "#
-    ));
+        ),
+    );
     assert_eq!(result.logs, ["aggregate"]);
 }
 
 #[test]
 fn separate_lexical_helpers_with_the_same_name_do_not_collide() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "separate_lexical_helpers_with_the_same_name_do_not_collide",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -839,7 +938,8 @@ fn separate_lexical_helpers_with_the_same_name_do_not_collide() {
             helper x
         main = (first True, second ())
     "#
-    ));
+        ),
+    );
     assert!(result.result.contains("con bool True"));
     assert!(result.result.contains("con unit"));
 }
@@ -861,6 +961,7 @@ fn shared_identity_binders_erase_the_first_instance_type() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             assert_eq!(
                 compiled
                     .specializations
@@ -882,8 +983,10 @@ fn shared_identity_binders_erase_the_first_instance_type() {
 
 #[test]
 fn higher_kinded_default_method_accepts_a_nominal_record_alias() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "higher_kinded_default_method_accepts_a_nominal_record_alias",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -898,14 +1001,17 @@ fn higher_kinded_default_method_accepts_a_nominal_record_alias() {
         boxed = { value = () }
         main = (pass boxed).value
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
 }
 
 #[test]
 fn source_data_encoding_preserves_nominal_constructors() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "source_data_encoding_preserves_nominal_constructors",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -921,14 +1027,17 @@ fn source_data_encoding_preserves_nominal_constructors() {
                 Second -> Builtin.constrData 1 []
         main = Builtin.equalsData (encodeFirst First) (encodeSecond Second)
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con bool False)");
 }
 
 #[test]
 fn conditional_recursive_function_initializes_only_the_selected_branch_once() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "conditional_recursive_function_initializes_only_the_selected_branch_once",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -940,15 +1049,18 @@ fn conditional_recursive_function_initializes_only_the_selected_branch_once() {
                 trace "unselected" (\flag -> loop flag)
         main = loop False
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
     assert_eq!(result.logs, ["condition", "selected"]);
 }
 
 #[test]
 fn case_recursive_function_retains_branch_captures() {
-    let result = core_eval(indoc::indoc!(
-        r#"
+    let result = core_eval(
+        "case_recursive_function_retains_branch_captures",
+        indoc::indoc!(
+            r#"
         module Main exposing (..)
         import Primitive exposing (..)
         import Builtin exposing (..)
@@ -960,7 +1072,8 @@ fn case_recursive_function_retains_branch_captures() {
                 Second -> \flag -> loop flag
         main = loop False
     "#
-    ));
+        ),
+    );
     assert_eq!(result.result, "(con unit ())");
     assert_eq!(result.logs, ["choose", "selected"]);
 }
@@ -982,6 +1095,7 @@ fn repeated_big_record_fields_share_the_list_decoder() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             let pretty = nash_ir::pretty::pretty(compiled.core);
             assert_eq!(pretty.matches("unListData").count(), 1, "{pretty}");
         },
@@ -1005,6 +1119,7 @@ fn big_constructor_pattern_and_access_share_the_constructor_decoder() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             let pretty = nash_ir::pretty::pretty(compiled.core);
             assert_eq!(pretty.matches("unConstrData").count(), 0, "{pretty}");
             assert_eq!(pretty.matches("sndPair").count(), 0, "{pretty}");
@@ -1034,6 +1149,7 @@ fn accessor_sharing_retains_trace_before_a_malformed_record_failure() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             let compiled = crate::program::assemble_core(arena, compiled.core).unwrap();
             let malformed = nash_plutus::data::PlutusData::integer_from(arena, 0);
             let result = compiled
@@ -1063,6 +1179,7 @@ fn accessor_sharing_keeps_unselected_branch_decoding_lazy() {
             let compiled = build
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
             let compiled = crate::program::assemble_core(arena, compiled.core).unwrap();
             let malformed = nash_plutus::data::PlutusData::integer_from(arena, 0);
             let result = compiled
@@ -1196,7 +1313,10 @@ fn source_trace_precedes_failure() {
             let evaluated = crate::harness::eval_core(arena, compiled.core);
             assert!(evaluated.result.starts_with("error:"));
             assert_eq!(evaluated.logs, ["before failure"]);
-            insta::assert_snapshot!(evaluated);
+            insta::assert_snapshot!(format!(
+                "--- core\n{}\n{evaluated}",
+                nash_ir::pretty::pretty(compiled.core)
+            ));
         },
     );
 }
@@ -1227,7 +1347,10 @@ fn native_case_branches_evaluate_scrutinee_once_and_remain_lazy() {
             assert_eq!(result.logs, ["condition", "true", "condition", "false"]);
             assert!(result.uplc.contains("(case"));
             assert!(!result.uplc.contains("ifThenElse"));
-            insta::assert_snapshot!(result.to_string());
+            insta::assert_snapshot!(format!(
+                "--- core\n{}\n{result}",
+                nash_ir::pretty::pretty(core)
+            ));
         },
     );
 }
@@ -1272,7 +1395,10 @@ fn native_case_dispatches_lists_data_and_sparse_literals() {
             assert!(result.uplc.contains("chooseData"));
             assert!(!result.uplc.contains("ifThenElse"));
             assert!(!result.uplc.contains("chooseList"));
-            insta::assert_snapshot!(result.to_string());
+            insta::assert_snapshot!(format!(
+                "--- core\n{}\n{result}",
+                nash_ir::pretty::pretty(core)
+            ));
         },
     );
 }
@@ -1296,7 +1422,7 @@ fn pair_wildcard_uses_native_case_without_projection_builtins() {
             assert!(uplc.contains("(case"), "{uplc}");
             assert!(!uplc.contains("fstPair"), "{uplc}");
             assert!(!uplc.contains("sndPair"), "{uplc}");
-            insta::assert_snapshot!(uplc);
+            insta::assert_snapshot!(compiled_output(arena, compiled.core));
         },
     );
 }
@@ -1331,3 +1457,19 @@ fn big_field_offsets_use_drop_list_from_two() {
         },
     );
 }
+
+source_codegen_snapshot!(
+    little_constructor_record_accesses_each_field,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin exposing (..)
+    type entry = Entry { count : int, enabled : bool, label : bytes }
+    main =
+        let
+            item = Entry { label = #"aabb", enabled = True, count = 42 }
+        in
+        if item.enabled then addInteger item.count (lengthOfByteString item.label) else 0
+    "#,
+    "(con integer 44)"
+);

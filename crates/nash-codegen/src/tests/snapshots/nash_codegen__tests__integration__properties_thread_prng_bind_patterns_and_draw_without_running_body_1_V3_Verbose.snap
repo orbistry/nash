@@ -1,0 +1,187 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Prop exposing (constant)\ntests\n    prop \"patterns\" =\n        let\n            x via constant 7\n            (y, z) via constant (8, True)\n        in\n        do\n            trace \"body\" ()\n            assert (if z then Builtin.equalsInteger y (Builtin.addInteger x 1) else False)\n"
+---
+--- patterns
+--- draw
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          (lam i4
+            (case
+              [i2 [i3 (con integer 7)]]
+              (lam i5
+                (case
+                  [i5 i4]
+                  (lam i6
+                    [(lam i7
+                      [(lam i8
+                        [(lam i9
+                          [(lam i10
+                            [(lam i11
+                              [(lam i12
+                                (case
+                                  [i2 (constr 0 [i3 (con integer 8)] (con bool True))]
+                                  (lam i13
+                                    (case
+                                      [i13 i8]
+                                      (lam i14
+                                        [(lam i15
+                                          [(lam i16
+                                            [(lam i17
+                                              [(lam i18
+                                                [(lam i19
+                                                  (case
+                                                    i19
+                                                    (lam i20
+                                                      (lam i21
+                                                        [(lam i22
+                                                          [(lam i23
+                                                            [(lam i24
+                                                              [(lam i25
+                                                                [(lam i26
+                                                                  (constr 0
+                                                                    (constr 0
+                                                                      i16
+                                                                      [[(force (builtin mkCons))
+                                                                        [[(lam i27
+                                                                          [(lam i28
+                                                                            [(lam i29 i29)
+                                                                              (lam i29
+                                                                                (case
+                                                                                  [[(builtin lessThanInteger) i29] [i25 (con integer 0)]]
+                                                                                  [(builtin decodeUtf8) [i27 i29]]
+                                                                                  [[(builtin appendString) [i28 i24]]
+                                                                                    [(builtin decodeUtf8)
+                                                                                      [i27 [[(builtin subtractInteger) [i25 (con integer 0)]] i29]]]]))])
+                                                                            (lam i28 i28)])
+                                                                          [(lam i27 [i27 i27])
+                                                                            (lam i27
+                                                                              (lam i28
+                                                                                (case
+                                                                                  [[(builtin lessThanInteger) i28] [i25 (con integer 10)]]
+                                                                                  [[(builtin appendByteString)
+                                                                                    [[i27 i27] [[(builtin quotientInteger) i28] [i25 (con integer 10)]]]]
+                                                                                    [[(builtin consByteString)
+                                                                                      [[(builtin addInteger) [i25 (con integer 48)]]
+                                                                                        [[(builtin remainderInteger) i28] [i25 (con integer 10)]]]]
+                                                                                      [i26 (con bytestring #)]]]
+                                                                                  [[(builtin consByteString) [[(builtin addInteger) [i25 (con integer 48)]] i28]]
+                                                                                    [i26 (con bytestring #)]])))]]
+                                                                          i10]]
+                                                                        [[(force (builtin mkCons)) i1] (con (list string) [])]])))
+                                                                  (lam i26 i26)])
+                                                                (lam i25 i25)])
+                                                              i0])
+                                                            i21])
+                                                          i20]))))
+                                                  i18])
+                                                i17])
+                                              (case i14 (lam i17 (lam i18 i18)))])
+                                            i15])
+                                          (case i14 (lam i15 (lam i16 i15)))])
+                                      (constr 1)))))
+                                i11])
+                              i10])
+                            i9])
+                          (case i6 (lam i9 (lam i10 i10)))])
+                        i7])
+                      (case i6 (lam i7 (lam i8 i7)))])
+                  (constr 1))))))
+          (lam i3 i3)])
+        (lam i2
+          [(lam i3 (constr 0 i3)) (lam i3 [(lam i4 (constr 0 i4)) (constr 0 i3 i2)])])])
+      (con string "?")])
+    (con string "-")])
+--- run
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          [(lam i4
+            [(lam i5
+              [(lam i6
+                [(lam i7
+                  (lam i8
+                    (case
+                      [i5 [i6 (con integer 7)]]
+                      (lam i9
+                        (case
+                          [i9 i8]
+                          (lam i10
+                            [(lam i11
+                              [(lam i12
+                                [(lam i13
+                                  [(lam i14
+                                    [(lam i15
+                                      [(lam i16
+                                        (case
+                                          [i5 (constr 0 [i6 (con integer 8)] (con bool True))]
+                                          (lam i17
+                                            (case
+                                              [i17 i12]
+                                              (lam i18
+                                                [(lam i19
+                                                  [(lam i20
+                                                    [(lam i21
+                                                      [(lam i22
+                                                        [(lam i23
+                                                          (case
+                                                            i23
+                                                            (lam i24
+                                                              (lam i25
+                                                                [(lam i26
+                                                                  [(lam i27
+                                                                    [(lam i28
+                                                                      [(lam i29
+                                                                        [(lam i30 (constr 0 i20))
+                                                                          (case
+                                                                            (case
+                                                                              i29
+                                                                              (con bool False)
+                                                                              [[(builtin equalsInteger) i26]
+                                                                                [[(builtin addInteger) i16] [i6 (con integer 1)]]])
+                                                                            (force
+                                                                              [[(force (builtin trace)) i1]
+                                                                                (delay
+                                                                                  [(lam i30
+                                                                                    [(lam i31
+                                                                                      [(lam i32
+                                                                                        [(lam i33
+                                                                                          (force
+                                                                                            [[(force (builtin trace)) [[(builtin appendString) i4] [i33 i29]]]
+                                                                                              (delay (error))]))
+                                                                                          (lam i33 (case i33 [i32 i31] [i32 i30]))])
+                                                                                        (lam i32 i32)])
+                                                                                      i3])
+                                                                                    i2])])
+                                                                            (con unit ()))])
+                                                                        i27])
+                                                                      (force [[(force (builtin trace)) [i7 i0]] (delay (con unit ()))])])
+                                                                    i25])
+                                                                  i24]))))
+                                                          i22])
+                                                        i21])
+                                                      (case i18 (lam i21 (lam i22 i22)))])
+                                                    i19])
+                                                  (case i18 (lam i19 (lam i20 i19)))])
+                                              (constr 1)))))
+                                        i15])
+                                      i14])
+                                    i13])
+                                  (case i10 (lam i13 (lam i14 i14)))])
+                                i11])
+                              (case i10 (lam i11 (lam i12 i11)))])
+                          (constr 1))))))
+                  (lam i7 i7)])
+                (lam i6 i6)])
+              (lam i5
+                [(lam i6 (constr 0 i6)) (lam i6 [(lam i7 (constr 0 i7)) (constr 0 i6 i5)])])])
+            (con string "\0assert\0\48\0\48\0")])
+          (con string "False")])
+        (con string "True")])
+      (con string "\0assert\0\48")])
+    (con string "body")])

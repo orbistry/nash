@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'b -> 'b\nimpl Keep (list 'b) where\n    keep _ value = value\nmain = keep [()] True\n"
+---
+--- core
+let keep#2 : list 'erased -> 'erased -> 'erased = \arg#3 : list 'erased value#4 : 'erased -> let match#5 : list 'erased = arg#3 in
+value#4 in
+let main#1 : bool = keep#2 (mkCons () (con (list unit) [])) true in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam keep_2
+    [(lam main_1 main_1)
+      [[keep_2 [[(force (builtin mkCons)) (con unit ())] (con (list unit) [])]]
+        (con bool True)]])
+    (lam arg_3 (lam value_4 [(lam match_5 value_4) arg_3]))])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 408462, memory: 2232

@@ -1,0 +1,74 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Datum = Datum { owner : Bytes, deadline : Int }\nmain : Datum -> (Bytes, Int)\nmain d = case d of Datum { owner } -> (owner, d.deadline)\n"
+---
+--- core
+let message#20 : string = "incomplete pattern match" in
+let main#1 : Main.Datum -> (Bytes, Int) = \d#2 : Main.Datum -> let match#6 : Main.Datum = d#2 in
+case@Data match#6 of
+  DataConstr pair#13 -> case@Pair pair#13 of
+    Pair tag#9 fields#10 -> case@Int tag#9 of
+      0 -> let fieldList#11 : list Data = fields#10 in
+      let projection#14 : Data = headList fieldList#11 in
+      let field#7 : Bytes = projection#14 in
+      let projection#15 : list Data = tailList fieldList#11 in
+      let fieldList#12 : list Data = projection#15 in
+      let projection#16 : Data = headList fieldList#12 in
+      let field#8 : Int = projection#16 in
+      let owner#3 : Bytes = field#7 in
+      let evaluated#17 : 'erased = case@Pair pair#13 of
+        Pair tag#4 fields#5 -> fields#5 in
+      let projection#18 : 'erased = tailList evaluated#17 in
+      let projection#19 : 'erased = headList projection#18 in
+      constr 0 owner#3 projection#19
+      _ -> trace message#20 in error
+  _ -> trace message#20 in error in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam i0
+    [(lam i1 i1)
+      (lam i1
+        [(lam i2
+          [(lam i3
+            (force
+              [[[[[[(force (builtin chooseData)) i3]
+                (delay
+                  [(lam i4
+                    (case
+                      i4
+                      (lam i5
+                        (lam i6
+                          [(lam i7
+                            (case
+                              [[(builtin equalsInteger) i7] (con integer 0)]
+                              (force [[(force (builtin trace)) i0] (delay (error))])
+                              [(lam i8
+                                [(lam i9
+                                  [(lam i10
+                                    [(lam i11
+                                      [(lam i12
+                                        [(lam i13
+                                          [(lam i14
+                                            [(lam i15
+                                              [(lam i16
+                                                [(lam i17 [(lam i18 (constr 0 i15 i18)) [(force (builtin headList)) i17]])
+                                                  [(force (builtin tailList)) i16]])
+                                                (case i4 (lam i16 (lam i17 i17)))])
+                                              i10])
+                                            i13])
+                                          [(force (builtin headList)) i12]])
+                                        i11])
+                                      [(force (builtin tailList)) i8]])
+                                    i9])
+                                  [(force (builtin headList)) i8]])
+                                i6]))
+                            i5]))))
+                    [(builtin unConstrData) i3]])]
+                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]
+                (delay (force [[(force (builtin trace)) i0] (delay (error))]))]))
+            i2])
+          i1])])
+    (con string "incomplete pattern match")])

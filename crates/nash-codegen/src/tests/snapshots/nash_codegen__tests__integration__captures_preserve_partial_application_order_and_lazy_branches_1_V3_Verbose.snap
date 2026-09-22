@@ -1,0 +1,178 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Logic exposing (..)\ncompare : int -> int -> bool\ncompare x = trace \"partial\" (\\y -> Builtin.equalsInteger x y)\none : int\none = 1\nordinary : unit\nordinary = if True || (fail \"unselected\") then () else (fail \"wrong\")\ntests\n    test \"ordered\" = do\n        assert (compare (trace \"left\" one) (trace \"right\" 2))\n    test \"lazy\" = do\n        assert (if False then (fail \"unselected\") else True)\n    test \"lazy or\" = do\n        assert (True || (fail \"unselected\"))\n    test \"lazy and\" = do\n        assert (if False && (fail \"unselected\") then False else True)\n    test \"ordinary lowering is lazy\" = do\n        ordinary\n"
+---
+--- ordered
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          [(lam i4
+            [(lam i5
+              [(lam i6
+                [(lam i7
+                  [(lam i8
+                    [(lam i9
+                      [(lam i10
+                        [(lam i11
+                          [(lam i12
+                            [(lam i13
+                              [(lam i14
+                                [(lam i15
+                                  [(lam i16
+                                    [(lam i17
+                                      [(lam i18
+                                        [(lam i19
+                                          (case
+                                            [i15 i19]
+                                            (force
+                                              [[(force (builtin trace)) i3]
+                                                (delay
+                                                  [(lam i20
+                                                    [(lam i21
+                                                      [(lam i22
+                                                        (force
+                                                          [[(force (builtin trace))
+                                                            [[(builtin appendString) i5]
+                                                              [[(lam i23
+                                                                [(lam i24
+                                                                  [(lam i25 i25)
+                                                                    (lam i25
+                                                                      (case
+                                                                        [[(builtin lessThanInteger) i25] [i21 (con integer 0)]]
+                                                                        [(builtin decodeUtf8) [i23 i25]]
+                                                                        [[(builtin appendString) [i24 i20]]
+                                                                          [(builtin decodeUtf8)
+                                                                            [i23 [[(builtin subtractInteger) [i21 (con integer 0)]] i25]]]]))])
+                                                                  (lam i24 i24)])
+                                                                [(lam i23 [i23 i23])
+                                                                  (lam i23
+                                                                    (lam i24
+                                                                      (case
+                                                                        [[(builtin lessThanInteger) i24] [i21 (con integer 10)]]
+                                                                        [[(builtin appendByteString)
+                                                                          [[i23 i23] [[(builtin quotientInteger) i24] [i21 (con integer 10)]]]]
+                                                                          [[(builtin consByteString)
+                                                                            [[(builtin addInteger) [i21 (con integer 48)]]
+                                                                              [[(builtin remainderInteger) i24] [i21 (con integer 10)]]]]
+                                                                            [i22 (con bytestring #)]]]
+                                                                        [[(builtin consByteString) [[(builtin addInteger) [i21 (con integer 48)]] i24]]
+                                                                          [i22 (con bytestring #)]])))]]
+                                                                i13]]]
+                                                            (delay (error))]))
+                                                        (lam i22 i22)])
+                                                      (lam i21 i21)])
+                                                    i4])])
+                                            (con unit ())))
+                                          i18])
+                                        [i8 (con integer 2)]])
+                                      (force [[(force (builtin trace)) i16] (delay (con unit ()))])])
+                                    [i6 i2]])
+                                  [i10 i14]])
+                                i13])
+                              i9])
+                            (force [[(force (builtin trace)) i11] (delay (con unit ()))])])
+                          [i6 i1]])
+                        i7])
+                      [i8 (con integer 1)]])
+                    (lam i8 i8)])
+                  (lam i7
+                    (force
+                      [[(force (builtin trace)) [i6 i0]]
+                        (delay (lam i8 [[(builtin equalsInteger) i7] i8]))]))])
+                (lam i6 i6)])
+              (con string "\0assert\0\48\0\49\0")])
+            (con string "-")])
+          (con string "\0assert\0\48")])
+        (con string "right")])
+      (con string "left")])
+    (con string "partial")])
+--- lazy
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          (case
+            (case
+              i3
+              (con bool True)
+              (force [[(force (builtin trace)) [i2 i0]] (delay (error))]))
+            (force [[(force (builtin trace)) i1] (delay (error))])
+            (con unit ())))
+          (con bool False)])
+        (lam i2 i2)])
+      (con string "\0assert\0\48")])
+    (con string "unselected")])
+--- lazy or
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          (case
+            (case
+              i3
+              (force [[(force (builtin trace)) [i2 i0]] (delay (error))])
+              (con bool True))
+            (force [[(force (builtin trace)) i1] (delay (error))])
+            (con unit ())))
+          (con bool True)])
+        (lam i2 i2)])
+      (con string "\0assert\0\48")])
+    (con string "unselected")])
+--- lazy and
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          [(lam i4
+            [(lam i5
+              [(lam i6
+                [(lam i7
+                  (case
+                    (case i7 (con bool True) (con bool False))
+                    (force
+                      [[(force (builtin trace)) i1]
+                        (delay
+                          [(lam i8
+                            [(lam i9
+                              [(lam i10
+                                [(lam i11
+                                  (force
+                                    [[(force (builtin trace)) [[(builtin appendString) i4] [i11 i7]]]
+                                      (delay (error))]))
+                                  (lam i11 (case i11 [i10 i9] [i10 i8]))])
+                                (lam i10 i10)])
+                              i3])
+                            i2])])
+                    (con unit ())))
+                  (case
+                    i6
+                    (con bool False)
+                    (force [[(force (builtin trace)) [i5 i0]] (delay (error))]))])
+                (con bool False)])
+              (lam i5 i5)])
+            (con string "\0assert\0\48\0\48\0")])
+          (con string "False")])
+        (con string "True")])
+      (con string "\0assert\0\48")])
+    (con string "unselected")])
+--- ordinary lowering is lazy
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3 i3)
+          (case
+            (case
+              (con bool True)
+              (force [[(force (builtin trace)) [i2 i0]] (delay (error))])
+              (con bool True))
+            (force [[(force (builtin trace)) [i2 i1]] (delay (error))])
+            (con unit ()))])
+        (lam i2 i2)])
+      (con string "wrong")])
+    (con string "unselected")])

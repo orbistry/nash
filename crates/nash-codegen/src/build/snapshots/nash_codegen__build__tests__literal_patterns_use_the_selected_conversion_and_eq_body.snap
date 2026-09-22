@@ -1,0 +1,63 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype box = Box int\nimpl FromInt box where\n    fromInt n = Box (Builtin.addInteger n 1)\nimpl Eq box where\n    eq (Box a) (Box b) = Builtin.equalsInteger (Builtin.addInteger a 1) b\nboxed : box\nboxed = 40\nmain =\n    case boxed of\n        41 -> True\n        _ -> False\n"
+---
+--- core
+let fromInt#9 : int -> int = \value#18 : int -> value#18 in
+let fromInt#3 : int -> Main.box = \n#7 : int -> (\field#8 : int -> constr 0 field#8) (addInteger n#7 (fromInt#9 1)) in
+let boxed#2 : Main.box = fromInt#3 40 in
+let eq#4 : Main.box -> Main.box -> bool = \arg#10 : Main.box arg#12 : Main.box -> let match#16 : Main.box = arg#10 in
+case@Tag match#16 of
+  0 field#17 -> let a#11 : int = field#17 in
+  let match#14 : Main.box = arg#12 in
+  case@Tag match#14 of
+    0 field#15 -> let b#13 : int = field#15 in
+    equalsInteger (addInteger a#11 (fromInt#9 1)) b#13 in
+let match#6 : Main.box = boxed#2 in
+let main#1 : bool = case@Bool (\literal#5 : Main.box -> eq#4 literal#5 (fromInt#3 41)) match#6 of
+  True -> true
+  False -> false in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_9
+    [(lam fromInt_3
+      [(lam boxed_2
+        [(lam eq_4
+          [(lam match_6
+            [(lam main_1 main_1)
+              (case
+                [(lam literal_5 [[eq_4 literal_5] [fromInt_3 (con integer 41)]]) match_6]
+                (con bool False)
+                (con bool True))])
+            boxed_2])
+          (lam arg_10
+            (lam arg_12
+              [(lam match_16
+                (case
+                  match_16
+                  (lam field_17
+                    [(lam a_11
+                      [(lam match_14
+                        (case
+                          match_14
+                          (lam field_15
+                            [(lam b_13
+                              [[(builtin equalsInteger)
+                                [[(builtin addInteger) a_11] [fromInt_9 (con integer 1)]]]
+                                b_13])
+                              field_15])))
+                        arg_12])
+                      field_17])))
+                arg_10]))])
+        [fromInt_3 (con integer 40)]])
+      (lam n_7
+        [(lam field_8 (constr 0 field_8))
+          [[(builtin addInteger) n_7] [fromInt_9 (con integer 1)]]])])
+    (lam value_18 value_18)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 1748057, memory: 8807

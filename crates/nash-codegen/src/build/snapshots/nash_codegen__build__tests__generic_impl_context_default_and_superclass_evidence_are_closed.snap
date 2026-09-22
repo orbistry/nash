@@ -1,0 +1,74 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntrait Eq 'a => Same 'a where\n    same : 'a -> 'a -> bool\n    same x y = eq x y\nimpl Same int where\nimpl Eq 'a => Same (list 'a) where\nuse : Same 'a => 'a -> 'a -> bool\nuse x y = if same x y then neq x y else True\nmain = use [1, 2] [1, 3]\n"
+---
+--- core
+let eq#16 : int -> int -> bool = equalsInteger in
+let eq#11 : list 'erased -> list 'erased -> bool = (\self#21 : 'erased -> self#21 self#21) (\self#21 : 'erased xs#14 : list 'erased ys#15 : list 'erased -> case@Bool nullList xs#14 of
+  True -> nullList ys#15
+  False -> case@Bool nullList ys#15 of
+    True -> false
+    False -> let projection#17 : 'erased = headList xs#14 in
+    let projection#18 : 'erased = headList ys#15 in
+    case@Bool eq#16 projection#17 projection#18 of
+      True -> let projection#19 : list 'erased = tailList xs#14 in
+      let projection#20 : list 'erased = tailList ys#15 in
+      self#21 self#21 projection#19 projection#20
+      False -> false) in
+let same#6 : 'erased -> 'erased -> bool = \x#9 : 'erased y#10 : 'erased -> eq#11 x#9 y#10 in
+let neq#7 : 'erased -> 'erased -> bool = \a#12 : 'erased b#13 : 'erased -> case@Bool eq#11 a#12 b#13 of
+  True -> false
+  False -> true in
+let use#2 : 'erased -> 'erased -> bool = \x#4 : 'erased y#5 : 'erased -> case@Bool same#6 x#4 y#5 of
+  True -> neq#7 x#4 y#5
+  False -> true in
+let fromInt#3 : int -> int = \value#8 : int -> value#8 in
+let main#1 : bool = use#2 (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (con (list integer) []))) (mkCons (fromInt#3 1) (mkCons (fromInt#3 3) (con (list integer) []))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam eq_16
+    [(lam eq_11
+      [(lam same_6
+        [(lam neq_7
+          [(lam use_2
+            [(lam fromInt_3
+              [(lam main_1 main_1)
+                [[use_2
+                  [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]]
+                    [[(force (builtin mkCons)) [fromInt_3 (con integer 2)]] (con (list integer) [])]]]
+                  [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]]
+                    [[(force (builtin mkCons)) [fromInt_3 (con integer 3)]] (con (list integer) [])]]]])
+              (lam value_8 value_8)])
+            (lam x_4 (lam y_5 (case [[same_6 x_4] y_5] (con bool True) [[neq_7 x_4] y_5])))])
+          (lam a_12
+            (lam b_13 (case [[eq_11 a_12] b_13] (con bool True) (con bool False))))])
+        (lam x_9 (lam y_10 [[eq_11 x_9] y_10]))])
+      [(lam self_21 [self_21 self_21])
+        (lam self_21
+          (lam xs_14
+            (lam ys_15
+              (case
+                [(force (builtin nullList)) xs_14]
+                (case
+                  [(force (builtin nullList)) ys_15]
+                  [(lam projection_17
+                    [(lam projection_18
+                      (case
+                        [[eq_16 projection_17] projection_18]
+                        (con bool False)
+                        [(lam projection_19
+                          [(lam projection_20 [[[self_21 self_21] projection_19] projection_20])
+                            [(force (builtin tailList)) ys_15]])
+                          [(force (builtin tailList)) xs_14]]))
+                      [(force (builtin headList)) ys_15]])
+                    [(force (builtin headList)) xs_14]]
+                  (con bool False))
+                [(force (builtin nullList)) ys_15]))))]])
+    (builtin equalsInteger)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 3699872, memory: 16250

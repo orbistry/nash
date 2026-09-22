@@ -1,0 +1,14 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nplain : 'a -> unit\nplain x = plain (Some x)\nmain = plain ()\n"
+---
+--- core
+letrec
+  plain#2 : 'erased -> unit [static []] = \x#3 : 'erased -> plain#2 ((\field#4 : 'erased -> constr 1 field#4) x#3)
+in
+let main#1 : unit = plain#2 () in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam i0 [(lam i1 i1) [i0 (con unit ())]])
+    [(lam i0 [i0 i0]) (lam i0 (lam i1 [[i0 i0] [(lam i2 (constr 1 i2)) i1]]))]])

@@ -1,0 +1,54 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype choice = First unit | Second\nloop : bool -> unit\nloop =\n    case trace \"choose\" (First ()) of\n        First captured -> trace \"selected\" (\\flag -> if flag then captured else loop True)\n        Second -> \\flag -> loop flag\nmain = loop False\n"
+---
+--- core
+let message#11 : string = "choose" in
+let message#12 : string = "selected" in
+let fromString#4 : string -> string = \value#10 : string -> value#10 in
+let match#8 : Main.choice = trace (fromString#4 message#11) in (\field#3 : unit -> constr 0 field#3) () in
+case@Tag match#8 of
+  0 field#9 -> let captured#5 : unit = field#9 in
+  trace (fromString#4 message#12) in let loop#2 : bool -> unit = (\self#13 : 'erased -> self#13 self#13) (\self#13 : 'erased flag#6 : bool -> case@Bool flag#6 of
+    True -> captured#5
+    False -> self#13 self#13 true) in
+  let main#1 : unit = loop#2 false in
+  main#1
+  1 -> let loop#2 : bool -> unit = \flag#7 : bool -> force ((\self#15 : 'erased -> self#15 self#15) (\self#15 : 'erased -> delay force (self#15 self#15))) in
+  let main#1 : unit = loop#2 false in
+  main#1
+--- uplc
+(program 1.1.0
+  [(lam message_11
+    [(lam message_12
+      [(lam fromString_4
+        [(lam match_8
+          (case
+            match_8
+            (lam field_9
+              [(lam captured_5
+                (force
+                  [[(force (builtin trace)) [fromString_4 message_12]]
+                    (delay
+                      [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
+                        [(lam self_13 [self_13 self_13])
+                          (lam self_13
+                            (lam flag_6 (case flag_6 [[self_13 self_13] (con bool True)] captured_5)))]])]))
+                field_9])
+            [(lam loop_2 [(lam main_1 main_1) [loop_2 (con bool False)]])
+              (lam flag_7
+                (force
+                  [(lam self_15 [self_15 self_15])
+                    (lam self_15 (delay (force [self_15 self_15])))]))]))
+          (force
+            [[(force (builtin trace)) [fromString_4 message_11]]
+              (delay [(lam field_3 (constr 0 field_3)) (con unit ())])])])
+        (lam value_10 value_10)])
+      (con string "selected")])
+    (con string "choose")])
+--- result
+(con unit ())
+--- logs
+["choose", "selected"]
+--- budget
+cpu: 1207096, memory: 6964

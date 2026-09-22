@@ -1,0 +1,81 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nprivateValue : int\nprivateValue = 1\ntests\n    test \"passes\" = do\n        assert True\n    test \"fails without captures\" = do\n        assert False\n    test \"captures private value\" = do\n        assert (Builtin.equalsInteger privateValue 2)\n"
+---
+--- passes
+(program 1.1.0
+  [(lam i0
+    (case
+      (con bool True)
+      (force [[(force (builtin trace)) i0] (delay (error))])
+      (con unit ())))
+    (con string "\0assert\0\48")])
+--- fails without captures
+(program 1.1.0
+  [(lam i0
+    (case
+      (con bool False)
+      (force [[(force (builtin trace)) i0] (delay (error))])
+      (con unit ())))
+    (con string "\0assert\0\48")])
+--- captures private value
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3
+          [(lam i4
+            [(lam i5
+              [(lam i6
+                [(lam i7
+                  [(lam i8
+                    (case
+                      [i7 i8]
+                      (force
+                        [[(force (builtin trace)) i0]
+                          (delay
+                            [(lam i9
+                              [(lam i10
+                                [(lam i11
+                                  (force
+                                    [[(force (builtin trace))
+                                      [[(builtin appendString) i2]
+                                        [[(lam i12
+                                          [(lam i13
+                                            [(lam i14 i14)
+                                              (lam i14
+                                                (case
+                                                  [[(builtin lessThanInteger) i14] [i10 (con integer 0)]]
+                                                  [(builtin decodeUtf8) [i12 i14]]
+                                                  [[(builtin appendString) [i13 i9]]
+                                                    [(builtin decodeUtf8)
+                                                      [i12 [[(builtin subtractInteger) [i10 (con integer 0)]] i14]]]]))])
+                                            (lam i13 i13)])
+                                          [(lam i12 [i12 i12])
+                                            (lam i12
+                                              (lam i13
+                                                (case
+                                                  [[(builtin lessThanInteger) i13] [i10 (con integer 10)]]
+                                                  [[(builtin appendByteString)
+                                                    [[i12 i12] [[(builtin quotientInteger) i13] [i10 (con integer 10)]]]]
+                                                    [[(builtin consByteString)
+                                                      [[(builtin addInteger) [i10 (con integer 48)]]
+                                                        [[(builtin remainderInteger) i13] [i10 (con integer 10)]]]]
+                                                      [i11 (con bytestring #)]]]
+                                                  [[(builtin consByteString) [[(builtin addInteger) [i10 (con integer 48)]] i13]]
+                                                    [i11 (con bytestring #)]])))]]
+                                          i6]]]
+                                      (delay (error))]))
+                                  (lam i11 i11)])
+                                (lam i10 i10)])
+                              i1])])
+                      (con unit ())))
+                    [i3 (con integer 2)]])
+                  [i5 i6]])
+                i4])
+              (builtin equalsInteger)])
+            [i3 (con integer 1)]])
+          (lam i3 i3)])
+        (con string "\0assert\0\48\0\49\0")])
+      (con string "-")])
+    (con string "\0assert\0\48")])

@@ -2,6 +2,13 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nmain : pair int (list Data) -> int\nmain pair(tag, _) = tag\n"
 ---
+--- core
+let main#1 : pair int (list Data) -> int = \arg#2 : pair int (list Data) -> let match#4 : pair int (list Data) = arg#2 in
+case@Pair match#4 of
+  Pair field#5 field#6 -> let tag#3 : int = field#5 in
+  tag#3 in
+main#1
+--- uplc
 (program 1.1.0
   [(lam i0 i0)
     (lam i0 [(lam i1 (case i1 (lam i2 (lam i3 [(lam i4 i4) i2])))) i0])])

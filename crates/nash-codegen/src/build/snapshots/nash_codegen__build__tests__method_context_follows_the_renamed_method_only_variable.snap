@@ -1,0 +1,28 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntrait Keep 'a where\n    keep : Eq 'b => 'a -> 'b -> bool\nimpl Keep (list 'b) where\n    keep _ x = eq x x\nmain = keep [()] 42\n"
+---
+--- core
+let eq#6 : int -> int -> bool = equalsInteger in
+let keep#2 : list 'erased -> 'erased -> bool = \arg#4 : list 'erased x#5 : 'erased -> let match#7 : list 'erased = arg#4 in
+eq#6 x#5 x#5 in
+let fromInt#3 : int -> int = \value#8 : int -> value#8 in
+let main#1 : bool = keep#2 (mkCons () (con (list unit) [])) (fromInt#3 42) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam eq_6
+    [(lam keep_2
+      [(lam fromInt_3
+        [(lam main_1 main_1)
+          [[keep_2 [[(force (builtin mkCons)) (con unit ())] (con (list unit) [])]]
+            [fromInt_3 (con integer 42)]]])
+        (lam value_8 value_8)])
+      (lam arg_4 (lam x_5 [(lam match_7 [[eq_6 x_5] x_5]) arg_4]))])
+    (builtin equalsInteger)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 668795, memory: 3533

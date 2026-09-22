@@ -1,0 +1,27 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nunwrap fallback opt =\n    case opt of\n        None -> fallback\n        Some x -> x\nmain = unwrap () (Some ())\n"
+---
+--- core
+let unwrap#2 : 'erased -> Main.option 'erased -> 'erased = \fallback#4 : 'erased opt#5 : Main.option 'erased -> let match#7 : Main.option 'erased = opt#5 in
+case@Tag match#7 of
+  0 -> fallback#4
+  1 field#8 -> let x#6 : 'erased = field#8 in
+  x#6 in
+let main#1 : unit = unwrap#2 () ((\field#3 : unit -> constr 1 field#3) ()) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam unwrap_2
+    [(lam main_1 main_1)
+      [[unwrap_2 (con unit ())] [(lam field_3 (constr 1 field_3)) (con unit ())]]])
+    (lam fallback_4
+      (lam opt_5
+        [(lam match_7 (case match_7 fallback_4 (lam field_8 [(lam x_6 x_6) field_8])))
+          opt_5]))])
+--- result
+(con unit ())
+--- logs
+[]
+--- budget
+cpu: 416100, memory: 2700

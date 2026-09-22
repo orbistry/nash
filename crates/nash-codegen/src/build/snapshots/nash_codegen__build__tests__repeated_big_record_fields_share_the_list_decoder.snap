@@ -1,0 +1,21 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> (Int, Int)\nmain d = (d.first, d.second)\n"
+---
+--- core
+let main#1 : { _0 : Int, _1 : Int } -> (Int, Int) = \d#2 : { _0 : Int, _1 : Int } -> let projection#3 : list Data = unListData d#2 in
+let projection#4 : Data = headList projection#3 in
+let projection#5 : list Data = tailList projection#3 in
+let projection#6 : Data = headList projection#5 in
+constr 0 projection#4 projection#6 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam i0 i0)
+    (lam i0
+      [(lam i1
+        [(lam i2
+          [(lam i3 [(lam i4 (constr 0 i2 i4)) [(force (builtin headList)) i3]])
+            [(force (builtin tailList)) i1]])
+          [(force (builtin headList)) i1]])
+        [(builtin unListData) i0]])])

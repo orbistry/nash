@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype First = First\ntype Second = Second\nencodeFirst : First -> Data\nencodeFirst value =\n    case value of\n        First -> Builtin.constrData 0 []\nencodeSecond : Second -> Data\nencodeSecond value =\n    case value of\n        Second -> Builtin.constrData 1 []\nmain = Builtin.equalsData (encodeFirst First) (encodeSecond Second)\n"
+---
+--- core
+let message#16 : string = "incomplete pattern match" in
+let fromInt#5 : int -> int = \value#15 : int -> value#15 in
+let encodeFirst#2 : Main.First -> Data = \value#4 : Main.First -> let match#6 : Main.First = value#4 in
+case@Data match#6 of
+  DataConstr pair#9 -> case@Pair pair#9 of
+    Pair tag#7 fields#8 -> case@Int tag#7 of
+      0 -> constrData (fromInt#5 0) (con (list data) [])
+      _ -> trace message#16 in error
+  _ -> trace message#16 in error in
+let encodeSecond#3 : Main.Second -> Data = \value#10 : Main.Second -> let match#11 : Main.Second = value#10 in
+case@Data match#11 of
+  DataConstr pair#14 -> case@Pair pair#14 of
+    Pair tag#12 fields#13 -> case@Int tag#12 of
+      0 -> constrData (fromInt#5 1) (con (list data) [])
+      _ -> trace message#16 in error
+  _ -> trace message#16 in error in
+let main#1 : bool = equalsData (encodeFirst#2 (constrData 0 (con (list data) []))) (encodeSecond#3 (constrData 0 (con (list data) []))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_16
+    [(lam fromInt_5
+      [(lam encodeFirst_2
+        [(lam encodeSecond_3
+          [(lam main_1 main_1)
+            [[(builtin equalsData)
+              [encodeFirst_2 [[(builtin constrData) (con integer 0)] (con (list data) [])]]]
+              [encodeSecond_3 [[(builtin constrData) (con integer 0)] (con (list data) [])]]]])
+          (lam value_10
+            [(lam match_11
+              [(lam generated_17
+                (force
+                  [[[[[[(force (builtin chooseData)) generated_17]
+                    (delay
+                      [(lam pair_14
+                        (case
+                          pair_14
+                          (lam tag_12
+                            (lam fields_13
+                              [(lam generated_18
+                                (case
+                                  [[(builtin equalsInteger) generated_18] (con integer 0)]
+                                  (force [[(force (builtin trace)) message_16] (delay (error))])
+                                  [[(builtin constrData) [fromInt_5 (con integer 1)]] (con (list data) [])]))
+                                tag_12]))))
+                        [(builtin unConstrData) generated_17]])]
+                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                    (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]))
+                match_11])
+              value_10])])
+        (lam value_4
+          [(lam match_6
+            [(lam generated_19
+              (force
+                [[[[[[(force (builtin chooseData)) generated_19]
+                  (delay
+                    [(lam pair_9
+                      (case
+                        pair_9
+                        (lam tag_7
+                          (lam fields_8
+                            [(lam generated_20
+                              (case
+                                [[(builtin equalsInteger) generated_20] (con integer 0)]
+                                (force [[(force (builtin trace)) message_16] (delay (error))])
+                                [[(builtin constrData) [fromInt_5 (con integer 0)]] (con (list data) [])]))
+                              tag_7]))))
+                      [(builtin unConstrData) generated_19]])]
+                  (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]
+                  (delay (force [[(force (builtin trace)) message_16] (delay (error))]))]))
+              match_6])
+            value_4])])
+      (lam value_15 value_15)])
+    (con string "incomplete pattern match")])
+--- result
+(con bool False)
+--- logs
+[]
+--- budget
+cpu: 3454560, memory: 12959

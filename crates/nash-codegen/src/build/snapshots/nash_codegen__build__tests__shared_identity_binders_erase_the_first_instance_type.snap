@@ -1,0 +1,20 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nident x = x\nmain : (int, bytes)\nmain = (ident 42, ident #\"aa\")\n"
+---
+--- core
+let ident#2 : 'erased -> 'erased = \x#5 : 'erased -> x#5 in
+let fromInt#3 : int -> int = \value#6 : int -> value#6 in
+let fromBytes#4 : bytes -> bytes = \value#7 : bytes -> value#7 in
+let main#1 : (int, bytes) = constr 0 (ident#2 (fromInt#3 42)) (ident#2 (fromBytes#4 (con bytestring #aa))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2
+        [(lam i3 i3)
+          (constr 0 [i0 [i1 (con integer 42)]] [i0 [i2 (con bytestring #aa)]])])
+        (lam i2 i2)])
+      (lam i1 i1)])
+    (lam i0 i0)])

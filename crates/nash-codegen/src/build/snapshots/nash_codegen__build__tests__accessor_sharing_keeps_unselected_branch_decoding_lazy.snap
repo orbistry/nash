@@ -1,0 +1,20 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias Record = { first : Int, second : Int }\nmain : Record -> unit\nmain d = if False then (\\x -> ()) d.first else ()\n"
+---
+--- core
+let main#1 : { _0 : Int, _1 : Int } -> unit = \d#2 : { _0 : Int, _1 : Int } -> case@Bool false of
+  True -> let projection#4 : list Data = unListData d#2 in
+  let projection#5 : Data = headList projection#4 in
+  (\x#3 : Int -> ()) projection#5
+  False -> () in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam i0 i0)
+    (lam i0
+      (case
+        (con bool False)
+        (con unit ())
+        [(lam i1 [(lam i2 [(lam i3 (con unit ())) i2]) [(force (builtin headList)) i1]])
+          [(builtin unListData) i0]]))])

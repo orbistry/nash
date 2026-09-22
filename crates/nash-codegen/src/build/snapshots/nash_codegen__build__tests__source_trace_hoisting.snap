@@ -2,7 +2,18 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nmain = (trace \"hello\" (), trace \"hello\" ())\n"
 ---
+--- core
 let message#4 : string = "hello" in
 let fromString#2 : string -> string = \value#3 : string -> value#3 in
 let main#1 : (unit, unit) = constr 0 (trace (fromString#2 message#4) in ()) (trace (fromString#2 message#4) in ()) in
 main#1
+--- uplc
+(program 1.1.0
+  [(lam i0
+    [(lam i1
+      [(lam i2 i2)
+        (constr 0
+          (force [[(force (builtin trace)) [i1 i0]] (delay (con unit ()))])
+          (force [[(force (builtin trace)) [i1 i0]] (delay (con unit ()))]))])
+      (lam i1 i1)])
+    (con string "hello")])

@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain =\n    let\n        (first, second) = trace \"aggregate\" (\\x -> x, \\x -> x)\n    in\n    (first (), second True)\n"
+---
+--- core
+let message#18 : string = "aggregate" in
+let fromString#15 : string -> string = \value#16 : string -> value#16 in
+let destruct#2 : ('erased -> 'erased, 'erased -> 'erased) = trace (fromString#15 message#18) in constr 0 (\x#13 : 'erased -> x#13) (\x#14 : 'erased -> x#14) in
+let match#5 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
+let evaluated#17 : 'erased = (case@Tag match#5 of
+  0 field#6 field#7 -> let first#3 : 'erased -> 'erased = field#6 in
+  let second#4 : 'erased -> 'erased = field#7 in
+  first#3) () in
+let match#10 : ('erased -> 'erased, 'erased -> 'erased) = destruct#2 in
+let main#1 : (unit, bool) = constr 0 evaluated#17 ((case@Tag match#10 of
+  0 field#11 field#12 -> let first#8 : 'erased -> 'erased = field#11 in
+  let second#9 : 'erased -> 'erased = field#12 in
+  second#9) true) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_18
+    [(lam fromString_15
+      [(lam destruct_2
+        [(lam match_5
+          [(lam evaluated_17
+            [(lam match_10
+              [(lam main_1 main_1)
+                (constr 0
+                  evaluated_17
+                  [(case
+                    match_10
+                    (lam field_11
+                      (lam field_12 [(lam first_8 [(lam second_9 second_9) field_12]) field_11])))
+                    (con bool True)])])
+              destruct_2])
+            [(case
+              match_5
+              (lam field_6
+                (lam field_7 [(lam first_3 [(lam second_4 first_3) field_7]) field_6])))
+              (con unit ())]])
+          destruct_2])
+        (force
+          [[(force (builtin trace)) [fromString_15 message_18]]
+            (delay (constr 0 (lam x_13 x_13) (lam x_14 x_14)))])])
+      (lam value_16 value_16)])
+    (con string "aggregate")])
+--- result
+(constr 0 (con unit ()) (con bool True))
+--- logs
+["aggregate"]
+--- budget
+cpu: 1051598, memory: 6332

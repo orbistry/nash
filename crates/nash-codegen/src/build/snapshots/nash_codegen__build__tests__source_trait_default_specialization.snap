@@ -2,6 +2,7 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmain = neq () ()\n"
 ---
+--- core
 let eq#5 : unit -> unit -> bool = \arg#6 : unit arg#7 : unit -> let match#9 : unit = arg#6 in
 let match#8 : unit = arg#7 in
 true in
@@ -10,3 +11,9 @@ let neq#2 : 'erased -> 'erased -> bool = \a#3 : 'erased b#4 : 'erased -> case@Bo
   False -> true in
 let main#1 : bool = neq#2 () () in
 main#1
+--- uplc
+(program 1.1.0
+  [(lam i0
+    [(lam i1 [(lam i2 i2) [[i1 (con unit ())] (con unit ())]])
+      (lam i1 (lam i2 (case [[i0 i1] i2] (con bool True) (con bool False))))])
+    (lam i0 (lam i1 [(lam i2 [(lam i3 (con bool True)) i1]) i0]))])

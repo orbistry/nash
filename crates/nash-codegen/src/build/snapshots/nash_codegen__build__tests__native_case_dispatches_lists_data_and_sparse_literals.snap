@@ -2,6 +2,32 @@
 source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfirst : list int -> int\nfirst xs =\n    case xs of\n        [] -> Builtin.subtractInteger 0 1\n        x :: _ -> x\ndecode : Data -> int\ndecode data =\n    case data of\n        I n -> n\n        _ -> Builtin.subtractInteger 0 2\nselect : int -> int\nselect n =\n    case n of\n        7 -> 10\n        100 -> 20\n        _ -> 30\nmain = (first [], first [42], decode (I 9), decode (B #\"\"), select 7, select 100, select (Builtin.subtractInteger 0 7))\n"
 ---
+--- core
+let fromInt#3 : int -> int = \value#14 : int -> value#14 in
+let first#2 : list int -> int = \xs#9 : list int -> let match#11 : list int = xs#9 in
+case@List match#11 of
+  Nil -> subtractInteger (fromInt#3 0) (fromInt#3 1)
+  Cons field#12 field#13 -> let x#10 : int = field#12 in
+  x#10 in
+let decode#4 : Data -> int = \data#15 : Data -> let match#17 : Data = data#15 in
+let leaf#23 : 'erased = delay (subtractInteger (fromInt#3 0) (fromInt#3 2)) in
+case@Data match#17 of
+  DataConstr field#24 -> force leaf#23
+  DataMap field#25 -> force leaf#23
+  DataList field#26 -> force leaf#23
+  DataI field#27 -> let n#16 : int = field#27 in
+  n#16
+  DataB field#28 -> force leaf#23 in
+let fromBytes#7 : bytes -> bytes = \value#29 : bytes -> value#29 in
+let eq#31 : int -> int -> bool = equalsInteger in
+let select#8 : int -> int = \n#30 : int -> let match#34 : int = n#30 in
+case@Bool (\literal#32 : int -> eq#31 literal#32 (fromInt#3 7)) match#34 of
+  True -> fromInt#3 10
+  False -> case@Bool (\literal#33 : int -> eq#31 literal#33 (fromInt#3 100)) match#34 of
+    True -> fromInt#3 20
+    False -> fromInt#3 30 in
+let main#1 : (int, int, int, int, int, int, int) = constr 0 (first#2 (con (list integer) [])) (first#2 (mkCons (fromInt#3 42) (con (list integer) []))) (decode#4 ((\field#5 : int -> iData field#5) (fromInt#3 9))) (decode#4 ((\field#6 : bytes -> bData field#6) (fromBytes#7 (con bytestring #)))) (select#8 (fromInt#3 7)) (select#8 (fromInt#3 100)) (select#8 (subtractInteger (fromInt#3 0) (fromInt#3 7))) in
+main#1
 --- uplc
 (program 1.1.0
   [(lam fromInt_3

@@ -1,0 +1,19 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias identity 'b = 'b\ntrait Keep 'a where\n    keep : 'a -> identity 'b -> identity 'b\nimpl Keep unit where\n    keep _ x = x\nmain = keep () ()\n"
+---
+--- core
+let keep#2 : unit -> 'erased -> 'erased = \arg#3 : unit x#4 : 'erased -> let match#5 : unit = arg#3 in
+x#4 in
+let main#1 : unit = keep#2 () () in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam keep_2 [(lam main_1 main_1) [[keep_2 (con unit ())] (con unit ())]])
+    (lam arg_3 (lam x_4 [(lam match_5 x_4) arg_3]))])
+--- result
+(con unit ())
+--- logs
+[]
+--- budget
+cpu: 256100, memory: 1700

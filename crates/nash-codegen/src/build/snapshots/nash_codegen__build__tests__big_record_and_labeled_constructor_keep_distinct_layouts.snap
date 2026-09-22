@@ -1,0 +1,64 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype alias Record = { owner : Bytes, count : Int }\ntype Datum = Datum { owner : Bytes, count : Int }\nrecord : Record\nrecord = { owner = #\"aa\", count = 1 }\ndatum : Datum\ndatum = Datum { owner = #\"bb\", count = 2 }\nmain = neq record.count datum.count\n"
+---
+--- core
+let neq#2 : 'erased -> 'erased -> bool = \a#7 : 'erased b#8 : 'erased -> case@Bool equalsData a#7 b#8 of
+  True -> false
+  False -> true in
+let fromBytes#9 : bytes -> Bytes = bData in
+let fromInt#10 : int -> Int = iData in
+let record#3 : { _0 : Bytes, _1 : Int } = listData (mkCons (fromBytes#9 (con bytestring #aa)) (mkCons (fromInt#10 1) (con (list data) []))) in
+let datum#4 : Main.Datum = (\field#11 : Bytes field#12 : Int -> constrData 0 (mkCons field#11 (mkCons field#12 (con (list data) [])))) (fromBytes#9 (con bytestring #bb)) (fromInt#10 2) in
+let projection#13 : list Data = unListData record#3 in
+let projection#14 : list Data = tailList projection#13 in
+let projection#15 : Data = headList projection#14 in
+let projection#16 : pair int (list Data) = unConstrData datum#4 in
+let evaluated#17 : 'erased = case@Pair projection#16 of
+  Pair tag#5 fields#6 -> fields#6 in
+let projection#18 : 'erased = tailList evaluated#17 in
+let projection#19 : 'erased = headList projection#18 in
+let main#1 : bool = neq#2 projection#15 projection#19 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam neq_2
+    [(lam fromBytes_9
+      [(lam fromInt_10
+        [(lam record_3
+          [(lam datum_4
+            [(lam projection_13
+              [(lam projection_14
+                [(lam projection_15
+                  [(lam projection_16
+                    [(lam evaluated_17
+                      [(lam projection_18
+                        [(lam projection_19 [(lam main_1 main_1) [[neq_2 projection_15] projection_19]])
+                          [(force (builtin headList)) projection_18]])
+                        [(force (builtin tailList)) evaluated_17]])
+                      (case projection_16 (lam tag_5 (lam fields_6 fields_6)))])
+                    [(builtin unConstrData) datum_4]])
+                  [(force (builtin headList)) projection_14]])
+                [(force (builtin tailList)) projection_13]])
+              [(builtin unListData) record_3]])
+            [[(lam field_11
+              (lam field_12
+                [[(builtin constrData) (con integer 0)]
+                  [[(force (builtin mkCons)) field_11]
+                    [[(force (builtin mkCons)) field_12] (con (list data) [])]]]))
+              [fromBytes_9 (con bytestring #bb)]]
+              [fromInt_10 (con integer 2)]]])
+          [(builtin listData)
+            [[(force (builtin mkCons)) [fromBytes_9 (con bytestring #aa)]]
+              [[(force (builtin mkCons)) [fromInt_10 (con integer 1)]] (con (list data) [])]]]])
+        (builtin iData)])
+      (builtin bData)])
+    (lam a_7
+      (lam b_8
+        (case [[(builtin equalsData) a_7] b_8] (con bool True) (con bool False))))])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 3605205, memory: 11813

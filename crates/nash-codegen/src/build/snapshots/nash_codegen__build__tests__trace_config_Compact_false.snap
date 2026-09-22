@@ -1,0 +1,31 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : unit\nmain = trace \"hello\" (assert False)\n"
+---
+--- core
+let message#2 : string = "Main:5:8" in
+let message#3 : string = "Main:5:23" in
+let main#1 : unit = trace message#2 in case@Bool false of
+  True -> ()
+  False -> trace message#3 in error in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_2
+    [(lam message_3
+      [(lam main_1 main_1)
+        (force
+          [[(force (builtin trace)) message_2]
+            (delay
+              (case
+                (con bool False)
+                (force [[(force (builtin trace)) message_3] (delay (error))])
+                (con unit ())))])])
+      (con string "Main:5:23")])
+    (con string "Main:5:8")])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["Main:5:8", "Main:5:23"]
+--- budget
+cpu: 119096, memory: 164

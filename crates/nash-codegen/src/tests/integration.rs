@@ -11,14 +11,16 @@ use nash_test::{
 };
 
 fn compile(
+    snapshot_name: &str,
     source: &str,
     version: PlutusVersion,
     trace: TraceLevel,
 ) -> Result<Vec<TestProgram>, String> {
-    compile_selected(source, version, trace, None)
+    compile_selected(snapshot_name, source, version, trace, None)
 }
 
 fn compile_selected(
+    snapshot_name: &str,
     source: &str,
     version: PlutusVersion,
     trace: TraceLevel,
@@ -99,7 +101,7 @@ fn compile_selected(
         types: solved,
         tables: &module.tables,
     }));
-    compile_tests_matching(
+    let programs = compile_tests_matching(
         &arena,
         &build,
         modules.last().unwrap().0.module.name,
@@ -112,7 +114,29 @@ fn compile_selected(
         },
         |test| name.is_none_or(|name| name == test.name.value),
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    let render = |bytes: &[u8]| {
+        let program: &nash_plutus::program::Program<'_, nash_plutus::binder::DeBruijn> =
+            flat::decode(&arena, bytes).unwrap();
+        nash_plutus::pretty::program(program)
+    };
+    let mut output = String::new();
+    for program in &programs {
+        output.push_str(&format!("--- {}\n", program.name));
+        match &program.programs {
+            Programs::Unit { run } => output.push_str(&render(run)),
+            Programs::Prop { draw, run } => output.push_str(&format!(
+                "--- draw\n{}\n--- run\n{}",
+                render(draw),
+                render(run)
+            )),
+        }
+        output.push('\n');
+    }
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(format!("{snapshot_name}_{version:?}_{trace:?}"), output);
+    });
+    Ok(programs)
 }
 
 fn unit(program: &TestProgram) -> (bool, Vec<String>) {
@@ -143,7 +167,13 @@ fn unit_roots_and_power_assert_payloads() {
                 assert (Builtin.equalsInteger privateValue 2)
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Silent).unwrap();
+    let programs = compile(
+        "unit_roots_and_power_assert_payloads_1",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Silent,
+    )
+    .unwrap();
     assert_eq!(unit(&programs[0]), (true, vec![]));
     assert_eq!(unit(&programs[1]), (false, vec!["\0assert\x000".into()]));
     let (passed, logs) = unit(&programs[2]);
@@ -185,7 +215,13 @@ fn captures_preserve_partial_application_order_and_lazy_branches() {
                 ordinary
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Verbose).unwrap();
+    let programs = compile(
+        "captures_preserve_partial_application_order_and_lazy_branches_1",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Verbose,
+    )
+    .unwrap();
     let (passed, logs) = unit(&programs[0]);
     assert!(!passed);
     assert_eq!(&logs[..3], ["left", "partial", "right"]);
@@ -227,7 +263,13 @@ fn custom_show_runs_only_on_failure_and_test_local_native_layouts_specialize() {
                 ordinary
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Verbose).unwrap();
+    let programs = compile(
+        "custom_show_runs_only_on_failure_and_test_local_native_layouts_specialize_1",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Verbose,
+    )
+    .unwrap();
     assert_eq!(unit(&programs[0]), (true, vec!["value".into()]));
     assert_eq!(
         unit(&programs[1]),
@@ -269,7 +311,13 @@ fn assertion_json_preserves_nested_call_delimiters_and_string_parentheses() {
                 assert ((\x -> x) False)
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Silent).unwrap();
+    let programs = compile(
+        "assertion_json_preserves_nested_call_delimiters_and_string_parentheses_1",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Silent,
+    )
+    .unwrap();
     let outcomes = nash_test::run_all(programs, &nash_test::Config::default());
     let report: serde_json::Value =
         serde_json::from_str(&nash_test::report::json::render(0, 100, &outcomes)).unwrap();
@@ -308,7 +356,13 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
                     assert (if z then Builtin.equalsInteger y (Builtin.addInteger x 1) else False)
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Verbose).unwrap();
+    let programs = compile(
+        "properties_thread_prng_bind_patterns_and_draw_without_running_body_1",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Verbose,
+    )
+    .unwrap();
     assert_eq!(programs[0].binder_texts, ["x", "(y, z)"]);
     let Programs::Prop { draw, run } = &programs[0].programs else {
         panic!("property program");
@@ -349,7 +403,13 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
                     assert (Builtin.equalsInteger x x)
     "#
     );
-    let programs = compile(source, PlutusVersion::V3, TraceLevel::Silent).unwrap();
+    let programs = compile(
+        "rejected_generator_skips_body_and_selected_target_is_enforced_3",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Silent,
+    )
+    .unwrap();
     let Programs::Prop { draw, run } = &programs[1].programs else {
         panic!("property program");
     };
@@ -371,12 +431,24 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
     ));
     assert!(result.logs.is_empty());
     for version in [PlutusVersion::V1, PlutusVersion::V2] {
-        let all = compile(source, version, TraceLevel::Silent).unwrap();
+        let all = compile(
+            "rejected_generator_skips_body_and_selected_target_is_enforced_2",
+            source,
+            version,
+            TraceLevel::Silent,
+        )
+        .unwrap();
         assert_eq!(all.len(), 2);
         assert_eq!(all[0].plutus_version, version);
         assert_eq!(all[1].plutus_version, version);
-        let selected =
-            compile_selected(source, version, TraceLevel::Silent, Some("plain")).unwrap();
+        let selected = compile_selected(
+            "rejected_generator_skips_body_and_selected_target_is_enforced_1",
+            source,
+            version,
+            TraceLevel::Silent,
+            Some("plain"),
+        )
+        .unwrap();
         assert_eq!(selected.len(), 1);
         assert_eq!(unit(&selected[0]), (true, vec![]));
     }

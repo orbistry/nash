@@ -1,0 +1,12 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Prop exposing (reject)\ntests\n    test \"plain\" = do\n        assert True\n    prop \"invalid\" =\n        let x via reject in\n        do\n            assert (Builtin.equalsInteger x x)\n"
+---
+--- plain
+(program 1.1.0
+  [(lam i0
+    (case
+      (con bool True)
+      (force [[(force (builtin trace)) i0] (delay (error))])
+      (con unit ())))
+    (con string "\0assert\0\48")])

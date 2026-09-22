@@ -1,0 +1,27 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias box 'a = { value : 'a }\ntrait Pass 'f where\n    pass : 'f 'a -> 'f 'a\n    pass x = x\n    other : 'f 'a -> 'f 'a\nimpl Pass box where\n    other x = x\nboxed : box unit\nboxed = { value = () }\nmain = (pass boxed).value\n"
+---
+--- core
+let pass#2 : 'erased -> 'erased = \x#4 : 'erased -> x#4 in
+let boxed#3 : { _0 : unit } = constr 0 () in
+let evaluated#5 : 'erased = pass#2 boxed#3 in
+let projection#6 : 'erased = field@0/1 evaluated#5 in
+let main#1 : unit = projection#6 in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam pass_2
+    [(lam boxed_3
+      [(lam evaluated_5
+        [(lam projection_6 [(lam main_1 main_1) projection_6])
+          (case evaluated_5 (lam generated_7 generated_7))])
+        [pass_2 boxed_3]])
+      (constr 0 (con unit ()))])
+    (lam x_4 x_4)])
+--- result
+(con unit ())
+--- logs
+[]
+--- budget
+cpu: 368100, memory: 2400
