@@ -1,0 +1,59 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int, c : Int, d : Int }\nselect : Record -> int\nselect r =\n    let\n        updated = { r | a = 10 }\n    in\n    Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData updated.a)\nmain = select { a = 1, b = 2, c = 3, d = 4 }\n"
+---
+--- core
+let fromInt#3 : int -> Int = iData in
+let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> int = \r#4 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> let base#6 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = r#4 in
+let evaluated#9 : 'erased = fromInt#3 10 in
+let projection#7 : list Data = unListData base#6 in
+let projection#8 : list Data = tailList projection#7 in
+let updated#5 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } = listData (mkCons evaluated#9 projection#8) in
+let projection#10 : list Data = tailList projection#8 in
+let projection#11 : Data = headList projection#10 in
+let evaluated#14 : 'erased = unIData projection#11 in
+let projection#12 : list Data = unListData updated#5 in
+let projection#13 : Data = headList projection#12 in
+addInteger evaluated#14 (unIData projection#13) in
+let main#1 : int = select#2 (listData (mkCons (fromInt#3 1) (mkCons (fromInt#3 2) (mkCons (fromInt#3 3) (mkCons (fromInt#3 4) (con (list data) [])))))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam select_2
+      [(lam main_1 main_1)
+        [select_2
+          [(builtin listData)
+            [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]]
+              [[(force (builtin mkCons)) [fromInt_3 (con integer 2)]]
+                [[(force (builtin mkCons)) [fromInt_3 (con integer 3)]]
+                  [[(force (builtin mkCons)) [fromInt_3 (con integer 4)]] (con (list data) [])]]]]]]])
+      (lam r_4
+        [(lam base_6
+          [(lam evaluated_9
+            [(lam projection_7
+              [(lam projection_8
+                [(lam updated_5
+                  [(lam projection_10
+                    [(lam projection_11
+                      [(lam evaluated_14
+                        [(lam projection_12
+                          [(lam projection_13
+                            [[(builtin addInteger) evaluated_14] [(builtin unIData) projection_13]])
+                            [(force (builtin headList)) projection_12]])
+                          [(builtin unListData) updated_5]])
+                        [(builtin unIData) projection_11]])
+                      [(force (builtin headList)) projection_10]])
+                    [(force (builtin tailList)) projection_8]])
+                  [(builtin listData) [[(force (builtin mkCons)) evaluated_9] projection_8]]])
+                [(force (builtin tailList)) projection_7]])
+              [(builtin unListData) base_6]])
+            [fromInt_3 (con integer 10)]])
+          r_4])])
+    (builtin iData)])
+--- result
+(con integer 13)
+--- logs
+[]
+--- budget
+cpu: 2726297, memory: 11342

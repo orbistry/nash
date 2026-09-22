@@ -49,6 +49,7 @@ struct Scope<'a> {
     projections: HashMap<(Projection, u32), Binder<'a>>,
     tail_positions: HashMap<u32, (u32, usize)>,
     tails: BTreeMap<(u32, usize), Binder<'a>>,
+    record_lengths: HashMap<u32, usize>,
     nonempty: HashSet<(u32, usize)>,
     /// Paths that lowering extracts as implicit case binders. Match the whole
     /// path before walking its children, so `sndPair (unConstrData value)` does
@@ -236,12 +237,24 @@ impl<'a> Share<'a, '_> {
         let Core::Var(name) = parts.value else {
             unreachable!()
         };
+        let record_length = match (projection, scope.ty(parts.value)) {
+            (Projection::Builtin(F::UnListData), Ty::Big(BigTy::Record(fields))) => {
+                Some(fields.len())
+            }
+            _ => None,
+        };
         let key = (projection, scope.canonical(name.unique));
         if let Some(binder) = scope
             .projections
             .get(&key)
             .or_else(|| scope.case_paths.get(&(vec![projection], key.1)))
+            .copied()
         {
+            if let Some(length) = record_length {
+                scope
+                    .record_lengths
+                    .insert(scope.list_position(binder.name.unique).0, length);
+            }
             parts.value = self.build.var(binder.name);
             return parts;
         }
@@ -268,8 +281,14 @@ impl<'a> Share<'a, '_> {
             if remaining == 0 {
                 return parts;
             }
-            // dropList tolerates short lists; tailList requires a nonempty input.
-            emitted_projection = if remaining == 1 && scope.nonempty.contains(&start) {
+            // A typed record supplies its field count without reading any fields.
+            // Arbitrary lists still need a successful head read or Cons match.
+            let nonempty = scope
+                .record_lengths
+                .get(&start.0)
+                .is_some_and(|length| start.1 < *length)
+                || scope.nonempty.contains(&start);
+            emitted_projection = if remaining == 1 && nonempty {
                 Projection::Builtin(F::TailList)
             } else {
                 Projection::DropList(remaining as u16)
@@ -309,6 +328,9 @@ impl<'a> Share<'a, '_> {
         };
         scope.bind(binder, None);
         scope.projections.insert(key, binder);
+        if let Some(length) = record_length {
+            scope.record_lengths.insert(binder.name.unique, length);
+        }
         if let Some(position) = tail_position {
             scope.remember_tail(binder, position);
         }

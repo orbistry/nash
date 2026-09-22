@@ -635,11 +635,16 @@ advance with `tailList`, while gaps of two or more use `dropList` for only
 the remaining distance. Repeated offsets reuse the existing tail and head.
 Constructor pattern bindings participate in the same cache.
 
-A successful head read or Cons branch proves that its list is nonempty.
-Only with that proof can a remaining `dropList 1` become `tailList`:
-explicit `dropList` calls must still saturate to an empty list. Existing
-`tailList` calls retain their empty-list failure behavior. Scope boundaries
-and source evaluation order are preserved.
+For a typed Big record, `unListData` retains the declared field count in
+the accessor cache. Every offset below that count is known nonempty from
+the record layout, even before any field is read. Adjacent accesses and
+update suffixes therefore use `tailList` directly from an available tail.
+Unchecked coercion does not require record access to revalidate this layout.
+
+Arbitrary lists have no declared length. For these, a successful head read
+or Cons branch supplies the nonempty proof needed to replace a remaining
+`dropList 1` with `tailList`; otherwise `dropList` retains its saturating
+behavior. Scope boundaries and source evaluation order are preserved.
 
 Big record updates evaluate the base once, rebuild the prefix through the
 last changed field, and attach the original suffix. Unchanged suffix fields

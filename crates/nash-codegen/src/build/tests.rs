@@ -1742,3 +1742,46 @@ source_codegen_snapshot!(
     "#,
     "error: Runtime(ExpectedList(Unit))"
 );
+
+source_codegen_snapshot!(
+    record_layout_proves_adjacent_update_tails_without_field_reads,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    update : Record -> int
+    update r =
+        let
+            first = { r | a = 10 }
+        in
+        let
+            second = { r | a = 10, b = 20 }
+        in
+        let
+            third = { r | a = 10, b = 20, c = 30 }
+        in
+        Builtin.addInteger (Builtin.unIData first.a)
+            (Builtin.addInteger (Builtin.unIData second.b) (Builtin.unIData third.c))
+    main = update { a = 1, b = 2, c = 3, d = 4 }
+    "#,
+    "(con integer 60)"
+);
+
+source_codegen_snapshot!(
+    record_layout_proves_access_after_cached_update_tail,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    select : Record -> int
+    select r =
+        let
+            updated = { r | a = 10 }
+        in
+        Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData updated.a)
+    main = select { a = 1, b = 2, c = 3, d = 4 }
+    "#,
+    "(con integer 13)"
+);
