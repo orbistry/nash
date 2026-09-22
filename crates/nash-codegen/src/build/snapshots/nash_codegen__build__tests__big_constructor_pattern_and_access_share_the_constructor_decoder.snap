@@ -3,7 +3,7 @@ source: crates/nash-codegen/src/build/tests.rs
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Datum = Datum { owner : Bytes, deadline : Int }\nmain : Datum -> (Bytes, Int)\nmain d = case d of Datum { owner } -> (owner, d.deadline)\n"
 ---
 --- core
-let message#20 : string = "incomplete pattern match" in
+let message#17 : string = "incomplete pattern match" in
 let main#1 : Main.Datum -> (Bytes, Int) = \d#2 : Main.Datum -> let match#6 : Main.Datum = d#2 in
 case@Data match#6 of
   DataConstr pair#13 -> case@Pair pair#13 of
@@ -16,13 +16,9 @@ case@Data match#6 of
       let projection#16 : Data = headList fieldList#12 in
       let field#8 : Int = projection#16 in
       let owner#3 : Bytes = field#7 in
-      let evaluated#17 : 'erased = case@Pair pair#13 of
-        Pair tag#4 fields#5 -> fields#5 in
-      let projection#18 : 'erased = tailList evaluated#17 in
-      let projection#19 : 'erased = headList projection#18 in
-      constr 0 owner#3 projection#19
-      _ -> trace message#20 in error
-  _ -> trace message#20 in error in
+      constr 0 owner#3 projection#16
+      _ -> trace message#17 in error
+  _ -> trace message#17 in error in
 main#1
 --- uplc
 (program 1.1.0
@@ -48,15 +44,7 @@ main#1
                                   [(lam i10
                                     [(lam i11
                                       [(lam i12
-                                        [(lam i13
-                                          [(lam i14
-                                            [(lam i15
-                                              [(lam i16
-                                                [(lam i17 [(lam i18 (constr 0 i15 i18)) [(force (builtin headList)) i17]])
-                                                  [(force (builtin tailList)) i16]])
-                                                (case i4 (lam i16 (lam i17 i17)))])
-                                              i10])
-                                            i13])
+                                        [(lam i13 [(lam i14 [(lam i15 (constr 0 i15 i13)) i10]) i13])
                                           [(force (builtin headList)) i12]])
                                         i11])
                                       [(force (builtin tailList)) i8]])

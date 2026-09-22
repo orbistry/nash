@@ -3,7 +3,7 @@
 //! Prefix bindings follow source evaluation order. A trace, branch, lambda or
 //! delay retains its own body scope, so a possibly failing decoder never moves
 //! from an unselected or delayed path into the enclosing execution path.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use nash_ir::{
     build::Builder,
@@ -47,6 +47,9 @@ struct Scope<'a> {
     aliases: HashMap<u32, u32>,
     types: HashMap<u32, Ty<'a>>,
     projections: HashMap<(Projection, u32), Binder<'a>>,
+    tail_positions: HashMap<u32, (u32, usize)>,
+    tails: BTreeMap<(u32, usize), Binder<'a>>,
+    nonempty: HashSet<(u32, usize)>,
     /// Paths that lowering extracts as implicit case binders. Match the whole
     /// path before walking its children, so `sndPair (unConstrData value)` does
     /// not repeat the decoder when the fields binder is already in scope.
@@ -62,6 +65,14 @@ impl<'a> Scope<'a> {
             self.aliases
                 .insert(binder.name.unique, self.canonical(name.unique));
         }
+    }
+    fn list_position(&self, name: u32) -> (u32, usize) {
+        let name = self.canonical(name);
+        self.tail_positions.get(&name).copied().unwrap_or((name, 0))
+    }
+    fn remember_tail(&mut self, binder: Binder<'a>, position: (u32, usize)) {
+        self.tail_positions.insert(binder.name.unique, position);
+        self.tails.insert(position, binder);
     }
     fn ty(&self, core: &Core<'a>) -> Ty<'a> {
         match core {
@@ -113,6 +124,13 @@ impl<'a> Scope<'a> {
         let Some((base, name)) = self.path(value) else {
             return;
         };
+        if let (CaseKind::List, Test::Cons, Core::Var(value)) = (kind, branch.test, value) {
+            let (root, offset) = self.list_position(value.unique);
+            self.nonempty.insert((root, offset));
+            if let Some(tail) = branch.binders.get(1) {
+                self.remember_tail(*tail, (root, offset + 1));
+            }
+        }
         let paths = match (kind, branch.test) {
             (CaseKind::Data, Test::DataConstr) => vec![vec![Projection::Builtin(F::UnConstrData)]],
             (CaseKind::Pair, Test::Pair) => vec![
@@ -227,6 +245,36 @@ impl<'a> Share<'a, '_> {
             parts.value = self.build.var(binder.name);
             return parts;
         }
+        let position = scope.list_position(name.unique);
+        let tail_position = match projection {
+            Projection::Builtin(F::TailList) => Some((position.0, position.1 + 1)),
+            Projection::DropList(count) => Some((position.0, position.1 + usize::from(count))),
+            _ => None,
+        };
+        if projection == Projection::Builtin(F::HeadList) {
+            scope.nonempty.insert(position);
+        }
+        let mut emitted_projection = projection;
+        if let Projection::DropList(count) = projection
+            && count != 0
+        {
+            let target = (position.0, position.1 + usize::from(count));
+            let mut start = position;
+            if let Some((&nearest, binder)) = scope.tails.range(position..=target).next_back() {
+                start = nearest;
+                parts.value = self.build.var(binder.name);
+            }
+            let remaining = target.1 - start.1;
+            if remaining == 0 {
+                return parts;
+            }
+            // dropList tolerates short lists; tailList requires a nonempty input.
+            emitted_projection = if remaining == 1 && scope.nonempty.contains(&start) {
+                Projection::Builtin(F::TailList)
+            } else {
+                Projection::DropList(remaining as u16)
+            };
+        }
         let input = scope.ty(parts.value);
         let ty = match (projection, input) {
             (Projection::Builtin(F::UnListData), _) => DATA_LIST,
@@ -247,7 +295,7 @@ impl<'a> Share<'a, '_> {
                 .unwrap_or(Ty::Erased),
             _ => Ty::Erased,
         };
-        let value = match projection {
+        let value = match emitted_projection {
             Projection::Builtin(func) => self.build.builtin(func, &[parts.value]),
             Projection::DropList(count) => self.build.builtin(
                 F::DropList,
@@ -261,6 +309,9 @@ impl<'a> Share<'a, '_> {
         };
         scope.bind(binder, None);
         scope.projections.insert(key, binder);
+        if let Some(position) = tail_position {
+            scope.remember_tail(binder, position);
+        }
         parts.bindings.push((binder, value));
         parts.value = self.build.var(binder.name);
         parts
@@ -387,7 +438,22 @@ impl<'a> Share<'a, '_> {
                 branches,
                 default,
             } => {
-                let scrutinee = self.term(scrutinee, scope);
+                let mut scrutinee = self.term(scrutinee, scope);
+                if let (CaseKind::Pair, [branch], None) = (kind, *branches, default)
+                    && let Core::Var(selected) = branch.body
+                    && let Some(index) = branch.binders.iter().position(|b| b.name == *selected)
+                    && let Some((mut path, root)) = scope.path(scrutinee.value)
+                {
+                    path.push(Projection::Builtin(if index == 0 {
+                        F::FstPair
+                    } else {
+                        F::SndPair
+                    }));
+                    if let Some(binder) = scope.case_paths.get(&(path, root)) {
+                        scrutinee.value = self.build.var(binder.name);
+                        return scrutinee;
+                    }
+                }
                 let branches = branches
                     .iter()
                     .map(|branch| {

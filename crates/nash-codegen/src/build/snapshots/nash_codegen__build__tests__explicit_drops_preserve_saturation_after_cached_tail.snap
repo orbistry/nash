@@ -1,0 +1,36 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nselect : list int -> bool\nselect xs =\n    let\n        first = Builtin.dropList 2 xs\n        second = Builtin.dropList 3 xs\n    in\n    if Builtin.nullList first then Builtin.nullList second else False\nmain = select [1]\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#7 : int -> value#7 in
+let select#2 : list int -> bool = \xs#4 : list int -> let second#5 : list int = dropList (fromInt#3 3) xs#4 in
+let first#6 : list int = dropList (fromInt#3 2) xs#4 in
+case@Bool nullList first#6 of
+  True -> nullList second#5
+  False -> false in
+let main#1 : bool = select#2 (mkCons (fromInt#3 1) (con (list integer) [])) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam select_2
+      [(lam main_1 main_1)
+        [select_2
+          [[(force (builtin mkCons)) [fromInt_3 (con integer 1)]] (con (list integer) [])]]])
+      (lam xs_4
+        [(lam second_5
+          [(lam first_6
+            (case
+              [(force (builtin nullList)) first_6]
+              (con bool False)
+              [(force (builtin nullList)) second_5]))
+            [[(force (builtin dropList)) [fromInt_3 (con integer 2)]] xs_4]])
+          [[(force (builtin dropList)) [fromInt_3 (con integer 3)]] xs_4]])])
+    (lam value_7 value_7)])
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 1280535, memory: 5304

@@ -27,7 +27,7 @@ let evaluated#32 : 'erased = (\field#6 : Bytes -> constrData 0 (mkCons field#6 (
 let projection#27 : list Data = unListData base#5 in
 let projection#28 : list Data = tailList projection#27 in
 let projection#29 : Data = headList projection#28 in
-let projection#30 : list Data = dropList 2 projection#27 in
+let projection#30 : list Data = tailList projection#28 in
 let projection#31 : Data = headList projection#30 in
 let nextOutput#4 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData (mkCons evaluated#32 (mkCons projection#29 (mkCons projection#31 (mkCons (constrData 0 (con (list data) [])) (con (list data) []))))) in
 let main#1 : bool = equalsData prevOutput#3 nextOutput#4 in
@@ -60,7 +60,7 @@ main#1
                                               [[(builtin constrData) (con integer 0)] (con (list data) [])]]
                                               (con (list data) [])]]]]]])
                                   [(force (builtin headList)) projection_30]])
-                                [[(force (builtin dropList)) (con integer 2)] projection_27]])
+                                [(force (builtin tailList)) projection_28]])
                               [(force (builtin headList)) projection_28]])
                             [(force (builtin tailList)) projection_27]])
                           [(builtin unListData) base_5]])
@@ -133,4 +133,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 7851358, memory: 26662
+cpu: 7780396, memory: 26490

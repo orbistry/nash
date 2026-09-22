@@ -1,0 +1,46 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nempty : list Data\nempty = []\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData empty)\nmain : Record\nmain = { original | a = (trace \"before tail\" 10) }\n"
+---
+--- core
+let message#12 : string = "before tail" in
+let empty#7 : list Data = (con (list data) []) in
+let original#2 : { _0 : Int, _1 : Int } = (\coerce#6 : 'erased -> coerce#6) (listData empty#7) in
+let fromInt#4 : int -> Int = iData in
+let fromString#5 : string -> string = \value#8 : string -> value#8 in
+let base#3 : { _0 : Int, _1 : Int } = original#2 in
+let evaluated#11 : 'erased = trace (fromString#5 message#12) in fromInt#4 10 in
+let projection#9 : list Data = unListData base#3 in
+let projection#10 : list Data = tailList projection#9 in
+let main#1 : { _0 : Int, _1 : Int } = listData (mkCons evaluated#11 projection#10) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_12
+    [(lam empty_7
+      [(lam original_2
+        [(lam fromInt_4
+          [(lam fromString_5
+            [(lam base_3
+              [(lam evaluated_11
+                [(lam projection_9
+                  [(lam projection_10
+                    [(lam main_1 main_1)
+                      [(builtin listData) [[(force (builtin mkCons)) evaluated_11] projection_10]]])
+                    [(force (builtin tailList)) projection_9]])
+                  [(builtin unListData) base_3]])
+                (force
+                  [[(force (builtin trace)) [fromString_5 message_12]]
+                    (delay [fromInt_4 (con integer 10)])])])
+              original_2])
+            (lam value_8 value_8)])
+          (builtin iData)])
+        [(lam coerce_6 coerce_6) [(builtin listData) empty_7]]])
+      (con (list data) [])])
+    (con string "before tail")])
+--- result
+error: Runtime(EmptyList([]))
+--- logs
+["before tail"]
+--- budget
+cpu: 216345, memory: 260

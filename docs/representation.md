@@ -64,6 +64,11 @@ Alias records are `List` rather than `Constr 0` because records are
 aliases, not nominal constructors; use a constructor with labeled fields
 when the `Constr` encoding is required.
 
+Big record updates rebuild the field-list prefix through the final changed
+field and share the unchanged suffix. Earlier updates therefore rebuild fewer
+list cells. Accesses in the same scope reuse previously computed tails;
+adjacent fields advance one tail, while larger gaps use `dropList`.
+
 Constructor and field order are the *declaration* order, which the
 canonical AST already records (`Ctor.index`, `FieldType.index` in
 `crates/nash-ast/src/lib.rs`). Canonical records sort fields by name for

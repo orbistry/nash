@@ -1,0 +1,64 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nchoose : bool -> Record -> int\nchoose flag r =\n    if flag then Builtin.unIData { r | a = (trace \"unused\" 10) }.b\n    else 42\nmain = choose False (Primitive.coerce ())\n"
+---
+--- core
+let message#19 : string = "unused" in
+let fromInt#6 : int -> int = \value#10 : int -> value#10 in
+let fromInt#8 : int -> Int = iData in
+let fromString#9 : string -> string = \value#11 : string -> value#11 in
+let choose#2 : bool -> { _0 : Int, _1 : Int } -> int = \flag#4 : bool r#5 : { _0 : Int, _1 : Int } -> case@Bool flag#4 of
+  True -> let base#7 : { _0 : Int, _1 : Int } = r#5 in
+  let evaluated#14 : 'erased = trace (fromString#9 message#19) in fromInt#8 10 in
+  let projection#12 : list Data = unListData base#7 in
+  let projection#13 : list Data = tailList projection#12 in
+  let evaluated#15 : 'erased = listData (mkCons evaluated#14 projection#13) in
+  let projection#16 : list Data = unListData evaluated#15 in
+  let projection#17 : list Data = tailList projection#16 in
+  let projection#18 : Data = headList projection#17 in
+  unIData projection#18
+  False -> fromInt#6 42 in
+let main#1 : int = choose#2 false ((\coerce#3 : 'erased -> coerce#3) ()) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_19
+    [(lam fromInt_6
+      [(lam fromInt_8
+        [(lam fromString_9
+          [(lam choose_2
+            [(lam main_1 main_1)
+              [[choose_2 (con bool False)] [(lam coerce_3 coerce_3) (con unit ())]]])
+            (lam flag_4
+              (lam r_5
+                (case
+                  flag_4
+                  [fromInt_6 (con integer 42)]
+                  [(lam base_7
+                    [(lam evaluated_14
+                      [(lam projection_12
+                        [(lam projection_13
+                          [(lam evaluated_15
+                            [(lam projection_16
+                              [(lam projection_17
+                                [(lam projection_18 [(builtin unIData) projection_18])
+                                  [(force (builtin headList)) projection_17]])
+                                [(force (builtin tailList)) projection_16]])
+                              [(builtin unListData) evaluated_15]])
+                            [(builtin listData) [[(force (builtin mkCons)) evaluated_14] projection_13]]])
+                          [(force (builtin tailList)) projection_12]])
+                        [(builtin unListData) base_7]])
+                      (force
+                        [[(force (builtin trace)) [fromString_9 message_19]]
+                          (delay [fromInt_8 (con integer 10)])])])
+                    r_5])))])
+          (lam value_11 value_11)])
+        (builtin iData)])
+      (lam value_10 value_10)])
+    (con string "unused")])
+--- result
+(con integer 42)
+--- logs
+[]
+--- budget
+cpu: 528100, memory: 3400

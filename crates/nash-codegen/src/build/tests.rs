@@ -1428,7 +1428,7 @@ fn pair_wildcard_uses_native_case_without_projection_builtins() {
 }
 
 #[test]
-fn big_field_offsets_use_drop_list_from_two() {
+fn consecutive_big_fields_reuse_previous_tails() {
     with_base(
         indoc::indoc!(
             r#"
@@ -1445,9 +1445,8 @@ fn big_field_offsets_use_drop_list_from_two() {
                 .compile(arena, root, None, TraceConfig::default())
                 .unwrap();
             let pretty = nash_ir::pretty::pretty(compiled.core);
-            assert_eq!(pretty.matches("tailList").count(), 1, "{pretty}");
-            assert_eq!(pretty.matches("dropList 2").count(), 1, "{pretty}");
-            assert_eq!(pretty.matches("dropList 3").count(), 1, "{pretty}");
+            assert_eq!(pretty.matches("tailList").count(), 3, "{pretty}");
+            assert!(!pretty.contains("dropList"), "{pretty}");
             let result = crate::harness::eval_core(arena, compiled.core);
             assert_eq!(
                 result.result,
@@ -1472,4 +1471,274 @@ source_codegen_snapshot!(
         if item.enabled then addInteger item.count (lengthOfByteString item.label) else 0
     "#,
     "(con integer 44)"
+);
+
+source_codegen_snapshot!(
+    sparse_big_fields_drop_from_previous_tail,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int, e : Int, f : Int }
+    select : Record -> int
+    select r = Builtin.addInteger (Builtin.unIData r.b)
+        (Builtin.addInteger (Builtin.unIData r.e) (Builtin.unIData r.f))
+    main = select { a = 1, b = 2, c = 3, d = 4, e = 5, f = 6 }
+    "#,
+    "(con integer 13)"
+);
+
+source_codegen_snapshot!(
+    reverse_big_fields_reuse_only_available_tails,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    select : Record -> int
+    select r = Builtin.addInteger (Builtin.unIData r.d)
+        (Builtin.addInteger (Builtin.unIData r.b) (Builtin.unIData r.d))
+    main = select { a = 1, b = 2, c = 3, d = 4 }
+    "#,
+    "(con integer 10)"
+);
+
+source_codegen_snapshot!(
+    constructor_pattern_tail_reused_by_field_access,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type Record = Record { a : Int, b : Int, c : Int, d : Int }
+    select : Record -> int
+    select r =
+        case r of
+            Record { b } -> Builtin.addInteger (Builtin.unIData b) (Builtin.unIData r.c)
+    main = select (Record { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 5)"
+);
+
+source_codegen_snapshot!(
+    explicit_drops_preserve_saturation_after_cached_tail,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    select : list int -> bool
+    select xs =
+        let
+            first = Builtin.dropList 2 xs
+            second = Builtin.dropList 3 xs
+        in
+        if Builtin.nullList first then Builtin.nullList second else False
+    main = select [1]
+    "#,
+    "(con bool True)"
+);
+
+source_codegen_snapshot!(
+    cached_drop_does_not_suppress_tail_failure,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    select : list int -> bool
+    select xs =
+        let
+            dropped = Builtin.dropList 1 xs
+        in
+        if Builtin.nullList dropped then
+            Builtin.nullList (Builtin.tailList xs)
+        else False
+    main = select []
+    "#,
+    "error: Runtime(EmptyList([]))"
+);
+
+source_codegen_snapshot!(
+    big_record_update_first_shares_unchanged_suffix,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    replace : Record -> Record
+    replace r = { r | a = (trace "replace" 10) }
+    total : Record -> int
+    total r = Builtin.addInteger (Builtin.unIData r.a)
+        (Builtin.addInteger (Builtin.unIData r.b)
+            (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))
+    main = total (replace { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 19)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_middle_shares_unchanged_suffix,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    replace : Record -> Record
+    replace r = { r | c = (trace "replace" 30) }
+    total : Record -> int
+    total r = Builtin.addInteger (Builtin.unIData r.a)
+        (Builtin.addInteger (Builtin.unIData r.b)
+            (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))
+    main = total (replace { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 37)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_last_rebuilds_fields,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    replace : Record -> Record
+    replace r = { r | d = (trace "replace" 40) }
+    total : Record -> int
+    total r = Builtin.addInteger (Builtin.unIData r.a)
+        (Builtin.addInteger (Builtin.unIData r.b)
+            (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))
+    main = total (replace { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 46)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_multiple_shares_unchanged_suffix,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    replace : Record -> Record
+    replace r = { r | c = (trace "third" 30), a = (trace "first" 10) }
+    total : Record -> int
+    total r = Builtin.addInteger (Builtin.unIData r.a)
+        (Builtin.addInteger (Builtin.unIData r.b)
+            (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))
+    main = total (replace { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 46)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_all_rebuilds_fields,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int, c : Int, d : Int }
+    replace : Record -> Record
+    replace r = { r | a = 10, b = 20, c = 30, d = 40 }
+    total : Record -> int
+    total r = Builtin.addInteger (Builtin.unIData r.a)
+        (Builtin.addInteger (Builtin.unIData r.b)
+            (Builtin.addInteger (Builtin.unIData r.c) (Builtin.unIData r.d)))
+    main = total (replace { a = 1, b = 2, c = 3, d = 4 })
+    "#,
+    "(con integer 100)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_all_does_not_decode_base,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int }
+    replace : Record -> Record
+    replace r = { r | a = (trace "first" 10), b = (trace "second" 20) }
+    main = Builtin.unIData (replace (Primitive.coerce ())).b
+    "#,
+    "(con integer 20)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_preserves_opaque_suffix,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int }
+    replace : Record -> Record
+    replace r = { r | a = (trace "first" 10) }
+    original : Record
+    original = Primitive.coerce (Builtin.listData [Builtin.iData 1, Builtin.iData 2, Builtin.iData 3])
+    main = Builtin.equalsData (Primitive.coerce (replace original))
+        (Primitive.coerce (Builtin.listData [Builtin.iData 10, Builtin.iData 2, Builtin.iData 3]))
+    "#,
+    "(con bool True)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_in_unselected_branch_stays_lazy,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int }
+    choose : bool -> Record -> int
+    choose flag r =
+        if flag then Builtin.unIData { r | a = (trace "unused" 10) }.b
+        else 42
+    main = choose False (Primitive.coerce ())
+    "#,
+    "(con integer 42)"
+);
+
+source_codegen_snapshot!(
+    big_record_update_traces_before_missing_tail_failure,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int }
+    empty : list Data
+    empty = []
+    original : Record
+    original = Primitive.coerce (Builtin.listData empty)
+    main : Record
+    main = { original | a = (trace "before tail" 10) }
+    "#,
+    "error: Runtime(EmptyList([]))"
+);
+
+source_codegen_snapshot!(
+    big_record_update_does_not_validate_unchanged_suffix,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias Record = { a : Int, b : Int }
+    original : Record
+    original = Primitive.coerce (Builtin.listData [Builtin.iData 1])
+    main = Builtin.equalsData
+        (Primitive.coerce { original | a = 10 })
+        (Primitive.coerce (Builtin.listData [Builtin.iData 10]))
+    "#,
+    "(con bool True)"
+);
+
+source_codegen_snapshot!(
+    zero_drop_still_checks_its_list_argument,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    wrong : list int
+    wrong = Primitive.coerce ()
+    main =
+        let
+            xs = Builtin.dropList 0 wrong
+        in
+        ()
+    "#,
+    "error: Runtime(ExpectedList(Unit))"
 );

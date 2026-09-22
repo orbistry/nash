@@ -7,9 +7,9 @@ let select#2 : { _0 : Int, _1 : Int, _2 : Int, _3 : Int } -> (Int, Int, Int, Int
 let projection#6 : Data = headList projection#5 in
 let projection#7 : list Data = tailList projection#5 in
 let projection#8 : Data = headList projection#7 in
-let projection#9 : list Data = dropList 2 projection#5 in
+let projection#9 : list Data = tailList projection#7 in
 let projection#10 : Data = headList projection#9 in
-let projection#11 : list Data = dropList 3 projection#5 in
+let projection#11 : list Data = tailList projection#9 in
 let projection#12 : Data = headList projection#11 in
 constr 0 projection#6 projection#8 projection#10 projection#12 projection#10 in
 let fromInt#3 : int -> Int = iData in
@@ -38,9 +38,9 @@ main#1
                     [(lam projection_12
                       (constr 0 projection_6 projection_8 projection_10 projection_12 projection_10))
                       [(force (builtin headList)) projection_11]])
-                    [[(force (builtin dropList)) (con integer 3)] projection_5]])
+                    [(force (builtin tailList)) projection_9]])
                   [(force (builtin headList)) projection_9]])
-                [[(force (builtin dropList)) (con integer 2)] projection_5]])
+                [(force (builtin tailList)) projection_7]])
               [(force (builtin headList)) projection_7]])
             [(force (builtin tailList)) projection_5]])
           [(force (builtin headList)) projection_5]])
@@ -55,4 +55,4 @@ main#1
 --- logs
 []
 --- budget
-cpu: 2651999, memory: 10488
+cpu: 2508118, memory: 10144

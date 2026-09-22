@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nwrong : list int\nwrong = Primitive.coerce ()\nmain =\n    let\n        xs = Builtin.dropList 0 wrong\n    in\n    ()\n"
+---
+--- core
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+let wrong#4 : list int = (\coerce#6 : 'erased -> coerce#6) () in
+let xs#2 : list int = dropList (fromInt#3 0) wrong#4 in
+let main#1 : unit = () in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam wrong_4
+      [(lam xs_2 [(lam main_1 main_1) (con unit ())])
+        [[(force (builtin dropList)) [fromInt_3 (con integer 0)]] wrong_4]])
+      [(lam coerce_6 coerce_6) (con unit ())]])
+    (lam value_5 value_5)])
+--- result
+error: Runtime(ExpectedList(Unit))
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100

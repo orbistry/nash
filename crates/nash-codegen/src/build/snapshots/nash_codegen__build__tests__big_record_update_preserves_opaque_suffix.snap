@@ -1,0 +1,61 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nreplace : Record -> Record\nreplace r = { r | a = (trace \"first\" 10) }\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData [Builtin.iData 1, Builtin.iData 2, Builtin.iData 3])\nmain = Builtin.equalsData (Primitive.coerce (replace original))\n    (Primitive.coerce (Builtin.listData [Builtin.iData 10, Builtin.iData 2, Builtin.iData 3]))\n"
+---
+--- core
+let message#17 : string = "first" in
+let fromInt#9 : int -> Int = iData in
+let fromString#10 : string -> string = \value#13 : string -> value#13 in
+let replace#3 : { _0 : Int, _1 : Int } -> { _0 : Int, _1 : Int } = \r#7 : { _0 : Int, _1 : Int } -> let base#8 : { _0 : Int, _1 : Int } = r#7 in
+let evaluated#16 : 'erased = trace (fromString#10 message#17) in fromInt#9 10 in
+let projection#14 : list Data = unListData base#8 in
+let projection#15 : list Data = tailList projection#14 in
+listData (mkCons evaluated#16 projection#15) in
+let fromInt#6 : int -> int = \value#12 : int -> value#12 in
+let original#4 : { _0 : Int, _1 : Int } = (\coerce#11 : 'erased -> coerce#11) (listData (mkCons (iData (fromInt#6 1)) (mkCons (iData (fromInt#6 2)) (mkCons (iData (fromInt#6 3)) (con (list data) []))))) in
+let main#1 : bool = equalsData ((\coerce#2 : 'erased -> coerce#2) (replace#3 original#4)) ((\coerce#5 : 'erased -> coerce#5) (listData (mkCons (iData (fromInt#6 10)) (mkCons (iData (fromInt#6 2)) (mkCons (iData (fromInt#6 3)) (con (list data) [])))))) in
+main#1
+--- uplc
+(program 1.1.0
+  [(lam message_17
+    [(lam fromInt_9
+      [(lam fromString_10
+        [(lam replace_3
+          [(lam fromInt_6
+            [(lam original_4
+              [(lam main_1 main_1)
+                [[(builtin equalsData) [(lam coerce_2 coerce_2) [replace_3 original_4]]]
+                  [(lam coerce_5 coerce_5)
+                    [(builtin listData)
+                      [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 10)]]]
+                        [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 2)]]]
+                          [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 3)]]]
+                            (con (list data) [])]]]]]]])
+              [(lam coerce_11 coerce_11)
+                [(builtin listData)
+                  [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 1)]]]
+                    [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 2)]]]
+                      [[(force (builtin mkCons)) [(builtin iData) [fromInt_6 (con integer 3)]]]
+                        (con (list data) [])]]]]]])
+            (lam value_12 value_12)])
+          (lam r_7
+            [(lam base_8
+              [(lam evaluated_16
+                [(lam projection_14
+                  [(lam projection_15
+                    [(builtin listData) [[(force (builtin mkCons)) evaluated_16] projection_15]])
+                    [(force (builtin tailList)) projection_14]])
+                  [(builtin unListData) base_8]])
+                (force
+                  [[(force (builtin trace)) [fromString_10 message_17]]
+                    (delay [fromInt_9 (con integer 10)])])])
+              r_7])])
+        (lam value_13 value_13)])
+      (builtin iData)])
+    (con string "first")])
+--- result
+(con bool True)
+--- logs
+["first"]
+--- budget
+cpu: 4506826, memory: 14541

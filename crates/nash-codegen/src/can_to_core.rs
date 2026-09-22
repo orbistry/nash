@@ -221,8 +221,18 @@ impl<'a> Engine<'a, '_, '_> {
                     name: self.ir.fresh("base"),
                     ty,
                 };
+                let prefix_len = if matches!(ty, Ty::Big(BigTy::Record(_))) {
+                    labels
+                        .iter()
+                        .rposition(|(name, ..)| {
+                            fields.iter().any(|field| field.field.value == *name)
+                        })
+                        .map_or(0, |index| index + 1)
+                } else {
+                    labels.len()
+                };
                 let mut values = Vec::new();
-                for (name, index, _) in &labels {
+                for (name, index, _) in &labels[..prefix_len] {
                     values.push(
                         if let Some(update) = fields.iter().find(|f| f.field.value == *name) {
                             self.expr(update.value, ctx)?
@@ -232,6 +242,18 @@ impl<'a> Engine<'a, '_, '_> {
                     );
                 }
                 let result = match ty {
+                    Ty::Big(BigTy::Record(_)) if prefix_len < labels.len() => {
+                        let list = self.ir.builtin(F::UnListData, &[self.ir.var(binder.name)]);
+                        let tail = match prefix_len {
+                            0 => list,
+                            1 => self.ir.builtin(F::TailList, &[list]),
+                            _ => self
+                                .ir
+                                .builtin(F::DropList, &[self.ir.int(prefix_len as i128), list]),
+                        };
+                        self.ir
+                            .builtin(F::ListData, &[self.list_prefix(&values, tail)])
+                    }
                     Ty::Big(BigTy::Adt(_)) => self.big_constructor(0, &values)?,
                     _ => self.product(ty, &values)?,
                 };
@@ -408,11 +430,14 @@ impl<'a> Engine<'a, '_, '_> {
         let typ = element
             .plutus_type(self.ir.arena)
             .ok_or(Error::RuntimeLayout(element))?;
-        let mut tail = self.ir.lit(Constant::proto_list(self.ir.arena, typ, &[]));
+        let tail = self.ir.lit(Constant::proto_list(self.ir.arena, typ, &[]));
+        Ok(self.list_prefix(values, tail))
+    }
+    fn list_prefix(&self, values: &[&'a Core<'a>], mut tail: &'a Core<'a>) -> &'a Core<'a> {
         for &head in values.iter().rev() {
             tail = self.ir.builtin(F::MkCons, &[head, tail]);
         }
-        Ok(tail)
+        tail
     }
     fn big_constructor(
         &self,

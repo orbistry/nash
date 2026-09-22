@@ -273,7 +273,9 @@ Handled inline while building `Core`:
   little record literal is `Constr(0, fields)`. Field access is
   `Field(r, i)` for little records and
   `Builtin(HeadList, [tail^i (unListData r)])` for Big records. Record update
-  binds the base once and rebuilds every field. `Expr::Accessor` becomes a
+  binds the base once. Big updates rebuild through the last changed field
+  and reuse the unchanged list suffix; little updates rebuild every field.
+  `Expr::Accessor` becomes a
   `Lam`.
 - Tuples are `Constr(0, ...)` and `Field`.
 - `Expr::List` is a `Const` list: a literal of constants is one `Lit`; a
@@ -479,7 +481,8 @@ indexing for Big, `Field` for little), exactly as the pattern
 ```
 let base = r
 Constr(0, [Field base 0, e, Field base 2, ..])       -- little
-listData [headList (unListData base), e, ..]         -- Big
+listData (mkCons (headList fields) (mkCons e suffix)) -- Big
+  -- fields = unListData base; suffix = dropList 2 fields
 ```
 
 ## Runtime errors and traces
@@ -623,9 +626,26 @@ No optimizer passes run while Plan 08 is deferred.
 
 ### Field offset extraction
 
-Big record and constructor field access uses `headList fields` at offset zero,
-`headList (tailList fields)` at offset one, and
-`headList (dropList offset fields)` at offsets two or greater. Repeated
-constant-offset projections are shared within their evaluation scope.
-Sequential destructuring that consumes each field still advances one tail
-at a time; it does not skip a multi-field prefix.
+Big record and constructor field access starts with `headList fields` at
+offset zero, `headList (tailList fields)` at offset one, and
+`headList (dropList offset fields)` at offsets two or greater. Within an
+evaluation scope, each computed tail retains its original list and offset.
+Later accesses reuse the nearest available preceding tail: adjacent reads
+advance with `tailList`, while gaps of two or more use `dropList` for only
+the remaining distance. Repeated offsets reuse the existing tail and head.
+Constructor pattern bindings participate in the same cache.
+
+A successful head read or Cons branch proves that its list is nonempty.
+Only with that proof can a remaining `dropList 1` become `tailList`:
+explicit `dropList` calls must still saturate to an empty list. Existing
+`tailList` calls retain their empty-list failure behavior. Scope boundaries
+and source evaluation order are preserved.
+
+Big record updates evaluate the base once, rebuild the prefix through the
+last changed field, and attach the original suffix. Unchanged suffix fields
+are neither extracted nor rebuilt. Replacing every field requires no base
+decoder. Updates preserve declaration-order evaluation of replacement
+expressions and retained prefix fields, including traces before decoding.
+This is not validation: for malformed records obtained through unchecked
+coercion, an untouched suffix retains extra fields and is not checked for
+missing fields.
