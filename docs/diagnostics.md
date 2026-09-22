@@ -433,12 +433,8 @@ IR/type values use the actual AST or Core input as their description. Small
 formatting and structural checks use ordinary assertions. No snapshot may
 capture a Rust expression, and there are no fixture exemptions. Injected Base
 sources must not appear in descriptions; explicit modules under test remain.
-`crates/nash-cli/tests/snapshot_hygiene.rs` enforces these metadata rules and
-rejects terminal escape codes and raw `Err(...)` output. Diagnostic
-snapshots set `info => &"diagnostic"`, which makes the rendered-output check
-apply across compiler crates. Error snapshot macros must use that metadata or
-forward to the shared diagnostic assertion macro; raw Debug error macros fail
-validation. Direct Core fixtures in codegen use structural and evaluation assertions;
+Diagnostic snapshots use `info => &"diagnostic"` and rendered reports rather
+than raw Debug errors. Direct Core fixtures in codegen use structural and evaluation assertions;
 codegen snapshots compile the Nash program shown in the description.
 
 After reviewing updates, run `cargo insta test --workspace --test-runner
