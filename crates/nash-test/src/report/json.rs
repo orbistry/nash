@@ -18,7 +18,7 @@ pub fn render(seed: u32, max_success: usize, outcomes: &[Outcome]) -> String {
             Status::Fail(Failure::InvalidProgram { message }) => json!({"kind":"invalidProgram", "message":message}),
             Status::Fail(Failure::BudgetExceeded { limit, used }) => json!({"kind":"budgetExceeded", "limit": budget_limit(*limit), "used":{"cpu":used.cpu,"mem":used.mem}}),
         };
-        json!({"module":o.test.module,"name":o.test.name,"kind":if matches!(o.test.programs, Programs::Unit { .. }) { "test" } else { "prop" }, "status": if o.status == Status::Pass { "pass" } else { "fail" }, "iterations":o.iterations,"budget":{"cpu":o.budget.cpu,"mem":o.budget.mem},"counterexample":o.counterexample.as_ref().map(|c| c.iter().map(|(name,value)| json!({"name":name,"value":value})).collect::<Vec<_>>()),"replay":o.replay.as_ref().map(|nodes| nodes.iter().map(trace).collect::<Vec<_>>()),"assert":assertion,"labels":o.labels,"traces":o.traces,"expectedFailure":o.expected_failure,"failure":failure})
+        json!({"module":o.test.module,"name":o.test.name,"kind":if matches!(o.test.programs, Programs::Unit { .. }) { "test" } else { "prop" }, "status": if o.status == Status::Pass { "pass" } else { "fail" }, "iterations":o.iterations,"budget":{"cpu":o.budget.cpu,"mem":o.budget.mem},"counterexample":o.counterexample.as_ref().map(|c| c.iter().map(|(name,value)| json!({"name":name,"value":value})).collect::<Vec<_>>()),"assert":assertion,"labels":o.labels,"traces":o.traces,"expectedFailure":o.expected_failure,"failure":failure})
     }).collect::<Vec<_>>();
     serde_json::to_string_pretty(&json!({"seed":seed,"maxSuccess":max_success,"tests":tests}))
         .expect("JSON report serializes")
@@ -34,14 +34,5 @@ fn budget_limit(limit: Budget) -> Value {
         Budget::Cpu(cpu) => json!({"cpu":number(cpu)}),
         Budget::Mem(mem) => json!({"mem":number(mem)}),
         Budget::Both { cpu, mem } => json!({"cpu":number(cpu),"mem":number(mem)}),
-    }
-}
-
-fn trace(node: &crate::prng::Trace) -> Value {
-    match node {
-        crate::prng::Trace::Choice(value) => json!({"choice": value.to_string()}),
-        crate::prng::Trace::Group(children) => {
-            json!({"group": children.iter().map(trace).collect::<Vec<_>>()})
-        }
     }
 }

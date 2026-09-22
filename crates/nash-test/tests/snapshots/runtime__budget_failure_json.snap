@@ -30,7 +30,6 @@ description: (program 1.1.0 (con unit ()))
       "labels": {},
       "module": "Example",
       "name": "fixture",
-      "replay": null,
       "status": "fail",
       "traces": []
     }

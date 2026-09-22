@@ -704,17 +704,3 @@ fn nested_reduction_normalization_and_boundaries() {
         insta::assert_snapshot!(format!("distinct tree cache entries: {}\nnon-reproducible normalization retained: {:?}\ncoordinated merge: {:?}", calls.get(), normalized.choices, merged.choices));
     });
 }
-
-#[test]
-fn report_nested_replay_choices_losslessly() {
-    let mut outcome = run(prop(true, false, Expect::FailOnce));
-    outcome.replay = Some(vec![Trace::Group(vec![
-        Trace::Choice(u64::MAX),
-        Trace::Group(vec![]),
-    ])]);
-    let json: serde_json::Value =
-        serde_json::from_str(&report::json::render(0, 100, &[outcome])).unwrap();
-    insta::with_settings!({omit_expression => true}, {
-        insta::assert_snapshot!(serde_json::to_string_pretty(&json["tests"][0]["replay"]).unwrap());
-    });
-}

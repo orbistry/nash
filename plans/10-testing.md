@@ -109,7 +109,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
   including zero-choice counterexamples and unsuccessful shrink attempts.
 - [x] Cover strict progress, invalid replay, caching and counterexample minima.
 - [x] Support split/merge/repartition/wrap/unwrap proposals with coordinated numeric
-  changes; retain reduced replay trees in outcomes and JSON reports.
+  changes; retain reduced replay trees in outcomes.
 
 ## 7. Runner
 

@@ -352,11 +352,9 @@ If normalization discards unused input, the normalized trace is replayed again
 before acceptance, since public state functions can inspect remaining input.
 Results are cached by the exact submitted tree, including empty groups.
 
-The final consumed tree is retained in `Outcome.replay` and JSON `replay`.
-JSON nodes are `{"choice":"42"}` or `{"group":[...]}`; decimal strings preserve
-all 64-bit choices in JavaScript consumers. The runner's public `Prng` codec
-can construct replay terms from that tree. The CLI seed remains the way to
-repeat the complete generation and reduction run.
+The final consumed tree is retained internally in `Outcome.replay`. The
+runner's public `Prng` codec can construct replay terms from that tree. The
+CLI seed repeats the complete generation and reduction run.
 
 Shrinking reports `Simplifying counterexample from N choices` and
 `Simplified counterexample in Tms after S steps` on stderr while it works.
