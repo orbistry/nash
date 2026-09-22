@@ -1,10 +1,33 @@
-module Bytes exposing (length, at, slice, take, drop, concat, sha2_256, sha3_256, blake2b_256, blake2b_224, keccak_256, ripemd_160, and, or, xor, complement, readBit, writeBits, shift, rotate, countSetBits, findFirstSetBit, toHex)
+module Bytes exposing (append, compare, min, max, length, at, slice, take, drop, concat, sha2_256, sha3_256, blake2b_256, blake2b_224, keccak_256, ripemd_160, and, or, xor, complement, readBit, writeBits, shift, rotate, countSetBits, findFirstSetBit, toHex)
 
 import Literal
 import Lift exposing (Lift)
 import Builtin
 import List
 import Show
+import Ord
+import Ordering exposing (type ordering)
+
+append : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
+append a b = Builtin.appendByteString (lower a) (lower b)
+
+compare : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> ordering
+compare a b = compareBytes (lower a) (lower b)
+
+compareBytes : bytes -> bytes -> ordering
+compareBytes = Ord.compare
+
+min : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
+min a b = minBytes (lower a) (lower b)
+
+minBytes : bytes -> bytes -> bytes
+minBytes = Ord.min
+
+max : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
+max a b = maxBytes (lower a) (lower b)
+
+maxBytes : bytes -> bytes -> bytes
+maxBytes = Ord.max
 
 length : Lift bytes 'b => 'b -> int
 length value = Builtin.lengthOfByteString (lower value)

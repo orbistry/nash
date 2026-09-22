@@ -1,7 +1,6 @@
 module Functor exposing (Functor)
 
 import Builtin
-import Lift exposing (Lift)
 
 trait Functor 'f where
     map : ('a -> 'b) -> 'f 'a -> 'f 'b
@@ -14,6 +13,3 @@ mapList f values =
     case values of
         [] -> []
         x :: xs -> Builtin.mkCons (f x) (mapList f xs)
-
-impl Functor List where
-    map f values = lift (mapList f (lower values))

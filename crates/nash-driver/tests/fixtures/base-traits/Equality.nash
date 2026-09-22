@@ -6,9 +6,6 @@ bigList = lift [Builtin.iData 1, Builtin.iData 2]
 bigMap : Map Int Bytes
 bigMap = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa")]
 
-resultOk : result string int
-resultOk = Ok 1
-
 tests
     test "primitive equality" = do
         assert (1 == 1)
@@ -39,8 +36,6 @@ tests
     test "little twin equality" = do
         assert (Some 1 == Some 1)
         assert (Some 1 /= None)
-        assert (resultOk == Ok 1)
-        assert (Err "bad" /= Ok 1)
         assert (LT /= GT)
     test "ordering and defaults" = do
         assert (compare 1 2 == LT)
@@ -54,8 +49,8 @@ tests
         assert (compare [1, 2] [1, 3] == LT)
         assert (compare [1] [1, 0] == LT)
         assert (compare [1, 0] [1] == GT)
-        assert (compare (Builtin.iData 2) (Builtin.iData 1) == GT)
-        assert (compare (Builtin.bData #"aa") (Builtin.bData #"bb") == LT)
+        assert (Int.compare (Builtin.iData 2) (Builtin.iData 1) == GT)
+        assert (Bytes.compare (Builtin.bData #"aa") (Builtin.bData #"bb") == LT)
     test "ordering operators and bounds" = do
         assert (1 < 2 && 2 <= 2 && 3 > 2 && 3 >= 3)
         assert (max 1 2 == 2 && min 1 2 == 1)

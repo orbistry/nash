@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
-description: "type Result 'e 'a = Ok 'a | Err 'e"
+description: "type Outcome 'e 'a = Ok 'a | Err 'e"
 ---
 Union(
     None,
@@ -12,7 +12,7 @@ Union(
             },
             end: Position {
                 line: 1,
-                column: 35,
+                column: 36,
             },
         },
         value: Union {
@@ -24,10 +24,10 @@ Union(
                     },
                     end: Position {
                         line: 1,
-                        column: 12,
+                        column: 13,
                     },
                 },
-                value: "Result",
+                value: "Outcome",
             },
             arguments: [
                 TypeParam {
@@ -35,11 +35,11 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 13,
+                                column: 14,
                             },
                             end: Position {
                                 line: 1,
-                                column: 15,
+                                column: 16,
                             },
                         },
                         value: "e",
@@ -51,11 +51,11 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 16,
+                                column: 17,
                             },
                             end: Position {
                                 line: 1,
-                                column: 18,
+                                column: 19,
                             },
                         },
                         value: "a",
@@ -69,11 +69,11 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 21,
+                                column: 22,
                             },
                             end: Position {
                                 line: 1,
-                                column: 23,
+                                column: 24,
                             },
                         },
                         value: "Ok",
@@ -84,11 +84,11 @@ Union(
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 24,
+                                        column: 25,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 26,
+                                        column: 27,
                                     },
                                 },
                                 value: Var(
@@ -103,11 +103,11 @@ Union(
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 29,
+                                column: 30,
                             },
                             end: Position {
                                 line: 1,
-                                column: 32,
+                                column: 33,
                             },
                         },
                         value: "Err",
@@ -118,11 +118,11 @@ Union(
                                 region: Region {
                                     start: Position {
                                         line: 1,
-                                        column: 33,
+                                        column: 34,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 35,
+                                        column: 36,
                                     },
                                 },
                                 value: Var(

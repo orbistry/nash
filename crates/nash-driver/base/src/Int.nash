@@ -1,10 +1,53 @@
-module Int exposing (abs, pow, powMod, toBytes, fromBytes, toString)
+module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, powMod, toBytes, fromBytes, toString)
 
 import Prelude exposing (..)
 import Lift exposing (Lift)
-import Integral exposing (Integral)
 import Builtin
 import Show
+import Ord
+import Ordering exposing (type ordering)
+
+add : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+add a b = Builtin.addInteger (lower a) (lower b)
+
+sub : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+sub a b = Builtin.subtractInteger (lower a) (lower b)
+
+mul : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+mul a b = Builtin.multiplyInteger (lower a) (lower b)
+
+div : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+div a b = Builtin.divideInteger (lower a) (lower b)
+
+mod : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+mod a b = Builtin.modInteger (lower a) (lower b)
+
+quot : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+quot a b = Builtin.quotientInteger (lower a) (lower b)
+
+rem : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+rem a b = Builtin.remainderInteger (lower a) (lower b)
+
+negate : Lift int 'a => 'a -> int
+negate value = Builtin.subtractInteger 0 (lower value)
+
+compare : (Lift int 'a, Lift int 'b) => 'a -> 'b -> ordering
+compare a b = compareInt (lower a) (lower b)
+
+compareInt : int -> int -> ordering
+compareInt = Ord.compare
+
+min : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+min a b = minInt (lower a) (lower b)
+
+minInt : int -> int -> int
+minInt = Ord.min
+
+max : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+max a b = maxInt (lower a) (lower b)
+
+maxInt : int -> int -> int
+maxInt = Ord.max
 
 abs : Lift int 'n => 'n -> int
 abs value =

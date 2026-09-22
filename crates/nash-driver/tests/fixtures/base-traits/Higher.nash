@@ -3,32 +3,23 @@ module Main exposing (..)
 increment x = x + 1
 optionNone : option int
 optionNone = None
-resultOk : result string int
-resultOk = Ok 1
-resultErr : result string int
-resultErr = Err "bad"
-resultFunction : result string (int -> int)
-resultFunction = pure increment
 bigList : List Int
 bigList = lift [Builtin.iData 1, Builtin.iData 2]
 
-doResult : option int
-doResult = do
+doOption : option int
+doOption = do
     x <- Some 1
     y <- Some 2
     pure (x + y)
 
 failOption : int -> option int
 failOption _ = fail "must not bind None"
-failResult : int -> result string int
-failResult _ = fail "must not bind Err"
-
 tests
     test "builtin list functor changes representation" = do
         assert (map Builtin.iData [1, 2] == [Builtin.iData 1, Builtin.iData 2])
         assert (map Builtin.unIData (map Builtin.iData [1, 2]) == [1, 2])
-    test "Big list functor" = do
-        assert (Builtin.unListData (map (\x -> x + 1) bigList) == [Builtin.iData 2, Builtin.iData 3])
+    test "Big list helper returns little list" = do
+        assert (List.map (\x -> Int.add x 1) bigList == [2, 3])
     test "option functor applicative and monad" = do
         assert ((increment <$> Some 1) == Some 2)
         assert ((increment <$> optionNone) == None)
@@ -36,12 +27,5 @@ tests
         assert ((Some increment <*> optionNone) == None)
         assert ((Some 1 >>= (\x -> Some (x + 1))) == Some 2)
         assert ((optionNone >>= failOption) == None)
-    test "result functor applicative and monad" = do
-        assert (map increment resultOk == Ok 2)
-        assert (map increment resultErr == Err "bad")
-        assert ((resultFunction <*> resultOk) == Ok 2)
-        assert ((resultFunction <*> resultErr) == Err "bad")
-        assert ((resultOk >>= (\x -> Ok (x + 1))) == Ok 2)
-        assert ((resultErr >>= failResult) == Err "bad")
     test "do binding" = do
-        assert (doResult == Some 3)
+        assert (doOption == Some 3)

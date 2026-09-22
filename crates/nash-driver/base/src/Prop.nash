@@ -6,6 +6,7 @@ import Prelude exposing (..)
 import Primitive exposing (type bool(..))
 import Literal
 import Num exposing (Num)
+import Lift exposing (Lift)
 import Option exposing (type option(..))
 import Functor exposing (Functor)
 import Applicative exposing (Applicative)
@@ -19,8 +20,11 @@ run : generator 'a -> Prng -> option (Prng, 'a)
 run (Generator f) = f
 
 -- The runner stores each primitive choice in a u64.
-choice : int -> generator int
-choice bound =
+choice : Lift int 'n => 'n -> generator int
+choice bound = choiceInt (lower bound)
+
+choiceInt : int -> generator int
+choiceInt bound =
     if bound < 0 || bound > 18446744073709551615 then
         (fail "Prop.choice bound must be in 0..18446744073709551615")
     else
@@ -79,8 +83,11 @@ bindGenerator = bind
 constant : 'a -> generator 'a
 constant a = Generator (\prng -> Some (prng, a))
 
-intBetween : int -> int -> generator int
-intBetween lo hi =
+intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
+intBetween low high = intBetweenInt (lower low) (lower high)
+
+intBetweenInt : int -> int -> generator int
+intBetweenInt lo hi =
     if hi < lo then (fail "Prop.intBetween has reversed bounds")
     else if hi == lo then constant lo
     else map (\n -> lo + n) (choice (hi - lo))
@@ -97,8 +104,11 @@ int =
 listOf : generator 'a -> generator (list 'a)
 listOf = listBetween 0 20
 
-listBetween : int -> int -> generator 'a -> generator (list 'a)
-listBetween lo hi item =
+listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
+listBetween low high generator = listBetweenInt (lower low) (lower high) generator
+
+listBetweenInt : int -> int -> generator 'a -> generator (list 'a)
+listBetweenInt lo hi item =
     if lo < 0 || hi < lo then (fail "Prop.listBetween has invalid bounds")
     else listFrom 0 lo hi item
 

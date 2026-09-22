@@ -11,6 +11,12 @@ This document covers surface syntax, the static semantics, the inference
 algorithm and its outputs, the core trait hierarchy, and the error cases.
 Implementation steps are in [plans/03-traits.md](../plans/03-traits.md).
 
+Computation instances shipped by Base use little representations: numeric
+operators use `int`, generic append uses little sequences, and Functor has no
+Big List instance. Named type helpers normalize Big/little inputs and return
+little outer results. Structural Big Eq, Show, explicit conversions, and
+payload access retain their separate contracts. See [stdlib.md](stdlib.md).
+
 ## Concepts
 
 | Term | Meaning |

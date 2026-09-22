@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/type_.rs
-description: "Code:\n\nResult String Int"
+description: "Code:\n\nOutcome String Int"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 18,
+            column: 19,
         },
     },
     value: Type {
@@ -21,31 +21,31 @@ Located {
             },
             end: Position {
                 line: 1,
-                column: 7,
+                column: 8,
             },
         },
-        name: "Result",
+        name: "Outcome",
         args: [
             Located {
                 region: Region {
                     start: Position {
                         line: 1,
-                        column: 8,
+                        column: 9,
                     },
                     end: Position {
                         line: 1,
-                        column: 14,
+                        column: 15,
                     },
                 },
                 value: Type {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 8,
+                            column: 9,
                         },
                         end: Position {
                             line: 1,
-                            column: 14,
+                            column: 15,
                         },
                     },
                     name: "String",
@@ -56,22 +56,22 @@ Located {
                 region: Region {
                     start: Position {
                         line: 1,
-                        column: 15,
+                        column: 16,
                     },
                     end: Position {
                         line: 1,
-                        column: 18,
+                        column: 19,
                     },
                 },
                 value: Type {
                     region: Region {
                         start: Position {
                             line: 1,
-                            column: 15,
+                            column: 16,
                         },
                         end: Position {
                             line: 1,
-                            column: 18,
+                            column: 19,
                         },
                     },
                     name: "Int",

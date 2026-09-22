@@ -137,7 +137,7 @@ if a later operation needs the expected shape; a value that is never inspected
 can pass through unchanged. `Validate.validate` is the required method of a separate trait:
 core impls check the shape and recursively validate collection elements.
 `Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
-result-based decoding.
+option-based decoding.
 
 `toData` uses `Primitive.coerce`: every Big value already has its Data
 representation. Conversion preserves that value and its wire encoding without
@@ -182,7 +182,6 @@ content. The impls shipped in `crates/nash-driver/base/` are the table of
 | `list (pair 'k 'v)` with `'k 'v : Big` | `Map 'k 'v` | `mapData` | `unMapData` |
 | `'a` for every type (built-in reflexive impl) | `'a` | identity | identity |
 | `option ('a : Big)` | `Option 'a` | `case`, rebuild | `unConstrData`, rebuild |
-| `result ('e : Big) ('a : Big)` | `Result 'e 'a` | as `option` | as `option` |
 | `ordering` | `Ordering` | rebuild | rebuild |
 
 Container conversions preserve their element types and values. Convert native
@@ -245,42 +244,36 @@ module Data.Decode exposing
     , succeed, fail, map1, map2, map3, andThen, oneOf
     )
 
-type error
-    = Failure string
-    | At int error
+type decoder 'a = Decoder (Data -> option 'a)
 
-type result 'e 'a = Ok 'a | Err 'e              -- from the prelude; Ok is tag 0
-
-type decoder 'a = Decoder (Data -> result error 'a)
-
-run : decoder 'a -> Data -> result error 'a
+run : decoder 'a -> Data -> option 'a
 run (Decoder f) d = f d
 
 expect : decoder 'a -> Data -> 'a
 expect dec d =
     case run dec d of
-        Ok a -> a
-        Err e -> fail (describe e)
+        Some a -> a
+        None -> fail
 
 -- primitives
 
 data : decoder Data
-data = Decoder Ok
+data = Decoder Some
 
 int : decoder int
 int = Decoder (\d -> case d of
-    I n -> Ok n
-    _ -> Err (Failure "expected I"))
+    I n -> Some n
+    _ -> None)
 
 bytes : decoder bytes
 bytes = Decoder (\d -> case d of
-    B b -> Ok b
-    _ -> Err (Failure "expected B"))
+    B b -> Some b
+    _ -> None)
 
 list : decoder 'a -> decoder (list 'a)
 list item = Decoder (\d -> case d of
     List xs -> traverse item xs
-    _ -> Err (Failure "expected List"))
+    _ -> None)
 
 map : decoder 'k -> decoder 'v -> decoder (list (pair 'k 'v))
 pair : decoder 'a -> decoder 'b -> decoder (pair 'a 'b)
@@ -290,24 +283,24 @@ pair : decoder 'a -> decoder 'b -> decoder (pair 'a 'b)
 field : int -> decoder 'a -> decoder 'a          -- i-th element of a List
 field i item = Decoder (\d -> case d of
     List xs -> at i (run item) xs
-    _ -> Err (Failure "expected List"))
+    _ -> None)
 
 index : int -> decoder 'a -> decoder 'a          -- i-th field of a Constr
 index i item = Decoder (\d -> case d of
     Constr pair(_, fs) -> at i (run item) fs
-    _ -> Err (Failure "expected Constr"))
+    _ -> None)
 
 tag : decoder int                                -- the Constr tag
 constr : int -> decoder 'a -> decoder 'a         -- require tag, decode fields as List
 constr t item = Decoder (\d -> case d of
     Constr pair(t', fs) -> if t == t' then run item (List fs)
-                    else Err (Failure "wrong tag")
-    _ -> Err (Failure "expected Constr"))
+                    else None
+    _ -> None)
 
 -- combinators
 
 succeed : 'a -> decoder 'a
-fail : string -> decoder 'a
+fail : decoder 'a
 map1 : ('a -> 'b) -> decoder 'a -> decoder 'b
 map2 : ('a -> 'b -> 'c) -> decoder 'a -> decoder 'b -> decoder 'c
 map3 : ...
@@ -348,19 +341,19 @@ datumDecoder =
 ```
 
 Unlike unchecked `fromData`, a decoder validates and converts to little types as it goes
-and reports *where* it failed (`At 1 (Failure "expected I")`). Compared
+and returns None on failure. Compared
 with a hand-written `case`, it composes.
 
 ### Cost and fusion
 
-A decoder as written above allocates a `result` constr per step and calls
+A decoder as written above allocates an `option` constr per step and calls
 through `Decoder` closures. After monomorphization and inlining most of the
-closures disappear, but the `Ok`/`Err` allocations remain. The compiler
+closures disappear, but the `Some`/`None` allocations remain. The compiler
 **may** later recognize decoder combinators (by their stdlib names, after
 monomorphization) and fuse a whole decoder into one decision tree with
 `chooseData` tests and memoized accessors, which is what the `case` version
 compiles to. This is an optimization, not a semantic change: `run` on a
-fused decoder returns the same `result`. Nothing in the language depends on
+fused decoder returns the same `option`. Nothing in the language depends on
 it, so the stdlib is written first and the fusion pass is scheduled after
 `plans/08-optimizer.md`.
 

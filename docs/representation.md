@@ -168,7 +168,6 @@ the on-chain encoding.
 | `bool` (Const) `False \| True` | `type Bool = False \| True` | `Constr 0 []`, `Constr 1 []` |
 | `unit` (Const) `()` | `type Unit = Unit` | `Constr 0 []` |
 | `type option 'a = Some 'a \| None` (Term) | `type Option 'a = Some 'a \| None` | `Constr 0 [x]`, `Constr 1 []` |
-| `type result 'e 'a = Ok 'a \| Err 'e` (Term) | `type Result 'e 'a = Ok 'a \| Err 'e` | `Constr 0 [x]`, `Constr 1 [e]` |
 | `type ordering = LT \| EQ \| GT` (Term) | `type Ordering = LT \| EQ \| GT` | `Constr 0 []` .. `Constr 2 []` |
 
 Constructor order matches the PlutusTx and Aiken encodings (`Some`/`Just`
@@ -176,9 +175,9 @@ before `None`/`Nothing`, `False` before `True`).
 
 Constructor names are shared between the twins, so the prelude resolves
 them by qualification: the little constructors are in scope unqualified
-(`True`, `False`, `()`, `Some`, `None`, `Ok`, `Err`, `LT`, `EQ`, `GT`), and
+(`True`, `False`, `()`, `Some`, `None`, `LT`, `EQ`, `GT`), and
 the Big constructors are always qualified by their type's module
-(`Bool.True`, `Unit.Unit`, `Option.Some`, `Result.Ok`, `Ordering.LT`). The
+(`Bool.True`, `Unit.Unit`, `Option.Some`, `Ordering.LT`). The
 Big type names themselves (`Bool`, `Option`, ...) are in scope unqualified.
 Patterns follow the same rule: `case b of Bool.True -> ...`.
 
@@ -251,7 +250,6 @@ Builtin impls, with their UPLC:
 | `Lift (list (pair 'k 'v)) (Map 'k 'v)` with `'k 'v : Big` | `mapData` | `unMapData` |
 | `Lift 'a 'a` for every type `'a` (compiler built-in) | identity | identity |
 | `Lift (option ('a : Big)) (Option 'a)` | `case`, rebuild | `unConstrData`, rebuild |
-| `Lift (result ('e : Big) ('a : Big)) (Result 'e 'a)` | as `option` | as `option` |
 | `Lift ordering Ordering` | rebuild | rebuild |
 
 Rules:

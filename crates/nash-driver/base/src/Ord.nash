@@ -67,9 +67,3 @@ impl (Ord 'a, Eq (list 'a)) => Ord (list 'a) where
                 y :: restY -> case compare x y of
                     EQ -> compare restX restY
                     order -> order
-
-impl Ord Int where
-    compare a b = compare (Builtin.unIData a) (Builtin.unIData b)
-
-impl Ord Bytes where
-    compare a b = compare (Builtin.unBData a) (Builtin.unBData b)

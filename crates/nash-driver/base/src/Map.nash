@@ -1,0 +1,29 @@
+module Map exposing (union)
+
+import Builtin
+import Primitive exposing (type bool(..))
+import Lift exposing (Lift)
+import Eq exposing (Eq)
+import List
+
+union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
+union left right = unionList (lower left) (lower right)
+
+unionList : Eq 'k => list (pair 'k 'v) -> list (pair 'k 'v) -> list (pair 'k 'v)
+unionList left right = List.append (withoutRightKeys left right) right
+
+withoutRightKeys : Eq 'k => list (pair 'k 'v) -> list (pair 'k 'v) -> list (pair 'k 'v)
+withoutRightKeys left right =
+    case left of
+        [] -> []
+        entry :: rest ->
+            let pair(key, _) = entry in
+            if containsKey key right then withoutRightKeys rest right
+            else Builtin.mkCons entry (withoutRightKeys rest right)
+
+containsKey : Eq 'k => 'k -> list (pair 'k 'v) -> bool
+containsKey key entries =
+    case entries of
+        [] -> False
+        pair(entryKey, _) :: rest ->
+            if eq key entryKey then True else containsKey key rest

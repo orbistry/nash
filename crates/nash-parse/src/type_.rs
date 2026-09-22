@@ -52,7 +52,7 @@ impl<'a> Parser<'a> {
         let (tipe1, end1) = self.one_of(
             error::Type::Start,
             vec![
-                // Type application: Maybe Int, Result String Int, etc.
+                // Type application: Maybe Int, Outcome String Int, etc.
                 Box::new(|p: &mut Parser<'a>| p.type_app(start)),
                 // Simple term
                 Box::new(|p: &mut Parser<'a>| {
@@ -163,7 +163,7 @@ impl<'a> Parser<'a> {
     // Type application
     // -------------------------------------------------------------------------
 
-    /// Parse type application: `Maybe Int`, `Result String Int`, etc.
+    /// Parse type application: `Maybe Int`, `Outcome String Int`, etc.
     ///
     /// Mirrors Elm's `Type.app`.
     fn type_app(
@@ -864,7 +864,7 @@ mod tests {
 
     #[test]
     fn type_app_result() {
-        assert_type_snapshot!("Result String Int");
+        assert_type_snapshot!("Outcome String Int");
     }
 
     #[test]
@@ -895,7 +895,7 @@ mod tests {
 
     #[test]
     fn function_with_app() {
-        assert_type_snapshot!("Maybe 'a -> Result 'e 'a");
+        assert_type_snapshot!("Maybe 'a -> Outcome 'e 'a");
     }
 
     // Unit

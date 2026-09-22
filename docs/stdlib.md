@@ -42,7 +42,6 @@ crates/nash-driver/base/
     Bool.nash             bool functions; Big Bool
     Unit.nash             Big Unit
     Option.nash           option / Option
-    Result.nash           result / Result
     Ordering.nash         ordering / Ordering
     Int.nash              int functions; Big Int
     Bytes.nash            bytes functions; Big Bytes
@@ -65,7 +64,7 @@ crates/nash-driver/base/
 ```
 
 Module naming: one module per type pair (`List`, `Int`, `Bytes`, `Option`,
-`Result`, `Ordering`, `Bool`, `Unit`). Named helpers accept either Big or little
+`Ordering`, `Bool`, `Unit`). Named helpers accept either Big or little
 outer inputs and return the little outer representation. Different arguments
 may use different representations. Payloads retain their types: reversing a
 `List Int` returns `list Int`, and `Option.unwrap : Option Int -> Int` leaves
@@ -105,7 +104,6 @@ import Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
 import Option exposing (Option, type option(..))
-import Result exposing (Result, type result(..))
 import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
 import Builtin
@@ -118,11 +116,11 @@ import Test
 Consequences, matching representation.md "Prelude twins":
 
 - Little constructors are unqualified: `True`, `False`, `()`, `Some`,
-  `None`, `Ok`, `Err`, `LT`, `EQ`, `GT`. `type option(..)` in the import
+  `None`, `LT`, `EQ`, `GT`. `type option(..)` in the import
   is what exposes them; `True`/`False`/`()` come with the compiler-known
   `bool`/`unit`.
 - Big twin constructors are qualified only: `Bool.True`, `Unit.Unit`,
-  `Option.Some`, `Result.Ok`, `Ordering.LT`. Their modules are imported
+  `Option.Some`, `Ordering.LT`. Their modules are imported
   but the Big types are exposed without `(..)`, so the constructors never
   enter the unqualified scope. The Big type names are unqualified
   (`Option`, `Bool`). No resolution by expected type is involved.
@@ -249,11 +247,11 @@ not repeated here. What each module adds beyond its trait:
 | Module | Impls for compiler-known types |
 |---|---|
 | `Eq` | `int`, `bytes`, `string`, `bool`, `unit`, `list 'a` (given `Eq 'a`), `pair 'a 'b`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` (all Big ones via `equalsData`) |
-| `Ord` | `int`, `bytes`, `string` (bytewise), `bool`, `unit`, `list 'a`, `Int`, `Bytes` |
+| `Ord` | `int`, `bytes`, `string` (bytewise), `bool`, `unit`, `list 'a` |
 | `Show` | `int`, `bytes` (hex), `string`, `bool`, `unit`, `list 'a`, `pair`, `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
-| `Num`, `Integral` | `int`, `Int` |
-| `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `Bytes`, `List 'a`, `Map 'k 'v` (right-biased union), `unit` |
-| `Functor` | `list`, `List`; each applied element must satisfy its constructor's datatype context (`Storable` for `list`, `Big` for `List`). No builtin pair Functor impl. |
+| `Num`, `Integral` | `int` |
+| `Semigroup`, `Monoid` | `bytes`, `string`, `list 'a`, `unit` |
+| `Functor` | `list`; elements must satisfy `Storable`. No builtin pair Functor impl. |
 | `Applicative`, `Monad` | No builtin `list` impls: list cannot hold functions required by apply. No impls for Big List. |
 | `Lift` | Outer-only conversions in representation.md; reflexive identity for every type. |
 | `Data` | Blanket `ToData` and `FromData` for every Big type; `Validate` for `Data`, `Int`, `Bytes`, `List 'a`, `Map 'k 'v` |
@@ -263,10 +261,18 @@ not repeated here. What each module adds beyond its trait:
 Tuple impls (`Eq`, `Ord`, `Show` up to 4) are in `Prelude`. Impls for the
 twin types (`option`, `Option`, ...) are in the twin's module.
 
-The shipping hierarchy provides Functor for `list`, `List`, `cons`, `option`
-and `result 'e`, and Applicative/Monad for `option` and `result 'e`.
-Big List mapping uses an explicitly typed little-list helper between Lift
-conversions, keeping the intermediate container unambiguous. Builtin list
+The shipping hierarchy provides Functor for `list`, `cons`, `option`, and
+`generator`, and Applicative/Monad for `option` and `generator`. Computation traits
+operate on little representations. Normalize Big inputs through named helpers:
+`Int.add`/`negate` and the other arithmetic helpers return `int`, `Bytes.append`
+returns `bytes`, `List.map`/`append` return `list`, and `Map.union` returns
+`list (pair 'k 'v)`. Helpers preserve element types and accept inputs independently.
+Sorting Big elements uses an explicit normalizing comparator, for example
+`List.sortBy Int.compare values`; the elements themselves remain Big.
+Operators retain their little-type trait signatures; use a helper or explicit
+`lower` for Big operands. Big empty values require explicit `lift`.
+
+Builtin list
 mapping can change element representations within Storable; it cannot produce Term
 elements. Builtin pair has no Functor impl: `mkPairData` accepts only Big
 components, not arbitrary Storable components needed by `map`. Pair.fst,
@@ -463,10 +469,11 @@ non-failing decoder API.
 
 ## Twin modules
 
-Option and Result helpers accept either twin and return little containers.
-Their Lift instances preserve payloads, including errors, without mapping.
-`Option.unwrap` fails on None; `withDefault` returns its supplied fallback.
-`map2` returns None if either option is None, or the leftmost error for Result.
+Option helpers accept either twin and return little containers.
+Its Lift instance preserves payloads without mapping.
+`Option.apply` accepts little optional functions and Big/little optional inputs,
+returning a little option. `Option.unwrap` fails on None; `withDefault` returns its supplied fallback.
+`map2` returns None if either option is None.
 `andThen` also normalizes the callback's returned outer container.
 
 ## Compiler special cases
@@ -654,6 +661,17 @@ xor : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
 ### `Int`
 
 ```elm
+add : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+sub : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+mul : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+div : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+mod : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+quot : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+rem : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+negate : Lift int 'a => 'a -> int
+compare : (Lift int 'a, Lift int 'b) => 'a -> 'b -> ordering
+min : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+max : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
 abs : Lift int 'n => 'n -> int
 pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
 powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
@@ -665,6 +683,10 @@ toString : Lift int 'n => 'n -> string
 ### `Bytes`
 
 ```elm
+append : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
+compare : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> ordering
+min : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
+max : (Lift bytes 'a, Lift bytes 'b) => 'a -> 'b -> bytes
 length : Lift bytes 'b => 'b -> int
 at : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> int
 slice : (Lift int 's, Lift int 'n, Lift bytes 'b) => 's -> 'n -> 'b -> bytes
@@ -826,6 +848,14 @@ accept all Storable component types, while Pair.make only constructs Data
 pairs, matching the target builtin.
 
 ### `Map`
+
+`union` is shipped: it accepts Big maps or little lists of pairs and returns a
+little list of pairs, preserving key/value types with right-biased keys. The
+remaining Map API below is planned.
+
+```elm
+union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
+```
 
 `Map 'k 'v` is an association list in `Data.Map` encoding, keys and
 values Big, insertion-ordered, no dedup on construction:

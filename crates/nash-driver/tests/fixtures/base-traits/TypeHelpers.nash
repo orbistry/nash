@@ -8,19 +8,10 @@ bigIndices : List Int
 bigIndices = lift [Builtin.iData 0, Builtin.iData 8]
 bigOption : Option Int
 bigOption = Option.Some 7
-bigResult : Result Bytes Int
-bigResult = Result.Ok 7
-bigError : Result Bytes Int
-bigError = Result.Err #"aa"
 littleOption : option Int
 littleOption = Some 7
-littleResult : result Bytes Int
-littleResult = Ok 7
 none : option int
 none = None
-emptyResult : result bytes int
-emptyResult = Err #""
-
 both : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
 both a b = Bool.and a b
 badBig : unit -> Bool
@@ -102,24 +93,16 @@ tests
         assert (String.fromBytes #"ff" == "")
     test "option helpers preserve payloads" = do
         assert (Option.map Builtin.unIData bigOption == Some 7)
-        assert (Option.map2 (\a b -> a + b) littleOption bigOption == Some (Builtin.iData 14))
+        assert (Option.map2 Int.add littleOption bigOption == Some 14)
         assert (Option.andThen (\x -> Option.Some x) littleOption == littleOption)
         assert (Option.isSome bigOption)
+        assert (Option.apply (Some Builtin.unIData) bigOption == Some 7)
     test "option helpers preserve payloads 2" = do
         assert (not (Option.isSome none))
         assert (Option.unwrap bigOption == bigInt)
         assert (Option.withDefault bigInt bigOption == bigInt)
-        assert (Option.toResult #"" bigOption == littleResult)
     test "unwrap None" fail = do
         assert (Option.unwrap none == 0)
-    test "result helpers preserve payloads" = do
-        assert (Result.map Builtin.unIData bigResult == Ok 7)
-        assert (Result.map2 (\a b -> a + b) littleResult bigResult == Ok (Builtin.iData 14))
-        assert (Result.andThen (\x -> Result.Ok x) littleResult == littleResult)
-        assert (Result.withDefault bigInt bigError == bigInt)
-    test "result helpers preserve payloads 2" = do
-        assert (Result.mapError Builtin.unBData bigError == Err #"aa")
-        assert (Result.map (\x -> x + 1) emptyResult == emptyResult)
     test "Big scalar control inputs" = do
         assert (List.take bigInt [1, 2] == [1, 2])
         assert (Int.pow 2 bigInt == 128)

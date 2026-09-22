@@ -14,6 +14,9 @@ nested = lift [big, big]
 badBool : unit -> bool
 badBool _ = fail
 
+unsortedBig : List Int
+unsortedBig = lift [Builtin.iData 3, Builtin.iData 1, Builtin.iData 2]
+
 tests
     test "construction and count boundaries" = do
         assert (List.singleton 3 == [3])
@@ -74,7 +77,7 @@ tests
         assert (List.partition (\x -> x > 1) [1, 2, 3] == ([2, 3], [1]))
         assert (List.sum [1, 2, 3] == 6)
     test "map2 truncates and sort is stable" = do
-        assert (List.map2 (\x y -> x + y) items big == [2, 4, 6])
+        assert (List.map2 Int.add items big == [2, 4, 6])
         assert (List.map2 (\x y -> x + y) [1, 2] [10] == [11])
         assert (List.sort [3, 1, 2, 1] == [1, 1, 2, 3])
         assert (List.sortBy (\a b -> compare (rem a 10) (rem b 10)) [21, 12, 11, 22] == [21, 11, 12, 22])
@@ -107,3 +110,5 @@ tests
         assert (List.isLength items (Builtin.iData 3))
         assert (List.isLength big 3)
         assert (not (List.isLength items (-1)))
+    test "sort Big elements through a little comparator" = do
+        assert (List.sortBy Int.compare unsortedBig == items)

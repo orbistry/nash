@@ -22,7 +22,7 @@ remain part of this plan's acceptance contract.
 Default imports remain Plan 12. Runtime/codegen, optimizer implementation,
 Prop and the full validator example retain their approved later-plan deferrals.
 Builtin pair has no Functor impl; builtin list has neither Applicative nor Monad.
-The shipping hierarchy includes option/result do and mapping between different
+The shipping hierarchy includes option do and mapping between different
 representations wherever the inferred constructor contexts permit it.
 
 ## Current acceptance
@@ -2494,9 +2494,9 @@ Applicative.apply stays unchanged; builtin list has no Applicative or Monad
 impl. The do inference regression now includes the real Applicative.apply
 signature and still gives identical schemes for do and its explicit bind
 expansion, with distinct Given/Super evidence sites. The shipping core CLI
-fixture exercises option/result do and Prelude operators. A fresh two-module
+fixture exercises option do and Prelude operators. A fresh two-module
 CLI application exports generic pairActions using do, then instantiates it
-at both option unit and result unit unit through the real core hierarchy;
+at option unit through the real core hierarchy;
 all 24 modules and 56 declarations compile. The earlier reduced-fixture and
 shared-kind questions are resolved. Chunk 12's default imports and remaining
 stdlib prerequisites are separate, unfinished acceptance items.
@@ -2672,7 +2672,7 @@ Generator impls land with the real Prop implementation after Plan 10. The full
 overview validator example is a later integration check because it needs
 Cardano modules, deriving, and the deferred defaults; it is not a Plan 03
 completion gate. Plan 03 must verify the shipping trait hierarchy, operators,
-literal defaulting and option/result do through the real core CLI fixture.
+literal defaulting and option do through the real core CLI fixture.
 
 ### Current acceptance audit
 
@@ -2683,8 +2683,8 @@ declarations with explicit imports. Remaining requirements are:
 | Requirement | Current evidence / remaining work |
 |---|---|
 | Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
-| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option/result; Applicative/Monad support option/result. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Generator impls are deferred with the real Prop implementation. |
-| Core option do acceptance | The real core fixture compiles option and result do blocks, operator calls, mixed-kind builtin list mapping and List Int to List Packet mapping. Runtime execution remains a backend prerequisite. |
+| Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option; Applicative/Monad support option. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Generator impls are deferred with the real Prop implementation. |
+| Core option do acceptance | The real core fixture compiles option do blocks, operator calls, mixed-kind builtin list mapping and normalized List Int mapping via List.map. Runtime execution remains a backend prerequisite. |
 | Default imports | User-approved deferral to Plan 12. Explicit imports are required for Plan 03. Eventual defaults must participate in dependency discovery before sequential compilation. |
 | Overview example up to tests | Later integration requirement: Cardano.Tx, deriving, field access, validator features and defaults require later work; the sketch also has undefined currentSlot/signedBy. Plan 03 acceptance uses the real core fixture with explicit imports. |
 | Final release verification | Refreshed at 1735e2f9 with Sampo 0.21.0. Release planning succeeds; all 28 internal dependency requirements match prepared versions. Publish dry-run verifies source, then ast is blocked by unpublished source 0.5.0. Repeat after any further crate changes; downstream package verification is not established. |
@@ -2829,14 +2829,6 @@ bool to Unit reports MissingImpl at the original outer `lift` call. Option's
 Functor/Applicative/Monad impls and remaining helpers are still pending;
 this does not complete the hierarchy. Formatting, strict Clippy, 1,912 tests
 and snapshot hygiene pass; no Rust crate changes in this source-only step.
-Result now declares both twins and supplies withDefault, mapError, Eq and
-contextual Lift for separate error/success payloads. Core CLI acceptance uses
-result unit bool and Result Unit Bool, checking Ok and Err in both directions,
-then the helpers and Eq. It compiles 16 modules and 94 declarations. Swapping
-the destination payload types reports both missing payload Lift impls at the
-original call. Formatting, strict Clippy, 1,912 tests and snapshot hygiene
-pass. Higher-kinded Result impls remain pending; runtime round trips still
-depend on Plan 07. This source-only step changes no Rust crate.
 Data defines Big-bounded ToData, FromData and Validate traits, plus
 serialise/tag/fields. ToData and FromData each have an ordinary blanket Big
 impl defining its method as Primitive.coerce. Both conversions preserve the
@@ -2987,7 +2979,7 @@ Tests: a driver test compiling `crates/nash-driver/base/` plus a `Main.nash` usi
 trait declarations in `Main`.
 
 Done when: `nash check tests/base` type-checks the shipping core hierarchy
-with explicit imports, including operators, literal defaulting and option/result
+with explicit imports, including operators, literal defaulting and option
 do, and the focused cross-module and rejection checks pass. Default imports
 and the complete overview validator example remain later integration work.
 

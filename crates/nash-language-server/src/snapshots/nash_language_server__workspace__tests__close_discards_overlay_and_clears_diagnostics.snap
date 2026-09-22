@@ -19,12 +19,12 @@ description: "module Main exposing (..)\nvalue = unknown\n"
       "severity": 1,
       "code": "nash::names::not_found_var",
       "source": "nash",
-      "message": "Unknown variable `unknown`.\n\n\n\nSimilar names:\n\n    not\n    show\n    Int.pow\n    and",
+      "message": "Unknown variable `unknown`.\n\n\n\nSimilar names:\n\n    not\n    show\n    Int.min\n    Int.pow",
       "data": [
         "not",
         "show",
-        "Int.pow",
-        "and"
+        "Int.min",
+        "Int.pow"
       ]
     }
   ],

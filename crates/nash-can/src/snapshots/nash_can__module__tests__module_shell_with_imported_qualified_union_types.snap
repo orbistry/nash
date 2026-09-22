@@ -1,6 +1,6 @@
 ---
 source: crates/nash-can/src/module.rs
-description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Result\n\ntype alias Wrapped 'e 'a = Result.Result 'e 'a\n"
+description: "Code:\n\nmodule Main exposing (Wrapped)\n\nimport Outcome\n\ntype alias Wrapped 'e 'a = Outcome.Outcome 'e 'a\n"
 ---
 Module {
     tests: [],
@@ -90,27 +90,27 @@ Module {
                         },
                         end: Position {
                             line: 5,
-                            column: 47,
+                            column: 49,
                         },
                     },
                     value: Named {
                         reference: QualifiedName {
                             home: ModuleName {
                                 package: None,
-                                name: "Result",
+                                name: "Outcome",
                             },
-                            name: "Result",
+                            name: "Outcome",
                         },
                         args: [
                             Located {
                                 region: Region {
                                     start: Position {
                                         line: 5,
-                                        column: 42,
+                                        column: 44,
                                     },
                                     end: Position {
                                         line: 5,
-                                        column: 44,
+                                        column: 46,
                                     },
                                 },
                                 value: Var(
@@ -121,11 +121,11 @@ Module {
                                 region: Region {
                                     start: Position {
                                         line: 5,
-                                        column: 45,
+                                        column: 47,
                                     },
                                     end: Position {
                                         line: 5,
-                                        column: 47,
+                                        column: 49,
                                     },
                                 },
                                 value: Var(

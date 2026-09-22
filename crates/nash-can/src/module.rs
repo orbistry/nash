@@ -2007,9 +2007,9 @@ mod tests {
             r#"
             module Main exposing (Wrapped)
 
-            import Result
+            import Outcome
 
-            type alias Wrapped 'e 'a = Result.Result 'e 'a
+            type alias Wrapped 'e 'a = Outcome.Outcome 'e 'a
         "#
         );
     }
@@ -2255,16 +2255,16 @@ mod tests {
             r#"
             module Main exposing (Wrapped)
 
-            import Result
+            import Outcome
 
-            type alias Wrapped 'e 'a = Result.Result 'e 'a
+            type alias Wrapped 'e 'a = Outcome.Outcome 'e 'a
         "#
         );
         let bump = Bump::new();
         let parameters = bump.alloc_slice_fill_iter(["e", "a"]);
         let interfaces = BTreeMap::from([(
-            "Result",
-            union_interface(&bump, "Result", "Result", parameters),
+            "Outcome",
+            union_interface(&bump, "Outcome", "Outcome", parameters),
         )]);
         let context = Context {
             package: None,

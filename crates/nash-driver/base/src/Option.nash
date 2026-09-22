@@ -1,10 +1,9 @@
-module Option exposing (Option(..), type option(..), withDefault, map, map2, andThen, isSome, unwrap, toResult)
+module Option exposing (Option(..), type option(..), withDefault, map, apply, map2, andThen, isSome, unwrap)
 
 import Primitive exposing (type bool(..))
 import Eq exposing (Eq)
 import Lift exposing (Lift)
 import Functor
-import Result exposing (type result(..))
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 
@@ -56,6 +55,9 @@ impl Lift (option ('a : Big)) (Option 'a) where
 map : Lift (option 'a) ('f 'a) => ('a -> 'b) -> 'f 'a -> option 'b
 map f value = Functor.map f (lowerOuter value)
 
+apply : Lift (option 'a) ('f 'a) => option ('a -> 'b) -> 'f 'a -> option 'b
+apply functions value = map2 (\f x -> f x) functions value
+
 map2 : (Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b)) => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> option 'c
 map2 f left right =
     case (lowerOuter left, lowerOuter right) of
@@ -79,12 +81,6 @@ unwrap value =
     case lowerOuter value of
         Some x -> x
         None -> fail
-
-toResult : Lift (option 'a) ('f 'a) => 'e -> 'f 'a -> result 'e 'a
-toResult error value =
-    case lowerOuter value of
-        Some x -> Ok x
-        None -> Err error
 
 lowerOuter : Lift (option 'a) ('f 'a) => 'f 'a -> option 'a
 lowerOuter = lower

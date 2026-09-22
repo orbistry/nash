@@ -1,0 +1,7 @@
+---
+source: crates/nash-driver/tests/base_traits.rs
+description: "module Main exposing (..)\n\nzero : Int\nzero = 0\ntwo : Int\ntwo = 2\nfive : Int\nfive = 5\n\nemptyChoices : list Int\nemptyChoices = []\n\ndraw : Prop.generator 'a -> option 'a\ndraw generator =\n    case Prop.run generator (Prop.Seeded #\"\" (lift emptyChoices)) of\n        Some (_, value) -> Some value\n        None -> None\n\ntests\n    test \"Big choice bound\" = do\n        assert (draw (Prop.choice zero) == Some 0)\n    test \"mixed integer bounds\" = do\n        assert (draw (Prop.intBetween five 5) == Some 5)\n        assert (draw (Prop.intBetween 5 five) == Some 5)\n    test \"mixed list bounds\" = do\n        assert (draw (Prop.listBetween two 2 (Prop.constant 7)) == Some [7, 7])\n        assert (draw (Prop.listBetween 2 two (Prop.constant 7)) == Some [7, 7])\n"
+---
+Big choice bound: Pass; traces: []
+mixed integer bounds: Pass; traces: []
+mixed list bounds: Pass; traces: []

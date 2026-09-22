@@ -20,14 +20,19 @@ tests
         assert ((-7) % 3 == 2)
         assert (quot (-7) 3 == -2)
         assert (rem (-7) 3 == -1)
-    test "Big arithmetic" = do
-        assert (Builtin.unIData (big + 2) == 9)
-        assert (Builtin.unIData (big - 2) == 5)
-        assert (Builtin.unIData (big * 2) == 14)
-        assert (Builtin.unIData (negate big) == -7)
-        assert (Builtin.unIData (negate big / 3) == -3)
-        assert (Builtin.unIData (negate big % 3) == 2)
-        assert (Builtin.unIData (quot (negate big) 3) == -2)
-        assert (Builtin.unIData (rem (negate big) 3) == -1)
+    test "Big arithmetic returns little integers" = do
+        assert (Int.add big 2 == 9)
+        assert (Int.add 2 big == 9)
+        assert (Int.sub big 2 == 5)
+        assert (Int.mul big big == 49)
+        assert (Int.negate big == -7)
+        assert (Int.div (Int.negate big) 3 == -3)
+        assert (Int.mod (Int.negate big) 3 == 2)
+        assert (Int.quot (Int.negate big) 3 == -2)
+        assert (Int.rem (Int.negate big) 3 == -1)
+    test "mixed integer ordering returns little values" = do
+        assert (Int.compare big 7 == EQ)
+        assert (Int.min big 3 == 3)
+        assert (Int.max 3 big == 7)
     test "division by zero" fail = do
         assert (1 / 0 == 0)

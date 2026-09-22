@@ -1,9 +1,6 @@
 module Semigroup exposing (Semigroup)
 
-import Primitive
-
 import Builtin
-import Eq exposing (Eq)
 
 trait Semigroup 'a where
     append : 'a -> 'a -> 'a
@@ -22,36 +19,3 @@ impl Semigroup (list 'a) where
 
 impl Semigroup unit where
     append _ _ = ()
-
-impl Semigroup Bytes where
-    append a b = Builtin.bData (Builtin.appendByteString (Builtin.unBData a) (Builtin.unBData b))
-
-impl Semigroup (List 'a) where
-    append xs ys = Builtin.listData (append (Builtin.unListData xs) (Builtin.unListData ys))
-
-impl Eq 'k => Semigroup (Map 'k 'v) where
-    append left right =
-        let
-            leftEntries = Builtin.unMapData left
-            rightEntries = Builtin.unMapData right
-        in
-        Builtin.mapData (append (withoutRightKeys leftEntries rightEntries) rightEntries)
-
-withoutRightKeys : Eq 'k => list (pair 'k 'v) -> list (pair 'k 'v) -> list (pair 'k 'v)
-withoutRightKeys left right =
-    case left of
-        [] -> []
-        entry :: rest ->
-            let
-                pair(key, _) = entry
-            in
-            if containsKey key right then withoutRightKeys rest right
-            else Builtin.mkCons entry (withoutRightKeys rest right)
-
-containsKey : Eq 'k => 'k -> list (pair 'k 'v) -> bool
-containsKey key entries =
-    case entries of
-        [] -> Primitive.False
-        pair(entryKey, _) :: rest ->
-            if eq key entryKey then Primitive.True
-            else containsKey key rest

@@ -9,15 +9,27 @@ emptyList = empty
 emptyUnit : unit
 emptyUnit = empty
 emptyBigBytes : Bytes
-emptyBigBytes = empty
+emptyBigBytes = lift emptyBytes
 emptyBigList : List Int
-emptyBigList = empty
+emptyBigList = lift emptyBigElements
+emptyBigElements : list Int
+emptyBigElements = empty
 left : Map Int Bytes
 left = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"bb")]
 right : Map Int Bytes
 right = lift [Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"cc"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"dd")]
-expected : Map Int Bytes
-expected = lift [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"cc"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"dd")]
+expected : list (pair Int Bytes)
+expected = [Builtin.mkPairData (Builtin.iData 1) (Builtin.bData #"aa"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"cc"), Builtin.mkPairData (Builtin.iData 2) (Builtin.bData #"dd")]
+
+emptyBigElementsMap : list (pair Int Bytes)
+emptyBigElementsMap = []
+
+leftEntries : list (pair Int Bytes)
+leftEntries = lower left
+unionForward : list (pair Int Bytes)
+unionForward = Map.union left right
+unionReverse : list (pair Int Bytes)
+unionReverse = Map.union right left
 
 tests
     test "little append and identities" = do
@@ -28,10 +40,15 @@ tests
         assert (emptyList ++ [1] == [1])
         assert (append emptyUnit () == ())
     test "Big append and identities" = do
-        assert (Builtin.unBData (Builtin.bData #"aa" ++ emptyBigBytes) == #"aa")
-        assert (Builtin.unListData (emptyBigList ++ lift [Builtin.iData 1, Builtin.iData 2]) == [Builtin.iData 1, Builtin.iData 2])
+        assert (Bytes.append (Builtin.bData #"aa") emptyBigBytes == #"aa")
+        assert (List.append emptyBigList [Builtin.iData 1, Builtin.iData 2] == [Builtin.iData 1, Builtin.iData 2])
     test "right biased map union" = do
-        assert (left ++ right == expected)
-        assert (empty ++ left == left)
-        assert (left ++ empty == left)
-        assert (left ++ right /= right ++ left)
+        assert (Map.union left right == expected)
+        assert (Map.union emptyBigElementsMap left == leftEntries)
+        assert (Map.union left emptyBigElementsMap == leftEntries)
+        assert (unionForward /= unionReverse)
+    test "mixed byte helpers return little bytes" = do
+        assert (Bytes.append #"aa" (Builtin.bData #"bb") == #"aabb")
+        assert (Bytes.compare (Builtin.bData #"aa") #"aa" == EQ)
+        assert (Bytes.min #"aa" (Builtin.bData #"bb") == #"aa")
+        assert (Bytes.max (Builtin.bData #"aa") #"bb" == #"bb")

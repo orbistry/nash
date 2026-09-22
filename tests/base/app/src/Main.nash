@@ -22,17 +22,6 @@ mappedOperator = (\x -> (x, x)) <$> Some ()
 appliedOperator = Some (\x -> (x, x)) <*> Some ()
 boundOperator = Some () >>= (\x -> Some (x, x))
 
-mappedResult : result unit (unit, unit)
-mappedResult = map (\x -> (x, x)) (Ok ())
-
-appliedResult : result unit (unit, unit)
-appliedResult = apply (Ok (\x -> (x, x))) (Ok ())
-
-resultDo : result unit (unit, unit)
-resultDo = do
-    item <- Ok ()
-    pure (item, item)
-
 mappedCons = map (\x -> (x, x)) (Cons.singleton ())
 
 type Packet = Packet Int
@@ -55,23 +44,26 @@ consRightFold = Cons.foldr sub 0 (Cons.fromList [1, 2])
 consRoundTrip = Cons.toList (Cons.fromList [1, 2])
 
 emptyBigMap : Map Int Bytes
-emptyBigMap = empty
+emptyBigMap = lift emptyEntries
 leftMap : Map Int Bytes
 leftMap = fromData (Map [Builtin.mkPairData (I 1) (B #"aa"), Builtin.mkPairData (I 2) (B #"bb")])
 rightMap : Map Int Bytes
 rightMap = fromData (Map [Builtin.mkPairData (I 2) (B #"cc"), Builtin.mkPairData (I 2) (B #"dd")])
-combinedMap = append leftMap rightMap
-mapWithEmpty = withEmpty leftMap
-mergeMaps : Eq 'k => Map 'k 'v -> Map 'k 'v -> Map 'k 'v
-mergeMaps = append
+combinedMap : list (pair Int Bytes)
+combinedMap = Map.union leftMap rightMap
+mapWithEmpty : list (pair Int Bytes)
+mapWithEmpty = Map.union leftMap emptyEntries
+mergeMaps : Eq 'k => Map 'k 'v -> Map 'k 'v -> list (pair 'k 'v)
+mergeMaps = Map.union
 
 emptyBigBytes : Bytes
-emptyBigBytes = empty
+emptyBigBytes = lift #""
 emptyBigList : List Int
-emptyBigList = empty
-appendedBigBytes = append bytesLiteral emptyBigBytes
-appendedBigList = append bigList emptyBigList
-bigListWithEmpty = withEmpty bigList
+emptyBigList = lift emptyInts
+appendedBigBytes = Bytes.append bytesLiteral emptyBigBytes
+appendedBigList = List.append bigList emptyBigList
+bigListWithEmpty : list Int
+bigListWithEmpty = withEmpty (lower bigList)
 
 shownBigPrimitives = (show integerLiteral, show bytesLiteral)
 shownBigContainers = (show bigList, show nestedBigLists, show bigMap)
@@ -96,19 +88,19 @@ checkedMap : Map Int Bytes
 checkedMap = validate mapData
 
 bigEquality = (eq integerLiteral bigInteger, eq bytesLiteral bigBytes)
-bigOrdering = (compare integerLiteral bigInteger, compare bytesLiteral bigBytes)
-bigOrderDefaults = (lt integerLiteral bigInteger, max bytesLiteral bigBytes)
-bigOrderedEqual = orderedEqual integerLiteral bigInteger
+bigOrdering = (Int.compare integerLiteral bigInteger, Bytes.compare bytesLiteral bigBytes)
+bigOrderDefaults = (Int.compare integerLiteral bigInteger == LT, Bytes.max bytesLiteral bigBytes)
+bigOrderedEqual = orderedEqual (Builtin.unIData integerLiteral) (Builtin.unIData bigInteger)
 equalBigLists : List Unit -> List Unit -> bool
 equalBigLists = eq
 equalBigMaps : Map Int Unit -> Map Int Unit -> bool
 equalBigMaps = eq
 
-bigArithmetic : (Int, Int, Int, Int)
-bigArithmetic = (add 7 3, sub 7 3, mul 7 3, -7)
-bigDivision : (Int, Int, Int, Int)
-bigDivision = (div (-7) 3, mod (-7) 3, quot (-7) 3, rem (-7) 3)
-bigSuperclass : Int
+bigArithmetic : (int, int, int, int)
+bigArithmetic = (Int.add bigInteger 3, Int.sub 7 bigInteger, Int.mul bigInteger bigInteger, Int.negate bigInteger)
+bigDivision : (int, int, int, int)
+bigDivision = (Int.div bigInteger 3, Int.mod 7 bigInteger, Int.quot bigInteger 3, Int.rem 7 bigInteger)
+bigSuperclass : int
 bigSuperclass = twice 21
 
 integerLiteral : Int
@@ -146,26 +138,6 @@ checkedData = validate wireData
 dataTags = (Data.tag wireData, Data.tag (I 1))
 dataFields = (Data.fields wireData, Data.fields (I 1))
 serialisedData = Data.serialise wireData
-
-okResult : result unit bool
-okResult = Ok True
-errResult : result unit bool
-errResult = Err ()
-liftedOk : Result Unit Bool.Bool
-liftedOk = lift bigPayloadOk
-bigPayloadOk : result Unit Bool.Bool
-bigPayloadOk = Ok Bool.True
-liftedErr : Result Unit Bool.Bool
-liftedErr = lift bigPayloadErr
-bigPayloadErr : result Unit Bool.Bool
-bigPayloadErr = Err Unit.Unit
-loweredOk : result Unit Bool.Bool
-loweredOk = lower liftedOk
-loweredErr : result Unit Bool.Bool
-loweredErr = lower liftedErr
-resultDefault = Result.withDefault False errResult
-resultMappedError = Result.mapError (\_ -> True) errResult
-resultEquality = (eq okResult errResult, eq errResult errResult)
 
 optionalEquality = eq (Some True) (Some False)
 optionalDefault = Option.withDefault True None
@@ -243,8 +215,8 @@ orderedEqual a b = if lt a b then False else eq a b
 units = eq () ()
 lists = eq [1, 2] [1, 2]
 bigElementLists = eq [Packet integerLiteral] [Packet bigInteger]
-mappedBigList : List Packet
-mappedBigList = map Packet bigList
+mappedBigList : list Packet
+mappedBigList = List.map Packet bigList
 pairs a b = eq (Builtin.mkPairData a b) (Builtin.mkPairData b a)
 data = eq (I 1) (Builtin.constrData 0 [I 1])
 
@@ -269,3 +241,8 @@ emptyUnit : unit
 emptyUnit = empty
 combined = append [1, 2] [3]
 text = withEmpty "text"
+
+emptyEntries : list (pair Int Bytes)
+emptyEntries = []
+emptyInts : list Int
+emptyInts = []

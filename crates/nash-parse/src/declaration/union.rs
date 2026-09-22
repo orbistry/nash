@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn union_multiple_args() {
-        assert_decl_snapshot!("type Result 'e 'a = Ok 'a | Err 'e");
+        assert_decl_snapshot!("type Outcome 'e 'a = Ok 'a | Err 'e");
     }
 
     #[test]

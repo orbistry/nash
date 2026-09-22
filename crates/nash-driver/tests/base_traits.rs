@@ -110,3 +110,5 @@ base_snapshot!(
     boolean_and_unit_literals,
     "fixtures/base-traits/BooleanUnitLiterals.nash"
 );
+
+base_snapshot!(generate_bounds, "fixtures/base-traits/PropBounds.nash");

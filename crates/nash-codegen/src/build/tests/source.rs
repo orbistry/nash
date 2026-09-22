@@ -6,7 +6,6 @@ const BASE_MODULES: &[&str] = &[
     include_str!("../../../../nash-driver/base/src/Functor.nash"),
     include_str!("../../../../nash-driver/base/src/Applicative.nash"),
     include_str!("../../../../nash-driver/base/src/Monad.nash"),
-    include_str!("../../../../nash-driver/base/src/Result.nash"),
     include_str!("../../../../nash-driver/base/src/Option.nash"),
     include_str!("../../../../nash-driver/base/src/Data.nash"),
 ];

@@ -1,0 +1,27 @@
+module Main exposing (..)
+
+zero : Int
+zero = 0
+two : Int
+two = 2
+five : Int
+five = 5
+
+emptyChoices : list Int
+emptyChoices = []
+
+draw : Prop.generator 'a -> option 'a
+draw generator =
+    case Prop.run generator (Prop.Seeded #"" (lift emptyChoices)) of
+        Some (_, value) -> Some value
+        None -> None
+
+tests
+    test "Big choice bound" = do
+        assert (draw (Prop.choice zero) == Some 0)
+    test "mixed integer bounds" = do
+        assert (draw (Prop.intBetween five 5) == Some 5)
+        assert (draw (Prop.intBetween 5 five) == Some 5)
+    test "mixed list bounds" = do
+        assert (draw (Prop.listBetween two 2 (Prop.constant 7)) == Some [7, 7])
+        assert (draw (Prop.listBetween 2 two (Prop.constant 7)) == Some [7, 7])

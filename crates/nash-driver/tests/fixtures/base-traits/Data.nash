@@ -11,14 +11,6 @@ bigOption : Option Int
 bigOption = lift (Some (Builtin.iData 42))
 bigNone : Option Int
 bigNone = lift littleNone
-bigResult : Result Bytes Int
-bigResult = lift littleOk
-bigError : Result Bytes Int
-bigError = lift littleErr
-smallResult : result Bytes Int
-smallResult = lower bigResult
-smallError : result Bytes Int
-smallError = lower bigError
 bigList : List Int
 bigList = lift [Builtin.iData 1, Builtin.iData 2]
 smallList : list Int
@@ -62,11 +54,6 @@ littleNone : option Int
 littleNone = None
 expectedNone : Option Int
 expectedNone = Option.None
-littleOk : result Bytes Int
-littleOk = Ok 42
-littleErr : result Bytes Int
-littleErr = Err #"626164"
-
 tests
     test "primitive and twin lift" = do
         assert (Builtin.unIData (lift 42) == 42)
@@ -78,8 +65,6 @@ tests
         assert (bigOption == Option.Some (Builtin.iData 42))
         assert (lower bigOption == Some (Builtin.iData 42))
         assert (bigNone == expectedNone)
-        assert (smallResult == Ok 42)
-        assert (smallError == Err #"626164")
     test "container lift and reflexive Big lift" = do
         assert (smallList == [1, 2])
         assert (bigList == reflexiveList)

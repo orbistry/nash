@@ -1,6 +1,6 @@
 ---
 source: crates/nash-parse/src/type_.rs
-description: "Code:\n\nMaybe 'a -> Result 'e 'a"
+description: "Code:\n\nMaybe 'a -> Outcome 'e 'a"
 ---
 Located {
     region: Region {
@@ -10,7 +10,7 @@ Located {
         },
         end: Position {
             line: 1,
-            column: 25,
+            column: 26,
         },
     },
     value: Lambda {
@@ -64,7 +64,7 @@ Located {
                 },
                 end: Position {
                     line: 1,
-                    column: 25,
+                    column: 26,
                 },
             },
             value: Type {
@@ -75,20 +75,20 @@ Located {
                     },
                     end: Position {
                         line: 1,
-                        column: 19,
+                        column: 20,
                     },
                 },
-                name: "Result",
+                name: "Outcome",
                 args: [
                     Located {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 20,
+                                column: 21,
                             },
                             end: Position {
                                 line: 1,
-                                column: 22,
+                                column: 23,
                             },
                         },
                         value: Var(
@@ -99,11 +99,11 @@ Located {
                         region: Region {
                             start: Position {
                                 line: 1,
-                                column: 23,
+                                column: 24,
                             },
                             end: Position {
                                 line: 1,
-                                column: 25,
+                                column: 26,
                             },
                         },
                         value: Var(

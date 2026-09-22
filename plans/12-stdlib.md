@@ -113,7 +113,7 @@ blanket impls of `ToData` and `FromData` use it; `Validate` remains opt-in.
 
 - [x] Seed compiler-known types from `nash_ast::primitives::PRIMITIVES`,
   homed in `Primitive`; there is no second builtin type table.
-- [x] Ship `Bool`, `Unit`, `Option`, `Result`, and `Ordering` modules with
+- [x] Ship `Bool`, `Unit`, `Option`, and `Ordering` modules with
   their Big/little twins. Primitive `bool` and `unit` remain compiler-known.
 - [x] Resolve little constructors unqualified and Big twins qualified
   (`Some` versus `Option.Some`). Restrict duplicate twin constructor names
@@ -127,7 +127,7 @@ blanket impls of `ToData` and `FromData` use it; `Validate` remains opt-in.
 
 Evidence: `crates/nash-ast/src/primitives.rs`,
 `crates/nash-can/src/environment/foreign.rs`,
-`crates/nash-driver/base/src/{Bool,Unit,Option,Result,Ordering}.nash`,
+`crates/nash-driver/base/src/{Bool,Unit,Option,Ordering}.nash`,
 `crates/nash-driver/tests/bundled_base.rs`, `tests/base/app/src/Main.nash`,
 and canonicalization/type-inference snapshots.
 
@@ -155,7 +155,7 @@ The implemented structure and executable coverage are listed below.
 - `crates/nash-driver/base/src/Eq.nash`, `Ord.nash`, `Show.nash`, `Num.nash`, `Integral.nash`, `Semigroup.nash`, `Monoid.nash`, `Functor.nash`, `Applicative.nash`, `Monad.nash`, `Lift.nash`, `Data.nash`, `Literal.nash`
 - `crates/nash-driver/base/src/Prelude.nash` (the `infix` table and the tuple impls)
 - `crates/nash-driver/base/src/Bool.nash` (`not`, `and`, `or`, `xor`)
-- `crates/nash-driver/base/src/Option.nash`, `Result.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
+- `crates/nash-driver/base/src/Option.nash`, `Ordering.nash` (their `Eq`/`Functor`/`Applicative`/`Monad`/`Lift` impls)
 - `crates/nash-codegen/src/can_to_core.rs` (plans/07: `Bool.and`/`or` delay the second argument)
 
 **Change**
@@ -212,7 +212,7 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 - `crates/nash-driver/tests/base_traits.rs` compiles and evaluates seven import-free Nash fixtures against embedded Base. Snapshots record Nash source and outcomes for equality/ordering, numeric/literal traits, Show, semigroup/monoid, functor/applicative/monad, Lift/Data, and Prelude/native debugging syntax. The debugging fixture also runs with silent traces.
 - Named and operator boolean calls preserve laziness in ordinary expressions and assertions; partial applications remain strict.
-- nash-can/nash-solve: `1 + 2` resolves to `Num int`; `(1 : Int) + 2` resolves `Num Int` with the literal at `Int` via `FromInt Int`; `lift` wraps `list Int` as `List Int` without converting elements; reflexive Lift works for Big and little types.
+- nash-can/nash-solve: `1 + 2` resolves to `Num int`; Big arithmetic uses normalization helpers such as `Int.add`, returning `int`; numeric operator traits remain little-only; `lift` wraps `list Int` as `List Int` without converting elements; reflexive Lift works for Big and little types.
 - codegen: `False && fail "x"` evaluates to `False` (laziness).
 
 **Done when** the in-process Base compilation tests and the user-facing operator tests pass.
@@ -221,7 +221,7 @@ Aiken `builtins.rs` `prelude` for `Ordering`, `Option`, and the
 
 ## Chunk 6: type modules — complete
 
-- [x] Ship Int, Bytes, String and List APIs and complete Option/Result helpers.
+- [x] Ship Int, Bytes, String and List APIs and complete Option helpers.
 - [x] Accept Big/little outer inputs independently; return little outer results.
 - [x] Preserve elements in all Lift/lower instances; make identity universal.
 - [x] Keep imports acyclic and List.map delegated to Functor.map.
@@ -251,7 +251,8 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 - [x] Ship Data.serialise, Data.tag and Data.fields alongside the Data traits.
 - [x] Use explicit `Constr pair(...)` patterns for tag/field extraction.
 - [ ] Add Data.Decode and Data.Encode combinators and round-trip tests.
-- [ ] Add the Map module and its lookup/update/collection API.
+- [x] Move right-biased map union into `Map.union`, returning a little list of pairs.
+- [ ] Complete the Map lookup/update/collection API.
 
 **Files**
 
