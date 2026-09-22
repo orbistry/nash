@@ -1,4 +1,4 @@
-module List exposing (singleton, repeat, range, head, tail, isEmpty, length, reverse, append, concat, map, indexedMap, filter, filterMap, foldl, foldr, any, all, find, member, take, drop, at, map2, sort, sortBy, sum, partition, toArray)
+module List exposing (singleton, repeat, range, head, tail, isEmpty, length, isLength, reverse, append, concat, map, indexedMap, filter, filterMap, foldl, foldr, any, all, find, member, take, drop, at, map2, sort, sortBy, sum, partition, toArray)
 
 import Prelude exposing (..)
 import Lift exposing (Lift)
@@ -41,6 +41,21 @@ isEmpty values = Builtin.nullList (lowerOuter values)
 
 length : Lift (list 'a) ('f 'a) => ('f 'a) -> int
 length values = foldlList (\_ n -> n + 1) 0 (lowerOuter values)
+
+isLength : (Lift (list 'a) ('f 'a), Lift int 'n) => ('f 'a) -> 'n -> bool
+isLength values mustLength =
+    let
+        count : int
+        count = lower mustLength
+        items = lowerOuter values
+    in
+    if count <= 0 then
+        case items of
+            [] -> count == 0
+            _ :: _ -> False
+    else case Builtin.dropList (count - 1) items of
+        [_] -> True
+        _ -> False
 
 reverse : Lift (list 'a) ('f 'a) => ('f 'a) -> list 'a
 reverse values = foldlList (\x xs -> x :: xs) [] (lowerOuter values)

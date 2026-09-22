@@ -710,6 +710,7 @@ head : Lift (list 'a) ('f 'a) => ('f 'a) -> option 'a
 tail : Lift (list 'a) ('f 'a) => ('f 'a) -> option (list 'a)
 isEmpty : Lift (list 'a) ('f 'a) => ('f 'a) -> bool
 length : Lift (list 'a) ('f 'a) => ('f 'a) -> int
+isLength : (Lift (list 'a) ('f 'a), Lift int 'n) => ('f 'a) -> 'n -> bool
 reverse : Lift (list 'a) ('f 'a) => ('f 'a) -> list 'a
 append : (Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a)) => ('f 'a) -> ('g 'a) -> list 'a
 concat : (Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a)) => 'g ('f 'a) -> list 'a
@@ -733,6 +734,10 @@ sum : (Lift int 'a, Lift (list 'a) ('f 'a)) => 'f 'a -> int
 partition : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> (list 'a, list 'a)
 toArray : Lift (list 'a) ('f 'a) => ('f 'a) -> array 'a
 ```
+
+`isLength values count` checks for exactly `count` elements. Negative counts
+return `False`; zero matches only an empty list. Positive counts use one
+`dropList (count - 1)` and a singleton pattern, without counting the full list.
 
 The higher-kinded inputs above share their element types with the little
 result; e.g. `Lift (list 'a) ('f 'a)` admits both list and List without

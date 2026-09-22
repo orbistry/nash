@@ -92,3 +92,18 @@ tests
         assert (List.find (\_ -> Bool.True) big == Some (Builtin.iData 1))
         assert (List.partition (\_ -> Bool.True) big == (items, []))
         assert (Builtin.equalsInteger (List.sum big) 6)
+    test "isLength empty and zero" = do
+        assert (List.isLength empty 0)
+        assert (not (List.isLength empty 1))
+        assert (not (List.isLength [1] 0))
+        assert (not (List.isLength empty (-1)))
+    test "isLength boundaries" = do
+        assert (List.isLength [1] 1)
+        assert (List.isLength items 3)
+        assert (not (List.isLength items 2))
+        assert (not (List.isLength items 4))
+    test "isLength Big inputs and negative counts" = do
+        assert (List.isLength big (Builtin.iData 3))
+        assert (List.isLength items (Builtin.iData 3))
+        assert (List.isLength big 3)
+        assert (not (List.isLength items (-1)))
