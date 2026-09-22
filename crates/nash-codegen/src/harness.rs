@@ -26,10 +26,26 @@ impl std::fmt::Display for Evaluated {
 }
 
 pub fn eval_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Evaluated {
+    eval_core_with_costs(arena, core, None)
+}
+
+pub fn eval_core_with_costs<'a>(
+    arena: &'a Arena,
+    core: &'a Core<'a>,
+    costs: Option<&[i64]>,
+) -> Evaluated {
     let named = crate::lower::lower(arena, core).expect("valid lowered Core");
     let term = debruijn::to_debruijn(arena, named).expect("closed term");
     let program = Program::new(arena, Version::plutus_v3(arena), term);
-    let evaluation = program.eval(arena);
+    let evaluation = match costs {
+        Some(costs) => program.eval_with_params(
+            arena,
+            nash_plutus::machine::PlutusVersion::V3,
+            costs,
+            ExBudget::default(),
+        ),
+        None => program.eval(arena),
+    };
     Evaluated {
         uplc: pretty::program(Program::new(arena, Version::plutus_v3(arena), named)),
         result: match evaluation.term {
