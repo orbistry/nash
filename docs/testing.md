@@ -176,6 +176,13 @@ values as `nash build` (default `verbose` for tests).
 
 ## Power-assert
 
+Codegen captures operands and supplies static assertion IDs and capture prefixes.
+Nash `Test.assertAt` and `Test.assertCapture` compose the trace messages and call
+the next failure step. Rendered captures stay inside the failure branch, and
+continuations preserve trace order without evaluating later captures early.
+These helpers use `Builtin.trace` explicitly, so reserved test messages survive
+silent user tracing without a module-name exception in codegen.
+
 `assert e` with `e : bool`. The compiler rewrites the call so that, when `e`
 is `False`, the value of every sub-expression of `e` whose type has a `Show`
 impl is traced, then evaluation fails. The runner lays the values out under
@@ -317,6 +324,12 @@ For every `prop` the compiler emits one preparation program:
 ```nash
 prepare : prng -> option (prng, unit -> unit, unit -> list string)
 ```
+
+Codegen translates the source patterns, body, and selected Show calls into
+ordinary callbacks. Nash `Test.both` composes generators in source order,
+initializing each later generator only after the earlier draw succeeds.
+Nash `Test.prepare` handles rejection and constructs the state/body/display tuple;
+these operations are library code, not a second implementation in codegen.
 
 It draws the `via` values once, then returns the next PRNG, a property-body
 function, and a function that shows the values. Native tuples can hold these

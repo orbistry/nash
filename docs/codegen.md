@@ -578,9 +578,10 @@ runner protocol in [testing.md](testing.md):
 prepare : prng -> option (prng, unit -> unit, unit -> list string)
 ```
 
-The program applies each generator function directly, reading `(value, nextPrng)`
-from its result. It returns the final state and functions for the property body
-and counterexample display. Native tuples retain function values and captures.
+Codegen produces ordinary source-pattern callbacks and calls Nash `Test.both`
+and `Test.prepare`. The Base functions own generator sequencing, rejection,
+result unpacking, tuple construction, and deferred body/display calls.
+Native tuples retain function values and captures.
 The runner saves the state before calling the body; it calls the display function
 only when needed. Generation is not repeated after a body failure.
 

@@ -73,6 +73,9 @@ tests validator
 contextual: they are keywords only in the positions shown below and remain
 valid variable names elsewhere. `port` and `effect` are removed.
 
+After a module qualifier, the final lowercase name may be a reserved word:
+`Builtin.trace` is a function reference; bare `trace` remains syntax.
+
 ## Modules
 
 ```elm
@@ -481,7 +484,7 @@ inner_char     = lower | upper | digit | '_' ;
 
 lower_var      = lower { inner_char } ;                (* not a reserved word *)
 upper_var      = upper { inner_char } ;
-qualified_var  = upper_var '.' ( lower_var | upper_var | qualified_var ) ;
+qualified_var  = upper_var '.' ( lower { inner_char } | upper_var | qualified_var ) ;
 qualified_upper = upper_var '.' ( upper_var | qualified_upper ) ;
 module_name    = upper_var { '.' upper_var } ;
 type_var       = "'" lower_var ;                       (* new *)

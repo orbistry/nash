@@ -346,13 +346,7 @@ impl<'a> Engine<'a, '_, '_> {
             }
             Expr::Trace { message, body } => {
                 let body = self.expr(body, ctx)?;
-                let home = self.build.inputs[ctx.input].module.name;
-                if home.package == Some(primitives::BASE) && home.name == "Test" {
-                    let message = self.expr(message, ctx)?;
-                    self.ir.trace(message, body)
-                } else {
-                    self.user_trace(Some(message), None, expr.region, body, ctx)?
-                }
+                self.user_trace(Some(message), None, expr.region, body, ctx)?
             }
             Expr::Fail(message) | Expr::Todo(message) => {
                 let todo = matches!(expr.value, Expr::Todo(_));

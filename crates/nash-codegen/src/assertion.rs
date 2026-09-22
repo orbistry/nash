@@ -4,7 +4,7 @@
 //! replace only emitted Core and leave canonical nodes and evidence intact.
 use nash_ast::{Expr, ModuleName, NodeId, Pred, QualifiedName, primitives};
 use nash_ir::{core::*, ty::Ty};
-use nash_plutus::{builtin::DefaultFunction as F, constant::Constant};
+use nash_plutus::constant::Constant;
 use nash_region::Located;
 use nash_test::{AssertSite, Capture};
 
@@ -98,15 +98,25 @@ impl<'a> Engine<'a, '_, '_> {
                 if let Some(shown) = captured.value {
                     let prefix =
                         self.string(&format!("\0assert\0{id}\0{}\0", captured.metadata.index));
-                    failed = self
-                        .ir
-                        .trace(self.ir.builtin(F::AppendString, &[prefix, shown]), failed);
+                    let unit = Binder {
+                        name: self.ir.fresh("unit"),
+                        ty: Ty::Const(&nash_ir::ty::ConstTy::Unit),
+                    };
+                    let rest = self.ir.lam(&[unit], failed);
+                    let trace = self.base_function("Test", "assertCapture", Substitution::new())?;
+                    failed = self.ir.app(trace, &[prefix, shown, rest]);
                 }
             }
             // A site marker also identifies assertions with no printable captures.
+            let unit = Binder {
+                name: self.ir.fresh("unit"),
+                ty: Ty::Const(&nash_ir::ty::ConstTy::Unit),
+            };
+            let rest = self.ir.lam(&[unit], failed);
+            let trace = self.base_function("Test", "assertAt", Substitution::new())?;
             failed = self
                 .ir
-                .trace(self.string(&format!("\0assert\0{id}")), failed);
+                .app(trace, &[self.string(&format!("\0assert\0{id}")), rest]);
             let mut body = self.ir.if_(
                 condition,
                 self.ir.lit(Constant::unit(self.ir.arena)),
@@ -162,20 +172,13 @@ impl<'a> Engine<'a, '_, '_> {
         }
         let value = match &expression.value {
             Expr::Trace { message, body } => {
-                let home = self.build.inputs[ctx.input].module.name;
-                let reserved = home.package == Some(primitives::BASE) && home.name == "Test";
-                if reserved || self.trace.user == TraceLevel::Verbose {
+                if self.trace.user == TraceLevel::Verbose {
                     self.assert_expression(message, ctx, true, bindings, captures)?;
                 }
                 // Trace before evaluating/capturing its body, preserving the
                 // effect boundary while retaining the body's strict captures.
                 let unit = self.ir.lit(Constant::unit(self.ir.arena));
-                let traced = if reserved {
-                    let message = self.expr(message, ctx)?;
-                    self.ir.trace(message, unit)
-                } else {
-                    self.user_trace(Some(message), None, expression.region, unit, ctx)?
-                };
+                let traced = self.user_trace(Some(message), None, expression.region, unit, ctx)?;
                 let binder = Binder {
                     name: self.ir.fresh("assert_trace"),
                     ty: Ty::Const(&nash_ir::ty::ConstTy::Unit),

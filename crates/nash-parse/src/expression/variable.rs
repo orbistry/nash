@@ -177,9 +177,9 @@ impl<'a> Parser<'a> {
 
                 // Check for qualification chain
                 if self.is_dot_upper() {
-                    self.chomp_qualified_upper(start_pos, row, col, to_error)
+                    Ok(self.chomp_qualified_upper(start_pos))
                 } else if self.is_dot_lower() {
-                    self.parse_qualified_lower(start_pos, row, col, to_error)
+                    Ok(self.parse_qualified_lower(start_pos))
                 } else {
                     // Simple uppercase
                     let name = self.slice_from(start_pos);
@@ -229,13 +229,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse Module.name (qualified lowercase).
-    fn parse_qualified_lower<E>(
-        &mut self,
-        start_pos: usize,
-        row: usize,
-        col: usize,
-        to_error: impl FnOnce(usize, usize) -> E,
-    ) -> Result<Expr<'a>, E> {
+    fn parse_qualified_lower(&mut self, start_pos: usize) -> Expr<'a> {
         let module_end = self.pos;
         self.advance(); // consume dot
         let name_start = self.pos;
@@ -247,43 +241,33 @@ impl<'a> Parser<'a> {
         let name = std::str::from_utf8(&self.src[name_start..self.pos])
             .expect("source slice must end at UTF-8 boundaries");
 
-        if keyword::is_reserved(name) {
-            return Err(to_error(row, col));
-        }
-
-        Ok(Expr::VarQual {
+        Expr::VarQual {
             kind: VarType::LowVar,
             module,
             name,
-        })
+        }
     }
 
     /// Chomp through Module.Module... chain, ending in either .Name or .name.
-    fn chomp_qualified_upper<E>(
-        &mut self,
-        start_pos: usize,
-        row: usize,
-        col: usize,
-        to_error: impl FnOnce(usize, usize) -> E,
-    ) -> Result<Expr<'a>, E> {
+    fn chomp_qualified_upper(&mut self, start_pos: usize) -> Expr<'a> {
         loop {
             if self.is_dot_upper() {
                 self.advance(); // consume dot
                 self.advance(); // consume first uppercase char
                 self.chomp_inner_chars();
             } else if self.is_dot_lower() {
-                return self.parse_qualified_lower(start_pos, row, col, to_error);
+                return self.parse_qualified_lower(start_pos);
             } else {
                 // No more dots - this is qualified uppercase: Module.Type
                 let (module, name) = self
                     .slice_from(start_pos)
                     .rsplit_once('.')
                     .expect("qualified uppercase name has a module prefix");
-                return Ok(Expr::VarQual {
+                return Expr::VarQual {
                     kind: VarType::CapVar,
                     module,
                     name,
-                });
+                };
             }
         }
     }
@@ -321,6 +305,16 @@ mod tests {
     #[test]
     fn qualified_lower() {
         assert_expr_snapshot!("Module.foo");
+    }
+
+    #[test]
+    fn qualified_keyword() {
+        assert_expr_snapshot!("Builtin.trace");
+    }
+
+    #[test]
+    fn nested_qualified_keyword() {
+        assert_expr_snapshot!("Base.Builtin.trace");
     }
 
     #[test]

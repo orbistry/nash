@@ -689,6 +689,27 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         Ok(())
     }
 
+    pub(crate) fn base_function(
+        &mut self,
+        module: &'a str,
+        name: &'a str,
+        subst: Substitution<'a>,
+    ) -> Result<&'a Core<'a>, Error<'a>> {
+        let reference = QualifiedName {
+            home: ModuleName {
+                package: Some(primitives::BASE),
+                name: module,
+            },
+            name,
+        };
+        let template = *self
+            .top
+            .get(&reference)
+            .ok_or(Error::UnknownDefinition(reference))?;
+        let binder = self.request(template, subst, &[])?;
+        Ok(self.ir.var(binder.name))
+    }
+
     pub fn reference(
         &mut self,
         reference: QualifiedName<'a>,

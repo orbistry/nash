@@ -34,6 +34,10 @@ tests
         case draw (Prop.constant increment) of
             Some function -> assert (function 3 == 4)
             None -> fail
+    test "Nash preparation returns deferred functions" = do
+        case Test.prepare custom (\_ -> fail) (\n -> [show n]) (Prop.Replayed []) of
+            Some (_, _, display) -> assert (display () == ["9"])
+            None -> fail
     prop "function alias generator" =
         let n via custom in
         do

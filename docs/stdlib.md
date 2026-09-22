@@ -492,7 +492,7 @@ returning a little option. `Option.unwrap` fails on None; `withDefault` returns 
 | Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
 | `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `trace`, `todo`, `fail` syntax | trace levels, compiler-generated traces switch |
-| `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
+| `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks uses `Test.assertAt` and `Test.assertCapture` for ordered operand traces; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Prop.generator`, `Prop.prng` | `prop`/`via` desugaring and the runner protocol (preparation programs, plans/10 chunk 4) |
 | `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
@@ -984,25 +984,29 @@ are in testing.md and plans/10.
 ## `Test`
 
 ```elm
-module Test exposing (label, assertFailed)
+module Test exposing (label, assertFailed, prepare, both, assertAt, assertCapture)
 
 import Builtin
 
 label : string -> unit
 label s = Builtin.trace (Builtin.appendString "\u{0}label\u{0}" s) ()
 
--- Target of the power-assert rewrite: one `\0assert\0` payload line per
--- captured operand, traced in order, then the error (testing.md "Payload").
+-- Explicitly trace supplied messages in order, then fail.
 assertFailed : list string -> 'a
 assertFailed msgs =
     case msgs of
         [] -> fail
         m :: rest -> Builtin.trace m (\() -> assertFailed rest) ()
+
+prepare : Prop.generator 'a -> ('a -> unit) -> ('a -> list string) -> Prop.prng -> option (Prop.prng, unit -> unit, unit -> list string)
+both : Prop.generator 'a -> (unit -> Prop.generator 'b) -> Prop.generator ('a, 'b)
+assertAt : string -> (unit -> unit) -> unit
+assertCapture : string -> string -> (unit -> unit) -> unit
 ```
 
 `assert` is a keyword with its own expression node (syntax.md); inside a
 `tests` block the compiler rewrites it into the power-assert form that
-ends in `Test.assertFailed` (plans/10 chunk 3). Test bodies have type
+uses `Test.assertAt` and `Test.assertCapture` before failing (plans/10 chunk 3). Test bodies have type
 `unit`; the required `do` in a `tests` block is a sequencing block that
 desugars to plain `let` (testing.md), so no test monad exists. `fail` /
 `fail once` on a `test`/`prop` header and `within (cpu N, mem M)` are

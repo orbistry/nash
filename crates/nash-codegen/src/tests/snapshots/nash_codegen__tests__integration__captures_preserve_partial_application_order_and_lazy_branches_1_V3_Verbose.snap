@@ -24,57 +24,60 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                                     [(lam i17
                                       [(lam i18
                                         [(lam i19
-                                          (case
-                                            [i15 i19]
-                                            (force
-                                              [[(force (builtin trace)) i3]
-                                                (delay
-                                                  [(lam i20
-                                                    [(lam i21
-                                                      [(lam i22
-                                                        (force
-                                                          [[(force (builtin trace))
-                                                            [[(builtin appendString) i5]
-                                                              [[(lam i23
-                                                                [(lam i24
-                                                                  [(lam i25 i25)
-                                                                    (lam i25
+                                          [(lam i20
+                                            [(lam i21
+                                              [(lam i22
+                                                (case
+                                                  [i18 i22]
+                                                  [[i11 i3]
+                                                    (lam i23
+                                                      [(lam i24
+                                                        [(lam i25
+                                                          [(lam i26
+                                                            [[[i12 i5]
+                                                              [[(lam i27
+                                                                [(lam i28
+                                                                  [(lam i29 i29)
+                                                                    (lam i29
                                                                       (case
-                                                                        [[(builtin lessThanInteger) i25] [i21 (con integer 0)]]
-                                                                        [(builtin decodeUtf8) [i23 i25]]
-                                                                        [[(builtin appendString) [i24 i20]]
+                                                                        [[(builtin lessThanInteger) i29] [i25 (con integer 0)]]
+                                                                        [(builtin decodeUtf8) [i27 i29]]
+                                                                        [[(builtin appendString) [i28 i24]]
                                                                           [(builtin decodeUtf8)
-                                                                            [i23 [[(builtin subtractInteger) [i21 (con integer 0)]] i25]]]]))])
-                                                                  (lam i24 i24)])
-                                                                [(lam i23 [i23 i23])
-                                                                  (lam i23
-                                                                    (lam i24
+                                                                            [i27 [[(builtin subtractInteger) [i25 (con integer 0)]] i29]]]]))])
+                                                                  (lam i28 i28)])
+                                                                [(lam i27 [i27 i27])
+                                                                  (lam i27
+                                                                    (lam i28
                                                                       (case
-                                                                        [[(builtin lessThanInteger) i24] [i21 (con integer 10)]]
+                                                                        [[(builtin lessThanInteger) i28] [i25 (con integer 10)]]
                                                                         [[(builtin appendByteString)
-                                                                          [[i23 i23] [[(builtin quotientInteger) i24] [i21 (con integer 10)]]]]
+                                                                          [[i27 i27] [[(builtin quotientInteger) i28] [i25 (con integer 10)]]]]
                                                                           [[(builtin consByteString)
-                                                                            [[(builtin addInteger) [i21 (con integer 48)]]
-                                                                              [[(builtin remainderInteger) i24] [i21 (con integer 10)]]]]
-                                                                            [i22 (con bytestring #)]]]
-                                                                        [[(builtin consByteString) [[(builtin addInteger) [i21 (con integer 48)]] i24]]
-                                                                          [i22 (con bytestring #)]])))]]
-                                                                i13]]]
-                                                            (delay (error))]))
-                                                        (lam i22 i22)])
-                                                      (lam i21 i21)])
-                                                    i4])])
-                                            (con unit ())))
-                                          i18])
-                                        [i8 (con integer 2)]])
-                                      (force [[(force (builtin trace)) i16] (delay (con unit ()))])])
-                                    [i6 i2]])
-                                  [i10 i14]])
-                                i13])
-                              i9])
-                            (force [[(force (builtin trace)) i11] (delay (con unit ()))])])
-                          [i6 i1]])
-                        i7])
+                                                                            [[(builtin addInteger) [i25 (con integer 48)]]
+                                                                              [[(builtin remainderInteger) i28] [i25 (con integer 10)]]]]
+                                                                            [i26 (con bytestring #)]]]
+                                                                        [[(builtin consByteString) [[(builtin addInteger) [i25 (con integer 48)]] i28]]
+                                                                          [i26 (con bytestring #)]])))]]
+                                                                i16]]
+                                                              (lam i27 (error))])
+                                                            (lam i26 i26)])
+                                                          (lam i25 i25)])
+                                                        i4])]
+                                                  (con unit ())))
+                                                i21])
+                                              [i8 (con integer 2)]])
+                                            (force [[(force (builtin trace)) i19] (delay (con unit ()))])])
+                                          [i6 i2]])
+                                        [i13 i17]])
+                                      i16])
+                                    i9])
+                                  (force [[(force (builtin trace)) i14] (delay (con unit ()))])])
+                                [i6 i1]])
+                              i7])
+                            (lam i12 (lam i13 (lam i14 [[i11 [[(builtin appendString) i12] i13]] i14])))])
+                          (lam i11 (lam i12 [[[(force (builtin trace)) i11] i12] [i10 (con unit ())]]))])
+                        (lam i10 i10)])
                       [i8 (con integer 1)]])
                     (lam i8 i8)])
                   (lam i7
@@ -95,14 +98,18 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
       [(lam i2
         [(lam i3
           [(lam i4
-            (case
-              (case
-                i4
-                [i2 (con bool True)]
-                (force [[(force (builtin trace)) [i3 i0]] (delay (error))]))
-              (force [[(force (builtin trace)) i1] (delay (error))])
-              (con unit ())))
-            [i2 (con bool False)]])
+            [(lam i5
+              [(lam i6
+                (case
+                  (case
+                    i6
+                    [i2 (con bool True)]
+                    (force [[(force (builtin trace)) [i3 i0]] (delay (error))]))
+                  [[i5 i1] (lam i7 (error))]
+                  (con unit ())))
+                [i2 (con bool False)]])
+              (lam i5 (lam i6 [[[(force (builtin trace)) i5] i6] [i4 (con unit ())]]))])
+            (lam i4 i4)])
           (lam i3 i3)])
         (lam i2 i2)])
       (con string "\0assert\0\48")])
@@ -116,11 +123,13 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
           [(lam i4
             [(lam i5
               [(lam i6
-                (case
-                  (case i6 [i4 [i5 (con unit ())]] (con bool True))
-                  (force [[(force (builtin trace)) i1] (delay (error))])
-                  (con unit ())))
-                [i2 (con bool True)]])
+                [(lam i7
+                  (case
+                    (case i7 [i4 [i5 (con unit ())]] (con bool True))
+                    [[i6 i1] (lam i8 (error))]
+                    (con unit ())))
+                  [i2 (con bool True)]])
+                (lam i6 (lam i7 [[[(force (builtin trace)) i6] i7] [i5 (con unit ())]]))])
               (lam i5 i5)])
             (lam i4
               [(lam i5 (force [[(force (builtin trace)) [i3 i0]] (delay (error))])) i4])])
@@ -141,25 +150,25 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                   [(lam i8
                     [(lam i9
                       [(lam i10
-                        (case
-                          (case i10 [i5 (con bool True)] [i5 (con bool False)])
-                          (force
-                            [[(force (builtin trace)) i1]
-                              (delay
-                                [(lam i11
-                                  [(lam i12
-                                    [(lam i13
-                                      [(lam i14
-                                        (force
-                                          [[(force (builtin trace)) [[(builtin appendString) i4] [i14 i10]]]
-                                            (delay (error))]))
-                                        (lam i14 (case i14 [i13 i12] [i13 i11]))])
-                                      (lam i13 i13)])
-                                    i3])
-                                  i2])])
-                          (con unit ())))
-                        (case i9 (con bool False) [i7 [i8 (con unit ())]])])
-                      [i5 (con bool False)]])
+                        [(lam i11
+                          [(lam i12
+                            (case
+                              (case i12 [i5 (con bool True)] [i5 (con bool False)])
+                              [[i9 i1]
+                                (lam i13
+                                  [(lam i14
+                                    [(lam i15
+                                      [(lam i16
+                                        [(lam i17 [[[i10 i4] [i17 i12]] (lam i18 (error))])
+                                          (lam i17 (case i17 [i16 i15] [i16 i14]))])
+                                        (lam i16 i16)])
+                                      i3])
+                                    i2])]
+                              (con unit ())))
+                            (case i11 (con bool False) [i7 [i8 (con unit ())]])])
+                          [i5 (con bool False)]])
+                        (lam i10 (lam i11 (lam i12 [[i9 [[(builtin appendString) i10] i11]] i12])))])
+                      (lam i9 (lam i10 [[[(force (builtin trace)) i9] i10] [i8 (con unit ())]]))])
                     (lam i8 i8)])
                   (lam i7
                     [(lam i8 (force [[(force (builtin trace)) [i6 i0]] (delay (error))])) i7])])

@@ -69,6 +69,10 @@ fn compile_selected(
             ),
             Some(primitives::BASE),
         ),
+        (
+            include_str!("../../../nash-driver/base/src/Test.nash"),
+            Some(primitives::BASE),
+        ),
         (source, None),
     ] {
         let text = bump.alloc_str(text);
@@ -349,8 +353,8 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
         tests
             prop "patterns" =
                 let
-                    x via constant 7
-                    (y, z) via constant (8, True)
+                    x via trace "first" (constant 7)
+                    (y, z) via trace "second" (constant (8, True))
                 in
                 do
                     trace "body" ()
@@ -393,7 +397,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
         nash_plutus::machine::ExBudget::max(),
     );
     assert!(result.term.is_ok(), "{:?}", result.term);
-    assert_eq!(result.logs, ["body"]);
+    assert_eq!(result.logs, ["first", "second", "body"]);
 }
 
 #[test]
@@ -457,4 +461,45 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
         assert_eq!(selected.len(), 1);
         assert_eq!(unit(&selected[0]), (true, vec![]));
     }
+}
+
+#[test]
+fn rejected_generator_does_not_initialize_later_generators() {
+    let source = indoc::indoc!(
+        r#"
+        module Main exposing (..)
+        import Builtin
+        import Prop exposing (reject)
+        tests
+            prop "reject before later generator" =
+                let
+                    x via trace "first" reject
+                    y via fail
+                in
+                do
+                    assert (Builtin.equalsInteger x y)
+    "#
+    );
+    let programs = compile(
+        "rejected_generator_does_not_initialize_later_generators",
+        source,
+        PlutusVersion::V3,
+        TraceLevel::Verbose,
+    )
+    .unwrap();
+    let Programs::Prop { prepare } = &programs[0].programs else {
+        panic!("property");
+    };
+    let arena = Arena::new();
+    let evaluated = eval::evaluate(
+        &arena,
+        MachineVersion::V3,
+        prepare,
+        Some(Prng::from_choices(&[]).to_term(&arena)),
+    );
+    assert!(matches!(
+        evaluated.term.unwrap(),
+        nash_plutus::term::Term::Constr { tag: 1, fields: [] }
+    ));
+    assert_eq!(evaluated.logs, ["first"]);
 }

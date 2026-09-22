@@ -1,18 +1,19 @@
 //! Closed roots for module-local unit and property tests.
 use std::path::Path;
 
-use nash_ast::{ModuleName, NodeId, ViaBinder};
+use nash_ast::{ModuleName, NodeId, Type};
 use nash_ir::{
     core::*,
-    ty::{ConstTy, TermTy, Ty},
+    ty::{ConstTy, Ty},
 };
 use nash_plutus::{arena::Arena, flat};
-use nash_region::{Position, Region};
+use nash_region::{Located, Position, Region};
 pub use nash_test::{AssertSite, Capture, Programs, TestProgram};
 
 use crate::{
     build::{Binding, Build, Context, Engine, TraceConfig},
     decision_tree::{self, MatchBranch, MatchInputs},
+    ty_of::Substitution,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -83,12 +84,7 @@ pub fn compile_tests_matching<'a>(
                 run: encode(&mut engine, root, version)?,
             }
         } else {
-            let prng = Binder {
-                name: engine.ir.fresh("prng"),
-                ty: engine.generator_layout(&test.binders[0], &ctx)?.2,
-            };
-            let prepare = engine.property(test, 0, &ctx, engine.ir.var(prng.name), &[])?;
-            let prepare = engine.ir.lam(&[prng], prepare);
+            let prepare = engine.property(test, &ctx)?;
             Programs::Prop {
                 prepare: encode(&mut engine, prepare, version)?,
             }
@@ -152,136 +148,119 @@ impl<'a> Engine<'a, '_, '_> {
     fn property(
         &mut self,
         test: &'a nash_ast::Test<'a>,
-        index: usize,
         ctx: &Context<'a>,
-        prng: &'a Core<'a>,
-        shown: &[&'a Core<'a>],
     ) -> Result<&'a Core<'a>, crate::build::Error<'a>> {
-        let Some(binder) = test.binders.get(index) else {
-            let body = self.expr(test.body, ctx)?;
+        let (last, prefix) = test.binders.split_last().expect("property has generators");
+        let mut generator = self.expr(last.generator, ctx)?;
+        let mut typ = self.substitute(
+            self.can_type(NodeId::pattern(last.pattern), ctx)?,
+            &ctx.subst,
+        )?;
+        for binder in prefix.iter().rev() {
+            let head_type = self.substitute(
+                self.can_type(NodeId::pattern(binder.pattern), ctx)?,
+                &ctx.subst,
+            )?;
+            let first = self.expr(binder.generator, ctx)?;
             let unit = Binder {
                 name: self.ir.fresh("unit"),
                 ty: Ty::Const(&ConstTy::Unit),
             };
-            let body = self.ir.lam(&[unit], body);
-            let strings = self.list(Ty::Const(&ConstTy::String), shown)?;
-            let show = self.ir.lam(&[unit], strings);
-            return Ok(self.ir.constr(0, &[self.ir.constr(0, &[prng, body, show])]));
-        };
-        let generator = self.expr(binder.generator, ctx)?;
-        let (some_tag, none_tag, prng_ty, tuple_ty) = self.generator_layout(binder, ctx)?;
-        let tuple = Binder {
-            name: self.ir.fresh("drawn"),
-            ty: tuple_ty,
-        };
-        let value_ty = self.ty(NodeId::pattern(binder.pattern), ctx)?;
-        let value = Binder {
-            name: self.ir.fresh("generated"),
-            ty: value_ty,
-        };
-        let next = Binder {
-            name: self.ir.fresh("next_prng"),
-            ty: prng_ty,
-        };
-        let (records, literals) = self.pattern_inputs(binder.pattern, ctx)?;
-        let bindings = decision_tree::bindings(
-            &self.ir,
-            &mut self.types,
-            value_ty,
-            binder.pattern,
-            &records,
-        )?;
-        let mut child = ctx.clone();
-        for (name, bound) in &bindings {
-            child.env.insert(name, Binding::Value(*bound));
+            let rest = self.ir.lam(&[unit], generator);
+            let both = self.base_function(
+                "Test",
+                "both",
+                Substitution::from([("a", head_type), ("b", typ)]),
+            )?;
+            generator = self.ir.app(both, &[first, rest]);
+            typ = self.ir.arena.alloc(Located::at_zero(Type::Tuple {
+                first: head_type,
+                second: typ,
+                rest: &[],
+            }));
         }
-        let mut shown = shown.to_vec();
-        let display = self
-            .show_value(
-                NodeId::pattern(binder.pattern),
-                self.ir.var(value.name),
-                ctx,
-            )?
-            .unwrap_or_else(|| self.string("?"));
-        shown.push(display);
-        let body = self.property(test, index + 1, &child, self.ir.var(next.name), &shown)?;
-        let body = decision_tree::compile(
-            &self.ir,
-            &mut self.types,
-            value_ty,
-            self.ir.var(value.name),
-            &[MatchBranch {
-                pattern: binder.pattern,
-                bindings,
-                body,
-            }],
-            MatchInputs {
-                record_fields: &records,
-                literal_tests: &literals,
-            },
-            self.ir.error(),
-        )?;
-        let body = self.ir.let_(
-            next,
-            self.ir.field(self.ir.var(tuple.name), 1, 2),
-            self.ir
-                .let_(value, self.ir.field(self.ir.var(tuple.name), 0, 2), body),
-        );
-        let sampled = self.ir.app(generator, &[prng]);
-        let sampled = self.ir.case(
-            CaseKind::Tag,
-            sampled,
-            &[
-                Branch {
-                    test: Test::Tag(some_tag),
-                    binders: self.ir.arena.alloc_slice_copy(&[tuple]),
-                    body,
-                },
-                Branch {
-                    test: Test::Tag(none_tag),
-                    binders: &[],
-                    body: self.ir.constr(1, &[]),
-                },
-            ],
-            None,
-        );
-        Ok(sampled)
+        let body = self.property_callback(test, ctx, typ, false)?;
+        let display = self.property_callback(test, ctx, typ, true)?;
+        let prepare = self.base_function("Test", "prepare", Substitution::from([("a", typ)]))?;
+        Ok(self.ir.app(prepare, &[generator, body, display]))
     }
 
-    /// Validate and obtain constructor tags from the actual standard-library
-    /// metadata, including its native option and tuple representation.
-    fn generator_layout(
+    fn property_callback(
         &mut self,
-        binder: &ViaBinder<'a>,
+        test: &'a nash_ast::Test<'a>,
         ctx: &Context<'a>,
-    ) -> Result<(u16, u16, Ty<'a>, Ty<'a>), crate::build::Error<'a>> {
-        use crate::build::Error as E;
-        let ty = self.ty(NodeId::expr(binder.generator), ctx)?;
-        let Ty::Term(TermTy::Fun([prng], Ty::Term(TermTy::Adt(option)))) = ty else {
-            return Err(E::RuntimeLayout(ty));
+        typ: &'a Located<Type<'a>>,
+        display: bool,
+    ) -> Result<&'a Core<'a>, crate::build::Error<'a>> {
+        let argument = Binder {
+            name: self.ir.fresh("values"),
+            ty: self.types.ty(typ, &Substitution::new())?,
         };
-        let union = self
-            .build
-            .unions
-            .get(&option.name)
-            .ok_or(E::InvalidConstructor)?;
-        let some = union
-            .ctors
-            .iter()
-            .find(|c| c.name == "Some" && c.arity == 1)
-            .ok_or(E::InvalidConstructor)?
-            .index;
-        let none = union
-            .ctors
-            .iter()
-            .find(|c| c.name == "None" && c.arity == 0)
-            .ok_or(E::InvalidConstructor)?
-            .index;
-        let fields = self.types.layout(*option)?;
-        let [tuple @ Ty::Term(TermTy::Tuple([_, _]))] = fields[some as usize] else {
-            return Err(E::InvalidConstructor);
+        let mut remaining = self.ir.var(argument.name);
+        let mut child = ctx.clone();
+        let mut patterns = Vec::new();
+        let mut shown = Vec::new();
+        for (index, binder) in test.binders.iter().enumerate() {
+            let value_ty = self.ty(NodeId::pattern(binder.pattern), ctx)?;
+            let value = Binder {
+                name: self.ir.fresh("generated"),
+                ty: value_ty,
+            };
+            let input = if index + 1 == test.binders.len() {
+                remaining
+            } else {
+                let first = self.ir.field(remaining, 0, 2);
+                remaining = self.ir.field(remaining, 1, 2);
+                first
+            };
+            let (records, literals) = self.pattern_inputs(binder.pattern, ctx)?;
+            let bindings = decision_tree::bindings(
+                &self.ir,
+                &mut self.types,
+                value_ty,
+                binder.pattern,
+                &records,
+            )?;
+            for (name, bound) in &bindings {
+                child.env.insert(name, Binding::Value(*bound));
+            }
+            if display {
+                let rendered = self
+                    .show_value(
+                        NodeId::pattern(binder.pattern),
+                        self.ir.var(value.name),
+                        ctx,
+                    )?
+                    .unwrap_or_else(|| self.string("?"));
+                shown.push(rendered);
+            }
+            patterns.push((binder, value, input, bindings, records, literals));
+        }
+        let mut body = if display {
+            self.list(Ty::Const(&ConstTy::String), &shown)?
+        } else {
+            self.expr(test.body, &child)?
         };
-        Ok((some, none, *prng, *tuple))
+        for (binder, value, input, bindings, records, literals) in patterns.into_iter().rev() {
+            body = decision_tree::compile(
+                &self.ir,
+                &mut self.types,
+                value.ty,
+                self.ir.var(value.name),
+                &[MatchBranch {
+                    pattern: binder.pattern,
+                    bindings,
+                    body,
+                }],
+                MatchInputs {
+                    record_fields: &records,
+                    literal_tests: &literals,
+                },
+                self.ir.error(),
+            )?;
+            body = self.ir.let_(value, input, body);
+        }
+        Ok(self.ir.lam(&[argument], body))
     }
 }
 
