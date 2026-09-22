@@ -7,12 +7,9 @@ two = 2
 five : Int
 five = 5
 
-emptyChoices : list Int
-emptyChoices = []
-
 draw : Prop.generator 'a -> option 'a
 draw generator =
-    case Prop.run generator (Prop.Seeded #"" (lift emptyChoices)) of
+    case Prop.run generator (Prop.Seeded #"" []) of
         Some (_, value) -> Some value
         None -> None
 

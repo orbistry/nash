@@ -493,7 +493,7 @@ returning a little option. `Option.unwrap` fails on None; `withDefault` returns 
 | `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `trace`, `todo`, `fail` syntax | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
-| `Prop.generator`, `Prop.Prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
+| `Prop.generator`, `Prop.prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
 | `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
 
@@ -923,7 +923,7 @@ andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
 
 Plan 10 supplies the executable core subset. `oneOf` uses `Cons.cons` because
 generators contain functions and cannot inhabit the native Storable-only list.
-Further helpers below remain Plan 12 work. See testing.md "Generators": `Prng` is Big, choices are `Int`s, the
+Further helpers below remain Plan 12 work. See testing.md "Generators": `prng` is little, choices are `int`s, the
 primitive is `choice`.
 
 ```elm
@@ -937,11 +937,11 @@ import Monad exposing (Monad)
 import Lift exposing (Lift)
 import List
 
-type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
+type prng = Seeded bytes (list int) | Replayed int (list int)
 
-type generator 'a = Generator (Prng -> option (Prng, 'a))
+type generator 'a = Generator (prng -> option (prng, 'a))
 
-run : generator 'a -> Prng -> option (Prng, 'a)
+run : generator 'a -> prng -> option (prng, 'a)
 run (Generator f) = f
 
 -- Draw an integer in [0, bound]. The only primitive.

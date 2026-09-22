@@ -3,7 +3,7 @@ use crate::{
     prng::Prng,
     shrink, *,
 };
-use nash_plutus::{arena::Arena, machine::PlutusVersion as MachineVersion, term::Term};
+use nash_plutus::{arena::Arena, machine::PlutusVersion as MachineVersion};
 use rayon::prelude::*;
 
 pub fn run_all(tests: Vec<TestProgram>, config: &Config) -> Vec<Outcome> {
@@ -101,7 +101,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
     for _ in 0..iterations {
         out.iterations += 1;
         let arena = Arena::new();
-        let arg = draw_program.map(|_| Term::data(&arena, prng.to_data(&arena)));
+        let arg = draw_program.map(|_| prng.to_term(&arena));
         let ev = eval::evaluate_with_budget(&arena, v, run, arg, machine_budget);
         let exhaustion = ev.exhaustion_failure();
         out.budget.mem = out.budget.mem.max(ev.budget.mem);
@@ -192,7 +192,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
                     &arena,
                     v,
                     run,
-                    Some(Term::data(&arena, p.to_data(&arena))),
+                    Some(p.to_term(&arena)),
                     machine_budget,
                 );
                 if invalid_shrink_evaluation(&ev, budget_limit) {
@@ -266,6 +266,7 @@ mod tests {
         binder::DeBruijn,
         flat,
         program::{Program, Version},
+        term::Term,
     };
     use nash_region::Region;
 

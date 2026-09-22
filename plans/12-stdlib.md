@@ -14,7 +14,7 @@ compiler features available when it lands):
 | 4 kinds-aware twin types | plans/02 (kinds) |
 | 5 trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` | plans/03 (traits; chunk 12 there is this chunk's file list) |
 | 6 type modules, 7 `Data`/`Map` modules | plans/03; `Data` patterns from data.md |
-| 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `Prng` protocol, runner) |
+| 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `prng` protocol, runner) |
 | 10 `Ast`, `Derive` | plans/11 chunk 4 (tags) and chunk 10 |
 | 11 `Cardano.*` | chunk 7 |
 
@@ -369,7 +369,7 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 ## Chunk 8: `Prop` — foundation implemented through Plan 10
 
-- [x] Ship Prng/generator types, choice bounds, seeded draws and validated replay.
+- [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
 - [x] Ship Functor/Applicative/Monad, run, constant, intBetween, int, listOf,
   listBetween, tuple2, oneOf, bytes, map and bind.
 - [x] Test Nash generators against the Rust runner and replay protocol in
@@ -382,12 +382,12 @@ Extend the existing implementation; do not replace its tested protocol.
 **Files**
 
 - `crates/nash-driver/base/src/Prop.nash`
-- `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_choices`, `to_data`, `from_data`)
+- `crates/nash-test/src/prng.rs` (plans/10 chunk 5: `Prng::from_seed`, `from_choices`, `to_term`, `from_term`)
 
 **Change**
 
-docs/testing.md "Generators", verbatim: the **Big** `Prng` ADT that the
-runner builds as `PlutusData`, the **little** `generator 'a` wrapper with
+docs/testing.md "Generators", verbatim: the **little** `prng` ADT that the
+runner builds as native constructor terms, the **little** `generator 'a` wrapper with
 `Functor`/`Applicative`/`Monad` impls, `choice` as the single primitive
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Prop`" built on `choice`.

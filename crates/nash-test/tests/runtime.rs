@@ -155,8 +155,9 @@ fn parallel_jobs_preserve_order_and_outcomes() {
     assert_eq!(a, run_all(tests, &c));
 }
 #[test]
-fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_data() {
+fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_terms() {
     let a = &Arena::new();
+    let mut terms = Vec::new();
     for p in [
         Prng::from_seed(42),
         Prng::Seeded {
@@ -165,9 +166,14 @@ fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_data() {
         },
         Prng::from_choices(&[0, 7, u64::MAX]),
     ] {
-        assert_eq!(Prng::from_data(p.to_data(a)).unwrap(), p);
+        let term = p.to_term(a);
+        assert_eq!(Prng::from_term(term).unwrap(), p);
+        terms.push(nash_plutus::pretty::term(term));
     }
-    assert!(Prng::from_data(nash_plutus::data::PlutusData::integer_from(a, 0)).is_err());
+    insta::with_settings!({omit_expression => true}, {
+        insta::assert_snapshot!("prng_native_terms", terms.join("\n\n"));
+    });
+    assert!(Prng::from_term(Term::integer_from(a, 0)).is_err());
     let Prng::Seeded { seed, .. } = Prng::from_seed(42) else {
         unreachable!()
     };
@@ -325,22 +331,15 @@ fn traced<'a>(
 fn actual_cek_property_shrinks_and_retains_failure_logs() {
     let a = &Arena::new();
     let p = Term::var(a, DeBruijn::new(a, 1));
-    let unpack = Term::un_constr_data(a).apply(a, p);
-    let tag = Term::fst_pair(a).force(a).force(a).apply(a, unpack);
-    let fields = Term::snd_pair(a).force(a).force(a).apply(a, unpack);
-    let second = Term::head_list(a)
+    let seeded = Term::integer_from(a, 25)
+        .lambda(a, DeBruijn::zero(a))
+        .lambda(a, DeBruijn::zero(a));
+    let replayed = Term::head_list(a)
         .force(a)
-        .apply(a, Term::tail_list(a).force(a).apply(a, fields));
-    let first_choice = Term::un_i_data(a).apply(
-        a,
-        Term::head_list(a)
-            .force(a)
-            .apply(a, Term::un_list_data(a).apply(a, second)),
-    );
-    let seeded = Term::equals_integer(a)
-        .apply(a, tag)
-        .apply(a, Term::integer_from(a, 0));
-    let n = lazy_if(a, seeded, Term::integer_from(a, 25), first_choice);
+        .apply(a, Term::var(a, DeBruijn::new(a, 1)))
+        .lambda(a, DeBruijn::zero(a))
+        .lambda(a, DeBruijn::zero(a));
+    let n = Term::case(a, p, a.alloc([seeded, replayed]));
     let enough = Term::less_than_equals_integer(a)
         .apply(a, Term::integer_from(a, 10))
         .apply(a, n);
@@ -348,7 +347,7 @@ fn actual_cek_property_shrinks_and_retains_failure_logs() {
         seed: [0; 32],
         choices: vec![25],
     };
-    let next = Term::data(a, output.to_data(a));
+    let next = output.to_term(a);
     let run = lazy_if(
         a,
         enough,

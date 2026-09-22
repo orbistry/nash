@@ -4,7 +4,7 @@ use super::*;
 use crate::build::{Input, TraceLevel};
 use nash_ast::primitives;
 use nash_config::PlutusVersion;
-use nash_plutus::{machine::PlutusVersion as MachineVersion, term::Term};
+use nash_plutus::machine::PlutusVersion as MachineVersion;
 use nash_test::{
     eval::{self, Drawn, Ran},
     prng::Prng,
@@ -58,12 +58,12 @@ fn compile_selected(
         (
             indoc::indoc!(
                 r#"
-            module Prop exposing (Prng(..), type generator(..), constant, reject)
+            module Prop exposing (type prng(..), type generator(..), constant, reject)
             import Primitive exposing (..)
             import Builtin exposing (..)
             import Option exposing (type option(..))
-            type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
-            type generator 'a = Generator (Prng -> option (Prng, 'a))
+            type prng = Seeded bytes (list int) | Replayed int (list int)
+            type generator 'a = Generator (prng -> option (prng, 'a))
             constant : 'a -> generator 'a
             constant value = Generator (\prng -> Some (prng, value))
             reject : generator 'a
@@ -379,12 +379,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
     };
     assert_eq!(shown, ["7", "?"]);
     let arena = Arena::new();
-    let result = eval::evaluate(
-        &arena,
-        MachineVersion::V3,
-        run,
-        Some(Term::data(&arena, prng.to_data(&arena))),
-    );
+    let result = eval::evaluate(&arena, MachineVersion::V3, run, Some(prng.to_term(&arena)));
     assert!(matches!(
         eval::decode_ran(result.term.unwrap()),
         Ok(Ran::Some(_))
@@ -425,12 +420,7 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
         Drawn::None
     ));
     let arena = Arena::new();
-    let result = eval::evaluate(
-        &arena,
-        MachineVersion::V3,
-        run,
-        Some(Term::data(&arena, prng.to_data(&arena))),
-    );
+    let result = eval::evaluate(&arena, MachineVersion::V3, run, Some(prng.to_term(&arena)));
     assert!(matches!(
         eval::decode_ran(result.term.unwrap()),
         Ok(Ran::None)

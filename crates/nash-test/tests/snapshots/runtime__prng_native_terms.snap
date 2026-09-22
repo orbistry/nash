@@ -1,0 +1,12 @@
+---
+source: crates/nash-test/tests/runtime.rs
+---
+(constr 0
+  (con bytestring #e7da4748680e2763d6ca394c222f99b27c75b2c9c9563ab56f963293f6cddb9b)
+  (con (list integer) []))
+
+(constr 0
+  (con bytestring #0303030303030303030303030303030303030303030303030303030303030303)
+  (con (list integer) [1, 18446744073709551615, 4]))
+
+(constr 1 (con integer 3) (con (list integer) [0, 7, 18446744073709551615]))

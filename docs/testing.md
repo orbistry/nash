@@ -241,9 +241,9 @@ to test bodies.
 
 ```elm
 -- Prop.nash (stdlib)
-type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
+type prng = Seeded bytes (list int) | Replayed int (list int)
 
-type generator 'a = Generator (Prng -> option (Prng, 'a))
+type generator 'a = Generator (prng -> option (prng, 'a))
 
 impl Functor generator where
     map f (Generator g) = Generator (\prng -> case g prng of
@@ -260,7 +260,7 @@ impl Monad generator where
         Some (p, a) -> case k a of Generator h -> h p)
 ```
 
-- `Prng` is a **Big** ADT: the runner builds it as `PlutusData` and reads it
+- `prng` is a **little** ADT: the runner builds a native constructor term and reads it
   back from the result. `Seeded seed choices` carries a 32-byte seed and the
   choices made so far, newest first. `Replayed remaining choices` carries a
   count and the choices still to replay, next first.
@@ -304,21 +304,20 @@ Nullary generators like `int` are values, so `a via int` and
 For every `prop` the compiler emits two programs that share the module code:
 
 ```
-draw : Prng -> option (Prng, list string)
-run  : Prng -> option Prng
+draw : prng -> option (prng, list string)
+run  : prng -> option prng
 ```
 
 `draw` applies the `via` generators in order, threading the PRNG, and returns
 the next PRNG with the `show` of each drawn value (`"?"` when the type has no
 `Show` impl). `run` draws the same values, evaluates the body with them in
-scope, and returns the next PRNG. Both take a `Prng` as `Data`.
+scope, and returns the next PRNG. Both take a `prng` as a native constructor term.
 
-The value never crosses the program boundary. A drawn value can be of any
-representation (an `int`, an `option`, a function), and only `Data` can be handed from
-one CEK evaluation to the next. So the body is compiled together with the
-draw, and the generator runs again inside `run`. Generation is deterministic
-and cheap next to the body, and the happy path costs one evaluation per
-iteration.
+Drawn values stay inside the program and may have any representation, including
+functions. The runner transfers only native PRNG state and shown strings.
+The body is compiled together with its generators, so `run` generates values
+and checks them in one evaluation. `draw` repeats deterministic generation when
+the runner needs to display a counterexample.
 
 Loop, seeded with `--seed`:
 
@@ -478,10 +477,9 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 
 ## Runtime consequences
 
-- `Prng` is `Data`, so `Prng::from_seed` and `Prng::from_choices` are two
-  `PlutusData::constr` calls (`crates/nash-plutus/src/data.rs:22`), and the
-  returned PRNG is read with `unwrap_constr`.
-- `draw` returns a `constr` term: `Some` is `constr 0 [constr 0 [data, list]]`,
+- `prng` uses native constructors with `bytes`, `int`, and `list int` fields.
+  The runner uses `Prng::to_term` and `Prng::from_term`; no Data encoding is needed.
+- `draw` returns a `constr` term: `Some` is `constr 0 [constr 0 [prng, list]]`,
   `None` is `constr 1 []`. The stdlib declares `type option 'a = Some 'a |
   None` in that order; the runner depends on the tags.
 - Test programs use the same unoptimized Core passes as validator builds.
@@ -503,7 +501,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Traits.** `Show` for power-assert and counterexamples; `Functor`,
   `Applicative`, `Monad` for `generator`; `@derive(Show)` from
   [macros.md](macros.md).
-- **Representations.** `(Prng, 'a)` is a tuple (`Term`) because `pair` requires
+- **Representations.** `(prng, 'a)` is a tuple (`Term`) because `pair` requires
   `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.
 - **Codegen.** Each test program is a standalone UPLC program that inlines
   the module's dependency closure ([codegen.md](codegen.md)).

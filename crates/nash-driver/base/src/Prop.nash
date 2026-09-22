@@ -1,4 +1,4 @@
-module Prop exposing (Prng(..), type generator(..), run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
+module Prop exposing (type prng(..), type generator(..), run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
 
 import Builtin
 
@@ -13,10 +13,10 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Cons exposing (type cons(..))
 
-type Prng = Seeded Bytes (List Int) | Replayed Int (List Int)
-type generator 'a = Generator (Prng -> option (Prng, 'a))
+type prng = Seeded bytes (list int) | Replayed int (list int)
+type generator 'a = Generator (prng -> option (prng, 'a))
 
-run : generator 'a -> Prng -> option (Prng, 'a)
+run : generator 'a -> prng -> option (prng, 'a)
 run (Generator f) = f
 
 -- The runner stores each primitive choice in a u64.
@@ -32,23 +32,18 @@ choiceInt bound =
             case prng of
                 Seeded seed choices ->
                     let
-                        seed2 = Builtin.blake2b_256 (Builtin.unBData seed)
+                        seed2 = Builtin.blake2b_256 seed
                         n = Builtin.byteStringToInteger True seed2 % (bound + 1)
                     in
-                    Some (Seeded (Builtin.bData seed2) (wrapChoices (Builtin.mkCons (Builtin.iData n) (unwrapChoices choices))), n)
+                    Some (Seeded seed2 (Builtin.mkCons n choices), n)
                 Replayed remaining choices ->
-                    let
-                        count = Builtin.unIData remaining
-                        rest = unwrapChoices choices
-                    in
-                    if count <= 0 then None
+                    if remaining <= 0 then None
                     else
-                        case rest of
+                        case choices of
                             [] -> None
-                            c :: cs ->
-                                let n = Builtin.unIData c in
+                            n :: rest ->
                                 if n < 0 || n > bound then None
-                                else Some (Replayed (Builtin.iData (count - 1)) (wrapChoices cs), n))
+                                else Some (Replayed (remaining - 1) rest, n))
 
 map : ('a -> 'b) -> generator 'a -> generator 'b
 map f (Generator g) =
@@ -147,9 +142,3 @@ packBytes values =
     case values of
         [] -> #""
         x :: xs -> Builtin.consByteString x (packBytes xs)
-
-wrapChoices : list Int -> List Int
-wrapChoices = Builtin.listData
-
-unwrapChoices : List Int -> list Int
-unwrapChoices = Builtin.unListData

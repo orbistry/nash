@@ -82,8 +82,8 @@ pub fn decode_ran(term: &Term<'_, DeBruijn>) -> Result<Ran, String> {
     match term {
         Term::Constr {
             tag: 0,
-            fields: [Term::Constant(Constant::Data(p))],
-        } => Ok(Ran::Some(Prng::from_data(p)?)),
+            fields: [p],
+        } => Ok(Ran::Some(Prng::from_term(p)?)),
         Term::Constr { tag: 1, fields: [] } => Ok(Ran::None),
         _ => Err("malformed property run result".into()),
     }
@@ -98,13 +98,7 @@ pub(crate) fn run_draw_with_budget(
     budget: ExBudget,
 ) -> Result<Drawn, Failure> {
     let arena = Arena::new();
-    let ev = evaluate_with_budget(
-        &arena,
-        version,
-        bytes,
-        Some(Term::data(&arena, prng.to_data(&arena))),
-        budget,
-    );
+    let ev = evaluate_with_budget(&arena, version, bytes, Some(prng.to_term(&arena)), budget);
     if let Some(failure) = ev.exhaustion_failure() {
         return Err(failure);
     }
@@ -120,15 +114,11 @@ fn decode_drawn(term: &Term<'_, DeBruijn>) -> Result<Drawn, String> {
                 [
                     Term::Constr {
                         tag: 0,
-                        fields:
-                            [
-                                Term::Constant(Constant::Data(p)),
-                                Term::Constant(Constant::ProtoList(_, items)),
-                            ],
+                        fields: [p, Term::Constant(Constant::ProtoList(_, items))],
                     },
                 ],
         } => Ok(Drawn::Some {
-            prng: Prng::from_data(p)?,
+            prng: Prng::from_term(p)?,
             shown: items
                 .iter()
                 .map(|c| match c {

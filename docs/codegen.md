@@ -575,15 +575,15 @@ success is no error. A `prop` compiles to two programs following the
 runner protocol in [testing.md](testing.md):
 
 ```
-draw : Prng -> option (Prng, list string)
-run  : Prng -> option Prng
+draw : prng -> option (prng, list string)
+run  : prng -> option prng
 ```
 
 `draw` threads the PRNG through the `via` generators and returns the shown
 values; `run` draws the same values, evaluates the body with them in scope,
 and returns the next PRNG. The drawn values never cross the program
 boundary (they may have any representation), so the body is compiled together with
-the generators, and `nash-test` only ever applies a `Prng` as `Data`.
+the generators, and `nash-test` only ever applies a `prng` as a native constructor term.
 
 ## Comptime hook
 
