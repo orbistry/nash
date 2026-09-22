@@ -44,13 +44,8 @@ impl Prng {
         }
     }
     pub fn to_term<'a>(&self, arena: &'a Arena) -> &'a Term<'a, DeBruijn> {
-        let (tag, first, choices) = match self {
-            Self::Seeded { seed, choices } => {
-                (0, Term::byte_string(arena, arena.alloc(*seed)), choices)
-            }
-            Self::Replayed { choices } => {
-                (1, Term::integer_from(arena, choices.len() as i128), choices)
-            }
+        let choices = match self {
+            Self::Seeded { choices, .. } | Self::Replayed { choices } => choices,
         };
         let items = arena.alloc(
             choices
@@ -58,29 +53,34 @@ impl Prng {
                 .map(|&n| Constant::integer_from(arena, i128::from(n)))
                 .collect::<Vec<_>>(),
         );
-        Term::constr(
+        let list = Term::constant(
             arena,
-            tag,
-            arena.alloc([
-                first,
-                Term::constant(
-                    arena,
-                    Constant::proto_list(arena, Type::integer(arena), items),
-                ),
-            ]),
-        )
+            Constant::proto_list(arena, Type::integer(arena), items),
+        );
+        match self {
+            Self::Seeded { seed, .. } => Term::constr(
+                arena,
+                0,
+                arena.alloc([Term::byte_string(arena, arena.alloc(*seed)), list]),
+            ),
+            Self::Replayed { .. } => Term::constr(arena, 1, arena.alloc([list])),
+        }
     }
     pub fn from_term(term: &Term<'_, DeBruijn>) -> Result<Self, String> {
-        let Term::Constr {
-            tag,
-            fields:
-                [
-                    Term::Constant(first),
-                    Term::Constant(Constant::ProtoList(Type::Integer, items)),
-                ],
-        } = term
-        else {
-            return Err("malformed PRNG term".into());
+        let (seed, items) = match term {
+            Term::Constr {
+                tag: 0,
+                fields:
+                    [
+                        Term::Constant(Constant::ByteString(seed)),
+                        Term::Constant(Constant::ProtoList(Type::Integer, items)),
+                    ],
+            } => (Some(*seed), *items),
+            Term::Constr {
+                tag: 1,
+                fields: [Term::Constant(Constant::ProtoList(Type::Integer, items))],
+            } => (None, *items),
+            _ => return Err("malformed PRNG term".into()),
         };
         let choices = items
             .iter()
@@ -91,17 +91,12 @@ impl Prng {
                 _ => Err("non-integer PRNG choice".into()),
             })
             .collect::<Result<Vec<_>, _>>()?;
-        match (tag, first) {
-            (0, Constant::ByteString(bytes)) => Ok(Self::Seeded {
-                seed: (*bytes)
-                    .try_into()
-                    .map_err(|_| "PRNG seed must be 32 bytes")?,
+        match seed {
+            Some(seed) => Ok(Self::Seeded {
+                seed: seed.try_into().map_err(|_| "PRNG seed must be 32 bytes")?,
                 choices,
             }),
-            (1, Constant::Integer(n)) if usize::try_from(*n).ok() == Some(choices.len()) => {
-                Ok(Self::Replayed { choices })
-            }
-            _ => Err("malformed PRNG constructor".into()),
+            None => Ok(Self::Replayed { choices }),
         }
     }
 }

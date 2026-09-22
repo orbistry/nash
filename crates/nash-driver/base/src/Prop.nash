@@ -1,4 +1,4 @@
-module Prop exposing (type prng(..), type generator(..), run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
+module Prop exposing (type prng(..), type generator, run, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, map, bind)
 
 import Builtin
 
@@ -13,51 +13,46 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Cons exposing (type cons(..))
 
-type prng = Seeded bytes (list int) | Replayed int (list int)
-type generator 'a = Generator (prng -> option (prng, 'a))
+type prng = Seeded bytes (list int) | Replayed (list int)
+type alias generator 'a = prng -> option ('a, prng)
 
-run : generator 'a -> prng -> option (prng, 'a)
-run (Generator f) = f
+run : generator 'a -> prng -> option ('a, prng)
+run f = f
 
 -- The runner stores each primitive choice in a u64.
 choice : Lift int 'n => 'n -> generator int
 choice bound = choiceInt (lower bound)
 
 choiceInt : int -> generator int
-choiceInt bound =
+choiceInt bound prng =
     if bound < 0 || bound > 18446744073709551615 then
         (fail "Prop.choice bound must be in 0..18446744073709551615")
     else
-        Generator (\prng ->
-            case prng of
-                Seeded seed choices ->
-                    let
-                        seed2 = Builtin.blake2b_256 seed
-                        n = Builtin.byteStringToInteger True seed2 % (bound + 1)
-                    in
-                    Some (Seeded seed2 (Builtin.mkCons n choices), n)
-                Replayed remaining choices ->
-                    if remaining <= 0 then None
-                    else
-                        case choices of
-                            [] -> None
-                            n :: rest ->
-                                if n < 0 || n > bound then None
-                                else Some (Replayed (remaining - 1) rest, n))
+        case prng of
+            Seeded seed choices ->
+                let
+                    seed2 = Builtin.blake2b_256 seed
+                    n = Builtin.byteStringToInteger True seed2 % (bound + 1)
+                in
+                Some (n, Seeded seed2 (Builtin.mkCons n choices))
+            Replayed choices ->
+                case choices of
+                    [] -> None
+                    n :: rest ->
+                        if n < 0 || n > bound then None
+                        else Some (n, Replayed rest)
 
 map : ('a -> 'b) -> generator 'a -> generator 'b
-map f (Generator g) =
-    Generator (\prng ->
-        case g prng of
-            None -> None
-            Some (p, a) -> Some (p, f a))
+map f g prng =
+    case g prng of
+        None -> None
+        Some (a, next) -> Some (f a, next)
 
 bind : generator 'a -> ('a -> generator 'b) -> generator 'b
-bind (Generator g) k =
-    Generator (\prng ->
-        case g prng of
-            None -> None
-            Some (p, a) -> run (k a) p)
+bind g k prng =
+    case g prng of
+        None -> None
+        Some (a, next) -> k a next
 
 impl Functor generator where
     map = mapGenerator
@@ -76,7 +71,7 @@ bindGenerator : generator 'a -> ('a -> generator 'b) -> generator 'b
 bindGenerator = bind
 
 constant : 'a -> generator 'a
-constant a = Generator (\prng -> Some (prng, a))
+constant a prng = Some (a, prng)
 
 intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
 intBetween low high = intBetweenInt (lower low) (lower high)

@@ -282,3 +282,28 @@ fn lambda_scope_does_not_escape_into_sibling() {
     let term = var.lambda(&arena, name).apply(&arena, var);
     assert!(debruijn::to_debruijn(&arena, term).is_err());
 }
+
+#[test]
+fn returned_closures_capture_native_constructors_and_cases() {
+    let source = "[(lam captured (constr 0 (lam unit (case (constr 0 captured) (lam item (constr 0 item captured)))))) (con integer 7)]";
+    let arena = Arena::new();
+    let term = syn::parse_term(&arena, source).into_result().unwrap();
+    let prepared = Program::new(&arena, Version::plutus_v3(&arena), term)
+        .eval(&arena)
+        .term
+        .unwrap();
+    let Term::Constr { fields: [body], .. } = prepared else {
+        panic!("returned closure");
+    };
+    let result = Program::new(
+        &arena,
+        Version::plutus_v3(&arena),
+        body.apply(&arena, Term::unit(&arena)),
+    )
+    .eval(&arena)
+    .term
+    .unwrap();
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(format!("--- prepared\n{}\n--- called\n{}", pretty::term(prepared), pretty::term(result)));
+    });
+}

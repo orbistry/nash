@@ -6,10 +6,29 @@ use nash_ast::NodeId;
 use nash_can::Context;
 use nash_constrain::UnionFind;
 
-const PROP: &str = "module Prop exposing (..)\nimport Literal\ntype generator 'a = Generator 'a\nunit = Generator ()\n";
+const PROP: &str = "module Prop exposing (..)\nimport Option\nimport Literal\ntype prng = Seeded\ntype alias generator 'a = prng -> Option.option ('a, prng)\nunit p = Option.Some ((), p)\n";
 
 fn canonicalize<'a>(bump: &'a Bump, source: &'a str) -> nash_can::CanResult<'a> {
     let mut interfaces = literals::literal_interfaces(bump);
+    let option = nash_parse::Parser::new(
+        bump,
+        "module Option exposing (type option(..))\ntype option 'a = Some 'a | None\n",
+    )
+    .module()
+    .unwrap();
+    let option = nash_can::canonicalize(
+        bump,
+        Context {
+            package: Some(nash_ast::primitives::BASE),
+            interfaces: Some(&interfaces),
+        },
+        &option,
+    )
+    .unwrap();
+    interfaces.insert(
+        "Option",
+        nash_can::from_module(bump, &option.module, &Default::default()),
+    );
     let generate = nash_parse::Parser::new(bump, PROP).module().unwrap();
     let generate = nash_can::canonicalize(
         bump,

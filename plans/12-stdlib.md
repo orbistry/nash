@@ -387,7 +387,7 @@ Extend the existing implementation; do not replace its tested protocol.
 **Change**
 
 docs/testing.md "Generators", verbatim: the **little** `prng` ADT that the
-runner builds as native constructor terms, the **little** `generator 'a` wrapper with
+runner builds as native constructor terms, the `generator 'a` function alias with
 `Functor`/`Applicative`/`Monad` impls, `choice` as the single primitive
 over `u64` integer choices (not Aiken's bytes), and the generators listed
 in docs/stdlib.md "`Prop`" built on `choice`.
@@ -410,7 +410,7 @@ choice element type: `Int`, not bytes (testing.md "Open questions").
 
 **Tests**
 
-- `tests` block: `run (choice 10) (Seeded (lift "seed") (lift []))` is `Some`; `run (choice 10) (Replayed (lift 0) (lift []))` is `None`; `run (choice 10) (Replayed (lift 1) (lift [lift 11]))` is `None` (over bound); `intBetween 3 3` is `3`.
+- `tests` block: `run (choice 10) (Seeded #"" [])` is `Some`; `run (choice 10) (Replayed [])` is `None`; `run (choice 10) (Replayed [11])` is `None` (over bound); `intBetween 3 3` is `3`.
 - `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` sampled through `Prop.run` stays in range.
 - Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
 

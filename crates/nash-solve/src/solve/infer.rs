@@ -334,15 +334,20 @@ impl<'a> Solver<'a, '_> {
                 )
             }
         };
-        let typ = arguments
-            .iter()
-            .rev()
-            .fold(result, |result, (_, expected)| {
-                let arg = match expected {
-                    PExpected::NoExpectation(t) | PExpected::FromContext(_, _, t) => *t,
-                };
-                self.structure(uf, rank, FlatType::Fun1(arg, result))
-            });
+        // Splitting arguments can expand a function alias; retain its declared identity.
+        let typ = if let Def::TypedDef { annotation, .. } = def {
+            self.src_type_to_var(uf, rank, &rtv, annotation)
+        } else {
+            arguments
+                .iter()
+                .rev()
+                .fold(result, |result, (_, expected)| {
+                    let arg = match expected {
+                        PExpected::NoExpectation(t) | PExpected::FromContext(_, _, t) => *t,
+                    };
+                    self.structure(uf, rank, FlatType::Fun1(arg, result))
+                })
+        };
         let expected = if let Some(annotation_region) = annotation_region {
             Expected::FromAnnotation(
                 name.value,
@@ -701,18 +706,34 @@ impl<'a> Solver<'a, '_> {
                     let mut patterns = Vec::new();
                     for binder in test.binders {
                         let element = self.fresh(uf, young);
-                        let generator = self.structure(
+                        let base = Some(nash_ast::primitives::BASE);
+                        let prng = self.structure(
                             uf,
                             young,
                             FlatType::App1(
                                 nash_ast::ModuleName {
-                                    package: Some(nash_ast::primitives::BASE),
+                                    package: base,
                                     name: "Prop",
                                 },
-                                "generator",
-                                vec![element],
+                                "prng",
+                                vec![],
                             ),
                         );
+                        let pair =
+                            self.structure(uf, young, FlatType::Tuple1(element, prng, vec![]));
+                        let result = self.structure(
+                            uf,
+                            young,
+                            FlatType::App1(
+                                nash_ast::ModuleName {
+                                    package: base,
+                                    name: "Option",
+                                },
+                                "option",
+                                vec![pair],
+                            ),
+                        );
+                        let generator = self.structure(uf, young, FlatType::Fun1(prng, result));
                         state = self.infer_expr(
                             uf,
                             env,

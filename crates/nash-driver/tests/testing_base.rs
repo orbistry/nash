@@ -10,7 +10,7 @@ async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
     let memory = InMemorySource::new();
     let mut origins = nash_driver::bundled_base::modules();
     let uri = Url::parse("file:///project/src/TestingCore.nash").unwrap();
-    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\nemptyInts : list int\nemptyInts = []\nreplay : int -> list int -> prng\nreplay count values = Replayed count values\nmain : Data -> unit\nmain _ =\n{body}\n"));
+    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\nemptyInts : list int\nemptyInts = []\nreplay : list int -> prng\nreplay values = Replayed values\nmain : Data -> unit\nmain _ =\n{body}\n"));
     origins.insert(uri, None);
     let db = Arc::new(Mutex::new(Database::new(memory)));
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
@@ -30,9 +30,9 @@ async fn choice_seeded_and_replayed_draws_agree() {
         initial = Seeded #"0000000000000000000000000000000000000000000000000000000000000000" emptyInts
     in
     case Prop.run (Prop.choice 100) initial of
-        Some (Seeded seed choices, n) ->
-            case Prop.run (Prop.choice 100) (Replayed 1 choices) of
-                Some (Replayed remaining rest, replayed) ->
+        Some (n, Seeded seed choices) ->
+            case Prop.run (Prop.choice 100) (Replayed choices) of
+                Some (replayed, Replayed rest) ->
                     assert (n == replayed)
                 _ -> (fail "replay rejected seeded choice")
         _ -> (fail "seeded draw failed")"##).await;
@@ -52,12 +52,12 @@ async fn choice_seeded_and_replayed_draws_agree() {
 
 #[tokio::test]
 async fn malformed_replayed_choices_are_rejected() {
-    for (count, choices) in [(0, "[0]"), (-1, "[0]"), (1, "[]"), (1, "[-1]"), (1, "[11]")] {
+    for choices in ["[]", "[-1]", "[11]"] {
         let output = compile(&format!(
             r#"    let
         values = {choices}
     in
-    case Prop.run (Prop.choice 10) (replay ({count}) values) of
+    case Prop.run (Prop.choice 10) (replay values) of
         None -> ()
         Some _ -> (fail "invalid replay accepted")"#
         ))
@@ -73,11 +73,7 @@ async fn malformed_replayed_choices_are_rejected() {
                 ),
             )
             .eval(&arena);
-        assert!(
-            result.term.is_ok(),
-            "count={count}, choices={choices}: {:?}",
-            result.term
-        );
+        assert!(result.term.is_ok(), "choices={choices}: {:?}", result.term);
     }
 }
 
@@ -106,8 +102,8 @@ async fn generator_combinators_thread_choices() {
         ("Prop.intBetween 3 3", "[]", "3"),
     ] {
         let output = compile(&format!(
-            r#"    case Prop.run ({generator}) (replay 10 {choices}) of
-        Some (_, value) -> assert (value == {expected})
+            r#"    case Prop.run ({generator}) (replay {choices}) of
+        Some (value, _) -> assert (value == {expected})
         None -> (fail "combinator exhausted replay")"#
         ))
         .await;
@@ -130,7 +126,7 @@ async fn generator_combinators_thread_choices() {
 async fn invalid_choice_bounds_fail() {
     for bound in ["-1", "18446744073709551616"] {
         let output = compile(&format!(
-            r#"    case Prop.run (Prop.choice ({bound})) (replay 1 [0]) of
+            r#"    case Prop.run (Prop.choice ({bound})) (replay [0]) of
         Some _ -> ()
         None -> ()"#
         ))

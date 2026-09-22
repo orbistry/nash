@@ -1,6 +1,6 @@
 ---
 source: crates/nash-test/tests/runtime.rs
-description: "(program 1.1.0\n  (lam i0\n    (force\n      [[(force (builtin trace)) (con string \"\\0label\\0a\")]\n        (delay\n          (force\n            [[(force (builtin trace)) (con string \"\\0label\\0a\")] (delay (constr 0 i0))]))])))"
+description: "(program 1.1.0\n  (lam i0\n    (constr 0\n      (constr 0\n        i0\n        (lam i1\n          (force\n            [[(force (builtin trace)) (con string \"\\0label\\0a\")]\n              (delay\n                (force\n                  [[(force (builtin trace)) (con string \"\\0label\\0a\")] (delay (con unit ()))]))]))\n        (lam i1 (con (list string) [\"7\"]))))))"
 ---
   Testing Example (Example.nash)
 

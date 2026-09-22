@@ -52,35 +52,48 @@ fn unit(error: bool, expect: Expect) -> TestProgram {
 }
 fn prop(error: bool, none: bool, expect: Expect) -> TestProgram {
     let a = &Arena::new();
-    let p = Term::var(a, DeBruijn::new(a, 1));
-    let run = if error {
-        Term::error(a)
-    } else if none {
-        Term::constr(a, 1, a.alloc([]))
+    let body = if error { Term::error(a) } else { Term::unit(a) };
+    let prepare = if none {
+        Term::constr(a, 1, a.alloc([])).lambda(a, DeBruijn::zero(a))
     } else {
-        Term::constr(a, 0, a.alloc([p]))
+        prepared_program(a, Term::var(a, DeBruijn::new(a, 1)), body, shown(a, "7"))
     };
-    let strings = a.alloc(Constant::ProtoList(
-        Type::string(a),
-        a.alloc([Constant::string(a, "7")]),
-    ));
-    let draw = Term::constr(
+    fixture(
+        Programs::Prop {
+            prepare: encode(a, prepare),
+        },
+        expect,
+    )
+}
+fn shown<'a>(a: &'a Arena, text: &'a str) -> &'a Term<'a, DeBruijn> {
+    Term::constant(
+        a,
+        Constant::proto_list(a, Type::string(a), a.alloc([Constant::string(a, text)])),
+    )
+}
+// Body and display terms sit under the unit argument and the outer PRNG argument.
+fn prepared_program<'a>(
+    a: &'a Arena,
+    next: &'a Term<'a, DeBruijn>,
+    body: &'a Term<'a, DeBruijn>,
+    show: &'a Term<'a, DeBruijn>,
+) -> &'a Term<'a, DeBruijn> {
+    Term::constr(
         a,
         0,
         a.alloc([Term::constr(
             a,
             0,
-            a.alloc([p, a.alloc(Term::Constant(strings))]),
+            a.alloc([
+                next,
+                body.lambda(a, DeBruijn::zero(a)),
+                show.lambda(a, DeBruijn::zero(a)),
+            ]),
         )]),
-    );
-    fixture(
-        Programs::Prop {
-            run: encode(a, run.lambda(a, DeBruijn::zero(a))),
-            draw: encode(a, draw.lambda(a, DeBruijn::zero(a))),
-        },
-        expect,
     )
+    .lambda(a, DeBruijn::zero(a))
 }
+
 fn run(test: TestProgram) -> Outcome {
     run_all(
         vec![test],
@@ -330,14 +343,13 @@ fn traced<'a>(
 #[test]
 fn actual_cek_property_shrinks_and_retains_failure_logs() {
     let a = &Arena::new();
-    let p = Term::var(a, DeBruijn::new(a, 1));
+    let p = Term::var(a, DeBruijn::new(a, 2));
     let seeded = Term::integer_from(a, 25)
         .lambda(a, DeBruijn::zero(a))
         .lambda(a, DeBruijn::zero(a));
     let replayed = Term::head_list(a)
         .force(a)
         .apply(a, Term::var(a, DeBruijn::new(a, 1)))
-        .lambda(a, DeBruijn::zero(a))
         .lambda(a, DeBruijn::zero(a));
     let n = Term::case(a, p, a.alloc([seeded, replayed]));
     let enough = Term::less_than_equals_integer(a)
@@ -352,9 +364,8 @@ fn actual_cek_property_shrinks_and_retains_failure_logs() {
         a,
         enough,
         traced(a, "failure remains", Term::error(a)),
-        Term::constr(a, 0, a.alloc([next])),
-    )
-    .lambda(a, DeBruijn::zero(a));
+        Term::unit(a),
+    );
     let exact = Term::equals_integer(a)
         .apply(a, n)
         .apply(a, Term::integer_from(a, 10));
@@ -365,12 +376,10 @@ fn actual_cek_property_shrinks_and_retains_failure_logs() {
         )))) as &Term<'_, DeBruijn>
     };
     let shown = lazy_if(a, exact, show("10"), show("25"));
-    let draw = Term::constr(a, 0, a.alloc([Term::constr(a, 0, a.alloc([next, shown]))]))
-        .lambda(a, DeBruijn::zero(a));
+    let prepare = prepared_program(a, next, run, shown);
     let t = fixture(
         Programs::Prop {
-            draw: encode(a, draw),
-            run: encode(a, run),
+            prepare: encode(a, prepare),
         },
         Expect::Pass,
     );
@@ -383,15 +392,19 @@ fn actual_cek_property_shrinks_and_retains_failure_logs() {
 fn unchanged_counterexample_preserves_assert_marker_and_traces() {
     let a = &Arena::new();
     let mut t = prop(true, false, Expect::Pass);
-    if let Programs::Prop { run, .. } = &mut t.programs {
-        *run = encode(
+    if let Programs::Prop { prepare } = &mut t.programs {
+        *prepare = encode(
             a,
-            traced(
+            prepared_program(
                 a,
-                "\0assert\x000",
-                traced(a, "original trace", Term::error(a)),
-            )
-            .lambda(a, DeBruijn::zero(a)),
+                Term::var(a, DeBruijn::new(a, 1)),
+                traced(
+                    a,
+                    "\0assert\x000",
+                    traced(a, "original trace", Term::error(a)),
+                ),
+                shown(a, "7"),
+            ),
         );
     }
     t.asserts.push(AssertSite {
@@ -407,8 +420,8 @@ fn unchanged_counterexample_preserves_assert_marker_and_traces() {
 fn generator_errors_remain_generator_failures_for_fail_properties() {
     let a = &Arena::new();
     let mut t = prop(true, false, Expect::Fail);
-    if let Programs::Prop { draw, .. } = &mut t.programs {
-        *draw = encode(a, Term::error(a).lambda(a, DeBruijn::zero(a)));
+    if let Programs::Prop { prepare } = &mut t.programs {
+        *prepare = encode(a, Term::error(a).lambda(a, DeBruijn::zero(a)));
     }
     assert!(matches!(
         run(t).status,
@@ -420,21 +433,21 @@ fn coverage_counts_duplicate_labels_and_uses_requested_denominator() {
     let a = &Arena::new();
     let mut t = prop(false, false, Expect::Pass);
     let p = Term::var(a, DeBruijn::new(a, 1));
-    if let Programs::Prop { run, .. } = &mut t.programs {
-        *run = encode(
+    if let Programs::Prop { prepare } = &mut t.programs {
+        *prepare = encode(
             a,
-            traced(
+            prepared_program(
                 a,
-                "\0label\0a",
-                traced(a, "\0label\0a", Term::constr(a, 0, a.alloc([p]))),
-            )
-            .lambda(a, DeBruijn::zero(a)),
+                p,
+                traced(a, "\0label\0a", traced(a, "\0label\0a", Term::unit(a))),
+                shown(a, "7"),
+            ),
         );
     }
     let out = run(t);
     assert_eq!(out.labels["a"], 10);
 
-    let Programs::Prop { run: bytes, .. } = &out.test.programs else {
+    let Programs::Prop { prepare: bytes } = &out.test.programs else {
         unreachable!()
     };
     let program: &nash_plutus::program::Program<'_, DeBruijn> =
@@ -552,4 +565,25 @@ fn multiline_assert_uses_source_rows_display_width_and_indented_values() {
             .collect::<Vec<_>>(),
         [(0, 0), (0, 17), (1, 9), (1, 26), (0, 33)]
     );
+}
+
+#[test]
+fn preparation_runs_once_and_success_does_not_show_values() {
+    let arena = &Arena::new();
+    let next = Prng::from_seed(42).to_term(arena);
+    let prepared = prepared_program(arena, next, Term::unit(arena), Term::error(arena));
+    let program =
+        traced(arena, "generate", prepared.apply(arena, next)).lambda(arena, DeBruijn::zero(arena));
+    let test = fixture(
+        Programs::Prop {
+            prepare: encode(arena, program),
+        },
+        Expect::Pass,
+    );
+    let outcome = run(test);
+    assert_eq!(outcome.status, Status::Pass);
+    assert_eq!(outcome.traces, ["generate"]);
+    insta::with_settings!({description => nash_plutus::pretty::term(program), omit_expression => true}, {
+        insta::assert_snapshot!(report::terminal::render(&[outcome], Coverage::Labels, 42, std::time::Duration::ZERO));
+    });
 }

@@ -493,7 +493,7 @@ returning a little option. `Option.unwrap` fails on None; `withDefault` returns 
 | `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `trace`, `todo`, `fail` syntax | trace levels, compiler-generated traces switch |
 | `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks traces the operands and calls `Test.assertFailed`; elsewhere `assert e` is `if e then () else fail` (testing.md) |
-| `Prop.generator`, `Prop.prng` | `prop`/`via` desugaring and the runner protocol (`draw`/`run` programs, plans/10 chunk 4) |
+| `Prop.generator`, `Prop.prng` | `prop`/`via` desugaring and the runner protocol (preparation programs, plans/10 chunk 4) |
 | `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
 
@@ -937,50 +937,18 @@ import Monad exposing (Monad)
 import Lift exposing (Lift)
 import List
 
-type prng = Seeded bytes (list int) | Replayed int (list int)
+type prng = Seeded bytes (list int) | Replayed (list int)
+type alias generator 'a = prng -> option ('a, prng)
 
-type generator 'a = Generator (prng -> option (prng, 'a))
+run : generator 'a -> prng -> option ('a, prng)
+run generator state = generator state
 
-run : generator 'a -> prng -> option (prng, 'a)
-run (Generator f) = f
+-- Each draw returns its value and next state. Replay consumes one choice.
+choice : Lift int 'n => 'n -> generator int
 
--- Draw an integer in [0, bound]. The only primitive.
-choice : int -> generator int
-choice bound =
-    Generator
-        (\prng ->
-            case prng of
-                Seeded seed choices ->
-                    let
-                        seed2 = Builtin.blake2b_256 (lower seed)
-                        n = Builtin.byteStringToInteger True seed2 % (bound + 1)
-                    in
-                    Some (Seeded (lift seed2) (lift (lift n :: lower choices)), n)
-
-                Replayed 0 _ -> None
-                Replayed k rest ->
-                    case lower rest of
-                        c :: cs ->
-                            if lower c <= bound then Some (Replayed (lift (k - 1)) (lift cs), lower c) else None
-                        [] -> None)
-
-impl Functor generator where
-    map f (Generator g) =
-        Generator (\prng ->
-            case g prng of
-                None -> None
-                Some (p, a) -> Some (p, f a))
-
-impl Applicative generator where
-    pure a = Generator (\prng -> Some (prng, a))
-    apply ff fa = bind ff (\f -> map f fa)
-
-impl Monad generator where
-    bind (Generator g) k =
-        Generator (\prng ->
-            case g prng of
-                None -> None
-                Some (p, a) -> run (k a) p)
+-- Functor, Applicative and Monad instances use this function alias.
+map : ('a -> 'b) -> generator 'a -> generator 'b
+bind : generator 'a -> ('a -> generator 'b) -> generator 'b
 
 constant : 'a -> generator 'a
 int : generator int                         -- small-biased, full range possible
@@ -1010,7 +978,7 @@ smaller values (testing.md "Shrinking"):
   small magnitudes;
 - never consume choices on a path that cannot fail differently.
 
-The `prop` desugaring, the `draw`/`run` programs, and the runner protocol
+The `prop` desugaring, the preparation programs, and the runner protocol
 are in testing.md and plans/10.
 
 ## `Test`

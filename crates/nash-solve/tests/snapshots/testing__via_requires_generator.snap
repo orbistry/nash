@@ -5,7 +5,7 @@ info: diagnostic
 ---
 nash::type::missing_impl
 
-  × No impl for `Literal.FromUnit (Prop.generator unit)`.
+  × No impl for `Literal.FromUnit (Prop.prng -> Option.option ( unit, Prop.prng ))`.
    ╭─[Main.nash:5:19]
  4 │     prop "type" =
  5 │         let x via () in
@@ -17,4 +17,4 @@ nash::type::missing_impl
 
             unit
 
-        Import or define an impl for `Literal.FromUnit (Prop.generator unit)`.
+        Import or define an impl for `Literal.FromUnit (Prop.prng -> Option.option ( unit, Prop.prng ))`.

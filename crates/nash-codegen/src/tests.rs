@@ -1,10 +1,10 @@
 //! Closed roots for module-local unit and property tests.
 use std::path::Path;
 
-use nash_ast::{ModuleName, NodeId, ViaBinder, primitives};
+use nash_ast::{ModuleName, NodeId, ViaBinder};
 use nash_ir::{
     core::*,
-    ty::{BigTy, ConstTy, TermTy, Ty},
+    ty::{ConstTy, TermTy, Ty},
 };
 use nash_plutus::{arena::Arena, flat};
 use nash_region::{Position, Region};
@@ -85,30 +85,12 @@ pub fn compile_tests_matching<'a>(
         } else {
             let prng = Binder {
                 name: engine.ir.fresh("prng"),
-                ty: Ty::Big(&BigTy::Data),
+                ty: engine.generator_layout(&test.binders[0], &ctx)?.2,
             };
-            let run = engine.property(test, 0, &ctx, engine.ir.var(prng.name), false, &[])?;
-            let run = engine.ir.lam(&[prng], run);
-            let run = encode(&mut engine, run, version)?;
-
-            let mut draw_engine = Engine::new(build, arena, trace);
-            let draw_ctx = draw_engine.test_context(input);
-            let prng = Binder {
-                name: draw_engine.ir.fresh("prng"),
-                ty: Ty::Big(&BigTy::Data),
-            };
-            let draw = draw_engine.property(
-                test,
-                0,
-                &draw_ctx,
-                draw_engine.ir.var(prng.name),
-                true,
-                &[],
-            )?;
-            let draw = draw_engine.ir.lam(&[prng], draw);
+            let prepare = engine.property(test, 0, &ctx, engine.ir.var(prng.name), &[])?;
+            let prepare = engine.ir.lam(&[prng], prepare);
             Programs::Prop {
-                draw: encode(&mut draw_engine, draw, version)?,
-                run,
+                prepare: encode(&mut engine, prepare, version)?,
             }
         };
         result.push(TestProgram {
@@ -173,29 +155,21 @@ impl<'a> Engine<'a, '_, '_> {
         index: usize,
         ctx: &Context<'a>,
         prng: &'a Core<'a>,
-        draw: bool,
         shown: &[&'a Core<'a>],
     ) -> Result<&'a Core<'a>, crate::build::Error<'a>> {
         let Some(binder) = test.binders.get(index) else {
-            return if draw {
-                let strings = self.list(Ty::Const(&ConstTy::String), shown)?;
-                Ok(self.ir.constr(0, &[self.ir.constr(0, &[prng, strings])]))
-            } else {
-                let body = self.expr(test.body, ctx)?;
-                let unit = Binder {
-                    name: self.ir.fresh("test_result"),
-                    ty: Ty::Const(&ConstTy::Unit),
-                };
-                Ok(self.ir.let_(unit, body, self.ir.constr(0, &[prng])))
+            let body = self.expr(test.body, ctx)?;
+            let unit = Binder {
+                name: self.ir.fresh("unit"),
+                ty: Ty::Const(&ConstTy::Unit),
             };
+            let body = self.ir.lam(&[unit], body);
+            let strings = self.list(Ty::Const(&ConstTy::String), shown)?;
+            let show = self.ir.lam(&[unit], strings);
+            return Ok(self.ir.constr(0, &[self.ir.constr(0, &[prng, body, show])]));
         };
         let generator = self.expr(binder.generator, ctx)?;
-        let (generator_tag, some_tag, none_tag, function_ty, tuple_ty) =
-            self.generator_layout(binder, ctx)?;
-        let function = Binder {
-            name: self.ir.fresh("generator"),
-            ty: function_ty,
-        };
+        let (some_tag, none_tag, prng_ty, tuple_ty) = self.generator_layout(binder, ctx)?;
         let tuple = Binder {
             name: self.ir.fresh("drawn"),
             ty: tuple_ty,
@@ -207,7 +181,7 @@ impl<'a> Engine<'a, '_, '_> {
         };
         let next = Binder {
             name: self.ir.fresh("next_prng"),
-            ty: Ty::Big(&BigTy::Data),
+            ty: prng_ty,
         };
         let (records, literals) = self.pattern_inputs(binder.pattern, ctx)?;
         let bindings = decision_tree::bindings(
@@ -222,24 +196,15 @@ impl<'a> Engine<'a, '_, '_> {
             child.env.insert(name, Binding::Value(*bound));
         }
         let mut shown = shown.to_vec();
-        if draw {
-            let display = self
-                .show_value(
-                    NodeId::pattern(binder.pattern),
-                    self.ir.var(value.name),
-                    ctx,
-                )?
-                .unwrap_or_else(|| self.string("?"));
-            shown.push(display);
-        }
-        let body = self.property(
-            test,
-            index + 1,
-            &child,
-            self.ir.var(next.name),
-            draw,
-            &shown,
-        )?;
+        let display = self
+            .show_value(
+                NodeId::pattern(binder.pattern),
+                self.ir.var(value.name),
+                ctx,
+            )?
+            .unwrap_or_else(|| self.string("?"));
+        shown.push(display);
+        let body = self.property(test, index + 1, &child, self.ir.var(next.name), &shown)?;
         let body = decision_tree::compile(
             &self.ir,
             &mut self.types,
@@ -258,11 +223,11 @@ impl<'a> Engine<'a, '_, '_> {
         )?;
         let body = self.ir.let_(
             next,
-            self.ir.field(self.ir.var(tuple.name), 0, 2),
+            self.ir.field(self.ir.var(tuple.name), 1, 2),
             self.ir
-                .let_(value, self.ir.field(self.ir.var(tuple.name), 1, 2), body),
+                .let_(value, self.ir.field(self.ir.var(tuple.name), 0, 2), body),
         );
-        let sampled = self.ir.app(self.ir.var(function.name), &[prng]);
+        let sampled = self.ir.app(generator, &[prng]);
         let sampled = self.ir.case(
             CaseKind::Tag,
             sampled,
@@ -280,16 +245,7 @@ impl<'a> Engine<'a, '_, '_> {
             ],
             None,
         );
-        Ok(self.ir.case(
-            CaseKind::Tag,
-            generator,
-            &[Branch {
-                test: Test::Tag(generator_tag),
-                binders: self.ir.arena.alloc_slice_copy(&[function]),
-                body: sampled,
-            }],
-            None,
-        ))
+        Ok(sampled)
     }
 
     /// Validate and obtain constructor tags from the actual standard-library
@@ -298,33 +254,11 @@ impl<'a> Engine<'a, '_, '_> {
         &mut self,
         binder: &ViaBinder<'a>,
         ctx: &Context<'a>,
-    ) -> Result<(u16, u16, u16, Ty<'a>, Ty<'a>), crate::build::Error<'a>> {
+    ) -> Result<(u16, u16, Ty<'a>, Ty<'a>), crate::build::Error<'a>> {
         use crate::build::Error as E;
         let ty = self.ty(NodeId::expr(binder.generator), ctx)?;
-        let Ty::Term(TermTy::Adt(adt)) = ty else {
+        let Ty::Term(TermTy::Fun([prng], Ty::Term(TermTy::Adt(option)))) = ty else {
             return Err(E::RuntimeLayout(ty));
-        };
-        if adt.name.home.package != Some(primitives::BASE)
-            || adt.name.home.name != "Prop"
-            || adt.name.name != "generator"
-        {
-            return Err(E::InvalidConstructor);
-        }
-        let union = self
-            .build
-            .unions
-            .get(&adt.name)
-            .ok_or(E::InvalidConstructor)?;
-        let [constructor] = union.ctors else {
-            return Err(E::InvalidConstructor);
-        };
-        let generator_tag = constructor.index;
-        let fields = self.types.layout(*adt)?;
-        let [function] = fields[generator_tag as usize] else {
-            return Err(E::InvalidConstructor);
-        };
-        let Ty::Term(TermTy::Fun(_, Ty::Term(TermTy::Adt(option)))) = function else {
-            return Err(E::RuntimeLayout(*function));
         };
         let union = self
             .build
@@ -347,7 +281,7 @@ impl<'a> Engine<'a, '_, '_> {
         let [tuple @ Ty::Term(TermTy::Tuple([_, _]))] = fields[some as usize] else {
             return Err(E::InvalidConstructor);
         };
-        Ok((generator_tag, some, none, *function, *tuple))
+        Ok((some, none, *prng, *tuple))
     }
 }
 

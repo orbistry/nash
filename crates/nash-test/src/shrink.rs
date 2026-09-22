@@ -23,7 +23,7 @@ impl<'a, T: Clone + PartialEq> Cache<'a, T> {
         self.db.len()
     }
     pub fn get(&mut self, choices: &[Choice]) -> Status<T> {
-        // Generator constructors can inspect replay length, so an extension need not
+        // Generator functions can inspect replay length, so an extension need not
         // have the same outcome as a successful prefix. Cache exact inputs only.
         if let Some(status) = self.db.get(choices) {
             return status.clone();

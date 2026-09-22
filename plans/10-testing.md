@@ -70,9 +70,9 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 ## 4. Test code generation
 
 - [x] Compile each unit test to an owned Flat program.
-- [x] Compile properties to deterministic `draw` and `run` programs sharing the
-  same generator semantics. Inputs are Data PRNG values; results follow the
-  documented option/tuple protocol. Generated values stay inside UPLC.
+- [x] Compile properties to one preparation program returning native PRNG state,
+  a property-body function, and a deferred display function. Generated values
+  remain captured in these functions; generators run once per candidate.
 - [x] Apply the existing Core passes and target checks for the selected member's
   settings; never silently change a requested ledger target.
 - [x] Preserve source/path/assertion metadata and binder text in owned outputs.
@@ -84,7 +84,7 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
   instances. Imports remain explicit. Keep reserved Test traces independent of
   user trace suppression.
 - [x] Seed with Blake2b-256 of u32 big-endian bytes. Thread the 32-byte seed and
-  newest-first choices in Seeded; replay next-first choices with a remaining count.
+  newest-first choices in Seeded; replay next-first choices until the list is empty.
 - [x] Choice values are u64; explicitly validate primitive bounds and replay
   values. Never truncate arbitrary-precision integers. Larger generated values
   can be constructed from multiple primitive choices.
@@ -112,10 +112,10 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 ## 7. Runner
 
 - [x] Implement unit pass/fail and property pass/fail/fail-once semantics.
-- [x] Seeded generator error or None always fails as a generator error. Recover PRNG
-  state with draw on the original input after expected body errors under `fail`.
+- [x] Seeded generator error or None always fails as a generator error. Retain PRNG
+  state before calling the property body, including expected failures under `fail`.
 - [x] Enforce per-iteration budgets independently of expected body failures;
-  report componentwise maxima from seeded runs, excluding shrinking/recovery.
+  report componentwise maxima from seeded runs, excluding shrinking/display.
 - [x] Count labels only from seeded runs; split reserved assertion/label payloads
   from user traces, handling malformed payloads without panics.
 - [x] Run with bounded parallelism and independent PRNG/arena state; jobs 1 and 8

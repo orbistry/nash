@@ -1,0 +1,9 @@
+---
+source: crates/nash-test/tests/runtime.rs
+description: "(lam i0\n  (force\n    [[(force (builtin trace)) (con string \"generate\")]\n      (delay\n        [(lam i1\n          (constr 0\n            (constr 0\n              (constr 0\n                (con bytestring #e7da4748680e2763d6ca394c222f99b27c75b2c9c9563ab56f963293f6cddb9b)\n                (con (list integer) []))\n              (lam i2 (con unit ()))\n              (lam i2 (error)))))\n          (constr 0\n            (con bytestring #e7da4748680e2763d6ca394c222f99b27c75b2c9c9563ab56f963293f6cddb9b)\n            (con (list integer) []))])]))"
+---
+  Testing Example (Example.nash)
+
+  PASS fixture  [after 5 tests]
+
+  Summary 1 passed, 0 failed, 0 skipped   seed 42   0.00s

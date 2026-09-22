@@ -8,7 +8,7 @@ and, for properties, a shrunk counterexample.
 The design follows Aiken: the PRNG is a Plutus value that the generator
 threads through on-chain code, the runner only sees the sequence of random
 choices, and shrinking is choice-sequence shrinking in Rust (MiniThesis). Nash
-adds a `generator 'a` monad (constructor `Generator`) so generators are written
+uses a `generator 'a` function alias with Monad support so generators are written
 with `do`, and a power-assert
 `assert` that prints the value of every sub-expression on failure.
 
@@ -241,35 +241,33 @@ to test bodies.
 
 ```elm
 -- Prop.nash (stdlib)
-type prng = Seeded bytes (list int) | Replayed int (list int)
+type prng = Seeded bytes (list int) | Replayed (list int)
+type alias generator 'a = prng -> option ('a, prng)
 
-type generator 'a = Generator (prng -> option (prng, 'a))
-
-impl Functor generator where
-    map f (Generator g) = Generator (\prng -> case g prng of
+map : ('a -> 'b) -> generator 'a -> generator 'b
+map f generator state =
+    case generator state of
         None -> None
-        Some (p, a) -> Some (p, f a))
+        Some (value, next) -> Some (f value, next)
 
-impl Applicative generator where
-    pure a = Generator (\prng -> Some (prng, a))
-    apply = ...
-
-impl Monad generator where
-    bind (Generator g) k = Generator (\prng -> case g prng of
+bind : generator 'a -> ('a -> generator 'b) -> generator 'b
+bind generator continuation state =
+    case generator state of
         None -> None
-        Some (p, a) -> case k a of Generator h -> h p)
+        Some (value, next) -> continuation value next
+
 ```
 
 - `prng` is a **little** ADT: the runner builds a native constructor term and reads it
   back from the result. `Seeded seed choices` carries a 32-byte seed and the
-  choices made so far, newest first. `Replayed remaining choices` carries a
-  count and the choices still to replay, next first.
-- `generator 'a` is a **little** ADT with one constructor wrapping the
-  function. The result tuple is a UPLC `constr 0 [prng, value]` because `pair`
-  only takes `Storable` components and `'a` may have any representation. The wrapper exists because
-  impls attach to nominal types, not to function aliases.
+  choices made so far, newest first. `Replayed choices` carries only the
+  choices still to replay, next first. An empty list means replay is exhausted.
+- `generator 'a` is a function alias. Each draw returns `(value, nextPrng)` in
+  `Some`, or `None` for invalid replay. The value may itself contain functions.
+  Functor, Applicative and Monad instances attach to the alias; there is no
+  runtime `Generator` constructor.
 - Choices are integers in `0..18446744073709551615`, one per primitive draw, as in
-  MiniThesis. Aiken uses bytes; Nash uses `Int` so a primitive can draw a
+  MiniThesis. Aiken uses bytes; Nash uses `int` so a primitive can draw a
   64-bit integer in one choice and shrink it with one binary search. Larger
   integers can be assembled from several choices. A primitive bound outside
   that range is a generator error; values are never truncated.
@@ -277,20 +275,33 @@ impl Monad generator where
 The single primitive:
 
 ```elm
--- Draw an integer in [0, bound].
-choice : int -> generator int
-choice bound = Generator (\prng -> case prng of
-    Seeded seed choices ->
-        let n = mod (lower (bytesToInt (blake2b256 seed))) (bound + 1) in
-        Some (Seeded (blake2b256 seed) (lift n :: choices), n)
-    Replayed 0 _ -> None
-    Replayed k (c :: rest) ->
-        if lower c <= bound then Some (Replayed (k - 1) rest, lower c) else None
-    Replayed _ [] -> None)
+-- The runner stores each primitive choice in a u64.
+choice : Lift int 'n => 'n -> generator int
+choice bound = choiceInt (lower bound)
+
+choiceInt : int -> generator int
+choiceInt bound prng =
+    if bound < 0 || bound > 18446744073709551615 then
+        (fail "Prop.choice bound must be in 0..18446744073709551615")
+    else
+        case prng of
+            Seeded seed choices ->
+                let
+                    seed2 = Builtin.blake2b_256 seed
+                    n = Builtin.byteStringToInteger True seed2 % (bound + 1)
+                in
+                Some (n, Seeded seed2 (Builtin.mkCons n choices))
+            Replayed choices ->
+                case choices of
+                    [] -> None
+                    n :: rest ->
+                        if n < 0 || n > bound then None
+                        else Some (n, Replayed rest)
+
 ```
 
-A replayed sequence that runs out, or replays a value above the requested
-bound, yields `None`. That is what makes choice-sequence shrinking sound: any
+A replayed sequence that runs out, or replays a value outside the requested
+bounds, yields `None`. That is what makes choice-sequence shrinking sound: any
 edit to the sequence either replays to a valid smaller input or is rejected
 by the generator itself. Everything else (`int`, `listOf`, `oneOf`, `bytes`,
 `map`, `bind`) is built on `choice`, and generators must draw smaller values
@@ -301,42 +312,29 @@ Nullary generators like `int` are values, so `a via int` and
 
 ## How the runner drives a property
 
-For every `prop` the compiler emits two programs that share the module code:
+For every `prop` the compiler emits one preparation program:
 
+```nash
+prepare : prng -> option (prng, unit -> unit, unit -> list string)
 ```
-draw : prng -> option (prng, list string)
-run  : prng -> option prng
-```
 
-`draw` applies the `via` generators in order, threading the PRNG, and returns
-the next PRNG with the `show` of each drawn value (`"?"` when the type has no
-`Show` impl). `run` draws the same values, evaluates the body with them in
-scope, and returns the next PRNG. Both take a `prng` as a native constructor term.
+It draws the `via` values once, then returns the next PRNG, a property-body
+function, and a function that shows the values. Native tuples can hold these
+functions, including their captured values. No generator rerun is needed to
+recover state or display a counterexample.
 
-Drawn values stay inside the program and may have any representation, including
-functions. The runner transfers only native PRNG state and shown strings.
-The body is compiled together with its generators, so `run` generates values
-and checks them in one evaluation. `draw` repeats deterministic generation when
-the runner needs to display a counterexample.
+The runner saves the state before calling the body with `()`. This order is
+required by strict evaluation: a body failure must not discard the state.
+Showing values is deferred until a counterexample is needed. Preparation and
+body execution share one execution-budget limit; their consumed budgets are added.
 
 Loop, seeded with `--seed`:
 
-1. `prng = Prng::from_seed(seed)`. Evaluate `run prng`.
-2. `Some p'` with no error: the iteration passed. Collect labels from the
-   log. Continue with `p'`.
-3. Error: the body failed (or, with `fail`, completion is the failure).
-   Evaluate `draw prng` to recover the next PRNG, the choice sequence and
-   the shown values. If `draw` itself errors or returns `None`, the generator
-   is broken: the prop is reported as `× generator failed unexpectedly` and the
-   loop stops.
-4. Build a `Counterexample { choices, shown }` and shrink it.
-
-Why not one combined program: the body fails with `error`, which discards the
-result, so the next PRNG and the choices would be lost exactly when they are
-needed. Why not return a thunk: discharging the CEK closure into a term and
-re-applying it works but copies the environment per iteration; two programs
-are simpler and mirror Aiken's `sample` / `eval` split
-(`test_framework.rs:709-722`, `493-499`).
+1. Evaluate `prepare prng`. An error or `None` is a generator failure.
+2. Retain the returned state and functions. Call the body with `()`.
+3. On success, continue from the returned PRNG with its choice history cleared.
+4. On a counterexample, call the display function and shrink the recorded choices.
+   `fail` and `fail once` retain their existing expected-outcome semantics.
 
 ### Shrinking
 
@@ -353,11 +351,11 @@ itself a port of MiniThesis, with `u64` choices instead of `u8`:
 6. Repeat until a full pass makes no change.
 
 A candidate sequence is evaluated with `Prng::from_choices(candidate)`:
-`draw` first (error or `None` is `Invalid`), then `run` (body error is `Keep`,
-completion is `Ignore`; swapped for `fail`). A candidate is accepted when it
+preparation first (error or `None` is `Invalid`), then the retained body
+(body error is `Keep`, completion is `Ignore`; swapped for `fail`). A candidate is accepted when it
 is `Keep` and shorter, or equal length and lexicographically smaller
-(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom `Generator` can
-inspect the public `Replayed` count or remaining choices, so a successful
+(`consider`, `test_framework.rs:807-826`). Results are memoised by the exact choice sequence. A custom generator can
+inspect the remaining replay choices, so a successful
 prefix does not prove that every extension has the same result. Exact caching
 preserves those generators' semantics.
 
@@ -479,7 +477,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 
 - `prng` uses native constructors with `bytes`, `int`, and `list int` fields.
   The runner uses `Prng::to_term` and `Prng::from_term`; no Data encoding is needed.
-- `draw` returns a `constr` term: `Some` is `constr 0 [constr 0 [prng, list]]`,
+- `prepare` returns a `constr` term: `Some` is `constr 0 [constr 0 [prng, body, show]]`,
   `None` is `constr 1 []`. The stdlib declares `type option 'a = Some 'a |
   None` in that order; the runner depends on the tags.
 - Test programs use the same unoptimized Core passes as validator builds.
@@ -501,7 +499,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - **Traits.** `Show` for power-assert and counterexamples; `Functor`,
   `Applicative`, `Monad` for `generator`; `@derive(Show)` from
   [macros.md](macros.md).
-- **Representations.** `(prng, 'a)` is a tuple (`Term`) because `pair` requires
+- **Representations.** `('a, prng)` is a tuple (`Term`) because `pair` requires
   `Storable` components, while `'a` may be `Term`; `list string` is a `Const` list of `Const` strings.
 - **Codegen.** Each test program is a standalone UPLC program that inlines
   the module's dependency closure ([codegen.md](codegen.md)).
@@ -510,7 +508,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 
 ## Open questions
 
-- **Choices as `Int`.** This diverges from Aiken's byte choices. It makes
+- **Choices as `int`.** This diverges from Aiken's byte choices. It makes
   `choice bound` one draw instead of a byte loop and keeps the shrinker
   identical up to the element type. If interop with Aiken generators matters,
   a byte-based `choice8` can be added without changing the runner.

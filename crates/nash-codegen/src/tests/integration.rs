@@ -5,10 +5,7 @@ use crate::build::{Input, TraceLevel};
 use nash_ast::primitives;
 use nash_config::PlutusVersion;
 use nash_plutus::machine::PlutusVersion as MachineVersion;
-use nash_test::{
-    eval::{self, Drawn, Ran},
-    prng::Prng,
-};
+use nash_test::{eval, prng::Prng};
 
 fn compile(
     snapshot_name: &str,
@@ -58,16 +55,16 @@ fn compile_selected(
         (
             indoc::indoc!(
                 r#"
-            module Prop exposing (type prng(..), type generator(..), constant, reject)
+            module Prop exposing (type prng(..), type generator, constant, reject)
             import Primitive exposing (..)
             import Builtin exposing (..)
             import Option exposing (type option(..))
-            type prng = Seeded bytes (list int) | Replayed int (list int)
-            type generator 'a = Generator (prng -> option (prng, 'a))
+            type prng = Seeded bytes (list int) | Replayed (list int)
+            type alias generator 'a = prng -> option ('a, prng)
             constant : 'a -> generator 'a
-            constant value = Generator (\prng -> Some (prng, value))
+            constant value prng = Some (value, prng)
             reject : generator 'a
-            reject = Generator (\_ -> None)
+            reject _ = None
         "#
             ),
             Some(primitives::BASE),
@@ -129,11 +126,9 @@ fn compile_selected(
         output.push_str(&format!("--- {}\n", program.name));
         match &program.programs {
             Programs::Unit { run } => output.push_str(&render(run)),
-            Programs::Prop { draw, run } => output.push_str(&format!(
-                "--- draw\n{}\n--- run\n{}",
-                render(draw),
-                render(run)
-            )),
+            Programs::Prop { prepare } => {
+                output.push_str(&format!("--- prepare\n{}", render(prepare)))
+            }
         }
         output.push('\n');
     }
@@ -370,20 +365,34 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
     )
     .unwrap();
     assert_eq!(programs[0].binder_texts, ["x", "(y, z)"]);
-    let Programs::Prop { draw, run } = &programs[0].programs else {
+    let Programs::Prop { prepare } = &programs[0].programs else {
         panic!("property program");
     };
-    let prng = Prng::from_choices(&[]);
-    let Drawn::Some { shown, .. } = eval::run_draw(MachineVersion::V3, draw, &prng).unwrap() else {
-        panic!("draw succeeds");
-    };
-    assert_eq!(shown, ["7", "?"]);
     let arena = Arena::new();
-    let result = eval::evaluate(&arena, MachineVersion::V3, run, Some(prng.to_term(&arena)));
-    assert!(matches!(
-        eval::decode_ran(result.term.unwrap()),
-        Ok(Ran::Some(_))
-    ));
+    let prepared = eval::prepare(
+        &arena,
+        MachineVersion::V3,
+        prepare,
+        &Prng::from_choices(&[]),
+        nash_plutus::machine::ExBudget::max(),
+    )
+    .unwrap()
+    .unwrap();
+    let shown = eval::show_prepared(
+        &arena,
+        MachineVersion::V3,
+        &prepared,
+        nash_plutus::machine::ExBudget::max(),
+    )
+    .unwrap();
+    assert_eq!(shown, ["7", "?"]);
+    let result = eval::run_prepared(
+        &arena,
+        MachineVersion::V3,
+        &prepared,
+        nash_plutus::machine::ExBudget::max(),
+    );
+    assert!(result.term.is_ok(), "{:?}", result.term);
     assert_eq!(result.logs, ["body"]);
 }
 
@@ -411,21 +420,21 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
         TraceLevel::Silent,
     )
     .unwrap();
-    let Programs::Prop { draw, run } = &programs[1].programs else {
+    let Programs::Prop { prepare } = &programs[1].programs else {
         panic!("property program");
     };
-    let prng = Prng::from_choices(&[]);
-    assert!(matches!(
-        eval::run_draw(MachineVersion::V3, draw, &prng).unwrap(),
-        Drawn::None
-    ));
     let arena = Arena::new();
-    let result = eval::evaluate(&arena, MachineVersion::V3, run, Some(prng.to_term(&arena)));
-    assert!(matches!(
-        eval::decode_ran(result.term.unwrap()),
-        Ok(Ran::None)
-    ));
-    assert!(result.logs.is_empty());
+    assert!(
+        eval::prepare(
+            &arena,
+            MachineVersion::V3,
+            prepare,
+            &Prng::from_choices(&[]),
+            nash_plutus::machine::ExBudget::max()
+        )
+        .unwrap()
+        .is_none()
+    );
     for version in [PlutusVersion::V1, PlutusVersion::V2] {
         let all = compile(
             "rejected_generator_skips_body_and_selected_target_is_enforced_2",

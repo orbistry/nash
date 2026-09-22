@@ -21,7 +21,7 @@ pub struct TestProgram {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Programs {
     Unit { run: Vec<u8> },
-    Prop { draw: Vec<u8>, run: Vec<u8> },
+    Prop { prepare: Vec<u8> },
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssertSite {

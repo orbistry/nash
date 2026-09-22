@@ -9,4 +9,4 @@ source: crates/nash-test/tests/runtime.rs
   (con bytestring #0303030303030303030303030303030303030303030303030303030303030303)
   (con (list integer) [1, 18446744073709551615, 4]))
 
-(constr 1 (con integer 3) (con (list integer) [0, 7, 18446744073709551615]))
+(constr 1 (con (list integer) [0, 7, 18446744073709551615]))

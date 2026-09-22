@@ -571,19 +571,18 @@ module's `Core` bindings are built and optimized once (monomorphized from
 the union of all test roots), and each test program is assembled from the
 bindings reachable from its own body, so shared code is compiled once and
 DCE is per program. A `test` compiles to one program of type `unit`:
-success is no error. A `prop` compiles to two programs following the
+success is no error. A `prop` compiles to one preparation program following the
 runner protocol in [testing.md](testing.md):
 
-```
-draw : prng -> option (prng, list string)
-run  : prng -> option prng
+```nash
+prepare : prng -> option (prng, unit -> unit, unit -> list string)
 ```
 
-`draw` threads the PRNG through the `via` generators and returns the shown
-values; `run` draws the same values, evaluates the body with them in scope,
-and returns the next PRNG. The drawn values never cross the program
-boundary (they may have any representation), so the body is compiled together with
-the generators, and `nash-test` only ever applies a `prng` as a native constructor term.
+The program applies each generator function directly, reading `(value, nextPrng)`
+from its result. It returns the final state and functions for the property body
+and counterexample display. Native tuples retain function values and captures.
+The runner saves the state before calling the body; it calls the display function
+only when needed. Generation is not repeated after a body failure.
 
 ## Comptime hook
 

@@ -13,69 +13,7 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
       (lam i1 i1)])
     (con string "\0assert\0\48")])
 --- invalid
---- draw
-(program 1.1.0
-  [(lam i0
-    [(lam i1
-      (lam i2
-        (case
-          i1
-          (lam i3
-            (case
-              [i3 i2]
-              (lam i4
-                [(lam i5
-                  [(lam i6
-                    [(lam i7
-                      [(lam i8
-                        [(lam i9
-                          [(lam i10
-                            [(lam i11
-                              [(lam i12
-                                [(lam i13
-                                  (constr 0
-                                    (constr 0
-                                      i6
-                                      [[(force (builtin mkCons))
-                                        [[(lam i14
-                                          [(lam i15
-                                            [(lam i16 i16)
-                                              (lam i16
-                                                (case
-                                                  [[(builtin lessThanInteger) i16] [i12 (con integer 0)]]
-                                                  [(builtin decodeUtf8) [i14 i16]]
-                                                  [[(builtin appendString) [i15 i11]]
-                                                    [(builtin decodeUtf8)
-                                                      [i14 [[(builtin subtractInteger) [i12 (con integer 0)]] i16]]]]))])
-                                            (lam i15 i15)])
-                                          [(lam i14 [i14 i14])
-                                            (lam i14
-                                              (lam i15
-                                                (case
-                                                  [[(builtin lessThanInteger) i15] [i12 (con integer 10)]]
-                                                  [[(builtin appendByteString)
-                                                    [[i14 i14] [[(builtin quotientInteger) i15] [i12 (con integer 10)]]]]
-                                                    [[(builtin consByteString)
-                                                      [[(builtin addInteger) [i12 (con integer 48)]]
-                                                        [[(builtin remainderInteger) i15] [i12 (con integer 10)]]]]
-                                                      [i13 (con bytestring #)]]]
-                                                  [[(builtin consByteString) [[(builtin addInteger) [i12 (con integer 48)]] i15]]
-                                                    [i13 (con bytestring #)]])))]]
-                                          i8]]
-                                        (con (list string) [])])))
-                                  (lam i13 i13)])
-                                (lam i12 i12)])
-                              i0])
-                            i9])
-                          i8])
-                        i7])
-                      (case i4 (lam i7 (lam i8 i8)))])
-                    i5])
-                  (case i4 (lam i5 (lam i6 i5)))])
-              (constr 1))))))
-      [(lam i1 (constr 0 i1)) (lam i1 [(lam i2 (constr 1)) i1])]])
-    (con string "-")])
---- run
+--- prepare
 (program 1.1.0
   [(lam i0
     [(lam i1
@@ -84,22 +22,22 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
           [(lam i4
             (lam i5
               (case
-                i4
+                [i4 i5]
                 (lam i6
-                  (case
-                    [i6 i5]
-                    (lam i7
-                      [(lam i8
-                        [(lam i9
-                          [(lam i10
-                            [(lam i11
-                              [(lam i12
-                                [(lam i13
-                                  [(lam i14
-                                    [(lam i15
-                                      [(lam i16
-                                        [(lam i17
-                                          [(lam i18 (constr 0 i9))
+                  [(lam i7
+                    [(lam i8
+                      [(lam i9
+                        [(lam i10
+                          [(lam i11
+                            [(lam i12
+                              (constr 0
+                                (constr 0
+                                  i8
+                                  (lam i13
+                                    [(lam i14
+                                      [(lam i15
+                                        [(lam i16
+                                          [(lam i17
                                             (case
                                               [i16 i17]
                                               (force
@@ -175,19 +113,53 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                                                           (lam i20 i20)])
                                                         (lam i19 i19)])
                                                       i1])])
-                                              (con unit ()))])
-                                          i13])
-                                        [i14 i15]])
-                                      i13])
-                                    (builtin equalsInteger)])
-                                  i12])
-                                i11])
-                              i10])
-                            (case i7 (lam i10 (lam i11 i11)))])
-                          i8])
-                        (case i7 (lam i8 (lam i9 i8)))])
-                    (constr 1))))))
-            [(lam i4 (constr 0 i4)) (lam i4 [(lam i5 (constr 1)) i4])]])
+                                              (con unit ())))
+                                            i12])
+                                          [i14 i15]])
+                                        i12])
+                                      (builtin equalsInteger)])
+                                  (lam i13
+                                    [(lam i14
+                                      [(lam i15
+                                        [(lam i16
+                                          [[(force (builtin mkCons))
+                                            [[(lam i17
+                                              [(lam i18
+                                                [(lam i19 i19)
+                                                  (lam i19
+                                                    (case
+                                                      [[(builtin lessThanInteger) i19] [i15 (con integer 0)]]
+                                                      [(builtin decodeUtf8) [i17 i19]]
+                                                      [[(builtin appendString) [i18 i14]]
+                                                        [(builtin decodeUtf8)
+                                                          [i17 [[(builtin subtractInteger) [i15 (con integer 0)]] i19]]]]))])
+                                                (lam i18 i18)])
+                                              [(lam i17 [i17 i17])
+                                                (lam i17
+                                                  (lam i18
+                                                    (case
+                                                      [[(builtin lessThanInteger) i18] [i15 (con integer 10)]]
+                                                      [[(builtin appendByteString)
+                                                        [[i17 i17] [[(builtin quotientInteger) i18] [i15 (con integer 10)]]]]
+                                                        [[(builtin consByteString)
+                                                          [[(builtin addInteger) [i15 (con integer 48)]]
+                                                            [[(builtin remainderInteger) i18] [i15 (con integer 10)]]]]
+                                                          [i16 (con bytestring #)]]]
+                                                      [[(builtin consByteString) [[(builtin addInteger) [i15 (con integer 48)]] i18]]
+                                                        [i16 (con bytestring #)]])))]]
+                                              i10]]
+                                            (con (list string) [])])
+                                          (lam i16 i16)])
+                                        (lam i15 i15)])
+                                      i1]))))
+                              i11])
+                            i10])
+                          i9])
+                        (case i6 (lam i9 (lam i10 i9)))])
+                      i7])
+                    (case i6 (lam i7 (lam i8 i8)))])
+                (constr 1))))
+            (lam i4 [(lam i5 (constr 1)) i4])])
           (con string "\0assert\0\48\0\50\0")])
         (con string "\0assert\0\48\0\49\0")])
       (con string "-")])

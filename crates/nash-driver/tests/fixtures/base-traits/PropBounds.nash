@@ -10,10 +10,34 @@ five = 5
 draw : Prop.generator 'a -> option 'a
 draw generator =
     case Prop.run generator (Prop.Seeded #"" []) of
-        Some (_, value) -> Some value
+        Some (value, _) -> Some value
         None -> None
 
+increment x = x + 1
+
+composed : Prop.generator int
+composed = do
+    x <- Prop.constant 2
+    y <- Prop.constant 3
+    pure (x + y)
+
+custom : Prop.generator int
+custom state = Some (9, state)
+
 tests
+    test "generator alias traits" = do
+        assert (draw (increment <$> Prop.constant 1) == Some 2)
+        assert (draw (Prop.constant increment <*> Prop.constant 2) == Some 3)
+        assert (draw composed == Some 5)
+        assert (draw custom == Some 9)
+    test "function values survive draw tuples" = do
+        case draw (Prop.constant increment) of
+            Some function -> assert (function 3 == 4)
+            None -> fail
+    prop "function alias generator" =
+        let n via custom in
+        do
+            assert (n == 9)
     test "Big choice bound" = do
         assert (draw (Prop.choice zero) == Some 0)
     test "mixed integer bounds" = do

@@ -1,5 +1,5 @@
 use crate::{
-    eval::{self, Drawn, Logs, Ran},
+    eval::{self, Logs},
     prng::Prng,
     shrink, *,
 };
@@ -56,20 +56,6 @@ fn record(out: &mut Outcome, logs: Logs) {
     });
     out.traces = logs.traces;
 }
-fn draw(
-    version: MachineVersion,
-    bytes: &[u8],
-    prng: &Prng,
-    machine_budget: ExBudget,
-) -> Result<(Prng, Vec<String>), Failure> {
-    match eval::run_draw_with_budget(version, bytes, prng, machine_budget) {
-        Ok(Drawn::Some { prng, shown }) => Ok((prng, shown)),
-        Ok(Drawn::None) => Err(Failure::Generator {
-            message: "generator returned None on a seeded run".into(),
-        }),
-        Err(failure) => Err(failure),
-    }
-}
 fn run_one(test: TestProgram, config: &Config) -> Outcome {
     run_one_with_budget(test, config, ExBudget::max())
 }
@@ -88,21 +74,36 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
     };
     // Own bytecode separately so result metadata can be updated throughout execution.
     let programs = out.test.programs.clone();
-    let (run, draw_program) = match &programs {
-        Programs::Unit { run } => (run, None),
-        Programs::Prop { draw, run } => (run, Some(draw)),
+    let (run, is_property) = match &programs {
+        Programs::Unit { run } => (run, false),
+        Programs::Prop { prepare } => (prepare, true),
     };
     let mut prng = Prng::from_seed(config.seed);
-    let iterations = if draw_program.is_some() {
-        config.max_success
-    } else {
-        1
-    };
+    let iterations = if is_property { config.max_success } else { 1 };
     for _ in 0..iterations {
         out.iterations += 1;
         let arena = Arena::new();
-        let arg = draw_program.map(|_| prng.to_term(&arena));
-        let ev = eval::evaluate_with_budget(&arena, v, run, arg, machine_budget);
+        let prepared = if is_property {
+            match eval::prepare(&arena, v, run, &prng, machine_budget) {
+                Ok(Some(prepared)) => Some(prepared),
+                Ok(None) => {
+                    out.status = Status::Fail(Failure::Generator {
+                        message: "generator returned None on a seeded run".into(),
+                    });
+                    return out;
+                }
+                Err(failure) => {
+                    out.status = Status::Fail(failure);
+                    return out;
+                }
+            }
+        } else {
+            None
+        };
+        let ev = match &prepared {
+            Some(prepared) => eval::run_prepared(&arena, v, prepared, machine_budget),
+            None => eval::evaluate_with_budget(&arena, v, run, None, machine_budget),
+        };
         let exhaustion = ev.exhaustion_failure();
         out.budget.mem = out.budget.mem.max(ev.budget.mem);
         out.budget.cpu = out.budget.cpu.max(ev.budget.cpu);
@@ -127,7 +128,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             Expect::Pass | Expect::FailOnce => errored,
             Expect::Fail => !errored,
         };
-        let Some(draw_program) = draw_program else {
+        let Some(prepared) = prepared else {
             out.status = if let Some(failure) = exceeded(out.test.budget, ev.budget) {
                 Status::Fail(failure)
             } else if counterexample {
@@ -138,74 +139,43 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             record(&mut out, logs);
             return out;
         };
-        // Check the protocol before interpreting a successful run as a body outcome.
-        let next = match ev.term {
-            Ok(term) => match eval::decode_ran(term) {
-                Ok(Ran::Some(p)) => Some(p),
-                Ok(Ran::None) => {
-                    out.status = Status::Fail(Failure::Generator {
-                        message: "generator returned None on a seeded run".into(),
-                    });
-                    record(&mut out, logs);
-                    return out;
-                }
-                Err(message) => {
-                    out.status = Status::Fail(Failure::Generator { message });
-                    record(&mut out, logs);
-                    return out;
-                }
-            },
-            Err(_) => None,
-        };
-        // An error may originate in a generator. Recovery distinguishes it from a body failure,
-        // including iterations expected to fail and budget violations.
-        let recovered = if next.is_none() || counterexample {
-            match draw(v, draw_program, &prng, machine_budget) {
-                Ok(p) => Some(p),
-                Err(f) => {
-                    out.status = Status::Fail(f);
-                    record(&mut out, logs);
-                    return out;
-                }
-            }
-        } else {
-            None
-        };
         if let Some(f) = exceeded(out.test.budget, ev.budget) {
             out.status = Status::Fail(f);
             record(&mut out, logs);
             return out;
         }
         if counterexample {
-            let (next, shown) = recovered.expect("counterexample recovers its inputs");
+            let shown = match eval::show_prepared(&arena, v, &prepared, machine_budget) {
+                Ok(shown) => shown,
+                Err(failure) => {
+                    out.status = Status::Fail(failure);
+                    return out;
+                }
+            };
             let original = (shown, logs.clone());
             let expect = out.test.expect;
             let budget_limit = out.test.budget;
             let oracle = |choices: &[u64]| {
                 let p = Prng::from_choices(choices);
-                let shown = match eval::run_draw_with_budget(v, draw_program, &p, machine_budget) {
-                    Ok(Drawn::Some { shown, .. }) => shown,
+                let arena = Arena::new();
+                let prepared = match eval::prepare(&arena, v, run, &p, machine_budget) {
+                    Ok(Some(prepared)) => prepared,
                     _ => return shrink::Status::Invalid,
                 };
-                let arena = Arena::new();
-                let ev = eval::evaluate_with_budget(
-                    &arena,
-                    v,
-                    run,
-                    Some(p.to_term(&arena)),
-                    machine_budget,
-                );
+                let ev = eval::run_prepared(&arena, v, &prepared, machine_budget);
                 if invalid_shrink_evaluation(&ev, budget_limit) {
                     return shrink::Status::Invalid;
                 }
-                let failed = match ev.term {
-                    Err(_) => expect != Expect::Fail,
-                    Ok(term) => match eval::decode_ran(term) {
-                        Ok(Ran::Some(_)) => expect == Expect::Fail,
-                        _ => return shrink::Status::Invalid,
-                    },
+                let failed = if expect == Expect::Fail {
+                    ev.term.is_ok()
+                } else {
+                    ev.term.is_err()
                 };
                 if failed {
+                    let shown = match eval::show_prepared(&arena, v, &prepared, machine_budget) {
+                        Ok(shown) => shown,
+                        Err(_) => return shrink::Status::Invalid,
+                    };
                     shrink::Status::Keep((shown, eval::split_logs(ev.logs)))
                 } else {
                     shrink::Status::Ignore
@@ -213,7 +183,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             };
             let mut ce = shrink::Counterexample {
                 value: original,
-                choices: next.choices(),
+                choices: prepared.prng.choices(),
                 cache: shrink::Cache::new(oracle),
                 steps: 0,
             };
@@ -243,10 +213,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             record(&mut out, logs);
             return out;
         }
-        prng = next
-            .or_else(|| recovered.map(|p| p.0))
-            .expect("successful iteration recovers PRNG")
-            .next_iteration();
+        prng = prepared.prng.next_iteration();
         record(&mut out, logs);
     }
     if out.test.expect == Expect::FailOnce {
@@ -308,8 +275,7 @@ mod tests {
                 for programs in [
                     Programs::Unit { run: unit.clone() },
                     Programs::Prop {
-                        run: property.clone(),
-                        draw: property.clone(),
+                        prepare: property.clone(),
                     },
                 ] {
                     let outcome = run_one_with_budget(
@@ -354,7 +320,8 @@ mod tests {
             arena,
             Term::unit(arena).lambda(arena, DeBruijn::zero(arena)),
         );
-        let failure = draw(
+        let failure = eval::prepare(
+            arena,
             MachineVersion::V3,
             &program,
             &Prng::from_seed(42),

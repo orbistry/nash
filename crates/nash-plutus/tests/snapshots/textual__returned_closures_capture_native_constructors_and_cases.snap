@@ -1,0 +1,10 @@
+---
+source: crates/nash-plutus/tests/textual.rs
+description: "[(lam captured (constr 0 (lam unit (case (constr 0 captured) (lam item (constr 0 item captured)))))) (con integer 7)]"
+---
+--- prepared
+(constr 0
+  (lam i0
+    (case (constr 0 (con integer 7)) (lam i1 (constr 0 i1 (con integer 7))))))
+--- called
+(constr 0 (con integer 7) (con integer 7))
