@@ -1,4 +1,0 @@
-module Types exposing (type holder(..), get)
-type holder 'f 'a = Holder { value : 'f 'a }
-get : holder 'f 'a -> 'f 'a
-get h = h.value

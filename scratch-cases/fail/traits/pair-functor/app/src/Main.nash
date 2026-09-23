@@ -1,4 +1,0 @@
-module Main exposing (..)
-import Functor exposing (Functor)
-bad : pair Data Data -> pair Data Data
-bad = map (\x -> x)

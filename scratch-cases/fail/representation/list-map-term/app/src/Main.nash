@@ -1,3 +1,0 @@
-module Main exposing (..)
-import Functor exposing (Functor)
-bad = map (\x -> (x, x)) [()]

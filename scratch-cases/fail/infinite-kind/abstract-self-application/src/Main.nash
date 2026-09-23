@@ -1,5 +1,0 @@
-module Main exposing (..)
-type self 'f = Self ('f 'f)
-type tag 'a = Tag unit
-witness : self tag
-witness = Self (Tag ())

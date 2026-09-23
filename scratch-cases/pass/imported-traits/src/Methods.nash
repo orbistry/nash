@@ -1,5 +1,0 @@
-module Methods exposing (Keep)
-trait Keep 'a where
-    keep : 'a -> 'a
-impl Keep unit where
-    keep x = x

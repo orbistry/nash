@@ -1,4 +1,0 @@
-module Main exposing (..)
-import Types
-get : Types.box -> unit
-get b = b.value

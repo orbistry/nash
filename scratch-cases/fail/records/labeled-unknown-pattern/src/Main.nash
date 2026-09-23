@@ -1,3 +1,0 @@
-module Main exposing (..)
-type box = Box { x : unit }
-get (Box { y }) = y

@@ -1,3 +1,0 @@
-module Middle exposing (..)
-import Broken
-x = Broken.f

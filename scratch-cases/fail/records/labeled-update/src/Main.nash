@@ -1,4 +1,0 @@
-module Main exposing (..)
-type box = Box { x : unit }
-change : box -> box
-change r = { r | x = () }

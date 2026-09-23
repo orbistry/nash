@@ -1,5 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type Fix ('f : Big -> Big) = Fix ('f (Fix 'f))

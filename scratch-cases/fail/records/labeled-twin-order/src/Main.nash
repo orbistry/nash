@@ -1,3 +1,0 @@
-module Main exposing (..)
-type Box = Box { x : Int, y : Int }
-type box = Box { y : int, x : int }

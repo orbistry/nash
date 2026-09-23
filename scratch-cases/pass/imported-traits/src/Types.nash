@@ -1,6 +1,0 @@
-module Types exposing (Token(..), forward)
-import Methods exposing (Keep)
-type Token = Token
-impl Keep Token where
-    keep x = x
-forward x = keep x

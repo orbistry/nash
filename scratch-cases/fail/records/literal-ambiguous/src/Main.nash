@@ -1,4 +1,0 @@
-module Main exposing (..)
-type alias first = { x : unit }
-type alias second = { x : unit }
-main = { x = () }

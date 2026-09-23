@@ -1,7 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type option 'a = None | Some 'a
-f : list (option int) -> int
-f x = 1

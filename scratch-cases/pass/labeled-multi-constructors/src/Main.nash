@@ -1,9 +1,0 @@
-module Main exposing (..)
-type choice = First { x : unit, y : unit } | Second { x : unit }
-first = First { y = (), x = () }
-second = Second { x = () }
-pick : choice -> unit
-pick c =
-    case c of
-        First { y } -> y
-        Second { x } -> x

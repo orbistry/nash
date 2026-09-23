@@ -1,9 +1,0 @@
-module Main exposing (..)
-import Builtin exposing (type bool(..), Data(..))
-import Eq exposing (Eq)
-import Literal exposing (FromInt, FromString, FromBytes)
-type packet = Packet { left : bool, right : unit }
-f packet =
-    case packet of
-        Packet { right } -> right
-        Packet True () -> ()

@@ -1,4 +1,0 @@
-module Main exposing (..)
-identity : ('a : Big) -> 'a
-identity x = x
-bad = identity ()

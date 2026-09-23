@@ -1,4 +1,0 @@
-module Main exposing (..)
-import Types exposing (Token(..), forward)
-value = forward Token
-unit = forward ()

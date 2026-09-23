@@ -1,6 +1,0 @@
-module Main exposing (..)
-type alias point = { x : unit }
-type wrapper = Wrap { inner : point }
-positional = Wrap ({ x = () })
-labeled = Wrap { inner = { x = () } }
-get (Wrap inner) = inner.x

@@ -1,7 +1,0 @@
-module Main exposing (identity)
-
-import Builtin exposing (..)
-import Contracts exposing (type fn)
-
-identity : fn int
-identity x = x

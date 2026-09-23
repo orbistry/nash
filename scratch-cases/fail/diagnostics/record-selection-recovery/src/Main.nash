@@ -1,4 +1,0 @@
-module Main exposing (..)
-type alias record 'a 'b = { a : 'a, b : 'b }
-bad : ()
-bad = { a = ().field, b = (\x -> x) }.b

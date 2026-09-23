@@ -1,9 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type alias fn ('a : Big) = 'a -> 'a
-identity : fn Int
-identity x = x
-keep : 'a -> list 'a -> list 'a
-keep _ xs = xs

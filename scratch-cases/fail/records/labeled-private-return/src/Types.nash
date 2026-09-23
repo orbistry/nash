@@ -1,3 +1,0 @@
-module Types exposing (make)
-type box = Box { value : unit }
-make = Box ()

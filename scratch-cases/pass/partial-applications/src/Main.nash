@@ -1,7 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type wrap 'f 'a = Wrap ('f 'a)
-keep : wrap (pair int) bytes -> wrap (pair int) bytes
-keep x = x

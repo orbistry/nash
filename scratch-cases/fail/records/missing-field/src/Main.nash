@@ -1,4 +1,0 @@
-module Main exposing (..)
-type alias point = { x : unit }
-get : point -> unit
-get r = r.missing

@@ -1,3 +1,0 @@
-module Main exposing (..)
-type alias point = { x : unit }
-get r = r.x

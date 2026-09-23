@@ -1,4 +1,0 @@
-module Main exposing (..)
-
-f : 'f 'a -> 'f 'a
-f x = x

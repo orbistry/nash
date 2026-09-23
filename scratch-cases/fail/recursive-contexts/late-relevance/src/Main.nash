@@ -1,6 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type s 'f 'a = S (t 'f 'a)
-type t 'f 'a = T ('f 'a) (s 'f (list 'a))

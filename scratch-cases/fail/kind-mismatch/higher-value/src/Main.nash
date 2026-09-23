@@ -1,6 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-f : ('f 'a, 'f) -> int
-f x = 1

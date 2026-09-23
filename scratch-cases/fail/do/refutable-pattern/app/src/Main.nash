@@ -1,6 +1,0 @@
-module Main exposing (..)
-import Monad exposing (Monad)
-import Option exposing (type option(..))
-bad action = do
-    Some x <- action
-    Some x

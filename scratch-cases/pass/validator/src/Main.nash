@@ -1,5 +1,0 @@
-validator module Main exposing (main)
-
-
-
-main datum a c = datum

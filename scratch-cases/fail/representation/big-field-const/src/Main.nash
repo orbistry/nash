@@ -1,5 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type Datum = Datum bytes

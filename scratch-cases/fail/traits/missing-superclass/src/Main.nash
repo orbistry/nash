@@ -1,7 +1,0 @@
-module Main exposing (..)
-trait Parent 'a where
-    parent : 'a -> 'a
-trait Parent 'a => Child 'a where
-    child : 'a -> 'a
-impl Child unit where
-    child x = x

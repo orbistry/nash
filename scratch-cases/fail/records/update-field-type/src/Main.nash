@@ -1,4 +1,0 @@
-module Main exposing (..)
-type alias point = { x : unit }
-change : point -> point
-change r = { r | x = (\y -> y) }

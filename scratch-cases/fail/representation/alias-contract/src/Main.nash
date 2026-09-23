@@ -1,7 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type alias fn ('a : Big) = 'a -> 'a
-f : fn int
-f x = x

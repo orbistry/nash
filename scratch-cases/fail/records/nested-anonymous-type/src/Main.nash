@@ -1,2 +1,0 @@
-module Main exposing (..)
-type alias outer = { inner : { x : unit } }

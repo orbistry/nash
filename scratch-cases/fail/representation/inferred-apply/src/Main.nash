@@ -1,7 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type wrap 'f 'a = Wrap ('f 'a)
-wrap x = Wrap x
-bad = wrap [\x -> x]

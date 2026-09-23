@@ -1,6 +1,0 @@
-module Main exposing (..)
-trait Pick 'a where
-    pick : 'a -> 'a
-impl Pick int where
-    pick x = x
-bad = pick ()

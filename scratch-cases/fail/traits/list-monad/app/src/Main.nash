@@ -1,6 +1,0 @@
-module Main exposing (..)
-import Monad exposing (Monad)
-import Applicative exposing (Applicative)
-bad = do
-    x <- [()]
-    pure x

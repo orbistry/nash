@@ -1,5 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type wrong 'f = Wrong 'f ('f Int)

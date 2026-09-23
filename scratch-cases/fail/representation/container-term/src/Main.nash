@@ -1,6 +1,0 @@
-module Main exposing (..)
-
-import Builtin exposing (..)
-
-type option 'a = None | Some 'a
-type alias xs = list (option int)
