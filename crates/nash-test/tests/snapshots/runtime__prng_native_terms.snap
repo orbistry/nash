@@ -4,8 +4,10 @@ source: crates/nash-test/tests/runtime.rs
 (constr 0
   (con bytestring #e7da4748680e2763d6ca394c222f99b27c75b2c9c9563ab56f963293f6cddb9b)
   (constr 0))
+replay-order history: []
 
 (constr 2 (con (list integer) [0, 42, 18446744073709551615]) (constr 0))
+replay-order history: []
 
 (constr 0
   (con bytestring #0303030303030303030303030303030303030303030303030303030303030303)
@@ -15,8 +17,55 @@ source: crates/nash-test/tests/runtime.rs
       (constr 1
         (constr 1
           (constr 0 (con integer 18446744073709551615))
-          (constr 1 (constr 1 (constr 0)) (constr 0))))
+          (constr 1
+            (constr 1
+              (constr 1
+                (constr 0 (con integer 2))
+                (constr 1 (constr 0 (con integer 3)) (constr 0))))
+            (constr 1 (constr 1 (constr 0)) (constr 0)))))
       (constr 1 (constr 0 (con integer 4)) (constr 0)))))
+replay-order history: [Choice(4), Group([Group([]), Group([Choice(3), Choice(2)]), Choice(18446744073709551615)]), Choice(1)]
+
+(constr 1
+  (constr 1
+    (constr 0 (con integer 0))
+    (constr 1
+      (constr 1
+        (constr 1
+          (constr 0 (con integer 7))
+          (constr 1 (constr 0 (con integer 18446744073709551615)) (constr 0))))
+      (constr 0)))
+  (constr 1
+    (constr 0 (con integer 1))
+    (constr 1
+      (constr 1
+        (constr 1
+          (constr 0 (con integer 18446744073709551615))
+          (constr 1
+            (constr 1
+              (constr 1
+                (constr 0 (con integer 2))
+                (constr 1 (constr 0 (con integer 3)) (constr 0))))
+            (constr 1 (constr 1 (constr 0)) (constr 0)))))
+      (constr 1 (constr 0 (con integer 4)) (constr 0)))))
+replay-order history: [Choice(4), Group([Group([]), Group([Choice(3), Choice(2)]), Choice(18446744073709551615)]), Choice(1)]
+
+(constr 2
+  (con (list integer) [7, 18446744073709551615])
+  (constr 1
+    (constr 0 (con integer 1))
+    (constr 1
+      (constr 1
+        (constr 1
+          (constr 0 (con integer 18446744073709551615))
+          (constr 1
+            (constr 1
+              (constr 1
+                (constr 0 (con integer 2))
+                (constr 1 (constr 0 (con integer 3)) (constr 0))))
+            (constr 1 (constr 1 (constr 0)) (constr 0)))))
+      (constr 1 (constr 0 (con integer 4)) (constr 0)))))
+replay-order history: [Choice(4), Group([Group([]), Group([Choice(3), Choice(2)]), Choice(18446744073709551615)]), Choice(1)]
 
 (constr 1
   (constr 1
@@ -28,6 +77,7 @@ source: crates/nash-test/tests/runtime.rs
           (constr 1 (constr 0 (con integer 18446744073709551615)) (constr 0))))
       (constr 0)))
   (constr 0))
+replay-order history: []
 
 (constr 0 (con integer -1)): choice does not fit u64
 

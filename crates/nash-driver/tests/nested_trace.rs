@@ -97,10 +97,13 @@ fn run<'a>(
                 [
                     Term::Constr {
                         tag: 0,
-                        fields: [value, trace],
+                        fields: [value, state],
                     },
                 ],
-        } => Some((value, Trace::from_term(trace).unwrap())),
+        } => Some((
+            value,
+            Trace::Group(nash_test::prng::Prng::from_term(state).unwrap().choices()),
+        )),
         term => panic!("unexpected generator output: {term:?}"),
     }
 }

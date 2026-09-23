@@ -16,12 +16,6 @@ type choiceTree = Choice int | Group (cons choiceTree)
 type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons choiceTree) | Rebuilding (list int) (cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
-reverse values = reverseOnto values Nil
-reverseOnto values result =
-    case values of
-        Nil -> result
-        Cons first rest -> reverseOnto rest (Cons first result)
-
 choice : Lift int 'n => 'n -> generator int
 choice bound = choiceInt (lower bound)
 
@@ -56,19 +50,19 @@ group generator state =
         Seeded seed recorded ->
             case generator (Seeded seed Nil) of
                 Some (value, Seeded next children) ->
-                    Some (value, Seeded next (Cons (Group (reverse children)) recorded))
+                    Some (value, Seeded next (Cons (Group children) recorded))
                 _ -> None
         Rebuilding remaining recorded ->
             case generator (Rebuilding remaining Nil) of
                 Some (value, Rebuilding rest children) ->
-                    Some (value, Rebuilding rest (Cons (Group (reverse children)) recorded))
+                    Some (value, Rebuilding rest (Cons (Group children) recorded))
                 _ -> None
         Replayed remaining recorded ->
             case remaining of
                 Cons (Group children) rest ->
                     case generator (Replayed children Nil) of
                         Some (value, Replayed _ used) ->
-                            Some (value, Replayed rest (Cons (Group (reverse used)) recorded))
+                            Some (value, Replayed rest (Cons (Group used) recorded))
                         _ -> None
                 _ -> None
 

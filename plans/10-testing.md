@@ -83,8 +83,9 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 - [x] Implement real core Prop and Test modules with direct generation functions. Imports remain explicit. Keep reserved Test traces independent of
   user trace suppression.
 - [x] Seed with Blake2b-256 of u32 big-endian bytes. Thread the 32-byte seed and
-  newest-first trace nodes in Seeded; replay next-first Choice/Group nodes with
-  strict group-local boundaries and a separate consumed history.
+  recursively newest-first trace nodes in Seeded; replay next-first Choice/Group
+  nodes with strict group-local boundaries and a separate consumed history.
+  Normalize recorded trees into replay order in Rust, without Nash reversals.
 - [x] Choice values are u64; explicitly validate primitive bounds and replay
   values. Never truncate arbitrary-precision integers. Larger generated values
   can be constructed from multiple primitive choices.

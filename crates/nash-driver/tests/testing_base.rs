@@ -163,11 +163,8 @@ async fn test_protocol_logs_survive_silent_user_traces() {
             true,
         ),
         (
-            r#"    Test.assertFailed ["\u{0000}assert\u{0000}0\u{0000}0\u{0000}1", "\u{0000}assert\u{0000}0\u{0000}1\u{0000}2"]"#,
-            vec![
-                "\u{0}assert\u{0}0\u{0}0\u{0}1",
-                "\u{0}assert\u{0}0\u{0}1\u{0}2",
-            ],
+            r#"    Test.assertAt "\u{0000}assert\u{0000}0" (\() -> Test.assertCapture "\u{0000}assert\u{0000}0\u{0000}0\u{0000}" "1" (\() -> fail))"#,
+            vec!["\u{0}assert\u{0}0", "\u{0}assert\u{0}0\u{0}0\u{0}1"],
             false,
         ),
     ] {

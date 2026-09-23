@@ -79,6 +79,8 @@ impl Trace {
     }
 }
 
+/// Raw Nash state: recorded choices are newest-first at every tree level;
+/// remaining replay input is chronological. Use `choices()` for replay-order history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Prng {
     Seeded {
@@ -118,14 +120,24 @@ impl Prng {
             choices: vec![],
         }
     }
-    /// Consumed history is accumulated in reverse by Nash at each scope.
+    /// Normalize Nash's newest-first history recursively into replay order.
     pub fn choices(&self) -> Vec<Trace> {
+        fn forward(nodes: &[Trace]) -> Vec<Trace> {
+            nodes
+                .iter()
+                .rev()
+                .map(|node| match node {
+                    Trace::Choice(n) => Trace::Choice(*n),
+                    Trace::Group(children) => Trace::Group(forward(children)),
+                })
+                .collect()
+        }
         let choices = match self {
             Self::Seeded { choices, .. }
             | Self::Replayed { choices, .. }
             | Self::Rebuilding { choices, .. } => choices,
         };
-        choices.iter().rev().cloned().collect()
+        forward(choices)
     }
     pub fn next_iteration(self) -> Self {
         match self {

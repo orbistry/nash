@@ -422,7 +422,7 @@ choice element type: `int`, not bytes (testing.md "Open questions").
 
 ## Chunk 9: `Test` — complete through Plan 10
 
-- [x] Ship Test.label and Test.assertFailed in Nash.
+- [x] Ship Test.label, property preparation and assertion-reporting helpers in Nash.
 - [x] Expose label unqualified only inside tests blocks.
 - [x] Preserve label/assertion logs even when ordinary user traces are silent.
 - [x] Integrate power-assert operand capture, failures and runner reporting.
@@ -432,8 +432,8 @@ Evidence: `crates/nash-driver/base/src/Test.nash`,
 `crates/nash-driver/tests/testing_base.rs`, `crates/nash-codegen/src/assertion.rs`,
 `crates/nash-codegen/src/tests/integration.rs`, and `crates/nash-test/`.
 
-Test bodies use sequencing do, not a test monad. Test.assertFailed explicitly
-thunks recursive failure so trace lines are emitted first. Do not assume
+Test bodies use sequencing do, not a test monad. Test.assertAt and
+Test.assertCapture invoke a thunk after tracing so trace lines are emitted first. Do not assume
 ordinary Builtin.trace calls have special lazy argument evaluation.
 
 ---

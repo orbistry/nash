@@ -54,7 +54,7 @@ crates/nash-driver/base/
     Data/Decode.nash      decoders
     Data/Encode.nash      encoders
     Prop.nash             generators
-    Test.nash             label, assertFailed (`assert` is a keyword)
+    Test.nash             label, property preparation and assertion reporting
     Ast.nash              macro AST: little ADTs over cons (see macros.md)
     Derive.nash           @derive
     Cardano/Tx.nash       script context (sketch)
@@ -492,7 +492,7 @@ returning a little option. `Option.unwrap` fails on None; `withDefault` returns 
 | Real `Builtin.*` operations | direct UPLC builtin nodes (below) |
 | `Primitive.coerce` | unchecked compiler intrinsic; runtime identity |
 | `trace`, `todo`, `fail` syntax | trace levels, compiler-generated traces switch |
-| `assert` keyword, `Test.assertFailed` | power-assert rewrite in `tests` blocks uses `Test.assertAt` and `Test.assertCapture` for ordered operand traces; elsewhere `assert e` is `if e then () else fail` (testing.md) |
+| `assert` keyword | power-assert rewrite in `tests` blocks uses `Test.assertAt` and `Test.assertCapture` for ordered operand traces; elsewhere `assert e` is `if e then () else fail` (testing.md) |
 | `Prop.generator`, `Prop.prng` | `prop`/`via` desugaring and the runner protocol (preparation programs, plans/10 chunk 4) |
 | `Ast.*`, `Cons.cons` | reified by `nash-macro` as `Term::Constr` trees by constructor index and walked back after evaluation (macros.md); the compiler knows the tag table, the Nash side is plain little ADTs |
 | `Derive.derive` | nothing special beyond being a macro; listed because default imports expose it |
@@ -982,19 +982,12 @@ are in testing.md and plans/10.
 ## `Test`
 
 ```elm
-module Test exposing (label, assertFailed, prepare, both, assertAt, assertCapture)
+module Test exposing (label, prepare, both, assertAt, assertCapture)
 
 import Builtin
 
 label : string -> unit
 label s = Builtin.trace (Builtin.appendString "\u{0}label\u{0}" s) ()
-
--- Explicitly trace supplied messages in order, then fail.
-assertFailed : list string -> 'a
-assertFailed msgs =
-    case msgs of
-        [] -> fail
-        m :: rest -> Builtin.trace m (\() -> assertFailed rest) ()
 
 prepare : Prop.generator 'a -> ('a -> unit) -> ('a -> list string) -> Prop.prng -> option (Prop.prng, unit -> unit, unit -> list string)
 both : Prop.generator 'a -> (unit -> Prop.generator 'b) -> Prop.generator ('a, 'b)

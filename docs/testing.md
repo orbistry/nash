@@ -122,7 +122,7 @@ Statements that tests use:
 
 `assert`, `fail`, `todo` and `trace` are keywords with their own expression
 nodes (`Expr::Assert` and friends, [syntax.md](syntax.md)), not functions.
-`label` and `assertFailed` are ordinary functions in the stdlib `Test`
+`label` is an ordinary function in the stdlib `Test`
 module ([stdlib.md](stdlib.md)). Only `assert` gets the compiler treatment
 below, and only inside a `tests` block.
 
@@ -272,10 +272,14 @@ first binder before initializing the next binder. These are Nash functions.
 
 `prng` and `choiceTree` are little ADTs. They use `Cons.cons`, since builtin
 lists cannot contain little constructor terms. `Seeded seed recorded` stores
-newest-first nodes. `Replayed remaining recorded` stores next-first input and
-newest-first consumed nodes. No redundant remaining count is stored.
+newest-first nodes at every level of the recorded tree. `Replayed remaining recorded`
+stores next-first input and recursively newest-first consumed nodes. No redundant
+remaining count is stored. The Rust codec preserves this raw state; `Prng::choices()`
+normalizes recorded histories recursively into chronological replay order for the
+runner and reducer. Replay input is already chronological and is not reversed.
 
-`Prop.group generator` records a `Group` whose children are chronological.
+`Prop.group generator` records a `Group` with its children still newest-first.
+Nash does no reversal when recording a group.
 During replay it consumes exactly one group from the parent, runs the generator
 using only that group's children, and resumes at the next parent sibling.
 Missing input, a wrong node kind, or an out-of-bounds choice returns `None`.

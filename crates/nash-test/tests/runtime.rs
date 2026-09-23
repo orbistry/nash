@@ -172,25 +172,43 @@ fn parallel_jobs_preserve_order_and_outcomes() {
 fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_terms() {
     let a = &Arena::new();
     let mut terms = Vec::new();
+    let history = vec![
+        Trace::Choice(1),
+        Trace::Group(vec![
+            Trace::Choice(u64::MAX),
+            Trace::Group(vec![Trace::Choice(2), Trace::Choice(3)]),
+            Trace::Group(vec![]),
+        ]),
+        Trace::Choice(4),
+    ];
+    let remaining = vec![
+        Trace::Choice(0),
+        Trace::Group(vec![Trace::Choice(7), Trace::Choice(u64::MAX)]),
+    ];
     for p in [
         Prng::from_seed(42),
         Prng::rebuild(&[0, 42, u64::MAX]),
         Prng::Seeded {
             seed: [3; 32],
-            choices: vec![
-                Trace::Choice(1),
-                Trace::Group(vec![Trace::Choice(u64::MAX), Trace::Group(vec![])]),
-                Trace::Choice(4),
-            ],
+            choices: history.clone(),
         },
-        Prng::from_trace(&[
-            Trace::Choice(0),
-            Trace::Group(vec![Trace::Choice(7), Trace::Choice(u64::MAX)]),
-        ]),
+        Prng::Replayed {
+            remaining: remaining.clone(),
+            choices: history.clone(),
+        },
+        Prng::Rebuilding {
+            remaining: vec![7, u64::MAX],
+            choices: history,
+        },
+        Prng::from_trace(&remaining),
     ] {
         let term = p.to_term(a);
         assert_eq!(Prng::from_term(term).unwrap(), p);
-        terms.push(nash_plutus::pretty::term(term));
+        terms.push(format!(
+            "{}\nreplay-order history: {:?}",
+            nash_plutus::pretty::term(term),
+            Prng::from_term(term).unwrap().choices()
+        ));
     }
     for term in [
         Term::constr(a, 0, a.alloc([Term::integer_from(a, -1)])),

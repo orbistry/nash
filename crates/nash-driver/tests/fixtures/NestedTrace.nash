@@ -3,30 +3,16 @@ module NestedTrace exposing (generate, replay, dependent, siblings, repartition,
 import Cons exposing (type cons(..))
 import Prop exposing (type choiceTree(..), type prng(..), type generator, choice, group)
 
-reverse values = reverseOnto values Nil
-reverseOnto values result =
-    case values of
-        Nil -> result
-        Cons first rest -> reverseOnto rest (Cons first result)
-
-finish : option ('a, prng) -> option ('a, choiceTree)
-finish result =
-    case result of
-        None -> None
-        Some (value, Seeded _ recorded) -> Some (value, Group (reverse recorded))
-        Some (value, Replayed _ recorded) -> Some (value, Group (reverse recorded))
-        Some (value, Rebuilding _ recorded) -> Some (value, Group (reverse recorded))
-
 items : int -> generator (list int)
 items limit = Prop.listBetween 0 limit (choice 100)
 
-generate : bytes -> option (list int, choiceTree)
-generate seed = finish (items 4 (Seeded seed Nil))
+generate : bytes -> option (list int, prng)
+generate seed = items 4 (Seeded seed Nil)
 
-replay : choiceTree -> option (list int, choiceTree)
+replay : choiceTree -> option (list int, prng)
 replay choiceTree =
     case choiceTree of
-        Group children -> finish (items 4 (Replayed children Nil))
+        Group children -> items 4 (Replayed children Nil)
         _ -> None
 
 bounds : generator (int, int)
@@ -38,10 +24,10 @@ bounds state =
                 None -> None
                 Some (index, final) -> Some ((offset + 1, index), final)
 
-dependent : choiceTree -> option ((int, int), choiceTree)
+dependent : choiceTree -> option ((int, int), prng)
 dependent choiceTree =
     case choiceTree of
-        Group children -> finish (bounds (Replayed children Nil))
+        Group children -> bounds (Replayed children Nil)
         _ -> None
 
 listAndNumber : generator (list int, int)
@@ -53,10 +39,10 @@ listAndNumber state =
                 None -> None
                 Some (number, final) -> Some ((values, number), final)
 
-siblings : choiceTree -> option ((list int, int), choiceTree)
+siblings : choiceTree -> option ((list int, int), prng)
 siblings choiceTree =
     case choiceTree of
-        Group children -> finish (listAndNumber (Replayed children Nil))
+        Group children -> listAndNumber (Replayed children Nil)
         _ -> None
 
 branch : generator int
@@ -81,10 +67,10 @@ shifted state = do
     (_, final) <- group (remaining mode) next
     Some (mode, final)
 
-repartition : choiceTree -> option (int, choiceTree)
+repartition : choiceTree -> option (int, prng)
 repartition tree =
     case tree of
-        Group children -> finish (shifted (Replayed children Nil))
+        Group children -> shifted (Replayed children Nil)
         _ -> None
 
 reshaped : generator (int, int)
@@ -93,14 +79,14 @@ reshaped state = do
     (value, final) <- (if mode == 0 then group (group (choice 100)) else choice 100) next
     Some ((mode, value), final)
 
-topologyReplay : choiceTree -> option ((int, int), choiceTree)
+topologyReplay : choiceTree -> option ((int, int), prng)
 topologyReplay tree =
     case tree of
-        Group children -> finish (reshaped (Replayed children Nil))
+        Group children -> reshaped (Replayed children Nil)
         _ -> None
 
-topologyBuild : list int -> option ((int, int), choiceTree)
-topologyBuild values = finish (reshaped (Rebuilding values Nil))
+topologyBuild : list int -> option ((int, int), prng)
+topologyBuild values = reshaped (Rebuilding values Nil)
 
-repartitionBuild : list int -> option (int, choiceTree)
-repartitionBuild values = finish (shifted (Rebuilding values Nil))
+repartitionBuild : list int -> option (int, prng)
+repartitionBuild values = shifted (Rebuilding values Nil)

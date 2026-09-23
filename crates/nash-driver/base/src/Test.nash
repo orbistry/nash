@@ -1,4 +1,4 @@
-module Test exposing (label, assertFailed, prepare, both, assertAt, assertCapture)
+module Test exposing (label, prepare, both, assertAt, assertCapture)
 
 import Builtin
 import Prop exposing (type generator, type prng)
@@ -6,13 +6,6 @@ import Option exposing (type option(..))
 
 label : string -> unit
 label s = Builtin.trace (Builtin.appendString "\u{0000}label\u{0000}" s) ()
-
--- A thunk ensures each trace is emitted before the recursive failure.
-assertFailed : list string -> 'a
-assertFailed msgs =
-    case msgs of
-        [] -> (fail "assertion failed")
-        m :: rest -> (Builtin.trace m (\() -> assertFailed rest)) ()
 
 prepare : generator 'a -> ('a -> unit) -> ('a -> list string) -> prng -> option (prng, unit -> unit, unit -> list string)
 prepare generator property display state =
