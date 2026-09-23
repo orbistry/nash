@@ -1376,6 +1376,37 @@ impl<'a> Solver<'a, '_> {
             let selection =
                 crate::resolve::select(self.tables, uf, trait_, &args, &givens, &mut allocated);
             self.introduce(uf, rank, &allocated);
+            if matches!(
+                selection,
+                crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing
+            ) {
+                let mut allocated = Vec::new();
+                let equations = crate::resolve::improvement(
+                    self.tables,
+                    uf,
+                    trait_,
+                    &args,
+                    &givens,
+                    &mut allocated,
+                );
+                self.introduce(uf, rank, &allocated);
+                if let Some(equations) = equations {
+                    for (left, right) in equations {
+                        let unify::Answer::Ok(fresh) = self.unify(uf, left, right) else {
+                            unreachable!("relational probe checked compatible equalities");
+                        };
+                        self.introduce(uf, rank, &fresh);
+                    }
+                    queue.push_front((wanted_rank, id, resolution_depth));
+                    queue.extend(
+                        self.wanted
+                            .split_off(start)
+                            .into_iter()
+                            .map(|(rank, id)| (rank, id, self.predicates.depth(id))),
+                    );
+                    continue;
+                }
+            }
             if report_missing
                 && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
@@ -2083,7 +2114,44 @@ impl<'a> Solver<'a, '_> {
         }
         self.propagate_poison(uf);
         let roots: Vec<_> = definitions.iter().map(|def| def.typ).collect();
-        let reachable = Self::type_variables(uf, roots);
+        let mut reachable = Self::type_variables(uf, roots);
+        if definitions
+            .iter()
+            .all(|definition| definition.context.is_none())
+        {
+            // Preserve relational hidden variables while the determining argument
+            // is generalized. Concrete calls must still solve their hidden types.
+            loop {
+                let before = reachable.len();
+                for (_, id) in &self.wanted[start..] {
+                    if self.predicate_blocked(uf, *id) {
+                        continue;
+                    }
+                    let Body::Trait { args, .. } = &self.predicates.get(*id).body else {
+                        continue;
+                    };
+                    if args.len() < 2 {
+                        continue;
+                    }
+                    let sets: Vec<_> = args
+                        .iter()
+                        .map(|arg| Self::type_variables(uf, vec![*arg]))
+                        .collect();
+                    if sets.iter().any(|vars| {
+                        !vars.is_empty()
+                            && vars.is_subset(&reachable)
+                            && vars.iter().all(|var| uf.get(*var).rank == NO_RANK)
+                    }) {
+                        for vars in sets {
+                            reachable.extend(vars);
+                        }
+                    }
+                }
+                if reachable.len() == before {
+                    break;
+                }
+            }
+        }
         let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for (_, id) in &self.wanted[start..] {
             if self.predicate_blocked(uf, *id) {

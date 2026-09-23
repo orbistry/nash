@@ -1,0 +1,10 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype wrapper 'a 'b = Wrap 'a 'b\ntrait Project 'input 'output where\n    project : 'input -> 'output\nimpl Project (wrapper 'a 'b) (list (pair 'a 'b)) where\n    project _ = fail\nkeys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k\nkeys input = case project input of\n    [] -> []\n    pair(key, _) :: _ -> [key]\ninferred input = case project input of\n    [] -> []\n    pair(key, _) :: _ -> [key]\nfirst : wrapper int bool -> list int\nfirst = keys\nsecond : wrapper bytes int -> list bytes\nsecond = keys\nthird : wrapper int bool -> list int\nthird = inferred\ngiven : Project (wrapper 'a bool) (list (pair 'a 'v)) => wrapper 'a bool -> list 'a\ngiven input = keys input\n"
+---
+first : wrapper int bool -> list int
+given : forall a v. (Storable a, Storable v, Project (wrapper a bool) (list (pair a v))) => wrapper a bool -> list a
+inferred : forall a b input. (Project input (list (pair a b)), Storable a, Storable b) => input -> list a
+keys : forall input k v. (Storable k, Storable v, Project input (list (pair k v))) => input -> list k
+second : wrapper bytes int -> list bytes
+third : wrapper int bool -> list int

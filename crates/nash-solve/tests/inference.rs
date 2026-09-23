@@ -5346,3 +5346,76 @@ fn representation_class_requires_a_given_for_rigid_types() {
     "#
     );
 }
+
+#[test]
+fn relational_constraints_infer_hidden_components() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type wrapper 'a 'b = Wrap 'a 'b
+        trait Project 'input 'output where
+            project : 'input -> 'output
+        impl Project (wrapper 'a 'b) (list (pair 'a 'b)) where
+            project _ = fail
+        keys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k
+        keys input = case project input of
+            [] -> []
+            pair(key, _) :: _ -> [key]
+        inferred input = case project input of
+            [] -> []
+            pair(key, _) :: _ -> [key]
+        first : wrapper int bool -> list int
+        first = keys
+        second : wrapper bytes int -> list bytes
+        second = keys
+        third : wrapper int bool -> list int
+        third = inferred
+        given : Project (wrapper 'a bool) (list (pair 'a 'v)) => wrapper 'a bool -> list 'a
+        given input = keys input
+    "#
+    );
+}
+
+#[test]
+fn competing_relational_outputs_remain_ambiguous() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        type wrapper 'a 'b = Wrap 'a 'b
+        trait Project 'input 'output where
+            project : 'input -> 'output
+        impl Project (wrapper 'a 'b) (list (pair 'a 'b)) where
+            project _ = fail
+        impl Project (wrapper int bool) (list (pair int bytes)) where
+            project _ = fail
+        keys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k
+        keys input = case project input of
+            [] -> []
+            pair(key, _) :: _ -> [key]
+        bad : wrapper int bool -> list int
+        bad = keys
+    "#
+    );
+}
+
+#[test]
+fn relational_given_precedes_a_matching_blanket() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type wrapper 'a = Wrap 'a
+        trait Project 'input 'output where
+            project : 'input -> 'output
+        impl Project (wrapper 'a) 'output where
+            project _ = fail
+        keys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k
+        keys input = case project input of
+            [] -> []
+            pair(key, _) :: _ -> [key]
+        given : Project (wrapper 'a) (list (pair 'a 'v)) => wrapper 'a -> list 'a
+        given input = keys input
+        duplicated : (Project (wrapper 'a) (list (pair 'a 'v)), Project (wrapper 'a) (list (pair 'a 'v))) => wrapper 'a -> list 'a
+        duplicated input = keys input
+    "#
+    );
+}

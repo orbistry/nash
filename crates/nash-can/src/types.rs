@@ -26,6 +26,36 @@ pub fn to_annotation<'a>(
     let context: &'a [nash_ast::Pred<'a>] = bump.alloc_slice_fill_iter(predicates);
     let mut free_var_set: BTreeSet<&'a str> = BTreeSet::new();
     collect_free_vars(&typ.value, &mut free_var_set);
+    // Multi-parameter constraints may carry hidden variables connected to an
+    // argument already named by the function's type. Uses must resolve them.
+    loop {
+        let before = free_var_set.len();
+        for predicate in context {
+            let arguments = predicate.args();
+            if predicate.trait_ref().is_none() || arguments.len() < 2 {
+                continue;
+            }
+            let sets: Vec<BTreeSet<_>> = arguments
+                .iter()
+                .map(|argument| {
+                    let mut vars = BTreeSet::new();
+                    collect_free_vars(&argument.value, &mut vars);
+                    vars
+                })
+                .collect();
+            if sets
+                .iter()
+                .any(|vars| !vars.is_empty() && vars.is_subset(&free_var_set))
+            {
+                for vars in sets {
+                    free_var_set.extend(vars);
+                }
+            }
+        }
+        if free_var_set.len() == before {
+            break;
+        }
+    }
     for predicate in context {
         for argument in predicate.types() {
             let mut variables = BTreeSet::new();

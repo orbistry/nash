@@ -66,7 +66,7 @@ ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
 | 5 traits / operators | complete | none |
 | 6 type modules | complete | none |
-| 7 Data / Map | partial | automatic lowering for Map.keys/values |
+| 7 Data / Map | complete | — |
 | 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
@@ -246,7 +246,7 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 
 ---
 
-## Chunk 7: `Data` and `Map` modules — partial
+## Chunk 7: `Data` and `Map` modules — complete
 
 - [x] Ship Data.serialise, Data.tag and Data.fields alongside the Data traits.
 - [x] Make tag/fields direct constructor accessors; non-constructor input fails.
@@ -256,8 +256,8 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 - [x] Reject malformed UTF-8 through the recoverable string decoder.
 - [x] Ship right-biased Map.union returning a little list of pairs.
 - [x] Ship Map construction, lookup, update, removal, folding and collection helpers.
-- [ ] Make Map.keys/values normalize Big input internally; the current little-only
-  signatures are provisional pending a sound inference/API decision.
+- [x] Make Map.keys/values normalize Big input internally through Lift; relational
+  inference determines the unused component, while preserving all element types.
 - [x] Embed nested Base modules and include them in implicit qualified imports.
 - [x] Complete full workspace validation.
 

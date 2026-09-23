@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype wrapper 'a 'b = Wrap 'a 'b\ntrait Project 'input 'output where\n    project : 'input -> 'output\nimpl Project (wrapper 'a 'b) (list (pair 'a 'b)) where\n    project _ = fail\nimpl Project (wrapper int bool) (list (pair int bytes)) where\n    project _ = fail\nkeys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k\nkeys input = case project input of\n    [] -> []\n    pair(key, _) :: _ -> [key]\nbad : wrapper int bool -> list int\nbad = keys\n"
+info: diagnostic
+---
+nash::type::ambiguous_type
+
+  × Cannot determine type `'v` in `bad`.
+    ╭─[Main.nash:14:1]
+ 13 │ bad : wrapper int bool -> list int
+ 14 │ bad = keys
+    · ───
+    ╰────
+  help: Required constraints: Primitive.Storable 'v Project (wrapper int bool) (list
+                                                                                    (pair
+                                                                                         int
+                                                                                         'v))
+
+        Add a type annotation that determines this variable.

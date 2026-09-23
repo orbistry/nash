@@ -36,6 +36,18 @@ filteredNative = Map.remove 3 native
 unionNative : list (pair int (list Data))
 unionNative = Map.union native native
 
+emptyBig : Map Int Int
+emptyBig = lift emptyEntries
+
+differentEntries : list (pair Int Bytes)
+differentEntries = Map.singleton one (lift #"aa")
+differentBig : Map Int Bytes
+differentBig = lift differentEntries
+preservedKeys : list Int
+preservedKeys = Map.keys differentBig
+preservedValues : list Bytes
+preservedValues = Map.values differentBig
+
 tests
     test "lookup preserves elements and returns first duplicate" = do
         assert (Map.get one entries == Some two)
@@ -62,3 +74,17 @@ tests
         assert (Map.get nativeKey native == Some [toData one])
         assert (Map.keys filteredNative == [4])
         assert (Map.values unionNative == [[], [toData one]])
+
+    test "Big map projections lower only the outer representation" = do
+        assert (Map.keys big == [one, one, two])
+        assert (Map.values big == [two, three, one])
+
+    test "empty Big map projections" = do
+        assert (Map.keys emptyBig == [])
+        assert (Map.values emptyBig == [])
+
+    test "projection infers the unused component and preserves Big elements" = do
+        assert (preservedKeys == [one])
+        assert (preservedValues == [lift #"aa"])
+        assert (Map.keys differentEntries == preservedKeys)
+        assert (Map.values differentEntries == preservedValues)

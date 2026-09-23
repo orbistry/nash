@@ -7,6 +7,7 @@ import Eq exposing (Eq)
 import List
 import Option exposing (type option(..))
 import Pair
+import Functor
 
 union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
 union left right = unionList (lower left) (lower right)
@@ -50,11 +51,11 @@ getList key entries = case entries of
 remove : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> list (pair 'k 'v)
 remove key entries = List.filter (\entry -> let pair(k, _) = entry in neq key k) (toList entries)
 
-keys : list (pair 'k 'v) -> list 'k
-keys entries = List.map Pair.fst entries
+keys : Lift (list (pair 'k 'v)) 'input => 'input -> list 'k
+keys entries = Functor.map Pair.fst (lower entries)
 
-values : list (pair 'k 'v) -> list 'v
-values entries = List.map Pair.snd entries
+values : Lift (list (pair 'k 'v)) 'input => 'input -> list 'v
+values entries = Functor.map Pair.snd (lower entries)
 
 toList : Lift (list (pair 'k 'v)) 'm => 'm -> list (pair 'k 'v)
 toList = lower

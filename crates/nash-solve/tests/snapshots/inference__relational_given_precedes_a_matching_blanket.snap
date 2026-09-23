@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype wrapper 'a = Wrap 'a\ntrait Project 'input 'output where\n    project : 'input -> 'output\nimpl Project (wrapper 'a) 'output where\n    project _ = fail\nkeys : Project 'input (list (pair 'k 'v)) => 'input -> list 'k\nkeys input = case project input of\n    [] -> []\n    pair(key, _) :: _ -> [key]\ngiven : Project (wrapper 'a) (list (pair 'a 'v)) => wrapper 'a -> list 'a\ngiven input = keys input\nduplicated : (Project (wrapper 'a) (list (pair 'a 'v)), Project (wrapper 'a) (list (pair 'a 'v))) => wrapper 'a -> list 'a\nduplicated input = keys input\n"
+---
+duplicated : forall a v. (Storable a, Storable v, Project (wrapper a) (list (pair a v))) => wrapper a -> list a
+given : forall a v. (Storable a, Storable v, Project (wrapper a) (list (pair a v))) => wrapper a -> list a
+keys : forall input k v. (Storable k, Storable v, Project input (list (pair k v))) => input -> list k

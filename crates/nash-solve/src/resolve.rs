@@ -1,5 +1,5 @@
-//! Coherent impl selection from known inference heads. Never binds a variable
-//! to make an impl match; unresolved heads must wait for type inference.
+//! Coherent selection from known heads and read-only probes for relational
+//! equalities. The solver commits only a unique candidate's equalities.
 use nash_ast::{HeadCon, ImplKey, QualifiedName};
 use nash_can::environment::{ImplInfo, Tables};
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
@@ -278,6 +278,13 @@ pub(crate) fn select<'a>(
     allocated: &mut Vec<Variable>,
 ) -> Selection<'a> {
     use nash_ast::head::{Match, matches};
+    if args.len() >= 2 {
+        match given_candidates(tables, uf, trait_, args, givens, allocated, &mut 16_384) {
+            None => return Selection::Limit,
+            Some(candidates) if !candidates.is_empty() => return Selection::Deferred,
+            Some(_) => {}
+        }
+    }
     let mut types = ClassedTypes {
         types: InferenceTypes(uf),
         tables,
@@ -318,6 +325,287 @@ pub(crate) fn select<'a>(
     } else {
         selected.unwrap_or(Selection::Missing)
     }
+}
+
+/// Probe equalities without changing the inference graph. A candidate may relate
+/// existing variables, but cannot manufacture a missing constructor application.
+struct Probe<'u, 'a> {
+    types: ClassedTypes<'u, 'a>,
+    substitutions: std::collections::BTreeMap<Variable, Variable>,
+    equations: Vec<(Variable, Variable)>,
+    classes: Vec<(Variable, nash_ast::primitives::ReprSet)>,
+}
+
+impl<'a> Probe<'_, 'a> {
+    fn root(&mut self, mut var: Variable) -> Variable {
+        loop {
+            var = self.types.types.0.find(var);
+            match self.substitutions.get(&var) {
+                Some(next) => var = *next,
+                None => return var,
+            }
+        }
+    }
+
+    fn occurs(
+        &mut self,
+        needle: Variable,
+        value: Variable,
+        remaining: &mut usize,
+    ) -> Result<bool, nash_ast::head::Limit> {
+        let mut pending = vec![value];
+        let mut seen = std::collections::BTreeSet::new();
+        while let Some(value) = pending.pop() {
+            nash_ast::head::step(remaining)?;
+            let value = self.root(value);
+            if value == needle {
+                return Ok(true);
+            }
+            if seen.insert(value) {
+                pending.extend(self.types.types.view(value).1);
+            }
+        }
+        Ok(false)
+    }
+
+    fn classes_match(&mut self) -> nash_ast::head::Match<()> {
+        use nash_ast::head::{Match, Types};
+        let mut deferred = false;
+        for (node, class) in self.classes.clone() {
+            let node = self.root(node);
+            match self.types.in_class(node, class) {
+                Match::No => return Match::No,
+                Match::Deferred => deferred = true,
+                Match::Yes(()) => {}
+            }
+        }
+        if deferred {
+            Match::Deferred
+        } else {
+            Match::Yes(())
+        }
+    }
+}
+
+impl<'a> nash_ast::head::Types<'a> for Probe<'_, 'a> {
+    type Node = Variable;
+    fn constructor(
+        &mut self,
+        node: Variable,
+        expected: HeadCon<'a>,
+    ) -> nash_ast::head::Match<Vec<Variable>> {
+        let node = self.root(node);
+        self.types.constructor(node, expected)
+    }
+    fn in_class(
+        &mut self,
+        node: Variable,
+        class: nash_ast::primitives::ReprSet,
+    ) -> nash_ast::head::Match<()> {
+        self.classes.push((node, class));
+        nash_ast::head::Match::Yes(())
+    }
+    fn equal(
+        &mut self,
+        a: Variable,
+        b: Variable,
+        remaining: &mut usize,
+    ) -> Result<nash_ast::head::Match<()>, nash_ast::head::Limit> {
+        use nash_ast::head::Match;
+        let mut pending = vec![(a, b)];
+        let mut deferred = false;
+        while let Some((a, b)) = pending.pop() {
+            nash_ast::head::step(remaining)?;
+            let a = self.root(a);
+            let b = self.root(b);
+            if a == b {
+                continue;
+            }
+            let (av, aa) = self.types.types.view(a);
+            let (bv, ba) = self.types.types.view(b);
+            if av == View::Flexible || bv == View::Flexible {
+                let (var, value) = if av == View::Flexible { (a, b) } else { (b, a) };
+                if self.occurs(var, value, remaining)? {
+                    return Ok(Match::No);
+                }
+                self.substitutions.insert(var, value);
+                self.equations.push((var, value));
+            } else if matches!(av, View::Application | View::Error)
+                || matches!(bv, View::Application | View::Error)
+            {
+                deferred = true;
+            } else if av != bv || aa.len() != ba.len() {
+                // Transparent aliases can unify with their bodies. Do not rule
+                // out a competing dictionary just because nominal views differ.
+                let transparent = |uf: &mut UnionFind<'a>, node| {
+                    nash_constrain::instantiate::alias_application(uf, node).is_some_and(|alias| {
+                        alias.remaining.is_empty()
+                            && !matches!(alias.body.value, nash_ast::Type::Record { .. })
+                    })
+                };
+                if transparent(self.types.types.0, a) || transparent(self.types.types.0, b) {
+                    deferred = true;
+                } else {
+                    return Ok(Match::No);
+                }
+            } else {
+                pending.extend(aa.into_iter().zip(ba));
+            }
+        }
+        Ok(if deferred {
+            Match::Deferred
+        } else {
+            Match::Yes(())
+        })
+    }
+}
+
+type Equations = Vec<(Variable, Variable)>;
+type Candidates = Vec<Option<Equations>>;
+
+fn given_candidates<'a>(
+    tables: &Tables<'a>,
+    uf: &mut UnionFind<'a>,
+    trait_: QualifiedName<'a>,
+    args: &[Variable],
+    givens: &[crate::preds::Body<'a>],
+    allocated: &mut Vec<Variable>,
+    remaining: &mut usize,
+) -> Option<Candidates> {
+    use nash_ast::head::{Match, Types};
+    let mut candidates = Vec::new();
+    let mut seen: Vec<&crate::preds::Body<'a>> = Vec::new();
+    // Local dictionaries take priority even when their hidden parameters still
+    // need equalities before ordinary given lookup can recognize them.
+    for given in givens {
+        let crate::preds::Body::Trait {
+            trait_: name,
+            args: supplied,
+            ..
+        } = given
+        else {
+            continue;
+        };
+        if *name != trait_ || supplied.len() != args.len() {
+            continue;
+        }
+        if seen.iter().any(|previous| previous.same(uf, given)) {
+            continue;
+        }
+        seen.push(given);
+        let mut probe = Probe {
+            types: ClassedTypes {
+                types: InferenceTypes(uf),
+                tables,
+                givens,
+                allocated,
+            },
+            substitutions: Default::default(),
+            equations: Vec::new(),
+            classes: Vec::new(),
+        };
+        let mut matched = Match::Yes(());
+        for (a, b) in args.iter().zip(supplied) {
+            match probe.equal(*a, *b, remaining).ok()? {
+                Match::No => {
+                    matched = Match::No;
+                    break;
+                }
+                Match::Deferred => matched = Match::Deferred,
+                Match::Yes(()) => {}
+            }
+        }
+        match matched {
+            Match::No => {}
+            Match::Deferred => candidates.push(None),
+            Match::Yes(()) => candidates.push(Some(probe.equations)),
+        }
+    }
+    Some(candidates)
+}
+
+/// Only a unique viable candidate may improve a multi-parameter constraint.
+/// Deferred competitors count; ordinary prerequisites never exclude a candidate.
+pub(crate) fn improvement<'a>(
+    tables: &Tables<'a>,
+    uf: &mut UnionFind<'a>,
+    trait_: QualifiedName<'a>,
+    args: &[Variable],
+    givens: &[crate::preds::Body<'a>],
+    allocated: &mut Vec<Variable>,
+) -> Option<Vec<(Variable, Variable)>> {
+    use nash_ast::head::{Match, Types};
+    if args.len() < 2 {
+        return None;
+    }
+    let mut remaining = 16_384;
+    let mut candidates =
+        given_candidates(tables, uf, trait_, args, givens, allocated, &mut remaining)?;
+    if !candidates.is_empty() {
+        return if candidates.len() == 1 {
+            candidates.pop().flatten().filter(|e| !e.is_empty())
+        } else {
+            None
+        };
+    }
+    for (key, info) in tables.impls_for(trait_) {
+        let mut probe = Probe {
+            types: ClassedTypes {
+                types: InferenceTypes(uf),
+                tables,
+                givens,
+                allocated,
+            },
+            substitutions: Default::default(),
+            equations: Vec::new(),
+            classes: Vec::new(),
+        };
+        let matched = nash_ast::head::matches(
+            &mut probe,
+            key.heads,
+            args,
+            info.variables.len(),
+            &mut remaining,
+        )
+        .ok()?;
+        if matches!(matched, Match::No) {
+            continue;
+        }
+        let classes = probe.classes_match();
+        if matches!(classes, Match::No) {
+            continue;
+        }
+        let ready = matches!(matched, Match::Yes(_)) && matches!(classes, Match::Yes(()));
+        candidates.push(ready.then_some(probe.equations));
+    }
+    if trait_ == nash_ast::primitives::lift_trait()
+        && tables.has_reflexive_lift()
+        && args.len() == 2
+    {
+        let mut probe = Probe {
+            types: ClassedTypes {
+                types: InferenceTypes(uf),
+                tables,
+                givens,
+                allocated,
+            },
+            substitutions: Default::default(),
+            equations: Vec::new(),
+            classes: Vec::new(),
+        };
+        match probe.equal(args[0], args[1], &mut remaining).ok()? {
+            Match::No => {}
+            Match::Deferred => candidates.push(None),
+            Match::Yes(()) => candidates.push(Some(probe.equations)),
+        }
+    }
+    if candidates.len() != 1 {
+        return None;
+    }
+    candidates
+        .pop()
+        .flatten()
+        .filter(|equations| !equations.is_empty())
 }
 
 #[cfg(test)]

@@ -76,7 +76,7 @@ conversion for already-matching types. Recursive element conversion requires
 explicit mapping. There is no Big String: use `String.toBytes` / `fromBytes`
 for UTF-8 and `lift` / `lower` for bytes/Bytes. `Data`, `Data.Decode` and
 `Data.Encode` operate on Data itself. Map collection operations return little
-pair lists; `keys` and `values` require little pair-list inputs.
+lists and preserve element types; `keys` and `values` also normalize Big inputs.
 
 ## Default imports
 
@@ -850,8 +850,8 @@ pairs, matching the target builtin.
 
 ### `Map`
 
-Except for `keys` and `values`, Map helpers accept Big `Map 'k 'v` or little `list (pair 'k 'v)` inputs.
-Collection results are little pair lists and preserve component types. Big maps
+Map helpers accept Big `Map 'k 'v` or little `list (pair 'k 'v)` inputs.
+Collection results are little lists and preserve component types. Big maps
 require Big keys and values; native pairs obtained from builtins can also hold
 little components, and the read/filter helpers support them.
 
@@ -866,12 +866,16 @@ foldl : Lift (list (pair 'k 'v)) 'm => ('k -> 'v -> 'b -> 'b) -> 'b -> 'm -> 'b
 union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
 ```
 
-`keys : list (pair 'k 'v) -> list 'k` and
-`values : list (pair 'k 'v) -> list 'v` take little pair lists and preserve
-components. For Big maps, first bind `Map.toList map` (or `lower map`) with an explicit
-`list (pair Key Value)` annotation, then pass that list to the projection.
-These projections cannot express an inferred unused component through generic Lift
-in the current type system.
+```nash
+keys : Lift (list (pair 'k 'v)) 'input => 'input -> list 'k
+values : Lift (list (pair 'k 'v)) 'input => 'input -> list 'v
+```
+
+Both projections lower only the outer representation. For `Map Int Bytes`,
+`keys` returns `list Int` and `values` returns `list Bytes`. The unused component
+is inferred through the map's Lift implementation. Little pair lists use identity
+Lift. Competing conversions still require enough type information to choose one.
+
 `get` returns the first matching entry. `remove` removes every matching entry.
 `insert` removes all previous matches and appends the new pair. `union` removes
 left entries whose keys occur on the right, then appends the right entries;

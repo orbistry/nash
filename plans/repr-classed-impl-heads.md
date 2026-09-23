@@ -61,9 +61,11 @@ Base. Existing superclass, identity Lift, and evidence tests run with these rule
 
 Validation passed: formatting, strict Clippy, and the full workspace suite.
 
-## Separate follow-up
+## Completed follow-up
 
-Infer missing arguments of multi-parameter constraints from a unique compatible
-implementation, including reflexive Lift. That is needed for Map.keys/values to
-accept Big or little maps while returning little lists. Representation classes
-constrain that inference; they do not themselves infer missing types.
+The solver now infers equalities between existing arguments of multi-parameter
+constraints from unique compatible implementations or annotation dictionaries,
+including reflexive Lift. Map.keys/values accept Big or little maps and return
+little lists. Representation classes constrain the candidate probes. Connected
+hidden variables can remain in generic signatures; concrete calls must resolve
+them unambiguously. See docs/traits.md for the rules and limits.

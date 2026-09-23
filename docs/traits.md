@@ -373,10 +373,40 @@ read back with `to_annotation`, which now also emits the retained
 predicates on the reached generalized variables as the annotation's
 context.
 
+### Relational inference
+
+A multi-parameter constraint can relate unknown components of types whose
+constructor structure is already known. The solver probes compatible heads
+without changing inference variables. A unique compatible candidate can supply
+equalities between existing variables; it cannot invent a missing constructor
+application. Deferred competitors prevent that improvement. Single-parameter
+traits do not acquire an implicit default from having one implementation.
+
+Representation classes constrain these probes. Ordinary prerequisites are
+checked after selection, never used to exclude competing heads. Compatible
+annotation dictionaries take priority over global implementations. Reflexive
+Lift participates alongside explicit conversions. Transparent alias comparisons
+that the probe cannot establish remain deferred rather than excluding a candidate.
+
+For example, `Lift (list (pair Int 'v)) (Map Int Bytes)` determines `'v = Bytes`.
+`Lift (list (pair Int 'v)) (list (pair Int Bytes))` does the same through identity.
+If two conversions remain possible, neither is chosen. After improvement, retry
+pending constraints and use ordinary selection to record implementation evidence.
+
+Annotations may quantify a context-only variable when multi-parameter constraints
+connect it to a nonempty argument whose variables occur in the function type.
+This permits `keys : Lift (list (pair 'k 'v)) 'input => 'input -> list 'k`.
+It does not permit a disconnected `Show 'v` constraint. Each use instantiates the
+hidden variables independently and must resolve its required dictionaries.
+
 ### Ambiguity and defaulting
 
 A retained predicate is *ambiguous* when one of its generalized variables
-is not reachable from the definition's header type. `x = show 1` retains
+is not reachable from the definition's header type or its retained relational
+constraints. For an unannotated definition, a multi-parameter constraint extends
+reachability only through a nonempty argument whose variables are all reachable
+and generalized. Annotated bodies cannot retain additional undeclared constraints.
+Concrete calls must resolve hidden types. `x = show 1` retains
 `FromInt 'a` and `Show 'a` but `'a` does not appear in `x : string`.
 Use the full types of all members when checking a shared untyped recursive
 context. An annotated body can introduce a hidden flexible variable too;
@@ -872,7 +902,7 @@ cannot call itself at a bigger type under a trait constraint.
 Also reported: unknown trait, wrong trait arity, bad instance head (bare
 variable, variable application, function type, record), unknown method in
 impl, duplicate trait, duplicate method, method signature missing a trait
-parameter, context mentioning a variable outside the type, cyclic
+parameter, disconnected context variable, cyclic
 superclasses, refutable pattern in `<-`, kind mismatch between head and
 trait parameter (reported by the kind checker).
 
