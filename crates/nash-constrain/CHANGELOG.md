@@ -1,5 +1,20 @@
 # nash-constrain
 
+## 0.8.0 — 2026-09-22
+
+### Minor changes
+
+- [aee8c3d2](https://github.com/orbistry/nash/commit/aee8c3d240a5a3deabfada906dda9a9e9ebfb67a) Overload bare boolean and unit expressions through FromBool and FromUnit, with
+  little defaults and bundled implementations for bool, Bool, unit, and Unit.
+  Like integer literals, unannotated values retain their literal constraints;
+  annotate concrete entry points where needed. Qualified constructors and patterns
+  retain their declared types. Add source snapshots for inference, diagnostics,
+  custom conversions, and execution. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.10.0, nash-can@0.10.0
+
 ## 0.7.0 — 2026-09-20
 
 ### Minor changes

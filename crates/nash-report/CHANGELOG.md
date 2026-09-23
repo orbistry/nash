@@ -1,5 +1,19 @@
 # nash-report
 
+## 0.5.1 — 2026-09-22
+
+### Patch changes
+
+- [3f9188b0](https://github.com/orbistry/nash/commit/3f9188b01b8bdc18363335274c20c150197d1173) Name property generation Prop throughout the compiler, Base, diagnostics and
+  examples. Use direct draws returning values and PRNG states. Remove the identity
+  run helper, generator map/bind functions and generator trait instances; ordinary
+  Option do notation remains available for explicit state-threaded draws. — Thanks @MicroProofs!
+- [402557e5](https://github.com/orbistry/nash/commit/402557e547f9496fb1fc73d4203433bcb25df0d4) Complete Base type helpers with Big or little inputs and little outer results.
+  Preserve payload types in Lift conversions, support identity conversion for all
+  types, and keep mixed-representation boolean calls lazy. Add source snapshots
+  for helper behavior and rejected recursive conversions. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.10.0, nash-can@0.10.0, nash-constrain@0.8.0, nash-nitpick@0.3.1, nash-parse@0.7.1, nash-source@0.8.1
+
 ## 0.5.0 — 2026-09-20
 
 ### Minor changes
