@@ -1,0 +1,8 @@
+---
+source: crates/nash-test/src/shrink.rs
+---
+equal choices: [Choice(7), Choice(77), Choice(7)]
+common offset: [Choice(0), Choice(3)]
+three related choices: [Choice(0), Choice(3), Choice(7)]
+two decrements and deletion: [Choice(4), Choice(6)]
+whole draws: [Group([Choice(1), Choice(9)]), Group([Choice(2), Choice(8)])]

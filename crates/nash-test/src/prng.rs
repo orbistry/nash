@@ -1,5 +1,5 @@
 use cryptoxide::{blake2b::Blake2b, digest::Digest};
-use nash_plutus::{arena::Arena, binder::DeBruijn, constant::Constant, term::Term};
+use nash_plutus::{arena::Arena, binder::DeBruijn, constant::Constant, term::Term, typ::Type};
 pub type Choice = u64;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -89,6 +89,11 @@ pub enum Prng {
         remaining: Vec<Trace>,
         choices: Vec<Trace>,
     },
+    /// Build a structural proposal from explicit choices. Never used to accept a failure.
+    Rebuilding {
+        remaining: Vec<Choice>,
+        choices: Vec<Trace>,
+    },
 }
 impl Prng {
     pub fn from_seed(seed: u32) -> Self {
@@ -107,10 +112,18 @@ impl Prng {
             choices: vec![],
         }
     }
+    pub fn rebuild(choices: &[Choice]) -> Self {
+        Self::Rebuilding {
+            remaining: choices.to_vec(),
+            choices: vec![],
+        }
+    }
     /// Consumed history is accumulated in reverse by Nash at each scope.
     pub fn choices(&self) -> Vec<Trace> {
         let choices = match self {
-            Self::Seeded { choices, .. } | Self::Replayed { choices, .. } => choices,
+            Self::Seeded { choices, .. }
+            | Self::Replayed { choices, .. }
+            | Self::Rebuilding { choices, .. } => choices,
         };
         choices.iter().rev().cloned().collect()
     }
@@ -133,6 +146,27 @@ impl Prng {
                     Trace::list_to_term(choices, arena),
                 ]),
             ),
+            Self::Rebuilding { remaining, choices } => {
+                let values = remaining
+                    .iter()
+                    .map(|n| Constant::integer_from(arena, i128::from(*n)))
+                    .collect::<Vec<_>>();
+                Term::constr(
+                    arena,
+                    2,
+                    arena.alloc([
+                        Term::constant(
+                            arena,
+                            Constant::proto_list(
+                                arena,
+                                Type::integer(arena),
+                                arena.alloc_slice_copy(&values),
+                            ),
+                        ),
+                        Trace::list_to_term(choices, arena),
+                    ]),
+                )
+            }
             Self::Replayed { remaining, choices } => Term::constr(
                 arena,
                 1,
@@ -161,6 +195,28 @@ impl Prng {
                 remaining: Trace::list_from_term(remaining)?,
                 choices: Trace::list_from_term(choices)?,
             }),
+            Term::Constr {
+                tag: 2,
+                fields:
+                    [
+                        Term::Constant(Constant::ProtoList(Type::Integer, values)),
+                        choices,
+                    ],
+            } => {
+                let remaining = values
+                    .iter()
+                    .map(|value| match value {
+                        Constant::Integer(n) => {
+                            u64::try_from(*n).map_err(|_| "choice does not fit u64".to_owned())
+                        }
+                        _ => Err("malformed rebuilding choice".to_owned()),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Self::Rebuilding {
+                    remaining,
+                    choices: Trace::list_from_term(choices)?,
+                })
+            }
             _ => Err("malformed PRNG term".into()),
         }
     }

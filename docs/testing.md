@@ -249,7 +249,7 @@ to test bodies.
 ```elm
 -- Prop.nash (bundled Base)
 type choiceTree = Choice int | Group (Cons.cons choiceTree)
-type prng = Seeded bytes (Cons.cons choiceTree) | Replayed (Cons.cons choiceTree) (Cons.cons choiceTree)
+type prng = Seeded bytes (Cons.cons choiceTree) | Replayed (Cons.cons choiceTree) (Cons.cons choiceTree) | Rebuilding (list int) (Cons.cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
 dependent : Prop.generator int
@@ -334,14 +334,41 @@ interval metadata. Strict group replay is a Nash adaptation. Rust proposes
 edits; Nash generation functions enforce bounds and replay boundaries. No
 compiler intrinsic implements the trace protocol.
 
-Candidates delete or zero sibling regions, replace a group with descendant
-contents, reduce individual choices, sort regions, swap neighbours, or
-redistribute values. Structural candidates split, merge, wrap, unwrap, and
-repartition groups, or insert a zero choice or empty group. Shape edits also
-try a numeric reduction in the same candidate, allowing a branch change to
-require a different group partition. The search restarts after improvement.
-These finite heuristics do not guarantee a global minimum or enumerate every
-possible combination of edits.
+The implementation uses these applicable techniques from the paper and the
+[Hypothesis 5.15.1 reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/hypothesis-python-5.15.1/hypothesis-python/src/hypothesis/internal/conjecture/shrinker.py):
+
+- Draw-region deletion grows successful batches exponentially and refines the
+  batch size. Separate primitive deletion passes cover lengths one through five.
+- Zeroing targets recorded draw scopes. A scope can also be replaced by a
+  descendant scope or a single zero choice.
+- Individual choices use zero and midpoint probes. Equal choices can reduce
+  together; alphabet ranges can collapse together. Common offsets can be
+  removed while preserving differences. Other passes sort primitive regions,
+  swap nearby choices, redistribute sums, and reorder whole sibling draws.
+- The `-XX` and `--X` patterns decrement one/two choices and delete the next
+  two/one choices in the same candidate.
+- Valid unsuccessful trials retain consumed-trace feedback. Consumption loss
+  determines deletion sizes; draw spans identify excess suffixes and child
+  deletions that preserve rightmost children. The repaired candidate is replayed.
+
+A strict group already preserves its outer suffix when it consumes fewer
+children. This directly covers the isolated-draw shortening illustrated in
+Figure 6; no second trial is needed solely to realign that outer suffix.
+
+When an edit requires different group boundaries, Nash's `Rebuilding remaining
+recorded` mode consumes a flat list of explicit integer choices and constructs
+a proposed tree through the same generator and `group` functions. It enforces
+bounds and rejects exhaustion; it adds no random choices. Rust then evaluates
+the proposed tree through **strict `Replayed` mode**. Reconstruction never
+establishes that a failure is preserved, and its cache is separate from strict
+replay. This replaces guessing combinations of split/merge/wrap operations.
+There are no additional codegen rules or hidden tracing hooks.
+
+The schedule restarts after improvement. These are word-level adaptations;
+Nash does not use Hypothesis's byte-suffix integer encoding or its specialized
+floating-point representation. There is no float-specific pass. Generators
+which explicitly match `prng` constructors must handle `Rebuilding` as well.
+The search does not guarantee a global minimum or every combination of edits.
 
 `Prng::from_trace` replays each candidate. Preparation failure or `None` rejects
 it. The property must retain its expected counterexample outcome. Acceptance
@@ -350,7 +377,9 @@ first, then lexicographically smaller values. Group counts do not affect the
 order; equal flattened choices are tied. Shape-only changes cannot cycle.
 If normalization discards unused input, the normalized trace is replayed again
 before acceptance, since public state functions can inspect remaining input.
-Results are cached by the exact submitted tree, including empty groups.
+Results, including valid non-interesting consumed traces, are cached by the
+exact submitted tree, including empty groups. Invalid generation supplies no
+consumed-trace feedback; the reducer does not invent missing choices.
 
 The final consumed tree is retained internally in `Outcome.replay`. The
 runner's public `Prng` codec can construct replay terms from that tree. The

@@ -371,6 +371,7 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 - [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
 - [x] Use nested little Choice/Group traces with strict replay, consumed-trace reduction, and ordinary generator Functor/Applicative/Monad instances.
+- [x] Rebuild structural proposals in Nash; accept only strict replay, with consumed-draw feedback for reduction.
 - [x] Ship direct generation functions: choice, constant, intBetween, int, listOf,
   listBetween, tuple2, oneOf and bytes; sequence draws with explicit state.
 - [x] Test Nash generators against the Rust runner and replay protocol in

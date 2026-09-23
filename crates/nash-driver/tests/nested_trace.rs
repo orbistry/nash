@@ -36,21 +36,30 @@ async fn compile() -> BTreeMap<String, Vec<u8>> {
             .unwrap()
             .module
             .name;
-        ["generate", "replay", "dependent", "siblings", "repartition"]
-            .into_iter()
-            .map(|name| {
-                let core = build
-                    .compile(
-                        &arena,
-                        nash_ast::QualifiedName { home, name },
-                        None,
-                        TraceConfig::default(),
-                    )
-                    .unwrap();
-                let program = nash_codegen::program::assemble_core(&arena, core.core).unwrap();
-                (name.to_owned(), flat::encode(program.program).unwrap())
-            })
-            .collect()
+        [
+            "generate",
+            "replay",
+            "dependent",
+            "siblings",
+            "repartition",
+            "topologyReplay",
+            "topologyBuild",
+            "repartitionBuild",
+        ]
+        .into_iter()
+        .map(|name| {
+            let core = build
+                .compile(
+                    &arena,
+                    nash_ast::QualifiedName { home, name },
+                    None,
+                    TraceConfig::default(),
+                )
+                .unwrap();
+            let program = nash_codegen::program::assemble_core(&arena, core.core).unwrap();
+            (name.to_owned(), flat::encode(program.program).unwrap())
+        })
+        .collect()
     })
     .await;
     assert!(
@@ -222,7 +231,8 @@ async fn nested_trace_reduction_repartitions_strict_groups() {
     let mut reduced = Counterexample {
         value: "(con integer 1)".to_owned(),
         choices: original.clone(),
-        cache: Cache::new(oracle),
+        cache: Cache::new(oracle)
+            .with_rebuild(|numbers| build_trace(&programs, "repartitionBuild", numbers)),
         steps: 0,
     };
     reduced.simplify();
@@ -233,4 +243,61 @@ async fn nested_trace_reduction_repartitions_strict_groups() {
     insta::with_settings!({description => SOURCE, omit_expression => true}, {
         insta::assert_snapshot!(format!("original: {original:?}\nreduced: {:?}\nvalue: {}", reduced.choices, reduced.value));
     });
+}
+
+#[tokio::test]
+async fn reconstructs_multiple_boundaries_then_replays_strictly() {
+    use Trace::{Choice as C, Group as G};
+    use nash_test::shrink::{Cache, Counterexample, Status};
+    let programs = compile().await;
+    let cache = Cache::new(|nodes: &[Trace]| {
+        let arena = Arena::new();
+        match run(
+            &arena,
+            &programs["topologyReplay"],
+            G(nodes.to_vec()).to_term(&arena),
+        ) {
+            Some((value, G(used))) => Status::Keep(pretty::term(value), used),
+            None => Status::Invalid,
+            _ => panic!("expected trace group"),
+        }
+    })
+    .with_rebuild(|numbers| build_trace(&programs, "topologyBuild", numbers));
+    let mut ce = Counterexample {
+        value: String::new(),
+        choices: vec![C(1), C(8)],
+        steps: 0,
+        cache,
+    };
+    ce.simplify();
+    assert_eq!(ce.choices, vec![C(0), G(vec![G(vec![C(0)])])]);
+    insta::with_settings!({description => SOURCE, omit_expression => true}, {
+        insta::assert_snapshot!(format!("value: {}\nstrict replay trace: {:?}", ce.value, ce.choices));
+    });
+}
+
+fn build_trace(
+    programs: &BTreeMap<String, Vec<u8>>,
+    name: &str,
+    numbers: &[u64],
+) -> Option<Vec<Trace>> {
+    let arena = Arena::new();
+    let items = numbers
+        .iter()
+        .map(|n| nash_plutus::constant::Constant::integer_from(&arena, i128::from(*n)))
+        .collect::<Vec<_>>();
+    let input = Term::constant(
+        &arena,
+        nash_plutus::constant::Constant::proto_list(
+            &arena,
+            nash_plutus::typ::Type::integer(&arena),
+            arena.alloc_slice_copy(&items),
+        ),
+    );
+    run(&arena, &programs[name], input).map(|(_, tree)| {
+        let Trace::Group(nodes) = tree else {
+            panic!("expected trace group")
+        };
+        nodes
+    })
 }

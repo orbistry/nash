@@ -935,7 +935,7 @@ import Lift exposing (Lift)
 import List
 
 type choiceTree = Choice int | Group (cons choiceTree)
-type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons choiceTree)
+type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons choiceTree) | Rebuilding (list int) (cons choiceTree)
 type alias generator 'a = prng -> option ('a, prng)
 
 -- Each draw returns its value and next state. Replay consumes one choice.

@@ -182,13 +182,19 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
                         prepared.prng.choices(),
                     )
                 } else {
-                    shrink::Status::Ignore
+                    shrink::Status::Ignore(prepared.prng.choices())
                 }
             };
             let mut ce = shrink::Counterexample {
                 value: original,
                 choices: prepared.prng.choices(),
-                cache: shrink::Cache::new(oracle),
+                cache: shrink::Cache::new(oracle).with_rebuild(|choices| {
+                    let arena = Arena::new();
+                    eval::prepare(&arena, v, run, &Prng::rebuild(choices), machine_budget)
+                        .ok()
+                        .flatten()
+                        .map(|prepared| prepared.prng.choices())
+                }),
                 steps: 0,
             };
             let choice_count = Trace::flatten(&ce.choices).len();

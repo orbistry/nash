@@ -107,3 +107,14 @@ tests
         let (count, index) via dependent in
         do
             assert (index < count - 1)
+
+    test "reconstruction enforces bounds and preserves remaining choices" = do
+        case Prop.choice 10 (Prop.Rebuilding [-1] Cons.Nil) of
+            None -> ()
+            Some _ -> fail
+        case Prop.choice 10 (Prop.Rebuilding [11] Cons.Nil) of
+            None -> ()
+            Some _ -> fail
+        case Prop.group (Prop.group (Prop.choice 10)) (Prop.Rebuilding [7, 42] Cons.Nil) of
+            Some (value, Prop.Rebuilding rest _) -> assert (value == 7 && rest == [42])
+            _ -> fail

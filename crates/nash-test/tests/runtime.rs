@@ -174,6 +174,7 @@ fn prng_roundtrip_preserves_nonempty_history_and_rejects_bad_terms() {
     let mut terms = Vec::new();
     for p in [
         Prng::from_seed(42),
+        Prng::rebuild(&[0, 42, u64::MAX]),
         Prng::Seeded {
             seed: [3; 32],
             choices: vec![
@@ -253,7 +254,7 @@ fn shrink_int_pair_and_list() {
             None => ShrinkStatus::Invalid,
             Some(n) if *n >= 1000 =>
                 ShrinkStatus::Keep(*n, c.iter().copied().map(Trace::Choice).collect()),
-            _ => ShrinkStatus::Ignore,
+            _ => ShrinkStatus::Ignore(c.iter().copied().map(Trace::Choice).collect()),
         })
         .0,
         [1000]
@@ -264,7 +265,7 @@ fn shrink_int_pair_and_list() {
         } else if c[0] > c[1] {
             ShrinkStatus::Keep(c[0], c.iter().copied().map(Trace::Choice).collect())
         } else {
-            ShrinkStatus::Ignore
+            ShrinkStatus::Ignore(c.iter().copied().map(Trace::Choice).collect())
         })
         .0,
         [1, 0]
@@ -280,7 +281,7 @@ fn shrink_int_pair_and_list() {
         if sum > 100 {
             ShrinkStatus::Keep(sum, c.iter().copied().map(Trace::Choice).collect())
         } else {
-            ShrinkStatus::Ignore
+            ShrinkStatus::Ignore(c.iter().copied().map(Trace::Choice).collect())
         }
     };
     let a = simplify(vec![5, 10, 90, 20, 5, 1], oracle);
@@ -695,6 +696,11 @@ fn nested_reduction_normalization_and_boundaries() {
             }
             [C(0), G(ab)] if ab.len() == 2 => ShrinkStatus::Keep(0, nodes.to_vec()),
             _ => ShrinkStatus::Invalid,
+        })
+        .with_rebuild(|numbers| match numbers {
+            [0, a, b] => Some(vec![C(0), G(vec![C(*a), C(*b)])]),
+            [1, a, b] => Some(vec![C(1), G(vec![C(*a)]), G(vec![C(*b)])]),
+            _ => None,
         }),
         steps: 0,
     };
