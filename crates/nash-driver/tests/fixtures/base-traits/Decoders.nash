@@ -1,0 +1,244 @@
+module Main exposing (..)
+
+import Data.Decode as Decode
+import Data.Encode as Encode
+import Cons exposing (type cons(..))
+
+record : Decode.decoder (int, bytes)
+record = Decode.constr 7 <| do
+    first <- Decode.field 0 Decode.int
+    second <- Decode.field 1 Decode.bytes
+    pure (first, second)
+
+applied : Decode.decoder int
+applied = pure (\a b -> a + b) <*> Decode.field 0 Decode.int <*> Decode.field 1 Decode.int
+
+constant : Decode.decoder int
+constant = pure 42
+
+emptyAlternatives : Decode.decoder int
+emptyAlternatives = Decode.oneOf Nil
+
+bad : Decode.decoder int
+bad _ = fail
+
+function : Decode.decoder (int -> int)
+function = map (\n -> \x -> n + x) Decode.int
+
+emptyPairs : cons (int, int)
+emptyPairs = Nil
+
+encoded = Encode.constr 7 [Encode.int 42, Encode.bytes #"ff"]
+
+bigInt : Int
+bigInt = 42
+bigBytes : Bytes
+bigBytes = lift #"ff"
+bigBool : Bool
+bigBool = True
+bigList : List Int
+bigList = lift [bigInt]
+bigFields : List Data
+bigFields = lift [Encode.int bigInt]
+rejected : Decode.decoder int
+rejected = Decode.reject
+rejectBind : Decode.decoder int
+rejectBind = do
+    _ <- rejected
+    bad
+rejectApply : Decode.decoder int
+rejectApply = pure (\a b -> a + b) <*> rejected <*> bad
+
+tests
+    test "implicit qualified decoder modules" = do
+        assert (Data.Decode.run Data.Decode.int (Data.Encode.int 5) == Some 5)
+    test "bind rejection skips continuation" = do
+        assert (Decode.run rejectBind encoded == None)
+    test "applicative rejection skips argument" = do
+        assert (Decode.run rejectApply encoded == None)
+    test "empty map decoding" = do
+        assert (Decode.run (Decode.map Decode.int Decode.int) (Encode.map Encode.int Encode.int emptyPairs) == Some Nil)
+    test "map key failure" = do
+        assert (Decode.run (Decode.map Decode.bytes Decode.int) (Encode.map Encode.int Encode.int (Cons (1, 2) Nil)) == None)
+    test "extra constructor fields accepted" = do
+        assert (Decode.run record (Encode.constr 7 [Encode.int 42, Encode.bytes #"ff", Encode.int 9]) == Some (42, #"ff"))
+    test "Big int encoding" = do
+        assert (Decode.run Decode.int (Encode.int bigInt) == Some 42)
+    test "Big bytes encoding" = do
+        assert (Decode.run Decode.bytes (Encode.bytes bigBytes) == Some #"ff")
+    test "Big bool encoding" = do
+        assert (Decode.run Decode.bool (Encode.bool bigBool) == Some True)
+    test "Big list encoding" = do
+        assert (Decode.run (Decode.list Decode.int) (Encode.list Encode.int bigList) == Some [42])
+    test "Big constructor inputs" = do
+        assert (Data.tag (Encode.constr bigInt bigFields) == 42)
+    test "primitive decoding and wrong shapes 1" = do
+        assert (Decode.run Decode.int (Encode.int -42) == Some -42)
+    test "primitive decoding and wrong shapes 2" = do
+        assert (Decode.run Decode.bytes (Encode.bytes #"00ff") == Some #"00ff")
+    test "primitive decoding and wrong shapes 3" = do
+        assert (Decode.run Decode.data encoded == Some encoded)
+    test "primitive decoding and wrong shapes 4" = do
+        assert (Decode.run Decode.int (Encode.bytes #"") == None)
+    test "primitive decoding and wrong shapes 5" = do
+        assert (Decode.run Decode.bytes (Encode.int 1) == None)
+    test "primitive decoding and wrong shapes 6" = do
+        assert (Decode.run Decode.int (Encode.list Encode.int [1]) == None)
+    test "primitive decoding and wrong shapes 7" = do
+        assert (Decode.run Decode.int (Encode.map Encode.int Encode.int emptyPairs) == None)
+    test "primitive decoding and wrong shapes 8" = do
+        assert (Decode.run Decode.int encoded == None)
+    test "primitive decoding and wrong shapes 9" = do
+        assert (Decode.run Decode.string (Encode.int 1) == None)
+    test "booleans require exact constructor shape 1" = do
+        assert (Decode.run Decode.bool (Encode.bool True) == Some True)
+    test "booleans require exact constructor shape 2" = do
+        assert (Decode.run Decode.bool (Encode.bool False) == Some False)
+    test "booleans require exact constructor shape 3" = do
+        assert (Decode.run Decode.bool (Encode.constr 2 []) == None)
+    test "booleans require exact constructor shape 4" = do
+        assert (Decode.run Decode.bool (Encode.constr 0 [Encode.int 1]) == None)
+    test "booleans require exact constructor shape 5" = do
+        assert (Decode.run Decode.bool (Encode.constr 1 [Encode.int 1]) == None)
+    test "booleans require exact constructor shape 6" = do
+        assert (Decode.run Decode.bool (Encode.int 1) == None)
+    test "UTF8 accepts empty" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"")))
+    test "UTF8 accepts 00" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"00")))
+    test "UTF8 accepts 7f" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"7f")))
+    test "UTF8 accepts c280" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"c280")))
+    test "UTF8 accepts dfbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"dfbf")))
+    test "UTF8 accepts e0a080" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"e0a080")))
+    test "UTF8 accepts ed9fbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"ed9fbf")))
+    test "UTF8 accepts ee8080" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"ee8080")))
+    test "UTF8 accepts efbfbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"efbfbf")))
+    test "UTF8 accepts f0908080" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"f0908080")))
+    test "UTF8 accepts f48fbfbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"f48fbfbf")))
+    test "UTF8 accepts 61c28062" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"61c28062")))
+    test "UTF8 accepts e18080" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"e18080")))
+    test "UTF8 accepts ecbfbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"ecbfbf")))
+    test "UTF8 accepts f1808080" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"f1808080")))
+    test "UTF8 accepts f3bfbfbf" = do
+        assert (Option.isSome (Decode.run Decode.string (Encode.bytes #"f3bfbfbf")))
+    test "UTF8 rejects 80" = do
+        assert (Decode.run Decode.string (Encode.bytes #"80") == None)
+    test "UTF8 rejects bf" = do
+        assert (Decode.run Decode.string (Encode.bytes #"bf") == None)
+    test "UTF8 rejects c080" = do
+        assert (Decode.run Decode.string (Encode.bytes #"c080") == None)
+    test "UTF8 rejects c1bf" = do
+        assert (Decode.run Decode.string (Encode.bytes #"c1bf") == None)
+    test "UTF8 rejects e09fbf" = do
+        assert (Decode.run Decode.string (Encode.bytes #"e09fbf") == None)
+    test "UTF8 rejects eda080" = do
+        assert (Decode.run Decode.string (Encode.bytes #"eda080") == None)
+    test "UTF8 rejects f08fbfbf" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f08fbfbf") == None)
+    test "UTF8 rejects f4908080" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f4908080") == None)
+    test "UTF8 rejects f5808080" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f5808080") == None)
+    test "UTF8 rejects ff" = do
+        assert (Decode.run Decode.string (Encode.bytes #"ff") == None)
+    test "UTF8 rejects c2" = do
+        assert (Decode.run Decode.string (Encode.bytes #"c2") == None)
+    test "UTF8 rejects e0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"e0") == None)
+    test "UTF8 rejects e0a0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"e0a0") == None)
+    test "UTF8 rejects f0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f0") == None)
+    test "UTF8 rejects f090" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f090") == None)
+    test "UTF8 rejects f09080" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f09080") == None)
+    test "UTF8 rejects c27f" = do
+        assert (Decode.run Decode.string (Encode.bytes #"c27f") == None)
+    test "UTF8 rejects c2c0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"c2c0") == None)
+    test "UTF8 rejects e0a07f" = do
+        assert (Decode.run Decode.string (Encode.bytes #"e0a07f") == None)
+    test "UTF8 rejects f090807f" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f090807f") == None)
+    test "UTF8 rejects 61ff" = do
+        assert (Decode.run Decode.string (Encode.bytes #"61ff") == None)
+    test "UTF8 rejects e0a0c0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"e0a0c0") == None)
+    test "UTF8 rejects f09080c0" = do
+        assert (Decode.run Decode.string (Encode.bytes #"f09080c0") == None)
+    test "UTF8 text roundtrip" = do
+        assert (Decode.run Decode.string (Encode.string "hello λ 😀") == Some "hello λ 😀")
+    test "constructor decoder do" = do
+        assert (Decode.run record encoded == Some (42, #"ff"))
+    test "constructor wrong tag" = do
+        assert (Decode.run record (Encode.constr 8 []) == None)
+    test "constructor wrong shape" = do
+        assert (Decode.run record (Encode.int 7) == None)
+    test "negative field index" = do
+        assert (Decode.run (Decode.field -1 Decode.int) encoded == None)
+    test "missing field" = do
+        assert (Decode.run (Decode.field 2 Decode.int) encoded == None)
+    test "field on nonconstructor" = do
+        assert (Decode.run (Decode.field 0 Decode.int) (Encode.int 0) == None)
+    test "direct tag" = do
+        assert (Data.tag encoded == 7)
+    test "direct fields" = do
+        assert (Data.fields encoded == [Encode.int 42, Encode.bytes #"ff"])
+    test "applicative and bind share original input 1" = do
+        assert (Decode.run applied (Encode.constr 0 [Encode.int 2, Encode.int 3]) == Some 5)
+    test "applicative and bind share original input 2" = do
+        assert (Decode.run constant encoded == Some 42)
+    test "applicative and bind share original input 3" = do
+        assert (Decode.run (Decode.oneOf (Cons Decode.reject (Cons Decode.int (Cons bad Nil)))) (Encode.int 5) == Some 5)
+    test "applicative and bind share original input 4" = do
+        assert (Decode.run emptyAlternatives encoded == None)
+    test "applicative and bind share original input 5" = do
+        assert (Decode.run (Decode.oneOf (Cons Decode.int Nil)) encoded == None)
+    test "list decoding" = do
+        assert (Decode.run (Decode.list Decode.int) (Encode.list Encode.int [1, 2, 3]) == Some [1, 2, 3])
+    test "empty list decoding" = do
+        assert (Decode.run (Decode.list Decode.int) (Encode.list identity []) == Some [])
+    test "list item failure" = do
+        assert (Decode.run (Decode.list Decode.int) (Encode.list identity [Encode.int 1, Encode.bytes #"", Encode.int 3]) == None)
+    test "list wrong shape" = do
+        assert (Decode.run (Decode.list Decode.int) (Encode.int 1) == None)
+    test "map order and duplicates" = do
+        assert (Decode.run (Decode.map Decode.int Decode.bytes) (Encode.map Encode.int Encode.bytes (Cons (1, #"aa") (Cons (1, #"bb") Nil))) == Some (Cons (1, #"aa") (Cons (1, #"bb") Nil)))
+    test "map value failure" = do
+        assert (Decode.run (Decode.map Decode.int Decode.bytes) (Encode.map Encode.int Encode.int (Cons (1, 2) Nil)) == None)
+    test "map wrong shape" = do
+        assert (Decode.run (Decode.map Decode.int Decode.bytes) (Encode.int 1) == None)
+    test "decoded maps can contain functions" = do
+        case Decode.run (Decode.map Decode.int function) (Encode.map Encode.int Encode.int (Cons (1, 7) Nil)) of
+            Some (Cons (key, f) Nil) -> assert (key == 1 && f 3 == 10)
+            _ -> fail
+    test "tag expects constructor" fail = do
+        let _ = Data.tag (Encode.int 1) in ()
+    test "fields expects constructor" fail = do
+        let _ = Data.fields (Encode.bytes #"") in ()
+    prop "integer roundtrip" =
+        let value via Prop.int in
+        do
+            assert (Decode.run Decode.int (Encode.int value) == Some value)
+    prop "bytes roundtrip" =
+        let value via Prop.bytes in
+        do
+            assert (Decode.run Decode.bytes (Encode.bytes value) == Some value)
+    prop "integer list roundtrip" =
+        let values via Prop.listBetween 0 10 Prop.int in
+        do
+            assert (Decode.run (Decode.list Decode.int) (Encode.list Encode.int values) == Some values)

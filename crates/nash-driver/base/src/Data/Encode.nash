@@ -1,0 +1,35 @@
+module Data.Encode exposing (int, bytes, string, bool, list, constr, map)
+
+import Primitive
+import Builtin
+import Literal
+import Lift exposing (Lift)
+import Data exposing (ToData)
+import List
+import Cons exposing (type cons(..))
+
+int : Lift int 'a => 'a -> Data
+int value = toData (Builtin.iData (lower value))
+
+bytes : Lift bytes 'a => 'a -> Data
+bytes value = toData (Builtin.bData (lower value))
+
+string : string -> Data
+string value = toData (Builtin.bData (Builtin.encodeUtf8 value))
+
+bool : Lift bool 'a => 'a -> Data
+bool value = Builtin.constrData (if lower value then 1 else 0) []
+
+list : Lift (list 'a) ('f 'a) => ('a -> Data) -> 'f 'a -> Data
+list encode values = toData (Builtin.listData (List.map encode values))
+
+constr : (Lift int 'n, Lift (list Data) ('f Data)) => 'n -> 'f Data -> Data
+constr tag fields = Builtin.constrData (lower tag) (lower fields)
+
+map : ('k -> Data) -> ('v -> Data) -> cons ('k, 'v) -> Data
+map key value entries = toData (Builtin.mapData (encodeEntries key value entries))
+
+encodeEntries : ('k -> Data) -> ('v -> Data) -> cons ('k, 'v) -> list (pair Data Data)
+encodeEntries key value entries = case entries of
+    Nil -> []
+    Cons (k, v) rest -> Builtin.mkCons (Builtin.mkPairData (key k) (value v)) (encodeEntries key value rest)

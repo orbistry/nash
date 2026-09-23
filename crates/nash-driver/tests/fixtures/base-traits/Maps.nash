@@ -1,0 +1,64 @@
+module Main exposing (..)
+
+one : Int
+one = 1
+two : Int
+two = 2
+three : Int
+three = 3
+emptyEntries : list (pair Int Int)
+emptyEntries = Map.empty
+
+entries : list (pair Int Int)
+entries = List.append (Map.singleton one two) (List.append (Map.singleton one three) (Map.singleton two one))
+big : Map Int Int
+big = lift entries
+
+nativeKey : int
+nativeKey = 4
+
+native = [Builtin.unConstrData (Builtin.constrData 3 []), Builtin.unConstrData (Builtin.constrData 4 [toData one])]
+
+missing : option Int
+missing = Map.get three big
+missingEmpty : option Int
+missingEmpty = Map.get one emptyEntries
+removedAll : list (pair Int Int)
+removedAll = Map.remove one (Map.singleton one two)
+normalized : list (pair Int Int)
+normalized = Map.toList big
+sumEntry : Int -> Int -> int -> int
+sumEntry k v acc = acc * 10 + lower k + lower v
+countEntry : Int -> Int -> int -> int
+countEntry _ _ acc = acc + 1
+filteredNative : list (pair int (list Data))
+filteredNative = Map.remove 3 native
+unionNative : list (pair int (list Data))
+unionNative = Map.union native native
+
+tests
+    test "lookup preserves elements and returns first duplicate" = do
+        assert (Map.get one entries == Some two)
+        assert (Map.get one big == Some two)
+        assert (missing == None)
+        assert (missingEmpty == None)
+    test "insertion replaces all duplicates and appends" = do
+        assert (Map.insert one one big == List.append (Map.singleton two one) (Map.singleton one one))
+        assert (Map.insert three two big == List.append entries (Map.singleton three two))
+        assert (Map.insert one two emptyEntries == Map.singleton one two)
+    test "removal preserves other entries" = do
+        assert (Map.remove one big == Map.singleton two one)
+        assert (Map.remove three big == entries)
+        assert (removedAll == [])
+    test "collections and folds preserve order and duplicates" = do
+        assert (Map.keys normalized == [one, one, two])
+        assert (Map.values entries == [two, three, one])
+        assert (Map.toList big == entries)
+        assert (Map.toList entries == entries)
+        assert (Map.foldl sumEntry 0 big == 343)
+        assert (Map.foldl countEntry 0 emptyEntries == 0)
+    test "read and filter little native pairs" = do
+        assert (Map.keys native == [3, 4])
+        assert (Map.get nativeKey native == Some [toData one])
+        assert (Map.keys filteredNative == [4])
+        assert (Map.values unionNative == [[], [toData one]])

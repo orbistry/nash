@@ -55,8 +55,8 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 6 completion (2026-09-20). Base currently
-ships 28 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+Reconciled with chunk 7 implementation (2026-09-23). Base currently
+ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|
@@ -66,7 +66,7 @@ ships 28 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 4 twin types | complete | none; helper APIs belong to chunks 5–6 |
 | 5 traits / operators | complete | none |
 | 6 type modules | complete | none |
-| 7 Data / Map | partial | Data.Decode, Data.Encode, Map APIs |
+| 7 Data / Map | partial | automatic lowering for Map.keys/values |
 | 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
@@ -249,121 +249,42 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 ## Chunk 7: `Data` and `Map` modules — partial
 
 - [x] Ship Data.serialise, Data.tag and Data.fields alongside the Data traits.
-- [x] Use explicit `Constr pair(...)` patterns for tag/field extraction.
-- [ ] Add Data.Decode and Data.Encode combinators and round-trip tests.
-- [x] Move right-biased map union into `Map.union`, returning a little list of pairs.
-- [ ] Complete the Map lookup/update/collection API.
+- [x] Make tag/fields direct constructor accessors; non-constructor input fails.
+- [x] Ship Data.Decode and Data.Encode with source snapshot and round-trip tests.
+- [x] Use decoder function aliases with Functor/Applicative/Monad composition.
+- [x] Decode map entries into Cons tuples; use Cons for decoder alternatives.
+- [x] Reject malformed UTF-8 through the recoverable string decoder.
+- [x] Ship right-biased Map.union returning a little list of pairs.
+- [x] Ship Map construction, lookup, update, removal, folding and collection helpers.
+- [ ] Make Map.keys/values normalize Big input internally; the current little-only
+  signatures are provisional pending a sound inference/API decision.
+- [x] Embed nested Base modules and include them in implicit qualified imports.
+- [x] Complete full workspace validation.
 
-**Files**
+Implementation: `base/src/Data.nash`, `base/src/Data/Decode.nash`,
+`base/src/Data/Encode.nash`, `base/src/Map.nash` under `crates/nash-driver`.
+Authoritative APIs and behavior are in `docs/stdlib.md` and `docs/data.md`.
 
-- `crates/nash-driver/base/src/Data.nash` (`serialise`, `tag`, `fields` added to chunk 5's traits), `Data/Decode.nash`, `Data/Encode.nash`, `Map.nash`
+Decoder composition uses the existing language traits and `do`, with no custom
+numbered mapping/field helpers and no new compiler decoder behavior. `constr`
+checks the tag and decodes the original node; `field` selects its zero-based
+field. Missing fields return None, extra fields are allowed. Recoverable
+UTF-8 validation is implemented in Nash. Functions supplied by the user can
+still fail explicitly.
 
-**Change**
+Decoded maps use Cons tuples because native pair construction requires Data
+components. Map operations preserve elements and return little collections;
+construction uses native Data pairs. Construction/encoding does not deduplicate;
+get finds the first match, remove deletes all matches, insert appends one new
+entry after removing existing matches, and union is right-biased. A native pair
+list needs no fromList wrapper; explicit lift constructs its Big representation.
 
-Functions over the `Data` type, the decoder/encoder combinators, and
-`Map` (the one module whose functions take a Big type, because its little
-form `list (pair 'k 'v)` is not nominal). `Data`, `Data.Decode` and
-`Data.Encode` are about `Data` only; there are no `Data.List`-style Big
-counterparts of the type modules. Needs `Data` patterns (data.md).
+Tests use the shared in-process Base snapshot runner, including integer/bytes/list
+round-trip properties, invalid UTF-8, decoder composition, function-valued map
+entries, duplicate keys, map ordering, and constructor accessor failures.
 
-**Code** (`crates/nash-driver/base/src/Data/Decode.nash` excerpt)
-
-```elm
-module Data.Decode exposing (..)
-
-import Builtin
-import List
-
-type alias decoder 'a = Data -> option 'a
-
-int : decoder int
-int d =
-    case d of
-        I n -> Some n
-        _ -> None
-
-bytes : decoder bytes
-bytes d =
-    case d of
-        B b -> Some b
-        _ -> None
-
-list : decoder 'a -> decoder (list 'a)
-list item d =
-    case d of
-        List xs -> traverse item xs
-        _ -> None
-
-constr : int -> decoder 'a -> decoder 'a
-constr tag inner d =
-    case d of
-        Constr pair(t, _) -> if t == tag then inner d else None
-        _ -> None
-
-field : int -> decoder 'a -> decoder 'a
-field i inner d =
-    case d of
-        Constr pair(_, fields) ->
-            case List.at i fields of
-                Some f -> inner f
-                None -> None
-        _ -> None
-
-andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
-andThen f dec d =
-    case dec d of
-        Some a -> f a d
-        None -> None
-
-traverse : decoder 'a -> list Data -> option (list 'a)
-traverse dec xs =
-    List.foldr
-        (\x acc ->
-            case (dec x, acc) of
-                (Some a, Some rest) -> Some (a :: rest)
-                _ -> None)
-        (Some [])
-        xs
-```
-
-`crates/nash-driver/base/src/Map.nash` works on `Map 'k 'v` through `lower`/`lift`
-(`(Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v)`, one `unMapData`/`mapData` each):
-
-```elm
-module Map exposing (..)
-
-import Prelude exposing (..)
-import Builtin
-import Eq exposing (Eq)
-import Lift exposing (Lift)
-import List
-import Option
-import Pair
-
-get : Eq 'k => 'k -> Map 'k 'v -> option 'v
-get k m =
-    Option.map Pair.snd (List.find (\p -> Pair.fst p == k) (lower m))
-```
-
-`lower xs : list Int` on a `List Int` goes through
-`Lift (list ('a : Big)) (List 'a)` and costs one `unListData`;
-no element traversal or optimizer is needed.
-
-**Elm/Aiken reference**
-
-Elm `crates/nash-driver/base/src/Dict.elm` for `Map` API names (insert/get/remove/keys/values).
-Aiken `stdlib/lib/aiken/collection/dict.ak` (association list semantics),
-`stdlib/lib/aiken/cbor.ak` for diagnostics. Elm `Json.Decode` for the
-combinator shapes (`field`, `andThen`, `oneOf`, `succeed`, `fail`).
-
-**Tests**
-
-`tests` blocks: `Decode.run (Decode.constr 0 (Decode.field 0 Decode.int)) (Encode.constr 0 [Encode.int 5]) == Some 5`;
-`Decode.run Decode.int (Encode.bytes "x") == None`;
-`Map.get (lift 1) (Map.fromList [Pair.make (lift 1) (lift "a")]) == Some (lift "a")`;
-a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
-
-**Done when** the in-process Base compilation tests passes and the decode tests pass.
+Validation: formatting and strict Clippy passed; 3,432 workspace tests
+passed, 3 ignored. Snapshot tests run without a custom Rust stack setting.
 
 ---
 
@@ -371,7 +292,7 @@ a `prop` that `Encode` then `Decode` is identity for `int`, `bytes`, `list int`.
 
 - [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
 - [x] Use nested little Choice/Group traces with strict replay, consumed-trace reduction, and ordinary generator Functor/Applicative/Monad instances.
-- [x] Rebuild structural proposals in Nash; accept only strict replay, with consumed-draw feedback for reduction.
+- [x] Rebuild structures in Nash and evaluate the prepared property once, with consumed-draw feedback for reduction.
 - [x] Ship direct generation functions: choice, constant, intBetween, int, listOf,
   listBetween, tuple2, oneOf and bytes; sequence draws with explicit state.
 - [x] Test Nash generators against the Rust runner and replay protocol in

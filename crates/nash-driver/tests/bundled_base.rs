@@ -253,3 +253,26 @@ async fn lift_does_not_encode_strings() {
     "#
     );
 }
+
+#[tokio::test]
+async fn map_singleton_rejects_little_components() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        bad : int -> Data -> list (pair int Data)
+        bad key value = Map.singleton key value
+    "#
+    );
+}
+
+#[tokio::test]
+async fn decoder_list_rejects_function_elements() {
+    assert_base_type_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        functions : Data.Decode.decoder (int -> int)
+        functions = pure (\x -> x)
+        bad = Data.Decode.list functions
+    "#
+    );
+}

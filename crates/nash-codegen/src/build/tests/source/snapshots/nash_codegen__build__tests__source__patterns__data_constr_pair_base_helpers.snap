@@ -1,144 +1,95 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-description: "module Main exposing (..)\nimport Data\nimport Primitive exposing (..)\nimport Option exposing (type option(..))\nmain : int\nmain =\n    case Data.tag (Builtin.constrData 7 [I 42]) of\n        Some index ->\n            case Data.fields (Builtin.constrData 7 [I 42]) of\n                Some [I number] -> Builtin.addInteger index number\n                _ -> fail\n        _ -> fail\n"
+description: "module Main exposing (..)\nimport Data\nimport Primitive exposing (..)\nimport Option exposing (type option(..))\nmain : int\nmain =\n    let index = Data.tag (Builtin.constrData 7 [I 42]) in\n    case Data.fields (Builtin.constrData 7 [I 42]) of\n        [I number] -> Builtin.addInteger index number\n        _ -> fail\n"
 ---
 --- core
-let tag#2 : Data -> nash/base:Option.option int = \value#33 : Data -> let match#36 : Data = value#33 in
-let leaf#44 : 'erased = delay (constr 1) in
-case@Data match#36 of
-  DataConstr field#45 -> case@Pair field#45 of
-    Pair field#46 field#47 -> let index#34 : int = field#46 in
-    (\field#35 : int -> constr 0 field#35) index#34
-  DataMap field#48 -> force leaf#44
-  DataList field#49 -> force leaf#44
-  DataI field#50 -> force leaf#44
-  DataB field#51 -> force leaf#44 in
-let fromInt#3 : int -> int = \value#52 : int -> value#52 in
-let fields#6 : Data -> nash/base:Option.option (list Data) = \value#53 : Data -> let match#56 : Data = value#53 in
-let leaf#64 : 'erased = delay (constr 1) in
-case@Data match#56 of
-  DataConstr field#65 -> case@Pair field#65 of
-    Pair field#66 field#67 -> let items#54 : list Data = field#67 in
-    (\field#55 : list Data -> constr 0 field#55) items#54
-  DataMap field#68 -> force leaf#64
-  DataList field#69 -> force leaf#64
-  DataI field#70 -> force leaf#64
-  DataB field#71 -> force leaf#64 in
-let match#31 : nash/base:Option.option int = tag#2 (constrData (fromInt#3 7) (mkCons ((\field#4 : int -> iData field#4) (fromInt#3 42)) (con (list data) []))) in
-let main#1 : int = case@Tag match#31 of
-  0 field#32 -> let index#5 : int = field#32 in
-  let match#9 : nash/base:Option.option (list Data) = fields#6 (constrData (fromInt#3 7) (mkCons ((\field#7 : int -> iData field#7) (fromInt#3 42)) (con (list data) []))) in
-  let leaf#20 : 'erased = delay error in
-  case@Tag match#9 of
-    0 field#21 -> case@List field#21 of
-      Nil -> force leaf#20
-      Cons field#22 field#23 -> case@Data field#22 of
-        DataConstr field#24 -> force leaf#20
-        DataMap field#25 -> force leaf#20
-        DataList field#26 -> force leaf#20
-        DataI field#27 -> case@List field#23 of
-          Nil -> let number#8 : int = field#27 in
-          addInteger index#5 number#8
-          Cons field#28 field#29 -> force leaf#20
-        DataB field#30 -> force leaf#20
-    1 -> force leaf#20
-  1 -> error in
+let fields#3 : Data -> list Data = \value#29 : Data -> let projection#42 : pair int (list Data) = unConstrData value#29 in
+let destruct#30 : pair int (list Data) = projection#42 in
+let match#32 : pair int (list Data) = destruct#30 in
+case@Pair match#32 of
+  Pair field#33 field#34 -> let items#31 : list Data = field#34 in
+  items#31 in
+let fromInt#4 : int -> int = \value#35 : int -> value#35 in
+let tag#27 : Data -> int = \value#36 : Data -> let projection#43 : pair int (list Data) = unConstrData value#36 in
+let destruct#37 : pair int (list Data) = projection#43 in
+let match#39 : pair int (list Data) = destruct#37 in
+case@Pair match#39 of
+  Pair field#40 field#41 -> let index#38 : int = field#40 in
+  index#38 in
+let index#2 : int = tag#27 (constrData (fromInt#4 7) (mkCons ((\field#28 : int -> iData field#28) (fromInt#4 42)) (con (list data) []))) in
+let match#7 : list Data = fields#3 (constrData (fromInt#4 7) (mkCons ((\field#5 : int -> iData field#5) (fromInt#4 42)) (con (list data) []))) in
+let leaf#17 : 'erased = delay error in
+let main#1 : int = case@List match#7 of
+  Nil -> force leaf#17
+  Cons field#18 field#19 -> case@Data field#18 of
+    DataConstr field#20 -> force leaf#17
+    DataMap field#21 -> force leaf#17
+    DataList field#22 -> force leaf#17
+    DataI field#23 -> case@List field#19 of
+      Nil -> let number#6 : int = field#23 in
+      addInteger index#2 number#6
+      Cons field#24 field#25 -> force leaf#17
+    DataB field#26 -> force leaf#17 in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam tag_2
-    [(lam fromInt_3
-      [(lam fields_6
-        [(lam match_31
-          [(lam main_1 main_1)
-            (case
-              match_31
-              (lam field_32
-                [(lam index_5
-                  [(lam match_9
-                    [(lam leaf_20
-                      (case
-                        match_9
-                        (lam field_21
-                          (case
-                            field_21
-                            (lam field_22
-                              (lam field_23
-                                [(lam generated_72
-                                  (force
-                                    [[[[[[(force (builtin chooseData)) generated_72] (delay (force leaf_20))]
-                                      (delay (force leaf_20))]
-                                      (delay (force leaf_20))]
-                                      (delay
-                                        [(lam field_27
-                                          (case
-                                            field_23
-                                            (lam field_28 (lam field_29 (force leaf_20)))
-                                            [(lam number_8 [[(builtin addInteger) index_5] number_8]) field_27]))
-                                          [(builtin unIData) generated_72]])]
-                                      (delay (force leaf_20))]))
-                                  field_22]))
-                            (force leaf_20)))
-                        (force leaf_20)))
-                      (delay (error))])
-                    [fields_6
-                      [[(builtin constrData) [fromInt_3 (con integer 7)]]
-                        [[(force (builtin mkCons))
-                          [(lam field_7 [(builtin iData) field_7]) [fromInt_3 (con integer 42)]]]
-                          (con (list data) [])]]]])
-                  field_32])
-              (error))])
-          [tag_2
-            [[(builtin constrData) [fromInt_3 (con integer 7)]]
+  [(lam fields_3
+    [(lam fromInt_4
+      [(lam tag_27
+        [(lam index_2
+          [(lam match_7
+            [(lam leaf_17
+              [(lam main_1 main_1)
+                (case
+                  match_7
+                  (lam field_18
+                    (lam field_19
+                      [(lam generated_44
+                        (force
+                          [[[[[[(force (builtin chooseData)) generated_44] (delay (force leaf_17))]
+                            (delay (force leaf_17))]
+                            (delay (force leaf_17))]
+                            (delay
+                              [(lam field_23
+                                (case
+                                  field_19
+                                  (lam field_24 (lam field_25 (force leaf_17)))
+                                  [(lam number_6 [[(builtin addInteger) index_2] number_6]) field_23]))
+                                [(builtin unIData) generated_44]])]
+                            (delay (force leaf_17))]))
+                        field_18]))
+                  (force leaf_17))])
+              (delay (error))])
+            [fields_3
+              [[(builtin constrData) [fromInt_4 (con integer 7)]]
+                [[(force (builtin mkCons))
+                  [(lam field_5 [(builtin iData) field_5]) [fromInt_4 (con integer 42)]]]
+                  (con (list data) [])]]]])
+          [tag_27
+            [[(builtin constrData) [fromInt_4 (con integer 7)]]
               [[(force (builtin mkCons))
-                [(lam field_4 [(builtin iData) field_4]) [fromInt_3 (con integer 42)]]]
+                [(lam field_28 [(builtin iData) field_28]) [fromInt_4 (con integer 42)]]]
                 (con (list data) [])]]]])
-        (lam value_53
-          [(lam match_56
-            [(lam leaf_64
-              [(lam generated_73
-                (force
-                  [[[[[[(force (builtin chooseData)) generated_73]
-                    (delay
-                      [(lam field_65
-                        (case
-                          field_65
-                          (lam field_66
-                            (lam field_67
-                              [(lam items_54 [(lam field_55 (constr 0 field_55)) items_54]) field_67]))))
-                        [(builtin unConstrData) generated_73]])]
-                    (delay (force leaf_64))]
-                    (delay (force leaf_64))]
-                    (delay (force leaf_64))]
-                    (delay (force leaf_64))]))
-                match_56])
-              (delay (constr 1))])
-            value_53])])
-      (lam value_52 value_52)])
-    (lam value_33
-      [(lam match_36
-        [(lam leaf_44
-          [(lam generated_74
-            (force
-              [[[[[[(force (builtin chooseData)) generated_74]
-                (delay
-                  [(lam field_45
-                    (case
-                      field_45
-                      (lam field_46
-                        (lam field_47
-                          [(lam index_34 [(lam field_35 (constr 0 field_35)) index_34]) field_46]))))
-                    [(builtin unConstrData) generated_74]])]
-                (delay (force leaf_44))]
-                (delay (force leaf_44))]
-                (delay (force leaf_44))]
-                (delay (force leaf_44))]))
-            match_36])
-          (delay (constr 1))])
-        value_33])])
+        (lam value_36
+          [(lam projection_43
+            [(lam destruct_37
+              [(lam match_39
+                (case match_39 (lam field_40 (lam field_41 [(lam index_38 index_38) field_40]))))
+                destruct_37])
+              projection_43])
+            [(builtin unConstrData) value_36]])])
+      (lam value_35 value_35)])
+    (lam value_29
+      [(lam projection_42
+        [(lam destruct_30
+          [(lam match_32
+            (case match_32 (lam field_33 (lam field_34 [(lam items_31 items_31) field_34]))))
+            destruct_30])
+          projection_42])
+        [(builtin unConstrData) value_29]])])
 --- result
 (con integer 49)
 --- logs
 []
 --- budget
-cpu: 3761977, memory: 19786
+cpu: 2725227, memory: 14422

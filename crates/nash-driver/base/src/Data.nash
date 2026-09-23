@@ -3,7 +3,6 @@ module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
 import Builtin
 
 import Primitive exposing (Data(..))
-import Option exposing (type option(..))
 
 trait ToData ('a : Big) where
     toData : 'a -> Data
@@ -44,17 +43,11 @@ impl Validate Bytes where
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
 
-tag : Data -> option int
-tag value =
-    case value of
-        Constr pair(index, _) -> Some index
-        _ -> None
+tag : Data -> int
+tag value = let pair(index, _) = Builtin.unConstrData value in index
 
-fields : Data -> option (list Data)
-fields value =
-    case value of
-        Constr pair(_, items) -> Some items
-        _ -> None
+fields : Data -> list Data
+fields value = let pair(_, items) = Builtin.unConstrData value in items
 
 impl Validate 'a => Validate (List 'a) where
     validate value =

@@ -75,7 +75,8 @@ Trait methods such as `Functor.map` retain their trait's container contract.
 conversion for already-matching types. Recursive element conversion requires
 explicit mapping. There is no Big String: use `String.toBytes` / `fromBytes`
 for UTF-8 and `lift` / `lower` for bytes/Bytes. `Data`, `Data.Decode` and
-`Data.Encode` operate on Data itself. Map's dedicated API is planned separately.
+`Data.Encode` operate on Data itself. Map collection operations return little
+pair lists; `keys` and `values` require little pair-list inputs.
 
 ## Default imports
 
@@ -100,6 +101,8 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
 import Data exposing (ToData, FromData, Validate)
+import Data.Decode
+import Data.Encode
 import Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
@@ -432,24 +435,22 @@ impl Validate Data where
 
 impl Validate Int where
     validate value =
-        case value of
-            I _ -> Primitive.coerce value
-            _ -> fail
+        let
+            candidate : Int
+            candidate = Primitive.coerce value
+            _ = Builtin.unIData candidate
+        in
+        candidate
 
 serialise : Data -> bytes
 serialise = Builtin.serialiseData
 
-tag : Data -> option int
-tag d =
-    case d of
-        Constr pair(t, _) -> Some t
-        _ -> None
+tag : Data -> int
+tag value = let pair(index, _) = Builtin.unConstrData value in index
 
-fields : Data -> option (list Data)
-fields d =
-    case d of
-        Constr pair(_, fs) -> Some fs
-        _ -> None
+fields : Data -> list Data
+fields value = let pair(_, items) = Builtin.unConstrData value in items
+
 ```
 
 `Data` fields in patterns are little (`Constr (pair int (list Data))`), as data.md
@@ -849,52 +850,47 @@ pairs, matching the target builtin.
 
 ### `Map`
 
-`union` is shipped: it accepts Big maps or little lists of pairs and returns a
-little list of pairs, preserving key/value types with right-biased keys. The
-remaining Map API below is planned.
+Except for `keys` and `values`, Map helpers accept Big `Map 'k 'v` or little `list (pair 'k 'v)` inputs.
+Collection results are little pair lists and preserve component types. Big maps
+require Big keys and values; native pairs obtained from builtins can also hold
+little components, and the read/filter helpers support them.
 
 ```elm
+empty : list (pair 'k 'v)
+singleton : ('k : Big) -> ('v : Big) -> list (pair 'k 'v)
+insert : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => ('k : Big) -> ('v : Big) -> 'm -> list (pair 'k 'v)
+get : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> option 'v
+remove : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> list (pair 'k 'v)
+toList : Lift (list (pair 'k 'v)) 'm => 'm -> list (pair 'k 'v)
+foldl : Lift (list (pair 'k 'v)) 'm => ('k -> 'v -> 'b -> 'b) -> 'b -> 'm -> 'b
 union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
 ```
 
-`Map 'k 'v` is an association list in `Data.Map` encoding, keys and
-values Big, insertion-ordered, no dedup on construction:
+`keys : list (pair 'k 'v) -> list 'k` and
+`values : list (pair 'k 'v) -> list 'v` take little pair lists and preserve
+components. For Big maps, first bind `Map.toList map` (or `lower map`) with an explicit
+`list (pair Key Value)` annotation, then pass that list to the projection.
+These projections cannot express an inferred unused component through generic Lift
+in the current type system.
+`get` returns the first matching entry. `remove` removes every matching entry.
+`insert` removes all previous matches and appends the new pair. `union` removes
+left entries whose keys occur on the right, then appends the right entries;
+remaining order and duplicates are preserved. `foldl` visits entries left to
+right, passing key, value, then accumulator.
 
-The Semigroup impl requires `Eq 'k`. Right-biased union removes each left
-entry whose key equals any right key, then appends the right entries. It
-preserves the order and duplicates of surviving left entries and all right
-entries. The Monoid impl has the same key constraint through its superclass;
-its identity is the empty map. Thus appending empty does not deduplicate a
-map. Key comparison uses the key's Eq impl, as do the Map lookup helpers.
-
-```elm
-module Map exposing (..)
-
-empty : Map 'k 'v
-singleton : 'k -> 'v -> Map 'k 'v
-insert : Eq 'k => 'k -> 'v -> Map 'k 'v -> Map 'k 'v
-get : Eq 'k => 'k -> Map 'k 'v -> option 'v
-remove : Eq 'k => 'k -> Map 'k 'v -> Map 'k 'v
-keys : Map 'k 'v -> list 'k
-values : Map 'k 'v -> list 'v
-toList : Map 'k 'v -> list (pair 'k 'v)
-fromList : list (pair 'k 'v) -> Map 'k 'v
-foldl : ('k -> 'v -> 'b -> 'b) -> 'b -> Map 'k 'v -> 'b
-```
+`singleton` and `insert` require Big components because `mkPairData` constructs
+Data pairs. Other helpers do not impose that restriction. There is no redundant
+`fromList`: a native pair list is already the little map representation. Use
+`lift` explicitly when a Big map is required.
 
 ## `Data.Decode`, `Data.Encode`
 
-Structured decoders for untrusted `Data` return failure as a value.
-`Validate.validate` is the separate trapping validation path; future
-derivation generates recursive source checks.
+`Data.tag : Data -> int` and `Data.fields : Data -> list Data` assume constructor
+Data and use `unConstrData`; other shapes fail. Recoverable decoding lives in
+`Data.Decode`, separately from the trapping `validate` trait.
 
 ```elm
-module Data.Decode exposing (..)
-
-import List
-
 type alias decoder 'a = Data -> option 'a
-
 run : decoder 'a -> Data -> option 'a
 int : decoder int
 bytes : decoder bytes
@@ -902,22 +898,46 @@ string : decoder string
 bool : decoder bool
 data : decoder Data
 list : decoder 'a -> decoder (list 'a)
-map : decoder 'k -> decoder 'v -> decoder (list (pair 'k 'v))
-constr : int -> decoder 'a -> decoder 'a          -- checks the tag, then decodes the same node
-field : int -> decoder 'a -> decoder 'a           -- nth field of a Constr
-fields2 : decoder 'a -> decoder 'b -> decoder ('a, 'b)
-fields3 : ...
-oneOf : list (decoder 'a) -> decoder 'a
-succeed : 'a -> decoder 'a
-fail : decoder 'a
-andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
+map : decoder 'k -> decoder 'v -> decoder (Cons.cons ('k, 'v))
+constr : int -> decoder 'a -> decoder 'a
+field : int -> decoder 'a -> decoder 'a
+oneOf : Cons.cons (decoder 'a) -> decoder 'a
+reject : decoder 'a
 ```
 
-`decoder` is a little alias of a function type (`Term` representation), so it has no
-`Functor`/`Monad` impls (impls attach to nominal types); v1 uses
-`andThen`. `Data.Encode` is the inverse: `int : int -> Data`, `bytes`,
-`string`, `bool`, `list : ('a -> Data) -> list 'a -> Data`,
-`constr : int -> list Data -> Data`, `map`.
+The decoder function alias implements `Functor`, `Applicative`, and `Monad`.
+Use `map`, `pure`, application or `do` for composition; no numbered mapping or
+field helpers are needed. Both application and bind decode against the same
+original input, and stop on the first `None`. `constr` checks the tag and passes
+the original node to its inner decoder. `field` selects a zero-based constructor
+field; negative/missing indices or non-constructor input return `None`. Extra
+fields are permitted. `oneOf` tries decoders in order and stops at first success;
+an empty sequence returns `None`. `reject` always returns `None` (`fail` is a
+language keyword).
+
+`list` requires Storable decoded elements. Decoded maps use `Cons` of ordinary
+tuples so keys and values may be little types or functions; order and duplicates
+are retained. `oneOf` also uses `Cons` because decoders are functions.
+
+`bool` accepts only constructor tags 0 (False) and 1 (True), with no fields.
+`string` validates UTF-8 in Nash before calling `decodeUtf8`; malformed byte
+sequences return `None`. User-supplied decoder functions can still deliberately
+fail; the library does not catch VM failures.
+
+```elm
+-- Data.Encode
+int : Lift int 'a => 'a -> Data
+bytes : Lift bytes 'a => 'a -> Data
+string : string -> Data
+bool : Lift bool 'a => 'a -> Data
+list : Lift (list 'a) ('f 'a) => ('a -> Data) -> 'f 'a -> Data
+constr : (Lift int 'n, Lift (list Data) ('f Data)) => 'n -> 'f Data -> Data
+map : ('k -> Data) -> ('v -> Data) -> Cons.cons ('k, 'v) -> Data
+```
+
+Encoders normalize outer inputs only; explicit element encoders decide how
+contents are represented. Strings use UTF-8 bytes, and booleans use the exact
+constructor shapes above. Map encoding preserves order and duplicates.
 
 ## `Prop`
 

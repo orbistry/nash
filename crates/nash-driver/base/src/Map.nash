@@ -1,10 +1,12 @@
-module Map exposing (union)
+module Map exposing (empty, singleton, insert, get, remove, keys, values, toList, foldl, union)
 
 import Builtin
 import Primitive exposing (type bool(..))
 import Lift exposing (Lift)
 import Eq exposing (Eq)
 import List
+import Option exposing (type option(..))
+import Pair
 
 union : (Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b) => 'a -> 'b -> list (pair 'k 'v)
 union left right = unionList (lower left) (lower right)
@@ -27,3 +29,35 @@ containsKey key entries =
         [] -> False
         pair(entryKey, _) :: rest ->
             if eq key entryKey then True else containsKey key rest
+
+empty : list (pair 'k 'v)
+empty = []
+
+singleton : ('k : Big) -> ('v : Big) -> list (pair 'k 'v)
+singleton key value = [Builtin.mkPairData key value]
+
+insert : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => ('k : Big) -> ('v : Big) -> 'm -> list (pair 'k 'v)
+insert key value entries = List.append (remove key entries) (singleton key value)
+
+get : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> option 'v
+get key entries = getList key (lower entries)
+
+getList : Eq 'k => 'k -> list (pair 'k 'v) -> option 'v
+getList key entries = case entries of
+    [] -> None
+    pair(k, v) :: rest -> if eq key k then Some v else getList key rest
+
+remove : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> list (pair 'k 'v)
+remove key entries = List.filter (\entry -> let pair(k, _) = entry in neq key k) (toList entries)
+
+keys : list (pair 'k 'v) -> list 'k
+keys entries = List.map Pair.fst entries
+
+values : list (pair 'k 'v) -> list 'v
+values entries = List.map Pair.snd entries
+
+toList : Lift (list (pair 'k 'v)) 'm => 'm -> list (pair 'k 'v)
+toList = lower
+
+foldl : Lift (list (pair 'k 'v)) 'm => ('k -> 'v -> 'b -> 'b) -> 'b -> 'm -> 'b
+foldl f initial entries = List.foldl (\entry acc -> let pair(k, v) = entry in f k v acc) initial (toList entries)

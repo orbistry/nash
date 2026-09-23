@@ -21,6 +21,8 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Monad", &["Monad"]),
     ("Lift", &["Lift"]),
     ("Data", &["ToData", "FromData", "Validate"]),
+    ("Data.Decode", &[]),
+    ("Data.Encode", &[]),
     (
         "Literal",
         &["FromInt", "FromString", "FromBytes", "FromBool", "FromUnit"],

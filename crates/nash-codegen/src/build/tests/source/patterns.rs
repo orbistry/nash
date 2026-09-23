@@ -723,11 +723,9 @@ case!(
     import Option exposing (type option(..))
     main : int
     main =
-        case Data.tag (Builtin.constrData 7 [I 42]) of
-            Some index ->
-                case Data.fields (Builtin.constrData 7 [I 42]) of
-                    Some [I number] -> Builtin.addInteger index number
-                    _ -> fail
+        let index = Data.tag (Builtin.constrData 7 [I 42]) in
+        case Data.fields (Builtin.constrData 7 [I 42]) of
+            [I number] -> Builtin.addInteger index number
             _ -> fail
     "#,
     Ok("(con integer 49)")

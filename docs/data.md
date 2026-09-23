@@ -193,169 +193,46 @@ concrete typed Data builtins. The reflexive impl is identity. Other Lift
 impls use normal pattern matching and construction. Optimizations operate
 on actual builtin applications and preserve errors and evaluation order.
 
-## Encoding: `Data.Encode`
+## Encoding and decoding
 
-Encoders are plain functions to `Data`. The module is small because
-every Big type already has `ToData` through the blanket impl:
+`Data.Encode` contains ordinary Nash functions for integers, bytes, UTF-8
+strings, booleans, lists, maps and constructors. See [stdlib.md](stdlib.md#datadecode-dataencode)
+for their signatures. Encoders accept Big/little outer representations where
+applicable, and element encoders are explicit. `Data.tag` and `Data.fields`
+assume constructor Data and fail on other shapes.
 
-```elm
-module Data.Encode exposing (int, bytes, list, map, constr, bool)
+Labeled constructor fields encode flat: `type Datum = Datum { owner : Bytes,
+deadline : Int }` has two positional fields under tag 0. Alias records use a
+Data list instead.
 
-int : int -> Data
-int = I
+`Data.Decode.decoder 'a` is the function alias `Data -> option 'a`, with
+ordinary Functor, Applicative and Monad instances. Primitive decoders return
+`None` for the wrong shape; string decoding also rejects malformed UTF-8.
+`constr` checks a tag and keeps the original node; `field` selects a constructor
+field. Missing/negative indices return `None`; extra fields are allowed.
 
-bytes : bytes -> Data
-bytes = B
+```nash
+import Data.Decode as Decode
 
-list : list Data -> Data
-list = List
-
-map : list (pair Data Data) -> Data
-map = Map
-
-constr : int -> list Data -> Data
-constr = Builtin.constrData
-
-bool : bool -> Data
-bool b = Builtin.constrData (if b then 1 else 0) []
-```
-
-A little ADT is encoded by writing its `toData`-like function by hand or
-via a `Lift` impl to its Big twin.
-
-Labeled constructor fields encode flat. `type Datum = Datum { owner :
-Bytes, deadline : Int }` is one constructor with two positional fields
-whose labels exist only at compile time, so a value is
-`Constr 0 [B owner, I deadline]`, never `Constr 0 [List [..]]`. The
-future derived codecs reconstruct the same encoding and check arity
-`2` under tag `0`. A little labeled constructor is `constr i [..]` the
-same way. Only `type alias` records are a `List` of fields.
-
-## Decoding: `Data.Decode`
-
-Elm-JSON-style combinators written in Nash on top of `Data` patterns. A
-decoder is a function, hence a little type:
-
-```elm
-module Data.Decode exposing
-    ( decoder, error, run, expect
-    , data, int, bytes, list, map, pair
-    , field, index, constr, tag
-    , succeed, fail, map1, map2, map3, andThen, oneOf
-    )
-
-type decoder 'a = Decoder (Data -> option 'a)
-
-run : decoder 'a -> Data -> option 'a
-run (Decoder f) d = f d
-
-expect : decoder 'a -> Data -> 'a
-expect dec d =
-    case run dec d of
-        Some a -> a
-        None -> fail
-
--- primitives
-
-data : decoder Data
-data = Decoder Some
-
-int : decoder int
-int = Decoder (\d -> case d of
-    I n -> Some n
-    _ -> None)
-
-bytes : decoder bytes
-bytes = Decoder (\d -> case d of
-    B b -> Some b
-    _ -> None)
-
-list : decoder 'a -> decoder (list 'a)
-list item = Decoder (\d -> case d of
-    List xs -> traverse item xs
-    _ -> None)
-
-map : decoder 'k -> decoder 'v -> decoder (list (pair 'k 'v))
-pair : decoder 'a -> decoder 'b -> decoder (pair 'a 'b)
-
--- structure
-
-field : int -> decoder 'a -> decoder 'a          -- i-th element of a List
-field i item = Decoder (\d -> case d of
-    List xs -> at i (run item) xs
-    _ -> None)
-
-index : int -> decoder 'a -> decoder 'a          -- i-th field of a Constr
-index i item = Decoder (\d -> case d of
-    Constr pair(_, fs) -> at i (run item) fs
-    _ -> None)
-
-tag : decoder int                                -- the Constr tag
-constr : int -> decoder 'a -> decoder 'a         -- require tag, decode fields as List
-constr t item = Decoder (\d -> case d of
-    Constr pair(t', fs) -> if t == t' then run item (List fs)
-                    else None
-    _ -> None)
-
--- combinators
-
-succeed : 'a -> decoder 'a
-fail : decoder 'a
-map1 : ('a -> 'b) -> decoder 'a -> decoder 'b
-map2 : ('a -> 'b -> 'c) -> decoder 'a -> decoder 'b -> decoder 'c
-map3 : ...
-andThen : ('a -> decoder 'b) -> decoder 'a -> decoder 'b
-oneOf : decoder 'a -> decoder 'a -> decoder 'a   -- binary; chain for more
-
-impl Functor decoder where ...
-impl Monad decoder where ...                     -- enables `do`
-```
-
-`list` inherits the datatype context of `list`: `'a` must be Storable, so
-`list int`, `list Int` and `list Data` decode, but a `list (option int)`
-decoder fails the `Storable` representation predicate. Decoding a `List` into a little container is done
-with `andThen` and a fold over `list Data`.
-
-Example, a decoder for the `Datum` of [overview.md](overview.md) that
-returns a little record:
-
-```elm
 type alias datum = { owner : bytes, deadline : int }
 
-datumDecoder : decoder datum
-datumDecoder =
-    constr 0
-        (map2 (\o d -> { owner = o, deadline = d })
-            (field 0 bytes)
-            (field 1 int))
+datumDecoder : Decode.decoder datum
+datumDecoder = Decode.constr 0 <| do
+    owner <- Decode.field 0 Decode.bytes
+    deadline <- Decode.field 1 Decode.int
+    pure { owner = owner, deadline = deadline }
 ```
 
-and with `do`:
+Use ordinary `map`, `pure`, application and `do` instead of custom mapping or
+binding helpers. `reject` always returns `None`; `oneOf` tries a `Cons` sequence
+of decoders, stopping at the first success. Function values cannot inhabit a
+native list. Similarly decoded maps use `Cons` of tuples so decoded components
+can be arbitrary little values. Native `Decode.list` retains its Storable
+constraint. Map encoding/decoding preserves duplicates and order.
 
-```elm
-datumDecoder =
-    constr 0 <| do
-        o <- field 0 bytes
-        d <- field 1 int
-        succeed { owner = o, deadline = d }
-```
-
-Unlike unchecked `fromData`, a decoder validates and converts to little types as it goes
-and returns None on failure. Compared
-with a hand-written `case`, it composes.
-
-### Cost and fusion
-
-A decoder as written above allocates an `option` constr per step and calls
-through `Decoder` closures. After monomorphization and inlining most of the
-closures disappear, but the `Some`/`None` allocations remain. The compiler
-**may** later recognize decoder combinators (by their stdlib names, after
-monomorphization) and fuse a whole decoder into one decision tree with
-`chooseData` tests and memoized accessors, which is what the `case` version
-compiles to. This is an optimization, not a semantic change: `run` on a
-fused decoder returns the same `option`. Nothing in the language depends on
-it, so the stdlib is written first and the fusion pass is scheduled after
-`plans/08-optimizer.md`.
+The library is implemented in Nash. There is no compiler-generated decoder or
+special codegen treatment of decoder combinators. A user-written decoder that
+calls `fail` still aborts evaluation; `None` is the recoverable failure result.
 
 ## Error cases
 
