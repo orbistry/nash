@@ -27,9 +27,12 @@ description: "module Lift exposing (Lift)\ntrait Lift 'small 'big where\n    lif
                             name: "Box",
                         },
                         args: [
-                            Var(
-                                0,
-                            ),
+                            Var {
+                                index: 0,
+                                repr: ReprSet(
+                                    1,
+                                ),
+                            },
                         ],
                     },
                 ],

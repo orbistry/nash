@@ -717,7 +717,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 key.heads.iter().map(head).collect::<Vec<_>>().join(" ")
             )),
             Doc::reflow(
-                "Remove one impl or make their heads disjoint; context constraints do not disambiguate heads.",
+                "Remove one impl or make their heads disjoint; ordinary trait constraints do not disambiguate heads.",
             ),
         ),
         Error::MissingSuperclass {
@@ -1459,7 +1459,13 @@ fn head_con(value: &nash_ast::HeadCon<'_>) -> String {
 fn head(value: &nash_ast::Head<'_>) -> String {
     use nash_ast::Head;
     match value {
-        Head::Var(n) => format!("'a{n}"),
+        Head::Var { index: n, repr } => {
+            if repr.is_all() {
+                format!("'a{n}")
+            } else {
+                format!("('a{n} : {})", repr.name())
+            }
+        }
         Head::Named { reference, args } => {
             if args.is_empty() {
                 qualified(*reference)
@@ -1635,7 +1641,13 @@ mod coverage {
             Error::MissingSuperclass {
                 region: r(),
                 trait_: q(),
-                heads: &[Located::at(r(), nash_ast::Head::Var(0))],
+                heads: &[Located::at(
+                    r(),
+                    nash_ast::Head::Var {
+                        index: 0,
+                        repr: nash_ast::primitives::ReprSet::ALL
+                    }
+                )],
                 superclass: &nash_ast::Pred::Trait {
                     trait_: q(),
                     args: &[],
@@ -1723,7 +1735,10 @@ mod coverage {
             Error::OverlappingImpls {
                 key: &nash_ast::ImplKey {
                     trait_: q(),
-                    heads: &[nash_ast::Head::Var(0)],
+                    heads: &[nash_ast::Head::Var {
+                        index: 0,
+                        repr: nash_ast::primitives::ReprSet::ALL
+                    }],
                 },
                 first: r(),
                 second: r2(),
@@ -2938,7 +2953,13 @@ mod branches {
                 Error::MissingSuperclass {
                     region: r(),
                     trait_,
-                    heads: &[Located::at(r(), nash_ast::Head::Var(0))],
+                    heads: &[Located::at(
+                        r(),
+                        nash_ast::Head::Var {
+                            index: 0,
+                            repr: nash_ast::primitives::ReprSet::ALL
+                        }
+                    )],
                     superclass: &nash_ast::Pred::Trait {
                         trait_,
                         args: &[&arg],
@@ -3033,7 +3054,6 @@ mod branches {
         assert!(report.labels[0].region == *first && report.region == *second);
         let rendered = crate::render_plain(&report, &source, "Bad.nash");
         assert!(!rendered.contains("Rename"));
-        assert!(rendered.contains("context constraints"));
         insta::with_settings!({ description => input, omit_expression => true }, {
             insta::assert_snapshot!(rendered);
         });

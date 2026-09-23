@@ -5,7 +5,8 @@ info: diagnostic
 ---
 nash::names::missing_superclass
 
-  × The `Main.Ord` impl for (Primitive.List 'a0) does not establish superclass 1:
+  × The `Main.Ord` impl for (Primitive.List ('a0 : Big)) does not establish
+  │ superclass 1:
    ╭─[src/Main.nash:8:1]
  7 │         eq x = x
  8 │ ╭─▶ impl Ord (List 'a) where

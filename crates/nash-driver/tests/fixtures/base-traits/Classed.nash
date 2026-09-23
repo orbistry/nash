@@ -1,0 +1,22 @@
+module Main exposing (..)
+
+trait Echo 'a where
+    echo : 'a -> 'a
+
+impl Echo ('a : Big) where
+    echo value = value
+
+impl Echo ('a : Little) where
+    echo value = value
+
+bigValue : Int
+bigValue = 42
+littleValue : int
+littleValue = 42
+
+tests
+    test "Big class uses its implementation" = do
+        assert (echo bigValue == bigValue)
+
+    test "Little class uses its implementation" = do
+        assert (echo littleValue == littleValue)

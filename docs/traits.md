@@ -133,7 +133,8 @@ both its trait and its head type are visible.
   Variables may recur across patterns; every occurrence denotes the same type.
   Inline annotations add representation prerequisites, for example
   `impl Keep (list ('a : Big))` requires `Big 'a`. They are checked during
-  superclass proof and selection; they do not distinguish overlapping heads.
+  superclass proof and selection. Compiler-owned representation predicates on
+  head variables also distinguish disjoint implementation classes.
   Matching must preserve that equality. A bare variable head is permitted only
   when the trait is defined in the same module as the impl. Function heads
   remain excluded; reflexive Lift remains a compiler-provided rule.
@@ -207,8 +208,10 @@ common well-kinded type assignment. Freshen their variables independently
 before checking this. Trait prerequisites do not establish disjointness merely
 because an impl is currently absent. Thus `SomeTrait (list int)` and
 `SomeTrait (list bytes)` are disjoint, while `SomeTrait (list 'a)` overlaps
-both. A blanket variable head also overlaps concrete heads regardless of
-impl contexts; contexts do not make these ordinary impls disjoint. Overlap
+both. A blanket variable head admits the intersection of its `Big`, `Const`, `Term`,
+`Storable`, and `Little` predicates. Disjoint representation classes do not
+overlap: `Keep ('a : Big)` can coexist with `Keep ('a : Little)` or `Keep int`.
+Ordinary trait prerequisites do not distinguish heads. Overlap
 remains an error; declaration order does not select an impl.
 Check this across
 all build interfaces as well as within a module. In particular, separate

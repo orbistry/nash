@@ -1,14 +1,14 @@
 ---
 source: crates/nash-solve/tests/inference.rs
-description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Big 'a => Keep 'a where\n    keep x = x\ngeneric : Const 'a => 'a -> 'a\ngeneric x = keep x\n"
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Const, Storable, Little)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\ngeneric : 'a -> 'a\ngeneric x = keep x\n"
 info: diagnostic
 ---
 nash::type::missing_constraint
 
   × `keep` requires undeclared constraint `Keep 'a`.
-   ╭─[Main.nash:9:13]
- 8 │ generic : Const 'a => 'a -> 'a
- 9 │ generic x = keep x
+   ╭─[Main.nash:8:13]
+ 7 │ generic : 'a -> 'a
+ 8 │ generic x = keep x
    · ───┬───     ──┬─
    ·    │          ╰── constraint required here
    ·    ╰── annotation for `generic`

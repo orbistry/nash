@@ -10,4 +10,4 @@ nash::syntax
  1 │ type T ('f : ) = A
    ·              ─
    ╰────
-  help: Use `Big`, `Const`, `Term`, or `Storable`.
+  help: Use `Big`, `Const`, `Term`, `Storable`, or `Little`.

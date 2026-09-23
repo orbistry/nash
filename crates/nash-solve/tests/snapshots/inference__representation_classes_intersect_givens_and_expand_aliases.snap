@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (Big, Const, Storable, Little)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Const) where\n    keep x = x\nconstrained : (Storable 'a, Little 'a) => 'a -> 'a\nconstrained x = keep x\nalias : Const 'a => identity 'a -> identity 'a\nalias x = keep x\napplication : Const ('f 'a) => 'f 'a -> 'f 'a\napplication x = keep x\n"
+---
+alias : forall a. (Const a, Little a) => identity a -> identity a
+application : forall a f. (Apply f a, Const (f a)) => f a -> f a
+constrained : forall a. (Storable a, Little a) => a -> a

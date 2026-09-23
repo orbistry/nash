@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (Big, Const, Storable, Little)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\nbig : Data -> Data\nbig x = keep x\nlittle : int -> int\nlittle x = keep x\ngeneric : Big 'a => 'a -> 'a\ngeneric x = keep x\n"
+---
+big : Data -> Data
+generic : forall a. Big a => a -> a
+little : int -> int

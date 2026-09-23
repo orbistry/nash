@@ -60,12 +60,18 @@ Core impl heads:
             },
             value: Tuple(
                 [
-                    Var(
-                        0,
-                    ),
-                    Var(
-                        1,
-                    ),
+                    Var {
+                        index: 0,
+                        repr: ReprSet(
+                            7,
+                        ),
+                    },
+                    Var {
+                        index: 1,
+                        repr: ReprSet(
+                            7,
+                        ),
+                    },
                 ],
             ),
         },

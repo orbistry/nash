@@ -244,9 +244,12 @@ Module {
                                 name: "Alias",
                             },
                             args: [
-                                Var(
-                                    0,
-                                ),
+                                Var {
+                                    index: 0,
+                                    repr: ReprSet(
+                                        1,
+                                    ),
+                                },
                             ],
                         },
                     },

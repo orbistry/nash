@@ -9,4 +9,4 @@ nash::syntax
  1 │ type box ('a : Unknown) = Box
    ·                ─
    ╰────
-  help: Use `Big`, `Const`, `Term`, or `Storable`.
+  help: Use `Big`, `Const`, `Term`, `Storable`, or `Little`.

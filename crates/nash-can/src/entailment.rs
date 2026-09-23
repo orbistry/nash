@@ -269,10 +269,33 @@ impl<'a> Resolver<'_, 'a> {
                 return Ok(());
             }
         }
+        let mut class_givens = Vec::new();
+        for pred in given {
+            if let Some(trait_) = pred
+                .trait_
+                .filter(|name| nash_ast::primitives::ReprTrait::of(*name).is_some())
+            {
+                let args = pred
+                    .args
+                    .iter()
+                    .map(|arg| self.canonical(arg, 0))
+                    .collect::<Result<Vec<_>, _>>()?;
+                class_givens.push(Pred::Implied {
+                    trait_,
+                    args: self.bump.alloc_slice_fill_iter(args),
+                });
+            }
+        }
         if let Some(required) = wanted.trait_.and_then(nash_ast::primitives::ReprTrait::of) {
             let typ = self.canonical(wanted.args[0], 0)?;
-            return match crate::kinds::repr_of(self.bump, &self.tables.kinds, typ) {
-                Some(actual) if required.admits().contains(actual) => Ok(()),
+            return match crate::kinds::in_class(
+                self.bump,
+                &self.tables.kinds,
+                typ,
+                required.admits(),
+                &class_givens,
+            ) {
+                nash_ast::head::Match::Yes(()) => Ok(()),
                 _ => Err(Failure::Missing),
             };
         }
@@ -345,7 +368,9 @@ impl<'a> Resolver<'_, 'a> {
             .impls_for(wanted.trait_.ok_or(Failure::Missing)?)
         {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical,
+                &mut nash_ast::head::Canonical(&|typ, class| {
+                    crate::kinds::in_class(self.bump, &self.tables.kinds, typ, class, &class_givens)
+                }),
                 key.heads,
                 &canonical_args,
                 info.variables.len(),

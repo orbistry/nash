@@ -639,9 +639,24 @@ mod tests {
                     traits.push(trait_);
                     for heads in [
                         vec![],
-                        vec![Head::Var(0)],
-                        vec![Head::Var(1)],
-                        vec![Head::Var(0), Head::Var(1)],
+                        vec![Head::Var {
+                            index: 0,
+                            repr: nash_ast::primitives::ReprSet::ALL,
+                        }],
+                        vec![Head::Var {
+                            index: 1,
+                            repr: nash_ast::primitives::ReprSet::ALL,
+                        }],
+                        vec![
+                            Head::Var {
+                                index: 0,
+                                repr: nash_ast::primitives::ReprSet::ALL,
+                            },
+                            Head::Var {
+                                index: 1,
+                                repr: nash_ast::primitives::ReprSet::ALL,
+                            },
+                        ],
                     ] {
                         let key = ImplKey {
                             trait_,

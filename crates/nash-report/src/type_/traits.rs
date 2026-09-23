@@ -282,7 +282,14 @@ fn requirement(l: &Localizer, requirement: &Requirement<'_>) -> Doc {
 
 fn head_doc(l: &Localizer, head: &Head<'_>, nested: bool) -> Doc {
     let (doc, parens) = match head {
-        Head::Var(index) => (Doc::text(format!("'a{index}")), false),
+        Head::Var { index, repr } => (
+            Doc::text(if repr.is_all() {
+                format!("'a{index}")
+            } else {
+                format!("('a{index} : {})", repr.name())
+            }),
+            false,
+        ),
         Head::Named { reference, args } => (
             Doc::hsep(
                 std::iter::once(l.to_doc(reference.home, reference.name))

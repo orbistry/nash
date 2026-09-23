@@ -120,6 +120,13 @@ impl<'a> InferenceTypes<'_, 'a> {
 
 impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
     type Node = Variable;
+    fn in_class(
+        &mut self,
+        _: Variable,
+        _: nash_ast::primitives::ReprSet,
+    ) -> nash_ast::head::Match<()> {
+        unreachable!("classed matching uses ClassedTypes")
+    }
     fn constructor(
         &mut self,
         node: Variable,
@@ -179,17 +186,107 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
     }
 }
 
+struct ClassedTypes<'u, 'a> {
+    types: InferenceTypes<'u, 'a>,
+    tables: &'u Tables<'a>,
+    givens: &'u [crate::preds::Body<'a>],
+    allocated: &'u mut Vec<Variable>,
+}
+impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
+    type Node = Variable;
+    fn constructor(
+        &mut self,
+        node: Variable,
+        expected: HeadCon<'a>,
+    ) -> nash_ast::head::Match<Vec<Variable>> {
+        self.types.constructor(node, expected)
+    }
+    fn equal(
+        &mut self,
+        a: Variable,
+        b: Variable,
+        remaining: &mut usize,
+    ) -> Result<nash_ast::head::Match<()>, nash_ast::head::Limit> {
+        self.types.equal(a, b, remaining)
+    }
+    fn in_class(
+        &mut self,
+        node: Variable,
+        class: nash_ast::primitives::ReprSet,
+    ) -> nash_ast::head::Match<()> {
+        use nash_ast::{
+            head::Match,
+            primitives::{ReprSet, ReprTrait},
+        };
+        let uf = &mut *self.types.0;
+        let subject = crate::representation::subject(uf, &self.tables.kinds, node, self.allocated);
+        if let Some(actual) =
+            crate::representation::known(uf, &self.tables.kinds, subject, self.allocated)
+        {
+            return if class.contains(actual) {
+                Match::Yes(())
+            } else {
+                Match::No
+            };
+        }
+        let mut proven = ReprSet::ALL;
+        for given in self.givens {
+            if let crate::preds::Body::Trait { trait_, args, .. } = given
+                && let Some(required) = ReprTrait::of(*trait_)
+            {
+                let arg =
+                    crate::representation::subject(uf, &self.tables.kinds, args[0], self.allocated);
+                if crate::preds::same_args(uf, &[arg], &[subject]) {
+                    proven = proven.intersect(required.admits());
+                }
+            }
+        }
+        if !proven.is_all() && proven.intersect(class) == proven {
+            return Match::Yes(());
+        }
+        match self.types.view(subject).0 {
+            View::Flexible | View::Application | View::Error => Match::Deferred,
+            _ => Match::No,
+        }
+    }
+}
+
+pub(crate) fn in_class<'a>(
+    tables: &Tables<'a>,
+    uf: &mut UnionFind<'a>,
+    node: Variable,
+    class: nash_ast::primitives::ReprSet,
+    givens: &[crate::preds::Body<'a>],
+    allocated: &mut Vec<Variable>,
+) -> nash_ast::head::Match<()> {
+    use nash_ast::head::Types;
+    ClassedTypes {
+        types: InferenceTypes(uf),
+        tables,
+        givens,
+        allocated,
+    }
+    .in_class(node, class)
+}
+
 pub(crate) fn select<'a>(
     tables: &Tables<'a>,
     uf: &mut UnionFind<'a>,
     trait_: QualifiedName<'a>,
     args: &[Variable],
+    givens: &[crate::preds::Body<'a>],
+    allocated: &mut Vec<Variable>,
 ) -> Selection<'a> {
     use nash_ast::head::{Match, matches};
-    let mut types = InferenceTypes(uf);
+    let mut types = ClassedTypes {
+        types: InferenceTypes(uf),
+        tables,
+        givens,
+        allocated,
+    };
     let unknown_outer = args.iter().any(|arg| {
         matches!(
-            types.view(*arg).0,
+            types.types.view(*arg).0,
             View::Flexible | View::Rigid(_) | View::Application | View::Error
         )
     });

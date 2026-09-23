@@ -2057,3 +2057,44 @@ pub fn builtin_interface(bump: &Bump) -> crate::Interface<'_> {
         })),
     }
 }
+
+/// Test a representation class against a type and its declared assumptions.
+pub fn in_class<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    typ: &'a Located<Type<'a>>,
+    class: primitives::ReprSet,
+    given: &[Pred<'a>],
+) -> nash_ast::head::Match<()> {
+    if let Some(actual) = repr_of(bump, env, typ) {
+        return if class.contains(actual) {
+            nash_ast::head::Match::Yes(())
+        } else {
+            nash_ast::head::Match::No
+        };
+    }
+    let subject = representation_subject(bump, env, typ);
+    let mut proven = primitives::ReprSet::ALL;
+    for pred in given {
+        if let Some(required) = pred.trait_ref().and_then(ReprTrait::of)
+            && let [arg] = pred.args()
+            && (Pred::Implied {
+                trait_: ReprTrait::Big.qualified(),
+                args: bump.alloc_slice_copy(&[representation_subject(bump, env, arg)]),
+            })
+            .key()
+                == (Pred::Implied {
+                    trait_: ReprTrait::Big.qualified(),
+                    args: bump.alloc_slice_copy(&[subject]),
+                })
+                .key()
+        {
+            proven = proven.intersect(required.admits());
+        }
+    }
+    if !proven.is_all() && proven.intersect(class) == proven {
+        nash_ast::head::Match::Yes(())
+    } else {
+        nash_ast::head::Match::No
+    }
+}

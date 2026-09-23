@@ -16,5 +16,5 @@ nash::names::overlapping_impls
    ·             ╰── overlapping impl in `Second`
  4 │     equal x y = False
    ╰────
-  help: Remove one impl or make their heads disjoint; context constraints do not
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
         disambiguate heads.

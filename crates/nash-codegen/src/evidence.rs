@@ -146,10 +146,10 @@ fn check_heads<'a>(
     while let Some((head, depth)) = pending.pop() {
         step(remaining, depth)?;
         match head {
-            Head::Var(index) if usize::from(*index) >= variables => {
+            Head::Var { index, .. } if usize::from(*index) >= variables => {
                 return Err(Error::MalformedImpl);
             }
-            Head::Var(_) => {}
+            Head::Var { .. } => {}
             Head::Named { args, .. } | Head::Tuple(args) => {
                 if matches!(head, Head::Tuple(_)) && args.len() < 2 {
                     return Err(Error::MalformedImpl);
@@ -442,7 +442,7 @@ impl<'a> Grounder<'a, '_> {
     ) -> Result<&'a Located<Type<'a>>, Error<'a>> {
         step(&mut self.remaining, depth)?;
         let typ = match head {
-            Head::Var(index) => {
+            Head::Var { index, .. } => {
                 return variables
                     .get(usize::from(*index))
                     .copied()

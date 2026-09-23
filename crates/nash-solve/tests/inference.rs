@@ -1432,6 +1432,7 @@ fn expanding_impl_context_stops_with_a_diagnostic() {
             keep : 'a -> 'a
         impl Keep (list (list 'a)) => Keep (list 'a) where
             keep xs = xs
+        value : list unit
         value = keep [()]
     "#
     );
@@ -5283,6 +5284,65 @@ fn labeled_multi_constructor_update_rejected() {
         type choice = First { value : bool } | Second { value : bool }
         change : choice -> choice
         change b = { b | value = Primitive.True }
+    "#
+    );
+}
+
+#[test]
+fn representation_classes_select_disjoint_blankets() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Storable, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        impl Keep ('a : Little) where
+            keep x = x
+        big : Data -> Data
+        big x = keep x
+        little : int -> int
+        little x = keep x
+        generic : Big 'a => 'a -> 'a
+        generic x = keep x
+    "#
+    );
+}
+
+#[test]
+fn representation_classes_intersect_givens_and_expand_aliases() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Storable, Little)
+        type alias identity 'a = 'a
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Const) where
+            keep x = x
+        constrained : (Storable 'a, Little 'a) => 'a -> 'a
+        constrained x = keep x
+        alias : Const 'a => identity 'a -> identity 'a
+        alias x = keep x
+        application : Const ('f 'a) => 'f 'a -> 'f 'a
+        application x = keep x
+    "#
+    );
+}
+
+#[test]
+fn representation_class_requires_a_given_for_rigid_types() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Storable, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        generic : 'a -> 'a
+        generic x = keep x
     "#
     );
 }

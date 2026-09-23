@@ -14,7 +14,7 @@ nash::type::missing_impl
    ╰────
   help: Available impl heads:
 
-            (list 'a0)
+            (list ('a0 : Storable))
             unit
 
         Requirement chain:

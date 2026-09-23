@@ -113,11 +113,32 @@ impl ReprTrait {
     }
 }
 
-/// Used only for representation contradictions, never for kind unification.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Admitted runtime representations; independent of kind unification.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ReprSet(u8);
 impl ReprSet {
     pub const ALL: Self = Self(7);
+    pub const fn only(repr: Repr) -> Self {
+        match repr {
+            Repr::Big => Self(1),
+            Repr::Const => Self(2),
+            Repr::Term => Self(4),
+        }
+    }
+    pub const fn is_all(self) -> bool {
+        self.0 == Self::ALL.0
+    }
+    pub const fn name(self) -> &'static str {
+        match self.0 {
+            1 => "Big",
+            2 => "Const",
+            4 => "Term",
+            3 => "Storable",
+            6 => "Little",
+            7 => "Any",
+            _ => "None",
+        }
+    }
     pub const fn intersect(self, other: Self) -> Self {
         Self(self.0 & other.0)
     }

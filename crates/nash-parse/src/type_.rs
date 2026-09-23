@@ -572,6 +572,7 @@ impl<'a> Parser<'a> {
             "Const" => Repr::Const,
             "Term" => Repr::Term,
             "Storable" => Repr::Storable,
+            "Little" => Repr::Little,
             other => return Err(error::Repr::Name(other, row, col)),
         };
         let value = self.add_end(start, repr);
@@ -759,6 +760,11 @@ macro_rules! assert_indented_type_snapshot {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn little_representation_bound() {
+        assert_type_snapshot!("('a : Little)");
+    }
+
     #[test]
     fn scheme_single_constraint() {
         assert_scheme_snapshot!("Eq 'a => 'a -> 'a -> bool");

@@ -1,0 +1,88 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('b : Little) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('b : Const) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Const) where\n    keep x = x\nimpl Keep ('b : Term) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Storable) where\n    keep x = x\nimpl Keep ('b : Little) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('b : Storable) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep 'b where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep int where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep Data where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list ('a : Big)) where\n    keep x = x\nimpl Keep (list ('b : Const)) where\n    keep x = x\n\n\nmodule Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep (identity int) where\n    keep x = x\n"
+---
+Case 1: accepted
+Case 2: accepted
+Case 3: accepted
+nash::names::overlapping_impls
+
+  × These `Main.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is ('a0 : Little):
+   ╭─[src/Main.nash:7:1]
+ 4 │         keep : 'a -> 'a
+ 5 │ ╭─▶ impl Keep ('a : Storable) where
+ 6 │ ├─▶     keep x = x
+   · ╰──── first impl in `Main`
+ 7 │ ╭─▶ impl Keep ('b : Little) where
+ 8 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
+        disambiguate heads.
+
+nash::names::overlapping_impls
+
+  × These `Main.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is ('a0 : Storable):
+   ╭─[src/Main.nash:7:1]
+ 4 │         keep : 'a -> 'a
+ 5 │ ╭─▶ impl Keep ('a : Big) where
+ 6 │ ├─▶     keep x = x
+   · ╰──── first impl in `Main`
+ 7 │ ╭─▶ impl Keep ('b : Storable) where
+ 8 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
+        disambiguate heads.
+
+nash::names::overlapping_impls
+
+  × These `Main.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is 'a0:
+   ╭─[src/Main.nash:7:1]
+ 4 │         keep : 'a -> 'a
+ 5 │ ╭─▶ impl Keep ('a : Big) where
+ 6 │ ├─▶     keep x = x
+   · ╰──── first impl in `Main`
+ 7 │ ╭─▶ impl Keep 'b where
+ 8 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
+        disambiguate heads.
+
+Case 7: accepted
+nash::names::overlapping_impls
+
+  × These `Main.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is Primitive.Data:
+   ╭─[src/Main.nash:7:1]
+ 4 │         keep : 'a -> 'a
+ 5 │ ╭─▶ impl Keep ('a : Big) where
+ 6 │ ├─▶     keep x = x
+   · ╰──── first impl in `Main`
+ 7 │ ╭─▶ impl Keep Data where
+ 8 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
+        disambiguate heads.
+
+Case 9: accepted
+nash::names::overlapping_impls
+
+  × These `Main.Keep` impls can both match the same trait arguments. The overlapping
+  │ head is (Main.identity Primitive.int):
+   ╭─[src/Main.nash:7:1]
+ 4 │         keep : 'a -> 'a
+ 5 │ ╭─▶ impl Keep ('a : Big) where
+ 6 │ ├─▶     keep x = x
+   · ╰──── first impl in `Main`
+ 7 │ ╭─▶ impl Keep (identity int) where
+ 8 │ ├─▶     keep x = x
+   · ╰──── overlapping impl in `Main`
+   ╰────
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
+        disambiguate heads.

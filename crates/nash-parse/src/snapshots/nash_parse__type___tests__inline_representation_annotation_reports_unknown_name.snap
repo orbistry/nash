@@ -10,4 +10,4 @@ nash::syntax
  1 │ list ('a : Wrong)
    ·            ─
    ╰────
-  help: Use `Big`, `Const`, `Term`, or `Storable`.
+  help: Use `Big`, `Const`, `Term`, `Storable`, or `Little`.

@@ -102,6 +102,7 @@ pub fn src_to_doc(ctx: Ctx, typ: &Located<nash_source::Type<'_>>) -> Doc {
                 nash_source::Repr::Const => "Const",
                 nash_source::Repr::Term => "Term",
                 nash_source::Repr::Storable => "Storable",
+                nash_source::Repr::Little => "Little",
             };
             parens(Doc::hsep([
                 src_to_doc(Ctx::None, typ),

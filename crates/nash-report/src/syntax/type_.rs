@@ -248,14 +248,14 @@ pub(super) fn to_repr_report(source: &Source<'_>, error: &Repr<'_>, sr: Row, sc:
             r,
             c,
             "Expected a representation bound.",
-            "Use `Big`, `Const`, `Term`, or `Storable`.",
+            "Use `Big`, `Const`, `Term`, `Storable`, or `Little`.",
         ),
         Repr::Name(name, r, c) => problem(
             "UNKNOWN REPRESENTATION",
             r,
             c,
             &format!("Unknown representation bound `{name}`."),
-            "Use `Big`, `Const`, `Term`, or `Storable`.",
+            "Use `Big`, `Const`, `Term`, `Storable`, or `Little`.",
         ),
     };
     wide(report, sr, sc)

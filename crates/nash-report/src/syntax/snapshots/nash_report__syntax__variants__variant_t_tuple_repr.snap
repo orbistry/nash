@@ -9,4 +9,4 @@ nash::syntax
  1 │ f : ('a : 1)
    ·           ─
    ╰────
-  help: Use `Big`, `Const`, `Term`, or `Storable`.
+  help: Use `Big`, `Const`, `Term`, `Storable`, or `Little`.

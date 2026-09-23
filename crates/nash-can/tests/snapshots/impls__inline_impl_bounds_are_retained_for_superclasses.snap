@@ -115,9 +115,12 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                             name: "list",
                         },
                         args: [
-                            Var(
-                                0,
-                            ),
+                            Var {
+                                index: 0,
+                                repr: ReprSet(
+                                    1,
+                                ),
+                            },
                         ],
                     },
                 },
@@ -540,9 +543,12 @@ description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> '
                             name: "list",
                         },
                         args: [
-                            Var(
-                                0,
-                            ),
+                            Var {
+                                index: 0,
+                                repr: ReprSet(
+                                    1,
+                                ),
+                            },
                         ],
                     },
                 },

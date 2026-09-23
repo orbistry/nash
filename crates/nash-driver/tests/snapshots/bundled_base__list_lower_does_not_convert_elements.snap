@@ -14,7 +14,7 @@ nash::type::missing_impl
    ╰────
   help: Available impl heads:
 
-            (option 'a0) (Option 'a0)
+            (option ('a0 : Big)) (Option ('a0 : Big))
             ordering Ordering
             bool Bool
             bytes Bytes

@@ -425,6 +425,7 @@ pub enum Repr {
     Const,
     Term,
     Storable,
+    Little,
 }
 
 #[derive(Debug)]

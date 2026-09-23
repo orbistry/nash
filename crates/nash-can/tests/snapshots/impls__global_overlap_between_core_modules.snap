@@ -14,5 +14,5 @@ nash::names::overlapping_impls
    · │╰── first impl in `First`
    · ╰── overlapping impl in `Second`
    ╰────
-  help: Remove one impl or make their heads disjoint; context constraints do not
+  help: Remove one impl or make their heads disjoint; ordinary trait constraints do not
         disambiguate heads.

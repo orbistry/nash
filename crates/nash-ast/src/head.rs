@@ -2,6 +2,7 @@
 use std::collections::BTreeMap;
 
 use crate::Type;
+use crate::primitives::{Repr, ReprSet};
 use crate::{Head, HeadCon};
 use nash_region::Located;
 
@@ -16,6 +17,7 @@ pub enum Match<T> {
 
 pub trait Types<'a> {
     type Node: Copy;
+    fn in_class(&mut self, node: Self::Node, class: ReprSet) -> Match<()>;
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>>;
     fn equal(
         &mut self,
@@ -25,7 +27,7 @@ pub trait Types<'a> {
     ) -> Result<Match<()>, Limit>;
 }
 
-pub struct Canonical;
+pub struct Canonical<'r, 'a>(pub &'r dyn Fn(&'a Located<Type<'a>>, ReprSet) -> Match<()>);
 
 #[derive(PartialEq, Eq)]
 enum CanonicalCon<'a> {
@@ -81,8 +83,11 @@ fn canonical_view<'a>(
     (con, args)
 }
 
-impl<'a> Types<'a> for Canonical {
+impl<'a> Types<'a> for Canonical<'_, 'a> {
     type Node = &'a Located<Type<'a>>;
+    fn in_class(&mut self, node: Self::Node, class: ReprSet) -> Match<()> {
+        (self.0)(node, class)
+    }
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
         let (con, args) = canonical_view(node);
         if con == CanonicalCon::Known(expected) {
@@ -120,7 +125,7 @@ pub fn children<'p, 'a>(head: &'p Head<'a>) -> Vec<&'p Head<'a>> {
     match head {
         Head::Named { args, .. } | Head::Tuple(args) => args.iter().collect(),
         Head::Function(from, to) => vec![from, to],
-        Head::Var(_) => Vec::new(),
+        Head::Var { .. } => Vec::new(),
     }
 }
 
@@ -140,7 +145,7 @@ pub fn matches<'a, T: Types<'a>>(
     while let Some((head, argument)) = pending.pop() {
         step(remaining)?;
         match head {
-            Head::Var(index) => {
+            Head::Var { index, repr } => {
                 let binding = &mut bindings[usize::from(*index)];
                 if let Some(previous) = *binding {
                     match types.equal(previous, argument, remaining)? {
@@ -149,6 +154,13 @@ pub fn matches<'a, T: Types<'a>>(
                         Match::Deferred => deferred = true,
                     }
                 } else {
+                    if !repr.is_all() {
+                        match types.in_class(argument, *repr) {
+                            Match::Yes(()) => {}
+                            Match::No => return Ok(Match::No),
+                            Match::Deferred => deferred = true,
+                        }
+                    }
                     *binding = Some(argument);
                 }
             }
@@ -189,7 +201,7 @@ fn resolve<'p, 'a>(
     substitution: &Substitution<'p, 'a>,
     remaining: &mut usize,
 ) -> Result<Term<'p, 'a>, Limit> {
-    while let Head::Var(index) = term.pattern {
+    while let Head::Var { index, .. } = term.pattern {
         step(remaining)?;
         let Some(next) = substitution.get(&(term.side, *index)) else {
             break;
@@ -204,23 +216,26 @@ fn resolve<'p, 'a>(
 pub fn overlaps(
     left: &[Head<'_>],
     right: &[Head<'_>],
+    repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
     remaining: &mut usize,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, true)
+    unifiable(left, right, repr_of, remaining, true)
 }
 
 /// Equality within one impl preserves variables shared between its heads.
 pub fn can_equal(
     left: &[Head<'_>],
     right: &[Head<'_>],
+    repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
     remaining: &mut usize,
 ) -> Result<bool, Limit> {
-    unifiable(left, right, remaining, false)
+    unifiable(left, right, repr_of, remaining, false)
 }
 
 fn unifiable(
     left: &[Head<'_>],
     right: &[Head<'_>],
+    repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
     remaining: &mut usize,
     freshen: bool,
 ) -> Result<bool, Limit> {
@@ -228,6 +243,7 @@ fn unifiable(
         return Ok(false);
     }
     let mut substitution = BTreeMap::new();
+    let mut classes = BTreeMap::new();
     let mut pending: Vec<_> = left
         .iter()
         .zip(right)
@@ -248,16 +264,34 @@ fn unifiable(
         step(remaining)?;
         let left = resolve(left, &substitution, remaining)?;
         let right = resolve(right, &substitution, remaining)?;
-        if let Head::Var(index) = left.pattern {
+        if let Head::Var { index, repr } = left.pattern {
+            let mine = classes.get(&(left.side, *index)).copied().unwrap_or(*repr);
+            match right.pattern {
+                Head::Var { index: other, repr } => {
+                    let theirs = classes.get(&(right.side, *other)).copied().unwrap_or(*repr);
+                    let both = mine.intersect(theirs);
+                    if both.is_empty() {
+                        return Ok(false);
+                    }
+                    classes.insert((right.side, *other), both);
+                }
+                head => {
+                    if repr_of(head).is_some_and(|actual| !mine.contains(actual)) {
+                        return Ok(false);
+                    }
+                }
+            }
             let variable = (left.side, *index);
-            if matches!(right.pattern, Head::Var(other) if variable == (right.side, *other)) {
+            if matches!(right.pattern, Head::Var { index: other, .. } if variable == (right.side, *other))
+            {
                 continue;
             }
             let mut occurs = vec![right];
             while let Some(term) = occurs.pop() {
                 let term = resolve(term, &substitution, remaining)?;
                 step(remaining)?;
-                if matches!(term.pattern, Head::Var(other) if variable == (term.side, *other)) {
+                if matches!(term.pattern, Head::Var { index: other, .. } if variable == (term.side, *other))
+                {
                     return Ok(false);
                 }
                 occurs.extend(children(term.pattern).into_iter().map(|pattern| Term {
@@ -266,7 +300,7 @@ fn unifiable(
                 }));
             }
             substitution.insert(variable, right);
-        } else if matches!(right.pattern, Head::Var(_)) {
+        } else if matches!(right.pattern, Head::Var { .. }) {
             pending.push((right, left));
         } else {
             if left.pattern.con() != right.pattern.con() {

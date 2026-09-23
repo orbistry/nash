@@ -6,7 +6,7 @@ info: diagnostic
 Case 1: accepted
 nash::names::missing_superclass
 
-  × The `Main.Ord` impl for (Main.Box 'a0) does not establish superclass 1:
+  × The `Main.Ord` impl for (Main.Box ('a0 : Big)) does not establish superclass 1:
    ╭─[src/Main.nash:8:1]
  7 │         compare : 'a -> 'a
  8 │ ╭─▶ impl Eq (Other 'a) => Ord (Box 'a) where

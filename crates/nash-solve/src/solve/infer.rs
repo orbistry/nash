@@ -503,9 +503,12 @@ impl<'a> Solver<'a, '_> {
                 if !defaulted {
                     break;
                 }
+                // The young scope is already generalized. Defaulting can make
+                // representation queries allocate alias substitutions; those
+                // belong to the enclosing live scope.
                 state = self.resolve_wanted(
                     uf,
-                    young,
+                    rank,
                     state,
                     wanted_start,
                     Some(binder),

@@ -148,7 +148,7 @@ Changes from Elm:
 - Type parameters are `'a` binders. A binder may carry a representation
   annotation `('a : Storable)` on `type`, `type alias` and `trait`
   parameters and on type variables inside annotations. The names are
-  exactly `Big`, `Const`, `Term`, `Storable`; the parser rejects any other
+  exactly `Big`, `Const`, `Term`, `Storable`, `Little`; the parser rejects any other
   name. The annotation is sugar for the context entry `Storable 'a`
   ([kinds.md](kinds.md)). There is no syntax for kinds themselves; kinds
   are inferred.
@@ -534,7 +534,7 @@ context        = constraint | '(' constraint { ',' constraint } ')' ;
 constraint     = ( upper_var | qualified_upper ) type_term { type_term } ;
 
 type_param     = type_var | '(' type_var ':' repr ')' ; (* new *)
-repr           = 'Big' | 'Const' | 'Term' | 'Storable' ;   (* sugar for a context entry *)
+repr           = 'Big' | 'Const' | 'Term' | 'Storable' | 'Little' ;   (* sugar for a context entry *)
 ```
 
 ### Expressions

@@ -62,7 +62,7 @@ pub(crate) fn tables<'a>(
             );
         }
         for impl_ in interface.impls {
-            insert_impl(bump, &mut tables.impls, impl_)?;
+            insert_impl(bump, kind_env, &mut tables.impls, impl_)?;
         }
     }
     for trait_ in module.traits {
@@ -90,6 +90,7 @@ pub(crate) fn tables<'a>(
     for impl_ in module.impls {
         insert_impl(
             bump,
+            kind_env,
             &mut tables.impls,
             bump.alloc(info(bump, module.name, impl_)),
         )?;
@@ -102,6 +103,7 @@ pub(crate) fn tables<'a>(
 
 fn insert_impl<'a>(
     bump: &'a Bump,
+    kinds: &kinds::KindEnv<'a>,
     table: &mut crate::environment::ImplTable<'a>,
     impl_: &'a crate::environment::ImplInfo<'a>,
 ) -> Result<(), Vec<Error<'a>>> {
@@ -114,12 +116,17 @@ fn insert_impl<'a>(
         .iter()
         .filter(|(candidate, _)| candidate.trait_ == key.trait_)
     {
-        let overlaps = nash_ast::head::overlaps(candidate.heads, key.heads, &mut remaining)
-            .map_err(|_| {
-                vec![Error::ImplPatternLimit {
-                    region: impl_.region,
-                }]
-            })?;
+        let overlaps = nash_ast::head::overlaps(
+            candidate.heads,
+            key.heads,
+            &|head| head_repr(kinds, head),
+            &mut remaining,
+        )
+        .map_err(|_| {
+            vec![Error::ImplPatternLimit {
+                region: impl_.region,
+            }]
+        })?;
         if overlaps {
             return Err(vec![Error::OverlappingImpls {
                 key: bump.alloc(key),
@@ -193,7 +200,7 @@ pub(crate) fn canonicalize<'a>(
                             && env.home.package == Some(nash_ast::primitives::BASE))
                 }
                 Head::Tuple(_) => env.home.package == Some(nash_ast::primitives::BASE),
-                Head::Var(_) | Head::Function(..) => false,
+                Head::Var { .. } | Head::Function(..) => false,
             })
         {
             return Err(vec![Error::OrphanImpl {
@@ -224,8 +231,22 @@ pub(crate) fn canonicalize<'a>(
             }
         }
         let context = kinds::check_impl(bump, kind_env, info, &head_types, context)?;
-        // Compiler-owned instances participate in coherence with the exact core
-        // trait identity. Representation contexts cannot make equal heads disjoint.
+        let mut classes = vec![nash_ast::primitives::ReprSet::ALL; variables.len()];
+        for pred in context {
+            if let Some(required) = pred
+                .trait_ref()
+                .and_then(nash_ast::primitives::ReprTrait::of)
+                && let [subject] = pred.args()
+                && let Type::Var(name) = subject.value
+                && let Some(index) = variables.iter().position(|v| *v == name)
+            {
+                classes[index] = classes[index].intersect(required.admits());
+            }
+        }
+        for head in &mut heads {
+            head.value = classed(bump, head.value, &classes);
+        }
+        // Compiler-owned instances participate in coherence with the exact trait identity.
         let known_big = |typ| {
             if kinds::repr_of(bump, kind_env, typ) == Some(nash_ast::primitives::Repr::Big) {
                 return true;
@@ -252,23 +273,27 @@ pub(crate) fn canonicalize<'a>(
                         == wanted.key()
             })
         };
-        // A bare variable can instantiate to Big even without an explicit bound.
-        // As with source impl overlap, contexts do not make its head disjoint.
+        // A variable overlaps structural Eq only if its class admits Big.
         if trait_ == nash_ast::primitives::eq_trait()
             && let [head] = head_types.as_slice()
-            && (known_big(*head) || matches!(head.value, Type::Var(_)))
+            && (known_big(*head)
+                || matches!(heads[0].value, Head::Var { repr, .. } if repr.contains(nash_ast::primitives::Repr::Big)))
         {
             return Err(vec![Error::StructuralEqOverride { head }]);
         }
         if trait_ == nash_ast::primitives::lift_trait()
             && let [left, right] = heads.as_slice()
-            && nash_ast::head::can_equal(&[left.value], &[right.value], &mut 16_384).map_err(
-                |_| {
-                    vec![Error::ImplPatternLimit {
-                        region: source.region,
-                    }]
-                },
-            )?
+            && nash_ast::head::can_equal(
+                &[left.value],
+                &[right.value],
+                &|head| head_repr(kind_env, head),
+                &mut 16_384,
+            )
+            .map_err(|_| {
+                vec![Error::ImplPatternLimit {
+                    region: source.region,
+                }]
+            })?
         {
             return Err(vec![Error::ReflexiveLiftOverlap {
                 heads: bump.alloc_slice_copy(&head_types),
@@ -380,7 +405,10 @@ fn canonicalize_pattern<'a>(
                     variables.len() - 1
                 }
             };
-            Head::Var(index.try_into().expect("impl variable count exceeds u16"))
+            Head::Var {
+                index: index.try_into().expect("impl variable count exceeds u16"),
+                repr: nash_ast::primitives::ReprSet::ALL,
+            }
         }
         Type::Named { reference, args } => {
             let args = args
@@ -510,4 +538,38 @@ fn instantiate_method<'a>(
         typ,
     };
     kinds::check_annotation(bump, kind_env, method.name, bump.alloc(annotation))
+}
+
+fn head_repr(env: &kinds::KindEnv<'_>, head: &Head<'_>) -> Option<nash_ast::primitives::Repr> {
+    match head {
+        Head::Var { .. } => None,
+        Head::Tuple(_) | Head::Function(..) => Some(nash_ast::primitives::Repr::Term),
+        Head::Named { reference, .. } => match env.constructor(*reference) {
+            kinds::TypeInfo::Builtin(info) => Some(info.repr),
+            kinds::TypeInfo::Defined { repr, .. } => repr,
+        },
+    }
+}
+fn classed<'a>(
+    bump: &'a Bump,
+    head: Head<'a>,
+    classes: &[nash_ast::primitives::ReprSet],
+) -> Head<'a> {
+    match head {
+        Head::Var { index, .. } => Head::Var {
+            index,
+            repr: classes[usize::from(index)],
+        },
+        Head::Named { reference, args } => Head::Named {
+            reference,
+            args: bump.alloc_slice_fill_iter(args.iter().map(|h| classed(bump, *h, classes))),
+        },
+        Head::Tuple(args) => {
+            Head::Tuple(bump.alloc_slice_fill_iter(args.iter().map(|h| classed(bump, *h, classes))))
+        }
+        Head::Function(a, b) => Head::Function(
+            bump.alloc(classed(bump, *a, classes)),
+            bump.alloc(classed(bump, *b, classes)),
+        ),
+    }
 }

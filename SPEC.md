@@ -69,7 +69,7 @@ Implementation plans (Plan 08 is deferred; Plans 09 and 10 are complete):
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
 - [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)
-- [ ] Representation-classed impl heads: `Big`/`Little` blankets and concrete little impls coexist — [plans/repr-classed-impl-heads.md](plans/repr-classed-impl-heads.md) (deferred)
+- [x] Representation-classed impl heads: `Big`/`Little` blankets and concrete little impls coexist — [plans/repr-classed-impl-heads.md](plans/repr-classed-impl-heads.md)
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.
 

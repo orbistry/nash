@@ -45,7 +45,7 @@ fn recursive_overlap_ignores_representation_contexts() {
         keys.push(*result.tables.impls.keys().next().unwrap());
     }
     let overlap = |a: usize, b: usize, budget: &mut usize| {
-        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, budget)
+        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, &|_| None, budget)
     };
     assert!(
         overlap(0, 1, &mut 16_384).unwrap(),
@@ -1069,13 +1069,12 @@ fn owned_blanket_impls_preserve_bounds_and_overlap() {
         if suffix.is_empty() {
             let module = result.as_ref().unwrap();
             let info = module.tables.impls.values().next().unwrap();
-            assert!(matches!(info.heads[0].value, nash_ast::Head::Var(0)));
+            assert!(
+                matches!(info.heads[0].value, nash_ast::Head::Var { index: 0, repr } if repr == nash_ast::primitives::ReprTrait::Big.admits())
+            );
             assert_eq!(info.context.len(), 1);
         } else {
-            assert!(matches!(
-                result.as_ref().unwrap_err().as_slice(),
-                [nash_can::Error::OverlappingImpls { .. }]
-            ));
+            assert!(result.is_ok());
         }
         results.push(result.map(|_| ()));
     }
@@ -1138,5 +1137,56 @@ fn owned_blankets_cannot_overlap_compiler_owned_instances() {
     }
     insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.results(&results));
+    });
+}
+
+#[test]
+fn representation_class_overlap_matrix() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for (left, right) in [
+        ("('a : Big)", "('b : Little)"),
+        ("('a : Big)", "('b : Const)"),
+        ("('a : Const)", "('b : Term)"),
+        ("('a : Storable)", "('b : Little)"),
+        ("('a : Big)", "('b : Storable)"),
+        ("('a : Big)", "'b"),
+        ("('a : Big)", "int"),
+        ("('a : Big)", "Data"),
+        ("(list ('a : Big))", "(list ('b : Const))"),
+        ("('a : Big)", "(identity int)"),
+    ] {
+        let source = format!(
+            "module Main exposing (..)\ntype alias identity 'a = 'a\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep {left} where\n    keep x = x\nimpl Keep {right} where\n    keep x = x\n"
+        );
+        results.push(canonicalize(&bump, snapshot_inputs.record(&source)).map(|_| ()));
+    }
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
+    });
+}
+
+#[test]
+fn classed_superclass_selection_normalizes_alias_application_givens() {
+    let bump = Bump::new();
+    let source = indoc!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Const)
+        type alias applied 'f = 'f int
+        trait Keep 'a where
+            keep : 'a -> 'a
+        trait Keep 'a => More 'a where
+            more : 'a -> 'a
+        impl Keep ('a : Const) where
+            keep x = x
+        impl Const ('f int) => More (applied 'f) where
+            more x = x
+    "#
+    );
+    let result = canonicalize(&bump, source).unwrap();
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_debug_snapshot!(result.module.impls);
     });
 }

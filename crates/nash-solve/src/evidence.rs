@@ -303,7 +303,15 @@ impl<'a> Resolver<'_, 'a> {
         let mut selected = None;
         for (key, info) in self.tables.impls_for(trait_) {
             if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical,
+                &mut nash_ast::head::Canonical(&|typ, class| match nash_can::kinds::repr_of(
+                    self.bump,
+                    &self.tables.kinds,
+                    typ,
+                ) {
+                    Some(actual) if class.contains(actual) => nash_ast::head::Match::Yes(()),
+                    Some(_) => nash_ast::head::Match::No,
+                    None => nash_ast::head::Match::Deferred,
+                }),
                 key.heads,
                 args,
                 info.variables.len(),

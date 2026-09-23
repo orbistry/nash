@@ -1,0 +1,6 @@
+---
+source: crates/nash-driver/tests/base_traits.rs
+description: "module Main exposing (..)\n\ntrait Echo 'a where\n    echo : 'a -> 'a\n\nimpl Echo ('a : Big) where\n    echo value = value\n\nimpl Echo ('a : Little) where\n    echo value = value\n\nbigValue : Int\nbigValue = 42\nlittleValue : int\nlittleValue = 42\n\ntests\n    test \"Big class uses its implementation\" = do\n        assert (echo bigValue == bigValue)\n\n    test \"Little class uses its implementation\" = do\n        assert (echo littleValue == littleValue)\n"
+---
+Big class uses its implementation: Pass; traces: []
+Little class uses its implementation: Pass; traces: []

@@ -437,3 +437,18 @@ constants", which is a property of a head constructor and is expressed
 exactly by a predicate. Moving representation out of the kind restores
 Haskell 98 kinds (unification, occurs check, nothing to prove) and reuses
 the predicate machinery Nash already needs for traits.
+
+### Classes on implementation heads
+
+Representation predicates on an implementation's head variables restrict the
+representations those variables admit. The restriction applies at every repeated
+occurrence, including nested patterns. `Big` and `Little` implementations are
+disjoint; `Storable` and `Little` overlap at `Const`. All relevant predicates
+intersect. Predicates on constructed applications remain context obligations.
+
+Selection uses known representations or representation givens in scope. It waits
+for flexible types; it does not guess their representation. Transparent aliases
+are checked through their substituted bodies. Overlap remains conservative when
+an alias has no fixed representation. Ordinary user traits never prove that two
+heads are disjoint. Identity `Lift` applies to every representation, so a classed
+implementation must still be disjoint from that identity.

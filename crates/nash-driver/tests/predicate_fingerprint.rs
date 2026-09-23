@@ -75,3 +75,34 @@ fn application_argument_order_changes_the_interface_fingerprint() {
     assert!(first.differs_from(&second));
     assert!(!first.differs_from(&Cached::from_canonical(&forward)));
 }
+
+#[test]
+fn impl_representation_class_changes_the_interface_fingerprint() {
+    let bump = Bump::new();
+    let home = nash_ast::ModuleName {
+        package: None,
+        name: "Types",
+    };
+    let make = |repr| Interface {
+        home,
+        impls: bump.alloc_slice_fill_iter([nash_can::environment::ImplInfo {
+            variables: &["a"],
+            home,
+            region: nash_region::Region::zero(),
+            trait_: nash_ast::QualifiedName { home, name: "Keep" },
+            context: &[],
+            heads: bump
+                .alloc_slice_fill_iter([Located::at_zero(nash_ast::Head::Var { index: 0, repr })]),
+            methods: &["keep"],
+        }]),
+        traits: &[],
+        values: &[],
+        aliases: &[],
+        binops: &[],
+        unions: &[],
+    };
+    let all = Cached::from_canonical(&make(nash_ast::primitives::ReprSet::ALL));
+    let big = Cached::from_canonical(&make(ReprTrait::Big.admits()));
+    assert_eq!(all.exports, big.exports);
+    assert!(all.differs_from(&big));
+}

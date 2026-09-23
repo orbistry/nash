@@ -1296,6 +1296,35 @@ impl<'a> Solver<'a, '_> {
                     }
                     continue;
                 }
+                let givens: Vec<_> = self
+                    .givens
+                    .iter()
+                    .flat_map(|frame| frame.predicates.iter().map(|given| given.body.clone()))
+                    .collect();
+                let mut allocated = Vec::new();
+                let proven = matches!(
+                    crate::resolve::in_class(
+                        self.tables,
+                        uf,
+                        args[0],
+                        required.admits(),
+                        &givens,
+                        &mut allocated
+                    ),
+                    nash_ast::head::Match::Yes(())
+                );
+                self.introduce(uf, rank, &allocated);
+                if proven {
+                    self.predicates.solve(
+                        uf,
+                        id,
+                        Solution::Repr {
+                            trait_: required,
+                            typ: args[0],
+                        },
+                    );
+                    continue;
+                }
                 if report_missing
                     && let Some(binder) = binder
                     && let Some(site) = site
@@ -1338,7 +1367,15 @@ impl<'a> Solver<'a, '_> {
             }
             // A blanket impl can match a rigid argument without narrowing it;
             // its prerequisites are checked against the enclosing givens below.
-            let selection = crate::resolve::select(self.tables, uf, trait_, &args);
+            let givens: Vec<_> = self
+                .givens
+                .iter()
+                .flat_map(|frame| frame.predicates.iter().map(|given| given.body.clone()))
+                .collect();
+            let mut allocated = Vec::new();
+            let selection =
+                crate::resolve::select(self.tables, uf, trait_, &args, &givens, &mut allocated);
+            self.introduce(uf, rank, &allocated);
             if report_missing
                 && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
@@ -3392,7 +3429,7 @@ mod copy_tests {
     #[test]
     fn retained_impl_children_and_recursive_uses_reference_final_context_slots() {
         let bump = Bump::new();
-        let source = "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (list 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n";
+        let source = "module Main exposing (..)\ntype box 'a = Box 'a\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (box 'a) where\n    base xs = xs\nf x = (base (Box (let local y = g y in local x)), top x, [x])\ng x = case f x of\n    (xs, y, _) -> y\nh x = (f x, f x)\n";
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
@@ -3502,7 +3539,7 @@ mod copy_tests {
                         Some(crate::preds::Solution::Impl { .. })
                     ));
                     assert!(
-                        matches!(&pred.solution, Some(crate::preds::Solution::Super { binder, index: 1, path }) if *binder == group_binder && path == &[0, 0]),
+                        matches!(&pred.solution, Some(crate::preds::Solution::Super { binder, index: 0, path }) if *binder == group_binder && path == &[0, 0]),
                         "solution={:?} context={:?}",
                         pred.solution,
                         result.env["f"]
@@ -3512,13 +3549,13 @@ mod copy_tests {
                             .collect::<Vec<_>>()
                     );
                 }
-                Origin::Use { site, .. } if site.region.start.line == 13 => {
+                Origin::Use { site, .. } if site.region.start.line == 14 => {
                     h_uses += 1;
                     assert_eq!(
                         pred.solution,
                         Some(crate::preds::Solution::Given {
                             binder: h_binder,
-                            index: 1
+                            index: 0
                         })
                     );
                 }
@@ -3528,7 +3565,7 @@ mod copy_tests {
                         pred.solution,
                         Some(crate::preds::Solution::Given {
                             binder: group_binder,
-                            index: 1,
+                            index: 0,
                         })
                     );
                 }
@@ -3549,32 +3586,28 @@ mod copy_tests {
             let instance = &solved.instances[&use_.site.node];
             assert_eq!(instance.evidence.len(), use_.predicates.len());
             if matches!(use_.site.name, "f" | "g") {
-                let expected_binder = if use_.site.region.start.line == 13 {
+                let expected_binder = if use_.site.region.start.line == 14 {
                     h_binder
                 } else {
                     group_binder
                 };
                 assert!(matches!(
                     instance.evidence,
-                    [nash_ast::Evidence::Given { binder: repr_binder, index: 0 }, nash_ast::Evidence::Given { binder, index: 1 }]
+                    [nash_ast::Evidence::Given { binder, index: 0 }, nash_ast::Evidence::Given { binder: repr_binder, index: 1 }]
                         if *binder == expected_binder && *repr_binder == expected_binder
                 ));
             }
             if use_.site.name == "base" {
                 let [nash_ast::Evidence::Impl { args, .. }] = instance.evidence else {
-                    panic!("list Base use must publish impl evidence")
+                    panic!("box Base use must publish impl evidence")
                 };
-                let [
-                    nash_ast::Evidence::Super { of, index: 0 },
-                    nash_ast::Evidence::Given { index: 0, .. },
-                ] = *args
-                else {
+                let [nash_ast::Evidence::Super { of, index: 0 }] = *args else {
                     panic!("Base evidence must project from Strong")
                 };
                 let nash_ast::Evidence::Super { of, index: 0 } = of else {
                     panic!("Strong evidence must project from Top")
                 };
-                assert!(matches!(of, nash_ast::Evidence::Given { binder, index: 1 }
+                assert!(matches!(of, nash_ast::Evidence::Given { binder, index: 0 }
                     if *binder == group_binder));
             }
         }

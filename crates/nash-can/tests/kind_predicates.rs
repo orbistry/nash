@@ -210,17 +210,13 @@ fn trait_parameter_kinds_come_from_method_uses() {
 }
 
 #[test]
-fn representation_contexts_do_not_separate_overlapping_impl_heads() {
+fn representation_contexts_separate_disjoint_impl_heads() {
     let bump = Bump::new();
-    let errors = check_snapshot!(
+    check_snapshot!(
         &bump,
         "trait T 'a where\nimpl Big 'a => T (list 'a) where\nimpl Const 'a => T (list 'a) where",
     )
-    .unwrap_err();
-    assert!(matches!(
-        errors.as_slice(),
-        [Error::OverlappingImpls { .. }]
-    ));
+    .unwrap();
 }
 
 #[test]

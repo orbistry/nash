@@ -121,3 +121,4 @@ base_snapshot!(generate_bounds, "fixtures/base-traits/PropBounds.nash");
 
 base_snapshot!(data_decoders, "fixtures/base-traits/Decoders.nash");
 base_snapshot!(map_helpers, "fixtures/base-traits/Maps.nash");
+base_snapshot!(representation_classes, "fixtures/base-traits/Classed.nash");

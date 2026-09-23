@@ -14,6 +14,6 @@ nash::type::missing_impl
    ╰────
   help: Available impl heads:
 
-            (Pair 'a0)
+            (Pair ('a0 : Big))
 
         Import or define an impl for `Keep (Other Color)`.

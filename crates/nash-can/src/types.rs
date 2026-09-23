@@ -147,6 +147,7 @@ pub(crate) fn repr_trait(repr: nash_source::Repr) -> nash_ast::primitives::ReprT
         nash_source::Repr::Const => ReprTrait::Const,
         nash_source::Repr::Term => ReprTrait::Term,
         nash_source::Repr::Storable => ReprTrait::Storable,
+        nash_source::Repr::Little => ReprTrait::Little,
     }
 }
 

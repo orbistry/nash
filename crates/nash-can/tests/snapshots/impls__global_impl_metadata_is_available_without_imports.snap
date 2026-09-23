@@ -103,9 +103,12 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                         name: "List",
                     },
                     args: [
-                        Var(
-                            0,
-                        ),
+                        Var {
+                            index: 0,
+                            repr: ReprSet(
+                                1,
+                            ),
+                        },
                     ],
                 },
             ],
@@ -219,9 +222,12 @@ description: "module Instances exposing (Keep)\ntrait Hidden 'a where\n    hidde
                             name: "List",
                         },
                         args: [
-                            Var(
-                                0,
-                            ),
+                            Var {
+                                index: 0,
+                                repr: ReprSet(
+                                    1,
+                                ),
+                            },
                         ],
                     },
                 },

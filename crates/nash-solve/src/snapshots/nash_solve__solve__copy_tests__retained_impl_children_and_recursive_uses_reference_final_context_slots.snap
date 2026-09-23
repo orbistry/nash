@@ -1,11 +1,12 @@
 ---
 source: crates/nash-solve/src/solve.rs
-description: "module Main exposing (..)\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (list 'a) where\n    base xs = xs\nf x = (base [let local y = g y in local x], top x)\ng x = case f x of\n    (xs, y) -> y\nh x = (f x, f x)\n"
+description: "module Main exposing (..)\ntype box 'a = Box 'a\ntrait Base 'a where\n    base : 'a -> 'a\ntrait Base 'a => Strong 'a where\n    strong : 'a -> 'a\ntrait Strong 'a => Top 'a where\n    top : 'a -> 'a\nimpl Base 'a => Base (box 'a) where\n    base xs = xs\nf x = (base (Box (let local y = g y in local x)), top x, [x])\ng x = case f x of\n    (xs, y, _) -> y\nh x = (f x, f x)\n"
 ---
-base@10:8 : [nash/base/Primitive.list[a]] [Impl Main.Base [Named { reference: QualifiedName { home: ModuleName { package: Some(PackageName { author: "nash", project: "base" }), name: "Primitive" }, name: "list" }, args: [Var(0)] }] [a] [Super 0 (Super 0 (Given g@11:1#1)), Given g@11:1#0]]
-g@10:28 : [a] [Given g@11:1#0, Given g@11:1#1]
-local@10:35 : [] []
-top@10:45 : [a] [Given g@11:1#1]
-f@11:12 : [a] [Given g@11:1#0, Given g@11:1#1]
-f@13:8 : [a] [Given h@13:1#0, Given h@13:1#1]
-f@13:13 : [a] [Given h@13:1#0, Given h@13:1#1]
+base@11:8 : [Main.box[a]] [Impl Main.Base [Named { reference: QualifiedName { home: ModuleName { package: None, name: "Main" }, name: "box" }, args: [Var { index: 0, repr: ReprSet(7) }] }] [a] [Super 0 (Super 0 (Given g@12:1#0))]]
+Box@11:14 : [a] []
+g@11:33 : [a] [Given g@12:1#0, Given g@12:1#1]
+local@11:40 : [] []
+top@11:51 : [a] [Given g@12:1#0]
+f@12:12 : [a] [Given g@12:1#0, Given g@12:1#1]
+f@14:8 : [a] [Given h@14:1#0, Given h@14:1#1]
+f@14:13 : [a] [Given h@14:1#0, Given h@14:1#1]

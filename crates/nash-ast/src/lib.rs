@@ -580,7 +580,10 @@ pub struct Method<'a> {
 /// giving alpha-equivalent heads the same identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Head<'a> {
-    Var(u16),
+    Var {
+        index: u16,
+        repr: primitives::ReprSet,
+    },
     Named {
         reference: QualifiedName<'a>,
         args: &'a [Head<'a>],
@@ -650,7 +653,7 @@ pub enum Evidence<'a> {
 impl<'a> Head<'a> {
     pub fn con(&self) -> Option<HeadCon<'a>> {
         match self {
-            Head::Var(_) => None,
+            Head::Var { .. } => None,
             Head::Named { reference, .. } => Some(HeadCon::Named(*reference)),
 
             Head::Tuple(args) => Some(HeadCon::Tuple(args.len())),
@@ -665,7 +668,7 @@ impl<'a> Head<'a> {
         region: Region,
     ) -> &'a Located<Type<'a>> {
         let typ = match self {
-            Head::Var(index) => Type::Var(variables[usize::from(*index)]),
+            Head::Var { index, .. } => Type::Var(variables[usize::from(*index)]),
             Head::Named { reference, args } => Type::Named {
                 reference: *reference,
                 args: bump.alloc_slice_fill_iter(
