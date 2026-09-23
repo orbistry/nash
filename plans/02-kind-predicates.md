@@ -32,9 +32,10 @@ The subsequent cleanup and its verification are recorded in
   The permutation regression requires more than 256 replay steps.
 - [x] Infer trait parameter kinds across methods and superclasses; check
   specialized method signatures and recursive impl heads against them.
-- [x] Keep head-only coherence. Representation contexts cannot distinguish
-  otherwise overlapping heads. Reject user implementations of representation
-  traits and compiler-owned Big Eq/reflexive Lift instances, including
+- [x] Use recursive-head coherence with representation classes, completed by
+  [representation-classed impl heads](repr-classed-impl-heads.md). Disjoint
+  classes distinguish otherwise overlapping heads; ordinary prerequisites do not.
+  Reject user implementations of representation traits and compiler-owned Big Eq/reflexive Lift instances, including
   transparent aliases with variable bodies.
 
 ## Inference, generalization and evidence

@@ -289,17 +289,13 @@ are forbidden; a custom Eq method cannot change equality of a Big value.
 The compiler supplies Eq for Big types, including user-defined ADTs and
 nominal aliases, through the shared kind, representation and evidence contracts.
 
-For builtin `list 'a` with `'a : Big`, the stdlib equality route is
-`equalsData (listData left) (listData right)` *as a codegen rewrite*: there
-is exactly one `impl Eq 'a => Eq (list 'a)` (elementwise), because impl
-coherence is head-only and contexts are not part of an impl's identity
-(kinds.md "Traits and impls"). plans/08 replaces the monomorphized
-elementwise body with the `equalsData` comparison whenever the ground
-element type is Big; the semantics are identical because Big equality is
-structural equality on each element. Typed `listData` accepts Big elements
-directly and produces `List 'a`; any rewrite to equalsData must account for
-the concrete runtime representation without introducing source coercions. Generic `Ord (list 'a)` retains `Ord 'a` in its context
-and gets `Eq (list 'a)` through the superclass.
+Base provides one elementwise `impl Eq 'a => Eq (list 'a)`. Plan 08
+proposes replacing its specialized body for Big elements with
+`equalsData (listData left) (listData right)`. This optimization is not yet
+implemented. Representation-classed impl heads permit disjoint Big/Const
+alternatives, but Base does not use them here. Typed `listData` preserves
+Big elements and produces `List 'a`. Generic `Ord (list 'a)` retains
+`Ord 'a` in its context and gets `Eq (list 'a)` through the superclass.
 Map Data equality compares the encoded sequence of entries, including order
 and duplicates. It is not dictionary-style equality.
 

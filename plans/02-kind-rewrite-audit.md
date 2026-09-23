@@ -6,19 +6,18 @@ APIs, state and control paths, not just whether old symbol names disappeared.
 The work started from a clean working copy. No commit, push or publication
 is part of this delivery.
 
-Status: complete. Verified on 2026-09-08 against the working tree.
+Status: complete. Historical validation below was recorded on 2026-09-08.
+The head-matching and insertion descriptions incorporate the completed
+[representation-classed impl heads](repr-classed-impl-heads.md) follow-up.
 
 ## Removed
 
-- `head::overlaps` no longer accepts a kind-compatibility callback. Its
-  only production caller had replaced the old engine with an unconditional
-  `true`. Structural head unification now expresses the rule directly:
-  heads have already been checked against their trait's closed kinds.
-  Independent binders, repeated variables, occurs checks and work limits
-  remain part of head matching.
-- `insert_impl` no longer receives a kind environment it ignores.
-  `check_annotation` no longer receives an ignored module name. All
-  production and test callers use the smaller APIs.
+- Kind compatibility is checked before head matching. `head::overlaps`
+  unifies recursive heads and intersects variable representation classes;
+  its callback supplies concrete head representations. Independent binders,
+  repeated variables, occurs checks and work limits remain part of matching.
+- `insert_impl` uses the kind environment to obtain concrete representations
+  during overlap checking. `check_annotation` has no module-name argument.
 - `KindHead` and the unproduced `KindContext::TypeArg`, `ValuePosition`
   and `ParamAnnotation` variants are removed with their diagnostic arms.
 - The parser's obsolete recursive kind-error structure is removed.
@@ -108,7 +107,7 @@ limits; no Paterson restriction or new impl admission policy is introduced.
 
 Cross-module acceptance includes imported higher-kinded applications,
 transparent aliases, inferred wrapper contexts, partial pair contexts,
-recursive impls, superclass requirements, head-only overlap and shipping
+recursive impls, superclass requirements, structural overlap and shipping
 option/result do. Negative projects reject imported representation failures,
 invalid inferred `Apply`, contradictory predicates, infinite kinds and
 irregular recursive contexts. Driver tests also check closed-kind/context

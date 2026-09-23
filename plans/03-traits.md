@@ -9,15 +9,16 @@ Status: complete for the approved scope, including the Haskell 98 replacement in
 The current kind system is `Type | Arrow`; representation is expressed through
 compiler-owned predicates and inferred datatype contexts. All old kind schemes,
 value-kind metadata and retained kind obligations are removed. Coherence uses
-recursive heads only, after kind checking. Representation prerequisites do not
-make identical heads disjoint. Partial heads and nominal aliases retain their
-ordered arguments through specialization and interfaces.
+recursive heads with representation classes, after kind checking. Disjoint
+classes distinguish blanket implementations; ordinary trait prerequisites do not.
+Partial heads and nominal aliases retain their ordered arguments through
+specialization and interfaces.
 
 Big Eq remains compiler-owned, including generic transparent Big aliases.
 Builtin-list Eq now has one elementwise implementation. Plan 08 may optimize
 only ground Big-element Eq; Ord and Show do not acquire that rewrite. Reflexive
-Big Lift, superclass proofs, independent instantiation and dictionary slot order
-remain part of this plan's acceptance contract.
+Lift across all representations, superclass proofs, independent instantiation
+and dictionary slot order remain part of this plan's acceptance contract.
 
 Default imports remain Plan 12. Runtime/codegen, optimizer implementation,
 Prop and the full validator example retain their approved later-plan deferrals.
@@ -650,9 +651,11 @@ Acceptance coverage is in `crates/nash-can/tests/traits.rs`:
   `private_trait_metadata_does_not_expose_names`,
   `imported_trait_and_method_ambiguity`.
 
-`types.rs::context_tests` covers qualified annotation contexts, context
-variables absent from the type and trait arity. The existing module-level
-unknown-constraint test now checks `NotFoundTrait` as
+`types.rs::context_tests` covers qualified annotation contexts, disconnected
+context variables absent from the type, and trait arity. Connected hidden
+variables in multi-parameter constraints are supported; see
+[relational inference](../docs/traits.md#relational-inference). The existing
+module-level unknown-constraint test now checks `NotFoundTrait` as
 `unknown_trait_in_context`.
 
 Done when: a module with traits canonicalizes; methods resolve to
@@ -773,16 +776,17 @@ fn check_orphan<'a>(home: ModuleName<'a>, trait_: QualifiedName<'a>, heads: &[Lo
 }
 
 fn impl_key<'a>(bump: &'a Bump, trait_: QualifiedName<'a>, heads: &[Located<Head<'a>>]) -> ImplKey<'a> {
-    // Also retain generalized variable kinds; see the current ImplKey contract.
-    ImplKey { trait_, heads: copy_full_patterns(heads), kinds }
+    // Head variables retain their checked representation classes.
+    ImplKey { trait_, heads: copy_full_patterns(heads) }
 }
 ```
 
 Overlap: compare full patterns for every impl of the same trait, freshening
 the two sets of variables and checking occurs. A unifiable pair is
 `Error::OverlappingImpls { key, first, second, first_home, second_home }`.
-Kind-disjointness must also be proved before accepting structurally overlapping
-patterns; `kinds::impls_overlap` performs that check.
+Head-variable representation classes are intersected during unification;
+disjoint classes rule out overlap. Ordinary prerequisites do not. Kinds have
+already been checked before insertion.
 Both regions include their defining module because either entry can come
 from an interface. The same insertion check handles local and imported impls.
 
@@ -2682,7 +2686,7 @@ declarations with explicit imports. Remaining requirements are:
 
 | Requirement | Current evidence / remaining work |
 |---|---|
-| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses disjoint Big/Const element bounds. |
+| Concrete compiler-known trait impls | Eq/Ord/Show, numeric, literal, Semigroup/Monoid and Data impls are present. Map Lift uses recursive impl patterns; list Eq uses one elementwise implementation. |
 | Higher-kinded hierarchy and operators | Shipping Functor supports list/List/cons/option; Applicative/Monad support option. Prelude supplies <$> / <*> / >>=. Apply is unchanged; builtin list has no Applicative/Monad and pair has no Functor. Prop generation functions use explicit state threading; Option supplies optional do sequencing. |
 | Core option do acceptance | The real core fixture compiles option do blocks, operator calls, mixed-kind builtin list mapping and normalized List Int mapping via List.map. Runtime execution remains a backend prerequisite. |
 | Default imports | User-approved deferral to Plan 12. Explicit imports are required for Plan 03. Eventual defaults must participate in dependency discovery before sequential compilation. |

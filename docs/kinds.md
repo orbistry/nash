@@ -266,23 +266,18 @@ exempt from the Big-field rule: they mirror `chooseData`.
 - A trait parameter has a kind, inferred from the method signatures by
   unification. `Functor : Type -> Type`, `Eq : Type`, `Lift : Type -> Type`
   (two parameters, each `Type`).
-- An impl head must have the parameter's kind. No representation
-  requirement is placed on the head; representation requirements arise
-  from the specialized method signatures, as above.
-- Compiler-owned impls that depend on representation state it as a context:
-  the reflexive `impl Lift 'a 'a`, structural `impl Big 'a => Eq
-  'a`. These are the only impls with a representation predicate in their
-  context that the user cannot write themselves; they are exempt from the
-  Haskell 98 head-shape rule (see [traits.md](traits.md)).
-- Coherence (impl overlap) is a unification question over heads and their
-  kinds. Contexts do not participate: two impls with unifiable heads overlap
-  regardless of `Big`/`Const` contexts, because contexts are not part of
-  the impl's identity. Consequently core ships one `impl Eq 'a => Eq (list
-  'a)` (elementwise), not a second `Big 'a => Eq (list 'a)`; the
-  whole-list `equalsData` fast path is a codegen rewrite on ground types
-  whose element is Big ([codegen.md](codegen.md), plans/08). This
-  optimization is restricted to `Eq`; representation alone cannot replace
-  user-defined `Ord` or `Show` behavior.
+- An impl head must have the parameter's kind. Representation predicates
+  on head variables additionally restrict which representations can match.
+- Structural `impl Big 'a => Eq 'a` and reflexive `impl Lift 'a 'a`
+  are compiler-owned. Identity Lift applies to every representation.
+  User impls must not overlap these rules.
+- Coherence unifies recursive head patterns while intersecting the
+  representation classes attached to their variables. Big and Little are
+  disjoint; Storable and Little overlap at Const. Ordinary trait prerequisites
+  do not distinguish implementations. See [traits.md](traits.md).
+- Base ships one elementwise `impl Eq 'a => Eq (list 'a)`. Plan 08 proposes
+  a whole-list `equalsData` rewrite for ground Big elements; this is an
+  optimizer plan, not a restriction imposed by impl coherence.
 
 ## Recursion and infinite kinds
 
