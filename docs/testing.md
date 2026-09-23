@@ -283,7 +283,11 @@ Unused children are omitted from the consumed trace. A draw cannot borrow
 choices from a sibling group.
 
 Each list iteration has its own group, containing its continuation bit and a
-nested element group. Required elements omit the continuation draw. Reaching
+nested element group. List generation uses generator `bind` through `do` to
+create the iteration boundary, and `map` to prepend the element without adding
+another boundary. The iteration helper sequences direct draws with Option's
+`do`, keeping the continuation choice directly inside the iteration group.
+Required elements omit the continuation draw. Reaching
 the maximum length needs no stop draw. Deleting an iteration therefore removes
 an entire element without shifting the following element's choices.
 
