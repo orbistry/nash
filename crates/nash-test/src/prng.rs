@@ -91,7 +91,7 @@ pub enum Prng {
         remaining: Vec<Trace>,
         choices: Vec<Trace>,
     },
-    /// Build a structural proposal from explicit choices. Never used to accept a failure.
+    /// Generate from explicit choices while recording the resulting group structure.
     Rebuilding {
         remaining: Vec<Choice>,
         choices: Vec<Trace>,

@@ -716,9 +716,9 @@ fn nested_reduction_normalization_and_boundaries() {
             _ => ShrinkStatus::Invalid,
         })
         .with_rebuild(|numbers| match numbers {
-            [0, a, b] => Some(vec![C(0), G(vec![C(*a), C(*b)])]),
-            [1, a, b] => Some(vec![C(1), G(vec![C(*a)]), G(vec![C(*b)])]),
-            _ => None,
+            [0, a, b] => ShrinkStatus::Keep(0, vec![C(0), G(vec![C(*a), C(*b)])]),
+            [1, a, b] => ShrinkStatus::Keep(1, vec![C(1), G(vec![C(*a)]), G(vec![C(*b)])]),
+            _ => ShrinkStatus::Invalid,
         }),
         steps: 0,
     };

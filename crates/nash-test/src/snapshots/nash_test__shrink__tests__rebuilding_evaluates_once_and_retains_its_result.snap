@@ -1,0 +1,7 @@
+---
+source: crates/nash-test/src/shrink.rs
+---
+value: rebuilt property result
+retained: [Group([Choice(0)])]
+strict evaluations: 0
+rebuilding evaluations: 3

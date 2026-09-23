@@ -1,6 +1,0 @@
----
-source: crates/nash-test/src/shrink.rs
----
-retained: [Choice(9)]
-strict evaluations: 2
-reconstructions: 1

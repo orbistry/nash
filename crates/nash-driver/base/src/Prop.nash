@@ -143,7 +143,7 @@ listIteration required item state = do
     (continue, next) <- (if required then constant 1 else choice 1) state
     case continue of
         0 -> Some (None, next)
-        _ -> (Functor.map Some (group item)) next
+        _ -> (Monad.bind item (\value -> Applicative.pure (Some value))) next
 
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 tuple2 first second state =

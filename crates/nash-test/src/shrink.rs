@@ -9,13 +9,13 @@ pub enum Status<T> {
     Ignore(Vec<Trace>),
     Invalid,
 }
-type Rebuild<'a> = Box<dyn FnMut(&[Choice]) -> Option<Vec<Trace>> + 'a>;
+type Rebuild<'a, T> = Box<dyn FnMut(&[Choice]) -> Status<T> + 'a>;
 type Oracle<'a, T> = Box<dyn FnMut(&[Trace]) -> Status<T> + 'a>;
 pub struct Cache<'a, T> {
     db: BTreeMap<Vec<Trace>, Status<T>>,
     run: Oracle<'a, T>,
-    rebuild: Option<Rebuild<'a>>,
-    rebuilt: BTreeMap<Vec<Choice>, Option<Vec<Trace>>>,
+    rebuild: Option<Rebuild<'a, T>>,
+    rebuilt: BTreeMap<Vec<Choice>, Status<T>>,
     changed: BTreeSet<usize>,
 }
 impl<'a, T: Clone + PartialEq> Cache<'a, T> {
@@ -28,18 +28,17 @@ impl<'a, T: Clone + PartialEq> Cache<'a, T> {
             changed: BTreeSet::new(),
         }
     }
-    pub fn with_rebuild(
-        mut self,
-        rebuild: impl FnMut(&[Choice]) -> Option<Vec<Trace>> + 'a,
-    ) -> Self {
+    pub fn with_rebuild(mut self, rebuild: impl FnMut(&[Choice]) -> Status<T> + 'a) -> Self {
         self.rebuild = Some(Box::new(rebuild));
         self
     }
     pub fn size(&self) -> usize {
         self.db.len() + self.rebuilt.len()
     }
-    fn build(&mut self, choices: &[Choice]) -> Option<Vec<Trace>> {
-        let rebuild = self.rebuild.as_mut()?;
+    fn build(&mut self, choices: &[Choice]) -> Status<T> {
+        let Some(rebuild) = self.rebuild.as_mut() else {
+            return Status::Invalid;
+        };
         if let Some(result) = self.rebuilt.get(choices) {
             return result.clone();
         }
@@ -238,6 +237,16 @@ impl<T: Clone + PartialEq> Counterexample<'_, T> {
                 _ => return false,
             }
         }
+        self.accept_result(Status::Keep(value, used))
+    }
+
+    fn accept_result(&mut self, result: Status<T>) -> bool {
+        let Status::Keep(value, used) = result else {
+            return false;
+        };
+        if !smaller(&used, &self.choices) {
+            return false;
+        }
         let previous = Trace::flatten(&self.choices);
         let next = Trace::flatten(&used);
         if previous.len() != next.len() {
@@ -256,7 +265,7 @@ impl<T: Clone + PartialEq> Counterexample<'_, T> {
         true
     }
 
-    fn rebuild(&mut self, numbers: &[Choice]) -> Option<Vec<Trace>> {
+    fn rebuild(&mut self, numbers: &[Choice]) -> Status<T> {
         let before = self.cache.size();
         let result = self.cache.build(numbers);
         self.steps += self.cache.size() - before;
@@ -264,11 +273,8 @@ impl<T: Clone + PartialEq> Counterexample<'_, T> {
     }
 
     fn flat_attempt(&mut self, numbers: &[Choice]) -> bool {
-        if let Some(tree) = self.rebuild(numbers) {
-            self.accept(&tree)
-        } else {
-            false
-        }
+        let result = self.rebuild(numbers);
+        self.accept_result(result)
     }
 
     fn feedback(&mut self, candidate: &[Trace], used: &[Trace]) -> bool {
@@ -344,15 +350,15 @@ impl<T: Clone + PartialEq> Counterexample<'_, T> {
         {
             return true;
         }
-        // Reconstruct a proposed boundary tree in Nash; only strict replay above
-        // can accept it. Proposal generation never establishes interestingness.
-        if let Some(tree) = self.rebuild(&Trace::flatten(candidate)) {
-            if self.accept(&tree) {
-                return true;
-            }
-            if self.feedback(candidate, &tree) {
-                return true;
-            }
+        // Rebuilding already evaluated the property on its generated value.
+        let result = self.rebuild(&Trace::flatten(candidate));
+        if self.accept_result(result.clone()) {
+            return true;
+        }
+        if let Status::Keep(_, used) | Status::Ignore(used) = result
+            && self.feedback(candidate, &used)
+        {
+            return true;
         }
         false
     }
@@ -779,21 +785,32 @@ mod tests {
         insta::with_settings!({omit_expression => true}, { insta::assert_snapshot!(results); });
     }
     #[test]
-    fn rebuilding_cannot_accept_a_non_interesting_strict_replay() {
+    fn rebuilding_evaluates_once_and_retains_its_result() {
+        use std::cell::Cell;
+        let calls = Cell::new(0);
         let mut ce = Counterexample {
-            value: (),
+            value: "original",
             choices: vec![C(9)],
             steps: 0,
-            cache: Cache::new(|nodes| Status::Ignore(nodes.to_vec()))
-                .with_rebuild(|_| Some(vec![C(0)])),
+            cache: Cache::new(|_| panic!("rebuilt candidates must not regenerate through replay"))
+                .with_rebuild(|numbers| {
+                    calls.set(calls.get() + 1);
+                    match numbers {
+                        [8] => Status::Ignore(vec![C(8)]),
+                        [7] => Status::Invalid,
+                        _ => Status::Keep("rebuilt property result", vec![G(vec![C(0)])]),
+                    }
+                }),
         };
-        assert!(!ce.consider(&[C(8)]));
-        let calls = ce.steps;
-        assert!(!ce.consider(&[C(8)]));
-        assert_eq!(ce.steps, calls);
-        assert_eq!(ce.choices, vec![C(9)]);
+        assert!(!ce.flat_attempt(&[8]));
+        assert!(!ce.flat_attempt(&[7]));
+        assert!(ce.flat_attempt(&[6]));
+        assert!(!ce.flat_attempt(&[6]));
+        assert!(!ce.flat_attempt(&[8]));
+        assert!(!ce.flat_attempt(&[7]));
+        assert_eq!(calls.get(), 3);
         insta::with_settings!({omit_expression => true}, {
-            insta::assert_snapshot!(format!("retained: {:?}\nstrict evaluations: {}\nreconstructions: {}", ce.choices, ce.cache.db.len(), ce.cache.rebuilt.len()));
+            insta::assert_snapshot!(format!("value: {}\nretained: {:?}\nstrict evaluations: {}\nrebuilding evaluations: {}", ce.value, ce.choices, ce.cache.db.len(), calls.get()));
         });
     }
 }

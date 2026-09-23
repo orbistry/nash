@@ -109,8 +109,8 @@ Applicative and Monad APIs. `Applicative`'s method is `apply`.
 - [x] Preserve or recompute final shown values, traces and assertion payloads,
   including zero-choice counterexamples and unsuccessful shrink attempts.
 - [x] Cover strict progress, invalid replay, caching and counterexample minima.
-- [x] Reconstruct boundary proposals in Nash from explicit choices, then validate
-  through strict replay; retain reduced replay trees in outcomes.
+- [x] Reconstruct boundaries in Nash from explicit choices and run the returned
+  property thunk without regenerating; retain reduced trees and cache complete outcomes.
 - [x] Retain valid unsuccessful replay feedback and repair size-dependent edits.
   Add adaptive draw deletion, one-to-five primitive deletion, joint equal-choice
   and alphabet reduction, common offsets, whole-draw reordering, and -XX/--X edits.

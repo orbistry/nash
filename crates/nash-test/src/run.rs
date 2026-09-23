@@ -156,8 +156,7 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             let original = (shown, logs.clone());
             let expect = out.test.expect;
             let budget_limit = out.test.budget;
-            let oracle = |choices: &[Trace]| {
-                let p = Prng::from_trace(choices);
+            let evaluate = |p: Prng| {
                 let arena = Arena::new();
                 let prepared = match eval::prepare(&arena, v, run, &p, machine_budget) {
                     Ok(Some(prepared)) => prepared,
@@ -188,13 +187,8 @@ fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBud
             let mut ce = shrink::Counterexample {
                 value: original,
                 choices: prepared.prng.choices(),
-                cache: shrink::Cache::new(oracle).with_rebuild(|choices| {
-                    let arena = Arena::new();
-                    eval::prepare(&arena, v, run, &Prng::rebuild(choices), machine_budget)
-                        .ok()
-                        .flatten()
-                        .map(|prepared| prepared.prng.choices())
-                }),
+                cache: shrink::Cache::new(|choices| evaluate(Prng::from_trace(choices)))
+                    .with_rebuild(|choices| evaluate(Prng::rebuild(choices))),
                 steps: 0,
             };
             let choice_count = Trace::flatten(&ce.choices).len();

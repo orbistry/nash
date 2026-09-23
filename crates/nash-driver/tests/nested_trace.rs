@@ -249,7 +249,7 @@ async fn nested_trace_reduction_repartitions_strict_groups() {
 }
 
 #[tokio::test]
-async fn reconstructs_multiple_boundaries_then_replays_strictly() {
+async fn reconstructs_multiple_boundaries() {
     use Trace::{Choice as C, Group as G};
     use nash_test::shrink::{Cache, Counterexample, Status};
     let programs = compile().await;
@@ -275,7 +275,7 @@ async fn reconstructs_multiple_boundaries_then_replays_strictly() {
     ce.simplify();
     assert_eq!(ce.choices, vec![C(0), G(vec![G(vec![C(0)])])]);
     insta::with_settings!({description => SOURCE, omit_expression => true}, {
-        insta::assert_snapshot!(format!("value: {}\nstrict replay trace: {:?}", ce.value, ce.choices));
+        insta::assert_snapshot!(format!("value: {}\nrebuilt trace: {:?}", ce.value, ce.choices));
     });
 }
 
@@ -283,7 +283,7 @@ fn build_trace(
     programs: &BTreeMap<String, Vec<u8>>,
     name: &str,
     numbers: &[u64],
-) -> Option<Vec<Trace>> {
+) -> nash_test::shrink::Status<String> {
     let arena = Arena::new();
     let items = numbers
         .iter()
@@ -297,10 +297,11 @@ fn build_trace(
             arena.alloc_slice_copy(&items),
         ),
     );
-    run(&arena, &programs[name], input).map(|(_, tree)| {
-        let Trace::Group(nodes) = tree else {
-            panic!("expected trace group")
-        };
-        nodes
-    })
+    match run(&arena, &programs[name], input) {
+        Some((value, Trace::Group(nodes))) => {
+            nash_test::shrink::Status::Keep(pretty::term(value), nodes)
+        }
+        None => nash_test::shrink::Status::Invalid,
+        _ => panic!("expected trace group"),
+    }
 }

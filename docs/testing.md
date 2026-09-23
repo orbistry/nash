@@ -366,10 +366,11 @@ Figure 6; no second trial is needed solely to realign that outer suffix.
 When an edit requires different group boundaries, Nash's `Rebuilding remaining
 recorded` mode consumes a flat list of explicit integer choices and constructs
 a proposed tree through the same generator and `group` functions. It enforces
-bounds and rejects exhaustion; it adds no random choices. Rust then evaluates
-the proposed tree through **strict `Replayed` mode**. Reconstruction never
-establishes that a failure is preserved, and its cache is separate from strict
-replay. This replaces guessing combinations of split/merge/wrap operations.
+bounds and rejects exhaustion; it adds no random choices. Rust runs the property
+thunk returned by that preparation directly, without generating again through
+`Replayed`. The complete outcome, shown values, logs and consumed tree are cached
+by the supplied flat choices, separately from strict replay results.
+This replaces guessing combinations of split/merge/wrap operations.
 There are no additional codegen rules or hidden tracing hooks.
 
 The schedule restarts after improvement. These are word-level adaptations;
@@ -378,16 +379,19 @@ floating-point representation. There is no float-specific pass. Generators
 which explicitly match `prng` constructors must handle `Rebuilding` as well.
 The search does not guarantee a global minimum or every combination of edits.
 
-`Prng::from_trace` replays each candidate. Preparation failure or `None` rejects
+`Prng::from_trace` replays tree-edit candidates. Preparation failure or `None` rejects
 it. The property must retain its expected counterexample outcome. Acceptance
 compares the **consumed primitive choices**, flattened in order: fewer choices
 first, then lexicographically smaller values. Group counts do not affect the
 order; equal flattened choices are tied. Shape-only changes cannot cycle.
-If normalization discards unused input, the normalized trace is replayed again
+For strict replay, if normalization discards unused input, the normalized trace is replayed again
 before acceptance, since public state functions can inspect remaining input.
 Results, including valid non-interesting consumed traces, are cached by the
 exact submitted tree, including empty groups. Invalid generation supplies no
 consumed-trace feedback; the reducer does not invent missing choices.
+Rebuilt candidates are accepted from their actual property outcome without a
+second generation. Generators that inspect the PRNG mode or unused input can
+therefore behave differently when their recorded tree is later replayed.
 
 The final consumed tree is retained internally in `Outcome.replay`. The
 runner's public `Prng` codec can construct replay terms from that tree. The
