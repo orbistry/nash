@@ -3,6 +3,7 @@ module Bytes exposing (append, compare, min, max, length, at, slice, take, drop,
 import Literal
 import Lift exposing (Lift)
 import Builtin
+import Function exposing ((|>))
 import List
 import Show
 import Ord
@@ -30,7 +31,10 @@ maxBytes : bytes -> bytes -> bytes
 maxBytes = Ord.max
 
 length : Lift bytes 'b => 'b -> int
-length value = Builtin.lengthOfByteString (lower value)
+length value =
+    value
+        |> lower
+        |> Builtin.lengthOfByteString
 
 at : (Lift bytes 'b, Lift int 'n) => 'b -> 'n -> int
 at value index = Builtin.indexByteString (lower value) (lower index)
@@ -51,13 +55,22 @@ concat values = List.foldr (\x acc -> Builtin.appendByteString (lower x) acc) #"
 
 
 complement : Lift bytes 'b => 'b -> bytes
-complement value = Builtin.complementByteString (lower value)
+complement value =
+    value
+        |> lower
+        |> Builtin.complementByteString
 
 countSetBits : Lift bytes 'b => 'b -> int
-countSetBits value = Builtin.countSetBits (lower value)
+countSetBits value =
+    value
+        |> lower
+        |> Builtin.countSetBits
 
 findFirstSetBit : Lift bytes 'b => 'b -> int
-findFirstSetBit value = Builtin.findFirstSetBit (lower value)
+findFirstSetBit value =
+    value
+        |> lower
+        |> Builtin.findFirstSetBit
 
 and : (Lift bool 'p, Lift bytes 'a, Lift bytes 'b) => 'p -> 'a -> 'b -> bytes
 and pad left right = Builtin.andByteString (lower pad) (lower left) (lower right)
@@ -81,4 +94,7 @@ writeBits : (Lift bytes 'b, Lift (list 'n) ('f 'n), Lift int 'n, Lift bool 'v) =
 writeBits value indices bit = Builtin.writeBits (lower value) (List.map lower indices) (lower bit)
 
 toHex : Lift bytes 'b => 'b -> string
-toHex value = Show.hexBytes (lower value)
+toHex value =
+    value
+        |> lower
+        |> Show.hexBytes

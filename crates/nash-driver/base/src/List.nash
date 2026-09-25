@@ -37,10 +37,16 @@ tail values = case lowerOuter values of
     _ :: xs -> Some xs
 
 isEmpty : Lift (list 'a) ('f 'a) => ('f 'a) -> bool
-isEmpty values = Builtin.nullList (lowerOuter values)
+isEmpty values =
+    values
+        |> lowerOuter
+        |> Builtin.nullList
 
 length : Lift (list 'a) ('f 'a) => ('f 'a) -> int
-length values = foldlList (\_ n -> n + 1) 0 (lowerOuter values)
+length values =
+    values
+        |> lowerOuter
+        |> foldlList (\_ n -> n + 1) 0
 
 isLength : (Lift (list 'a) ('f 'a), Lift int 'n) => ('f 'a) -> 'n -> bool
 isLength values mustLength =
@@ -58,7 +64,10 @@ isLength values mustLength =
         _ -> False
 
 reverse : Lift (list 'a) ('f 'a) => ('f 'a) -> list 'a
-reverse values = foldlList (\x xs -> x :: xs) [] (lowerOuter values)
+reverse values =
+    values
+        |> lowerOuter
+        |> foldlList (\x xs -> x :: xs) []
 
 append : (Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a)) => ('f 'a) -> ('g 'a) -> list 'a
 append xs ys = appendList (lowerOuter xs) (lowerOuter ys)
@@ -69,7 +78,10 @@ appendList xs ys = case xs of
     x :: rest -> x :: appendList rest ys
 
 concat : (Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a)) => 'g ('f 'a) -> list 'a
-concat values = foldrList (\xs acc -> appendList (lowerOuter xs) acc) [] (lowerOuter values)
+concat values =
+    values
+        |> lowerOuter
+        |> foldrList (\xs acc -> appendList (lowerOuter xs) acc) []
 
 map : Lift (list 'a) ('f 'a) => ('a -> 'b) -> ('f 'a) -> list 'b
 map f values = Functor.map f (lowerOuter values)
@@ -172,7 +184,10 @@ map2List f xs ys = case (xs, ys) of
     _ -> []
 
 sort : (Ord 'a, Lift (list 'a) ('f 'a)) => ('f 'a) -> list 'a
-sort values = sortList compare (lowerOuter values)
+sort values =
+    values
+        |> lowerOuter
+        |> sortList compare
 
 sortBy : (Lift (list 'a) ('f 'a), Lift ordering 'o) => ('a -> 'a -> 'o) -> ('f 'a) -> list 'a
 sortBy cmp values = sortList (\a b -> lower (cmp a b)) (lowerOuter values)
@@ -188,7 +203,10 @@ insert cmp x xs = case xs of
         _ -> x :: xs
 
 sum : (Lift int 'a, Lift (list 'a) ('f 'a)) => 'f 'a -> int
-sum values = foldlList (\x acc -> Builtin.addInteger (lower x) acc) 0 (lowerOuter values)
+sum values =
+    values
+        |> lowerOuter
+        |> foldlList (\x acc -> Builtin.addInteger (lower x) acc) 0
 
 partition : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> (list 'a, list 'a)
 partition p values = partitionList (\x -> lower (p x)) (lowerOuter values)
@@ -201,7 +219,10 @@ partitionList p xs = case xs of
         if p x then (x :: yes, no) else (yes, x :: no)
 
 toArray : Lift (list 'a) ('f 'a) => ('f 'a) -> array 'a
-toArray values = Builtin.listToArray (lowerOuter values)
+toArray values =
+    values
+        |> lowerOuter
+        |> Builtin.listToArray
 
 lowerOuter : Lift (list 'a) ('f 'a) => 'f 'a -> list 'a
 lowerOuter = lower

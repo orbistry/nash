@@ -1,6 +1,7 @@
 module Map exposing (empty, singleton, insert, get, remove, keys, values, toList, foldl, union)
 
 import Builtin
+import Function exposing ((|>))
 import Primitive exposing (type bool(..))
 import Lift exposing (Lift)
 import Eq exposing (Eq)
@@ -52,10 +53,16 @@ remove : (Eq 'k, Lift (list (pair 'k 'v)) 'm) => 'k -> 'm -> list (pair 'k 'v)
 remove key entries = List.filter (\entry -> let pair(k, _) = entry in neq key k) (toList entries)
 
 keys : Lift (list (pair 'k 'v)) 'input => 'input -> list 'k
-keys entries = Functor.map Pair.fst (lower entries)
+keys entries =
+    entries
+        |> lower
+        |> Functor.map Pair.fst
 
 values : Lift (list (pair 'k 'v)) 'input => 'input -> list 'v
-values entries = Functor.map Pair.snd (lower entries)
+values entries =
+    entries
+        |> lower
+        |> Functor.map Pair.snd
 
 toList : Lift (list (pair 'k 'v)) 'm => 'm -> list (pair 'k 'v)
 toList = lower

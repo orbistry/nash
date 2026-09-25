@@ -34,35 +34,38 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                                                       [(lam i24
                                                         [(lam i25
                                                           [(lam i26
-                                                            [[[i12 i5]
-                                                              [[(lam i27
-                                                                [(lam i28
-                                                                  [(lam i29 i29)
-                                                                    (lam i29
-                                                                      (case
-                                                                        [[(builtin lessThanInteger) i29] [i25 (con integer 0)]]
-                                                                        [(builtin decodeUtf8) [i27 i29]]
-                                                                        [[(builtin appendString) [i28 i24]]
-                                                                          [(builtin decodeUtf8)
-                                                                            [i27 [[(builtin subtractInteger) [i25 (con integer 0)]] i29]]]]))])
-                                                                  (lam i28 i28)])
-                                                                [(lam i27 [i27 i27])
-                                                                  (lam i27
+                                                            [(lam i27
+                                                              [[[i12 i5]
+                                                                [[(lam i28
+                                                                  [(lam i29
+                                                                    [(lam i30 i30)
+                                                                      (lam i30
+                                                                        (case
+                                                                          [[(builtin lessThanInteger) i30] [i26 (con integer 0)]]
+                                                                          [[i25 [[i25 i30] i28]] (builtin decodeUtf8)]
+                                                                          [[i25
+                                                                            [[i25 [[i25 [[i25 i30] [(builtin subtractInteger) [i26 (con integer 0)]]]] i28]]
+                                                                              (builtin decodeUtf8)]]
+                                                                            [(builtin appendString) [i29 i24]]]))])
+                                                                    (lam i29 i29)])
+                                                                  [(lam i28 [i28 i28])
                                                                     (lam i28
-                                                                      (case
-                                                                        [[(builtin lessThanInteger) i28] [i25 (con integer 10)]]
-                                                                        [[(builtin appendByteString)
-                                                                          [[i27 i27] [[(builtin quotientInteger) i28] [i25 (con integer 10)]]]]
-                                                                          [[(builtin consByteString)
-                                                                            [[(builtin addInteger) [i25 (con integer 48)]]
-                                                                              [[(builtin remainderInteger) i28] [i25 (con integer 10)]]]]
-                                                                            [i26 (con bytestring #)]]]
-                                                                        [[(builtin consByteString) [[(builtin addInteger) [i25 (con integer 48)]] i28]]
-                                                                          [i26 (con bytestring #)]])))]]
-                                                                i16]]
-                                                              (lam i27 (error))])
+                                                                      (lam i29
+                                                                        (case
+                                                                          [[(builtin lessThanInteger) i29] [i26 (con integer 10)]]
+                                                                          [[(builtin appendByteString)
+                                                                            [[i28 i28] [[(builtin quotientInteger) i29] [i26 (con integer 10)]]]]
+                                                                            [[(builtin consByteString)
+                                                                              [[(builtin addInteger) [i26 (con integer 48)]]
+                                                                                [[(builtin remainderInteger) i29] [i26 (con integer 10)]]]]
+                                                                              [i27 (con bytestring #)]]]
+                                                                          [[(builtin consByteString) [[(builtin addInteger) [i26 (con integer 48)]] i29]]
+                                                                            [i27 (con bytestring #)]])))]]
+                                                                  i16]]
+                                                                (lam i28 (error))])
+                                                              (lam i27 i27)])
                                                             (lam i26 i26)])
-                                                          (lam i25 i25)])
+                                                          (lam i25 (lam i26 [i26 i25]))])
                                                         i4])]
                                                   (con unit ())))
                                                 i21])

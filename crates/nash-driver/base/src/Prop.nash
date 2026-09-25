@@ -18,7 +18,10 @@ type prng = Seeded bytes (cons choiceTree) | Replayed (cons choiceTree) (cons ch
 type alias generator 'a = prng -> option ('a, prng)
 
 choice : Lift int 'n => 'n -> generator int
-choice bound = choiceInt (lower bound)
+choice bound =
+    bound
+        |> lower
+        |> choiceInt
 
 choiceInt : int -> generator int
 choiceInt bound state =

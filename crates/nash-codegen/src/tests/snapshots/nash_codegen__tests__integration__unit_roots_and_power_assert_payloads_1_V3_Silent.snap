@@ -43,35 +43,38 @@ description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport 
                                 [(lam i13
                                   [(lam i14
                                     [(lam i15
-                                      [[[i7 i2]
-                                        [[(lam i16
-                                          [(lam i17
-                                            [(lam i18 i18)
-                                              (lam i18
-                                                (case
-                                                  [[(builtin lessThanInteger) i18] [i14 (con integer 0)]]
-                                                  [(builtin decodeUtf8) [i16 i18]]
-                                                  [[(builtin appendString) [i17 i13]]
-                                                    [(builtin decodeUtf8)
-                                                      [i16 [[(builtin subtractInteger) [i14 (con integer 0)]] i18]]]]))])
-                                            (lam i17 i17)])
-                                          [(lam i16 [i16 i16])
-                                            (lam i16
+                                      [(lam i16
+                                        [[[i7 i2]
+                                          [[(lam i17
+                                            [(lam i18
+                                              [(lam i19 i19)
+                                                (lam i19
+                                                  (case
+                                                    [[(builtin lessThanInteger) i19] [i15 (con integer 0)]]
+                                                    [[i14 [[i14 i19] i17]] (builtin decodeUtf8)]
+                                                    [[i14
+                                                      [[i14 [[i14 [[i14 i19] [(builtin subtractInteger) [i15 (con integer 0)]]]] i17]]
+                                                        (builtin decodeUtf8)]]
+                                                      [(builtin appendString) [i18 i13]]]))])
+                                              (lam i18 i18)])
+                                            [(lam i17 [i17 i17])
                                               (lam i17
-                                                (case
-                                                  [[(builtin lessThanInteger) i17] [i14 (con integer 10)]]
-                                                  [[(builtin appendByteString)
-                                                    [[i16 i16] [[(builtin quotientInteger) i17] [i14 (con integer 10)]]]]
-                                                    [[(builtin consByteString)
-                                                      [[(builtin addInteger) [i14 (con integer 48)]]
-                                                        [[(builtin remainderInteger) i17] [i14 (con integer 10)]]]]
-                                                      [i15 (con bytestring #)]]]
-                                                  [[(builtin consByteString) [[(builtin addInteger) [i14 (con integer 48)]] i17]]
-                                                    [i15 (con bytestring #)]])))]]
-                                          i9]]
-                                        (lam i16 (error))])
+                                                (lam i18
+                                                  (case
+                                                    [[(builtin lessThanInteger) i18] [i15 (con integer 10)]]
+                                                    [[(builtin appendByteString)
+                                                      [[i17 i17] [[(builtin quotientInteger) i18] [i15 (con integer 10)]]]]
+                                                      [[(builtin consByteString)
+                                                        [[(builtin addInteger) [i15 (con integer 48)]]
+                                                          [[(builtin remainderInteger) i18] [i15 (con integer 10)]]]]
+                                                        [i16 (con bytestring #)]]]
+                                                    [[(builtin consByteString) [[(builtin addInteger) [i15 (con integer 48)]] i18]]
+                                                      [i16 (con bytestring #)]])))]]
+                                            i9]]
+                                          (lam i17 (error))])
+                                        (lam i16 i16)])
                                       (lam i15 i15)])
-                                    (lam i14 i14)])
+                                    (lam i14 (lam i15 [i15 i14]))])
                                   i1])]
                             (con unit ())))
                           [i3 (con integer 2)]])

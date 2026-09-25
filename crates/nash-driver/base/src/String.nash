@@ -3,13 +3,17 @@ module String exposing (toBytes, fromBytes, fromInt, concat, join)
 import Literal
 import Lift exposing (Lift)
 import Builtin
+import Function exposing ((|>))
 import Int
 
 toBytes : string -> bytes
 toBytes = Builtin.encodeUtf8
 
 fromBytes : Lift bytes 'b => 'b -> string
-fromBytes value = Builtin.decodeUtf8 (lower value)
+fromBytes value =
+    value
+        |> lower
+        |> Builtin.decodeUtf8
 
 fromInt : Lift int 'n => 'n -> string
 fromInt = Int.toString

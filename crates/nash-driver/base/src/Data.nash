@@ -60,7 +60,10 @@ impl Validate 'a => Validate (List 'a) where
             candidate : List Data
             candidate = Primitive.coerce value
         in
-        Builtin.listData (mapList validate (Builtin.unListData candidate))
+        candidate
+            |> Builtin.unListData
+            |> mapList validate
+            |> Builtin.listData
 
 impl (Validate 'k, Validate 'v) => Validate (Map 'k 'v) where
     validate value =
@@ -68,7 +71,10 @@ impl (Validate 'k, Validate 'v) => Validate (Map 'k 'v) where
             candidate : Map Data Data
             candidate = Primitive.coerce value
         in
-        Builtin.mapData (mapList pairValidate (Builtin.unMapData candidate))
+        candidate
+            |> Builtin.unMapData
+            |> mapList pairValidate
+            |> Builtin.mapData
 
 mapList : ('a -> 'b) -> list 'a -> list 'b
 mapList f values =
@@ -90,10 +96,16 @@ trait Decode 'a where
     decode : Data -> option 'a
 
 impl ToData int where
-    toData value = Primitive.coerce (Builtin.iData value)
+    toData value =
+        value
+            |> Builtin.iData
+            |> Primitive.coerce
 
 impl FromData int where
-    fromData value = Builtin.unIData (Primitive.coerce value)
+    fromData value =
+        value
+            |> Primitive.coerce
+            |> Builtin.unIData
 
 impl Decode int where
     decode value = case value of
@@ -101,10 +113,16 @@ impl Decode int where
         _ -> None
 
 impl ToData bytes where
-    toData value = Primitive.coerce (Builtin.bData value)
+    toData value =
+        value
+            |> Builtin.bData
+            |> Primitive.coerce
 
 impl FromData bytes where
-    fromData value = Builtin.unBData (Primitive.coerce value)
+    fromData value =
+        value
+            |> Primitive.coerce
+            |> Builtin.unBData
 
 impl Decode bytes where
     decode value = case value of
@@ -112,10 +130,16 @@ impl Decode bytes where
         _ -> None
 
 impl ToData string where
-    toData value = toData (Builtin.encodeUtf8 value)
+    toData value =
+        value
+            |> Builtin.encodeUtf8
+            |> toData
 
 impl FromData string where
-    fromData value = Builtin.decodeUtf8 (fromData value)
+    fromData value =
+        value
+            |> fromData
+            |> Builtin.decodeUtf8
 
 impl Decode Data where
     decode value = Some value

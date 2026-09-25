@@ -2,24 +2,43 @@ module Crypto exposing (sha2_256, sha3_256, blake2b_224, blake2b_256, keccak_256
 
 import Lift exposing (Lift)
 import Builtin
+import Function exposing ((|>))
 
 sha2_256 : Lift bytes 'a => 'a -> bytes
-sha2_256 value = Builtin.sha2_256 (lower value)
+sha2_256 value =
+    value
+        |> lower
+        |> Builtin.sha2_256
 
 sha3_256 : Lift bytes 'a => 'a -> bytes
-sha3_256 value = Builtin.sha3_256 (lower value)
+sha3_256 value =
+    value
+        |> lower
+        |> Builtin.sha3_256
 
 blake2b_224 : Lift bytes 'a => 'a -> bytes
-blake2b_224 value = Builtin.blake2b_224 (lower value)
+blake2b_224 value =
+    value
+        |> lower
+        |> Builtin.blake2b_224
 
 blake2b_256 : Lift bytes 'a => 'a -> bytes
-blake2b_256 value = Builtin.blake2b_256 (lower value)
+blake2b_256 value =
+    value
+        |> lower
+        |> Builtin.blake2b_256
 
 keccak_256 : Lift bytes 'a => 'a -> bytes
-keccak_256 value = Builtin.keccak_256 (lower value)
+keccak_256 value =
+    value
+        |> lower
+        |> Builtin.keccak_256
 
 ripemd_160 : Lift bytes 'a => 'a -> bytes
-ripemd_160 value = Builtin.ripemd_160 (lower value)
+ripemd_160 value =
+    value
+        |> lower
+        |> Builtin.ripemd_160
 
 verifyEd25519Signature : (Lift bytes 'k, Lift bytes 'm, Lift bytes 's) => 'k -> 'm -> 's -> bool
 verifyEd25519Signature key message signature = Builtin.verifyEd25519Signature (lower key) (lower message) (lower signature)

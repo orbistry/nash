@@ -3,91 +3,96 @@ source: crates/nash-codegen/src/build/tests/source/patterns.rs
 description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : Map Int Bytes\nmain = validate (toData (Builtin.mapData [Builtin.mkPairData (Builtin.bData #\"aa\") (Builtin.bData #\"bb\")]))\n"
 ---
 --- core
-let mapList#7 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#12 : 'erased -> pair Data Data) values#13 : list 'erased -> (\self#35 : 'erased -> self#35 self#35) (\self#35 : 'erased values#13 : list 'erased -> let match#16 : list 'erased = values#13 in
-case@List match#16 of
+let applyForward#7 : 'erased -> ('erased -> 'erased) -> 'erased = \x#13 : 'erased (f#14 : 'erased -> 'erased) -> f#14 x#13 in
+let mapList#8 : ('erased -> pair Data Data) -> list 'erased -> list (pair Data Data) = \(f#15 : 'erased -> pair Data Data) values#16 : list 'erased -> (\self#38 : 'erased -> self#38 self#38) (\self#38 : 'erased values#16 : list 'erased -> let match#19 : list 'erased = values#16 in
+case@List match#19 of
   Nil -> (con (list (pair data data)) [])
-  Cons field#17 field#18 -> let first#14 : 'erased = field#17 in
-  let rest#15 : list 'erased = field#18 in
-  mkCons (f#12 first#14) (self#35 self#35 rest#15)) values#13 in
-let validate#22 : Data -> Int = \value#27 : Data -> let candidate#28 : Int = (\coerce#30 : 'erased -> coerce#30) value#27 in
-let destruct#29 : int = unIData candidate#28 in
-candidate#28 in
-let validate#23 : Data -> Bytes = \value#31 : Data -> let candidate#32 : Bytes = (\coerce#34 : 'erased -> coerce#34) value#31 in
-let destruct#33 : bytes = unBData candidate#32 in
-candidate#32 in
-let pairValidate#8 : pair Data Data -> pair Data Data = \arg#19 : pair Data Data -> let match#24 : pair Data Data = arg#19 in
-case@Pair match#24 of
-  Pair field#25 field#26 -> let key#20 : Data = field#25 in
-  let value#21 : Data = field#26 in
-  mkPairData (validate#22 key#20) (validate#23 value#21) in
-let validate#2 : Data -> Map Data Data = \value#5 : Data -> let candidate#6 : Map Data Data = (\coerce#9 : 'erased -> coerce#9) value#5 in
-mapData (mapList#7 pairValidate#8 (unMapData candidate#6)) in
-let toData#3 : 'erased -> Data = \coerce#10 : 'erased -> coerce#10 in
-let fromBytes#4 : bytes -> bytes = \value#11 : bytes -> value#11 in
+  Cons field#20 field#21 -> let first#17 : 'erased = field#20 in
+  let rest#18 : list 'erased = field#21 in
+  mkCons (f#15 first#17) (self#38 self#38 rest#18)) values#16 in
+let validate#25 : Data -> Int = \value#30 : Data -> let candidate#31 : Int = (\coerce#33 : 'erased -> coerce#33) value#30 in
+let destruct#32 : int = unIData candidate#31 in
+candidate#31 in
+let validate#26 : Data -> Bytes = \value#34 : Data -> let candidate#35 : Bytes = (\coerce#37 : 'erased -> coerce#37) value#34 in
+let destruct#36 : bytes = unBData candidate#35 in
+candidate#35 in
+let pairValidate#9 : pair Data Data -> pair Data Data = \arg#22 : pair Data Data -> let match#27 : pair Data Data = arg#22 in
+case@Pair match#27 of
+  Pair field#28 field#29 -> let key#23 : Data = field#28 in
+  let value#24 : Data = field#29 in
+  mkPairData (validate#25 key#23) (validate#26 value#24) in
+let validate#2 : Data -> Map Data Data = \value#5 : Data -> let candidate#6 : Map Data Data = (\coerce#10 : 'erased -> coerce#10) value#5 in
+applyForward#7 (applyForward#7 (applyForward#7 candidate#6 unMapData) (mapList#8 pairValidate#9)) mapData in
+let toData#3 : 'erased -> Data = \coerce#11 : 'erased -> coerce#11 in
+let fromBytes#4 : bytes -> bytes = \value#12 : bytes -> value#12 in
 let main#1 : Map Int Bytes = validate#2 (toData#3 (mapData (mkCons (mkPairData (bData (fromBytes#4 (con bytestring #aa))) (bData (fromBytes#4 (con bytestring #bb)))) (con (list (pair data data)) [])))) in
 main#1
 --- uplc
 (program 1.1.0
-  [(lam mapList_7
-    [(lam validate_22
-      [(lam validate_23
-        [(lam pairValidate_8
-          [(lam validate_2
-            [(lam toData_3
-              [(lam fromBytes_4
-                [(lam main_1 main_1)
-                  [validate_2
-                    [toData_3
-                      [(builtin mapData)
-                        [[(force (builtin mkCons))
-                          [[(builtin mkPairData) [(builtin bData) [fromBytes_4 (con bytestring #aa)]]]
-                            [(builtin bData) [fromBytes_4 (con bytestring #bb)]]]]
-                          (con (list (pair data data)) [])]]]]])
-                (lam value_11 value_11)])
-              (lam coerce_10 coerce_10)])
-            (lam value_5
-              [(lam candidate_6
-                [(builtin mapData)
-                  [[mapList_7 pairValidate_8] [(builtin unMapData) candidate_6]]])
-                [(lam coerce_9 coerce_9) value_5]])])
-          (lam arg_19
-            [(lam match_24
-              (case
-                match_24
-                (lam field_25
-                  (lam field_26
-                    [(lam key_20
-                      [(lam value_21
-                        [[(builtin mkPairData) [validate_22 key_20]] [validate_23 value_21]])
-                        field_26])
-                      field_25]))))
-              arg_19])])
-        (lam value_31
-          [(lam candidate_32
-            [(lam destruct_33 candidate_32) [(builtin unBData) candidate_32]])
-            [(lam coerce_34 coerce_34) value_31]])])
-      (lam value_27
-        [(lam candidate_28
-          [(lam destruct_29 candidate_28) [(builtin unIData) candidate_28]])
-          [(lam coerce_30 coerce_30) value_27]])])
-    (lam f_12
-      (lam values_13
-        [[(lam self_35 [self_35 self_35])
-          (lam self_35
-            (lam values_13
-              [(lam match_16
+  [(lam applyForward_7
+    [(lam mapList_8
+      [(lam validate_25
+        [(lam validate_26
+          [(lam pairValidate_9
+            [(lam validate_2
+              [(lam toData_3
+                [(lam fromBytes_4
+                  [(lam main_1 main_1)
+                    [validate_2
+                      [toData_3
+                        [(builtin mapData)
+                          [[(force (builtin mkCons))
+                            [[(builtin mkPairData) [(builtin bData) [fromBytes_4 (con bytestring #aa)]]]
+                              [(builtin bData) [fromBytes_4 (con bytestring #bb)]]]]
+                            (con (list (pair data data)) [])]]]]])
+                  (lam value_12 value_12)])
+                (lam coerce_11 coerce_11)])
+              (lam value_5
+                [(lam candidate_6
+                  [[applyForward_7
+                    [[applyForward_7 [[applyForward_7 candidate_6] (builtin unMapData)]]
+                      [mapList_8 pairValidate_9]]]
+                    (builtin mapData)])
+                  [(lam coerce_10 coerce_10) value_5]])])
+            (lam arg_22
+              [(lam match_27
                 (case
-                  match_16
-                  (lam field_17
-                    (lam field_18
-                      [(lam first_14
-                        [(lam rest_15
-                          [[(force (builtin mkCons)) [f_12 first_14]] [[self_35 self_35] rest_15]])
-                          field_18])
-                        field_17]))
-                  (con (list (pair data data)) [])))
-                values_13]))]
-          values_13]))])
+                  match_27
+                  (lam field_28
+                    (lam field_29
+                      [(lam key_23
+                        [(lam value_24
+                          [[(builtin mkPairData) [validate_25 key_23]] [validate_26 value_24]])
+                          field_29])
+                        field_28]))))
+                arg_22])])
+          (lam value_34
+            [(lam candidate_35
+              [(lam destruct_36 candidate_35) [(builtin unBData) candidate_35]])
+              [(lam coerce_37 coerce_37) value_34]])])
+        (lam value_30
+          [(lam candidate_31
+            [(lam destruct_32 candidate_31) [(builtin unIData) candidate_31]])
+            [(lam coerce_33 coerce_33) value_30]])])
+      (lam f_15
+        (lam values_16
+          [[(lam self_38 [self_38 self_38])
+            (lam self_38
+              (lam values_16
+                [(lam match_19
+                  (case
+                    match_19
+                    (lam field_20
+                      (lam field_21
+                        [(lam first_17
+                          [(lam rest_18
+                            [[(force (builtin mkCons)) [f_15 first_17]] [[self_38 self_38] rest_18]])
+                            field_21])
+                          field_20]))
+                    (con (list (pair data data)) [])))
+                  values_16]))]
+            values_16]))])
+    (lam x_13 (lam f_14 [f_14 x_13]))])
 --- result
 error: Runtime(MalFormedData(ByteString([170])))
 --- logs

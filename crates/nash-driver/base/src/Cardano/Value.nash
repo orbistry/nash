@@ -1,5 +1,6 @@
 module Cardano.Value exposing (Value, empty, singleton, insert, lovelace, quantityOf, add, contains, scale)
 
+import Function exposing ((|>))
 import Option exposing (type option(..))
 import Lift exposing (Lift)
 import Data exposing (FromData, ToData, Validate, Decode)
@@ -7,8 +8,14 @@ import Data exposing (FromData, ToData, Validate, Decode)
 type alias Value = Map Bytes (Map Bytes Int)
 
 impl Lift value Value where
-    lift value = fromData (Builtin.valueData value)
-    lower value = Builtin.unValueData (toData value)
+    lift value =
+        value
+            |> Builtin.valueData
+            |> fromData
+    lower value =
+        value
+            |> toData
+            |> Builtin.unValueData
 
 impl Validate Value where
     validate raw =
@@ -16,7 +23,9 @@ impl Validate Value where
             checked : Map Bytes (Map Bytes Int)
             checked = validate raw
         in
-        fromData (toData checked)
+        checked
+            |> toData
+            |> fromData
 
 empty : value
 empty = Builtin.unValueData (toData emptyMap)
