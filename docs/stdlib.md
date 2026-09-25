@@ -671,6 +671,7 @@ min : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
 max : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
 abs : Lift int 'n => 'n -> int
 pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
+pow2 : Lift int 'e => 'e -> int
 powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
 toBytes : (Lift bool 'b, Lift int 's, Lift int 'n) => 'b -> 's -> 'n -> bytes
 fromBytes : (Lift bool 'b, Lift bytes 'v) => 'b -> 'v -> int
@@ -770,7 +771,11 @@ any is False and empty all is True. Sum computes an int for native or Big intege
 Predicates, comparators, and filterMap callbacks accept either outer representation. Fold callbacks take
 item then accumulator. Native dropList handles list skipping.
 
-Int.pow rejects negative exponents and returns 1 for exponent zero. Int.powMod
+Int.pow and Int.pow2 reject negative exponents and return 1 for exponent zero.
+Int.pow2 computes exact powers of two: local powers through eight bits use
+expModInteger with modulus 257; larger exponents combine that result with a
+power of 256. Int.pow uses this path for base 2 and exponentiation by squaring
+for other bases. These helpers impose no fixed result-size limit. Int.powMod
 uses Plutus expModInteger semantics, including its invalid-modulus and modular
 inverse failures. Int.toBytes rejects negative values, invalid sizes and values
 that do not fit. Bytes.at/readBit/writeBits fail for invalid indices; slice
@@ -995,9 +1000,13 @@ smaller values (testing.md "Shrinking"):
   avoiding clamping or wrapping the final chunk. Primitive draws retain the
   existing hash-modulo distribution. Equal endpoints consume no choices.
 - `int` selects one of three branches: 0..255, signed 16-bit, or an
-  arbitrary-precision signed magnitude. The magnitude stops with probability
-  3/4 at each step, otherwise drawing another 64-bit chunk. Zero needs no sign
-  choice. `intAtLeast lo` adds such a nonnegative magnitude to `lo`.
+  arbitrary-precision signed magnitude. The magnitude first selects a bit width: 75% in 1–8, 18.75%
+  in 9–16, and successively wider eight-bit bands with probability decreasing
+  by a factor of four. Each width within a band is equally likely. It then
+  samples from zero through 2^width - 1; zero has roughly 9% probability,
+  rather than being the stopping result. Zero needs no sign choice. `intAtLeast lo` adds such a nonnegative magnitude to `lo`.
+  The local 1–8-bit power uses `Int.pow2`, backed by `expModInteger 2 bits 257`, which is exact
+  because the result is at most 256. Wider bands multiply the scale by 256.
   There is no fixed integer-size ceiling; VM budgets still apply.
 - never consume choices on a path that cannot fail differently.
 

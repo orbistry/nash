@@ -1,6 +1,7 @@
 module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, bool, option, bytesBetween, bytesExactly, frequency, suchThat, intAtLeast)
 
 import Builtin
+import Int
 import Functor
 import Applicative
 import Monad
@@ -115,19 +116,18 @@ bounded maximum =
         let value = high * 18446744073709551616 + low in
             if value <= maximum then Applicative.pure value else bounded maximum
 
--- Stop with probability 3/4; otherwise append a chunk. No fixed size ceiling.
+-- Favor small bit widths, then sample within that width.
 natural : generator int
 natural = naturalFrom 1
 
 naturalFrom : int -> generator int
-naturalFrom place = do
-    continue <- choice 3
-    case continue of
-        3 -> do
-            digit <- choice 18446744073709551615
-            rest <- naturalFrom (place * 18446744073709551616)
-            Applicative.pure (digit * place + rest)
-        _ -> Applicative.pure 0
+naturalFrom scale = do
+    wider <- choice 3
+    case wider of
+        3 -> naturalFrom (scale * 256)
+        _ -> do
+            bits <- choice 7
+            bounded (scale * Int.pow2 (bits + 1) - 1)
 
 intAtLeast : Lift int 'n => 'n -> generator int
 intAtLeast minimum =

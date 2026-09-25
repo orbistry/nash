@@ -98,7 +98,6 @@ async fn generation_functions_thread_choices() {
         ("Prop.int", "two (c 0) (c 42)", "42"),
         ("Prop.int", "two (c 1) (c 65535)", "32767"),
         ("Prop.int", "two (c 1) (c 0)", "(-32768)"),
-        ("Prop.int", "two (c 2) (g (one (g (one (c 0)))))", "0"),
         (
             "Prop.oneOf (Cons.Cons (Prop.constant 0) (Cons.Cons (Prop.choice 10) Cons.Nil))",
             "two (c 1) (g (one (c 7)))",
@@ -180,4 +179,51 @@ async fn test_protocol_logs_survive_silent_user_traces() {
         assert_eq!(result.term.is_ok(), succeeds);
         assert_eq!(result.info.logs, expected);
     }
+}
+
+#[tokio::test]
+async fn integer_width_bound_costs() {
+    let mut report = String::new();
+    let mut sources = Vec::new();
+    for width in [1_u32, 4, 8, 16, 64, 120] {
+        let local = (width - 1) % 8 + 1;
+        let scale = 1_i128 << (width - local);
+        let expected = (1_i128 << width) - 1;
+        for (name, expression) in [
+            ("pow", format!("Int.pow 2 {width} - 1")),
+            ("pow2", format!("Int.pow2 {width} - 1")),
+            (
+                "expMod",
+                format!("{scale} * Builtin.expModInteger 2 {local} 257 - 1"),
+            ),
+        ] {
+            let source = format!("    assert (({expression}) == {expected})");
+            let output = compile(&source).await;
+            let arena = Arena::new();
+            let program = syn::parse_program(&arena, &output.uplc).unwrap();
+            let result = program
+                .apply(
+                    &arena,
+                    Term::data(
+                        &arena,
+                        nash_plutus::data::PlutusData::integer_from(&arena, 0),
+                    ),
+                )
+                .eval(&arena);
+            assert!(
+                result.term.is_ok(),
+                "{name} width {width}: {:?}",
+                result.term
+            );
+            let budget = result.info.consumed_budget;
+            report.push_str(&format!(
+                "width={width} {name}: cpu={} memory={}\n",
+                budget.cpu, budget.mem
+            ));
+            sources.push(source);
+        }
+    }
+    insta::with_settings!({description => sources.join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!(report);
+    });
 }

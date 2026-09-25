@@ -339,11 +339,19 @@ snapshots show listOf int reducing to both `[]` and `[0]`, and a wide-range
 counterexample reducing to its lower bound. Existing protocol tests continue to
 exercise seeded/replayed choices, malformed traces and the Rust runner.
 
+Nonnegative offsets use small-biased bit widths rather than zero-or-u64 chunks.
+A seeded 256-draw snapshot checks zero, small nonzero and larger offsets; explicit
+replay cases cover 1, 2, 10, 100, 255, 256 and values beyond u64.
+CEK measurements showed exact modular powers cheaper than the previous
+Int.pow implementation. Int.pow2 now provides that reusable exact operation,
+and Int.pow selects it for base 2. A budget snapshot covers both public helpers
+and direct modular bound expressions. Prop uses Int.pow2 for its local width.
+
 The generator distribution changed for the wide branch of Prop.int; older
 recordings using its previous signed-64-bit layout are not replay-compatible.
 No PRNG wire tags, runner protocol, reducer passes or codegen behavior changed.
 
-Validation: formatting and strict Clippy passed; 3,444 workspace tests passed,
+Validation: formatting and strict Clippy passed; 3,445 workspace tests passed,
 3 ignored.
 
 ---

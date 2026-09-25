@@ -36,6 +36,19 @@ tests
         assert (Int.abs bigInt == 7)
         assert (Int.pow 2 10 == 1024)
         assert (Int.pow bigInt 0 == 1)
+    test "exact powers of two across byte boundaries" = do
+        assert (Int.pow2 0 == 1)
+        assert (Int.pow2 bigInt == 128)
+        assert (Int.pow2 8 == 256)
+        assert (Int.pow2 9 == 512)
+        assert (Int.pow2 64 == 18446744073709551616)
+        assert (Int.pow2 128 == 18446744073709551616 * 18446744073709551616)
+        assert (Int.pow 2 128 == Int.pow2 128)
+        assert (Int.pow (-2) 9 == -512)
+        assert (Int.pow 3 5 == 243)
+        assert (Int.pow 0 0 == 1)
+    test "negative power of two exponent" fail = do
+        assert (Int.pow2 (-1) == 0)
     test "integer helpers 2" = do
         assert (Int.powMod 2 10 7 == 2)
         assert (Int.toBytes True 2 bigInt == #"0007")

@@ -37,7 +37,29 @@ hugeLittle = lower huge
 never : Prop.generator int
 never _ = fail
 
+sampleOffsets : int -> Prop.prng -> (int, int, int)
+sampleOffsets count state =
+    if count == 0 then (0, 0, 0)
+    else case Prop.intAtLeast 0 state of
+        None -> fail
+        Some (n, next) ->
+            let (zeros, small, large) = sampleOffsets (count - 1) next in
+            if n == 0 then (zeros + 1, small, large)
+            else if n <= 255 then (zeros, small + 1, large)
+            else (zeros, small, large + 1)
+
 tests
+    test "small widths produce useful nonzero offsets" = do
+        assert (value (Prop.intAtLeast 0) (rebuild [0, 0, 1]) == Some 1)
+        assert (value (Prop.intAtLeast 0) (rebuild [0, 1, 2]) == Some 2)
+        assert (value (Prop.intAtLeast 0) (rebuild [0, 3, 10]) == Some 10)
+        assert (value (Prop.intAtLeast 0) (rebuild [0, 6, 100]) == Some 100)
+        assert (value (Prop.intAtLeast 0) (rebuild [0, 7, 255]) == Some 255)
+        assert (value (Prop.intAtLeast 0) (rebuild [3, 0, 0, 256]) == Some 256)
+    test "seeded offsets favor small nonzero values" = do
+        let (zeros, small, large) = sampleOffsets 256 seed in
+            let _ = assert (zeros < 64 && small > 128 && large > 0) in
+            Builtin.trace (show (zeros, small, large)) ()
     test "wide range strict replay isolates rejected attempts" = do
         assert (value (Prop.intBetween 0 18446744073709551616) (replay (Cons (g (one (c 1))) (Cons (g (one (c 1))) (two (g (one (c 1))) (g (one (c 0))))))) == Some 18446744073709551616)
     test "weight totals can exceed one choice" = do
@@ -53,10 +75,10 @@ tests
         do
             assert (n < 0)
     test "arbitrary integer offsets preserve large lower bounds" = do
-        assert (value (Prop.intAtLeast huge) (rebuild [0]) == Some (lower huge))
-        assert (value (Prop.intAtLeast (-hugeLittle)) (rebuild [3, 0, 3, 1, 0]) == Some (18446744073709551616 - lower huge))
-        assert (value Prop.int (rebuild [2, 3, 0, 3, 1, 0, 0]) == Some 18446744073709551616)
-        assert (value Prop.int (rebuild [2, 3, 0, 3, 1, 0, 1]) == Some (-18446744073709551616))
+        assert (value (Prop.intAtLeast huge) (rebuild [0, 0, 0]) == Some (lower huge))
+        assert (value (Prop.intAtLeast (-hugeLittle)) (rebuild [3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 1, 0]) == Some (18446744073709551616 - lower huge))
+        assert (value Prop.int (rebuild [2, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 1, 0, 0]) == Some 18446744073709551616)
+        assert (value Prop.int (rebuild [2, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 1, 0, 1]) == Some (-18446744073709551616))
     test "wide bounded generation rejects overshoot then retries" = do
         assert (value (Prop.intBetween 0 18446744073709551616) (rebuild [1, 1, 1, 0]) == Some 18446744073709551616)
         assert (value (Prop.intBetween 0 18446744073709551616) (rebuild [1, 1]) == None)

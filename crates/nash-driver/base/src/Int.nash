@@ -1,4 +1,4 @@
-module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, powMod, toBytes, fromBytes, toString)
+module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, pow2, powMod, toBytes, fromBytes, toString)
 
 import Prelude exposing (..)
 import Lift exposing (Lift)
@@ -62,7 +62,11 @@ pow value exponent =
         e : int
         e = lower exponent
     in
-    if e < 0 then fail else power (lower value) e
+    if e < 0 then fail
+    else
+        let n : int
+            n = lower value
+        in if n == 2 then powerOfTwo e else power n e
 
 power : int -> int -> int
 power n e =
@@ -70,6 +74,21 @@ power n e =
     else
         let half = power n (quot e 2) in
         if rem e 2 == 0 then half * half else n * half * half
+
+pow2 : Lift int 'e => 'e -> int
+pow2 exponent =
+    let e : int
+        e = lower exponent
+    in if e < 0 then fail else powerOfTwo e
+
+powerOfTwo : int -> int
+powerOfTwo e =
+    -- Local powers are at most 256, so modulus 257 leaves them unchanged.
+    if e <= 8 then Builtin.expModInteger 2 e 257
+    else
+        let bands = quot (e - 1) 8
+            bits = rem (e - 1) 8 + 1
+        in power 256 bands * Builtin.expModInteger 2 bits 257
 
 powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
 powMod n e m = Builtin.expModInteger (lower n) (lower e) (lower m)

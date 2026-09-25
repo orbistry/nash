@@ -1,0 +1,22 @@
+---
+source: crates/nash-driver/tests/testing_base.rs
+description: "    assert ((Int.pow 2 1 - 1) == 1)\n    assert ((Int.pow2 1 - 1) == 1)\n    assert ((1 * Builtin.expModInteger 2 1 257 - 1) == 1)\n    assert ((Int.pow 2 4 - 1) == 15)\n    assert ((Int.pow2 4 - 1) == 15)\n    assert ((1 * Builtin.expModInteger 2 4 257 - 1) == 15)\n    assert ((Int.pow 2 8 - 1) == 255)\n    assert ((Int.pow2 8 - 1) == 255)\n    assert ((1 * Builtin.expModInteger 2 8 257 - 1) == 255)\n    assert ((Int.pow 2 16 - 1) == 65535)\n    assert ((Int.pow2 16 - 1) == 65535)\n    assert ((256 * Builtin.expModInteger 2 8 257 - 1) == 65535)\n    assert ((Int.pow 2 64 - 1) == 18446744073709551615)\n    assert ((Int.pow2 64 - 1) == 18446744073709551615)\n    assert ((72057594037927936 * Builtin.expModInteger 2 8 257 - 1) == 18446744073709551615)\n    assert ((Int.pow 2 120 - 1) == 1329227995784915872903807060280344575)\n    assert ((Int.pow2 120 - 1) == 1329227995784915872903807060280344575)\n    assert ((5192296858534827628530496329220096 * Builtin.expModInteger 2 8 257 - 1) == 1329227995784915872903807060280344575)"
+---
+width=1 pow: cpu=4344881 memory=19508
+width=1 pow2: cpu=3956548 memory=17407
+width=1 expMod: cpu=2096588 memory=6106
+width=4 pow: cpu=4344881 memory=19508
+width=4 pow2: cpu=3956548 memory=17407
+width=4 expMod: cpu=2096588 memory=6106
+width=8 pow: cpu=4493214 memory=20109
+width=8 pow2: cpu=4104881 memory=18008
+width=8 expMod: cpu=2096588 memory=6106
+width=16 pow: cpu=8474416 memory=37128
+width=16 pow2: cpu=8086083 memory=35027
+width=16 expMod: cpu=2096588 memory=6106
+width=64 pow: cpu=11911700 memory=51745
+width=64 pow2: cpu=11523367 memory=49644
+width=64 expMod: cpu=2097008 memory=6107
+width=120 pow: cpu=13476256 memory=58652
+width=120 pow2: cpu=13087923 memory=56551
+width=120 expMod: cpu=2098085 memory=6108
