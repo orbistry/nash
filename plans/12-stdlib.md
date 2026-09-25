@@ -59,7 +59,7 @@ replace the tested PRNG, replay, label, and assertion protocols.
 ## Current status
 
 Reconciled with chunks 12 and 13 implementation (2026-09-25). Base currently
-ships 34 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+ships 35 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|

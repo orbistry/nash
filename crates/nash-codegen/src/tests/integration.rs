@@ -29,6 +29,10 @@ fn compile_selected(
     let mut modules = Vec::new();
     for (text, package) in crate::harness::dependency_order([
         (
+            include_str!("../../../nash-driver/base/src/Function.nash"),
+            Some(primitives::BASE),
+        ),
+        (
             include_str!("../../tests/fixtures/VestingLiteral.nash"),
             Some(primitives::BASE),
         ),

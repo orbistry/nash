@@ -1,6 +1,7 @@
 module Data exposing (ToData, FromData, Validate, Decode, serialise, tag, fields)
 
 import Builtin
+import Function exposing ((|>))
 import Literal
 import Eq exposing (Eq)
 import Option exposing (Option, type option(..))
@@ -158,10 +159,18 @@ impl Decode unit where
         _ -> None
 
 impl ToData 'a => ToData (list 'a) where
-    toData values = Primitive.coerce (Builtin.listData (mapList toData values))
+    toData values =
+        values
+            |> mapList toData
+            |> Builtin.listData
+            |> Primitive.coerce
 
 impl FromData 'a => FromData (list 'a) where
-    fromData value = mapList fromData (Builtin.unListData (Primitive.coerce value))
+    fromData value =
+        value
+            |> Primitive.coerce
+            |> Builtin.unListData
+            |> mapList fromData
 
 impl Decode 'a => Decode (list 'a) where
     decode value = case value of

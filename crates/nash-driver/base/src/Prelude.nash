@@ -1,6 +1,7 @@
 module Prelude exposing (..)
 
 import Builtin
+import Function
 
 import Primitive exposing (type bool(..))
 import Bool exposing (and, or)
@@ -45,10 +46,10 @@ always : 'a -> 'b -> 'a
 always x _ = x
 
 applyForward : 'a -> ('a -> 'b) -> 'b
-applyForward x f = f x
+applyForward = Function.applyForward
 
 applyBackward : ('a -> 'b) -> 'a -> 'b
-applyBackward f x = f x
+applyBackward = Function.applyBackward
 
 composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 composeLeft g f x = g (f x)

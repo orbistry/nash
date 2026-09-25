@@ -1,4 +1,5 @@
 const BASE_MODULES: &[&str] = &[
+    include_str!("../../../../nash-driver/base/src/Function.nash"),
     include_str!("../../../../nash-driver/base/src/Lift.nash"),
     include_str!("../../../../nash-driver/base/src/Bool.nash"),
     include_str!("../../../../nash-driver/base/src/Unit.nash"),

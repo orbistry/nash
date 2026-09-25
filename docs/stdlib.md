@@ -25,6 +25,7 @@ The layout includes planned library modules as well as the current foundation.
 ```
 crates/nash-driver/base/
   src/
+    Function.nash         dependency-free forward and backward application
     Prelude.nash          infix declarations, basics
     Eq.nash               trait Eq + impls for compiler-known types
     Ord.nash              trait Ord
@@ -175,6 +176,9 @@ table binds (`|>`, `<|`, `<<`, `>>`, `::` targets, plus
 `identity`/`always`), and the prelude impls: impls for tuples, which
 count as defined in `nash/base` under the orphan rule. Everything else
 lives in the trait modules or the type modules. `Prelude` imports the traits it needs and `Bool` (for `&&`/`||`).
+The pipe implementations live in dependency-free `Function`; `Prelude` keeps
+its public pipe operators and application functions. Base modules below
+`Prelude` can import the pipes from `Function` without an import cycle.
 The application default-import catalog exposes all shipped traits independently;
 Base modules use explicit imports to keep the bootstrap graph acyclic.
 The `::` target is named `prepend` (not `cons`, which is the `Cons`
@@ -195,6 +199,7 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Bool exposing (and, or)
 import Builtin
+import Function
 
 infix left  0 (|>)  = applyForward
 infix right 0 (<|)  = applyBackward
@@ -226,10 +231,10 @@ always : 'a -> 'b -> 'a
 always x _ = x
 
 applyForward : 'a -> ('a -> 'b) -> 'b
-applyForward x f = f x
+applyForward = Function.applyForward
 
 applyBackward : ('a -> 'b) -> 'a -> 'b
-applyBackward f x = f x
+applyBackward = Function.applyBackward
 
 composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 composeLeft g f x = g (f x)
