@@ -1,5 +1,11 @@
 # nash-ir
 
+## 0.3.2 — 2026-09-25
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.11.0
+
 ## 0.3.1 — 2026-09-22
 
 ### Patch changes
