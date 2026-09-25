@@ -44,6 +44,8 @@ crates/nash-driver/base/
     Option.nash           option / Option
     Ordering.nash         ordering / Ordering
     Int.nash              int functions; Big Int
+    Rational.nash         normalized little rational arithmetic
+    Crypto.nash           hashing and signature builtin helpers
     Bytes.nash            bytes functions; Big Bytes
     String.nash           string (little only; no Big twin)
     List.nash             list functions; Big List
@@ -97,7 +99,7 @@ import Functor exposing (Functor)
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
-import Data exposing (ToData, FromData, Validate)
+import Data exposing (ToData, FromData, Validate, Decode)
 import Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
@@ -106,6 +108,8 @@ import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
 import Builtin
 import Int
+import Rational
+import Crypto
 import Bytes
 import String
 import List
@@ -680,10 +684,90 @@ abs : Lift int 'n => 'n -> int
 pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
 pow2 : Lift int 'e => 'e -> int
 powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
+gcd : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+lcm : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+isqrt : Lift int 'n => 'n -> int
+isGcd : (Lift int 'a, Lift int 'b, Lift int 'g) => 'a -> 'b -> 'g -> bool
+isLcm : (Lift int 'a, Lift int 'b, Lift int 'm) => 'a -> 'b -> 'm -> bool
+isSqrt : (Lift int 'n, Lift int 'r) => 'n -> 'r -> bool
 toBytes : (Lift bool 'b, Lift int 's, Lift int 'n) => 'b -> 's -> 'n -> bytes
 fromBytes : (Lift bool 'b, Lift bytes 'v) => 'b -> 'v -> int
 toString : Lift int 'n => 'n -> string
 ```
+
+gcd and lcm return nonnegative integers; gcd(0,0) and lcm(0,n) are zero.
+isqrt is the floor square root and fails for negative input. The implementation
+uses a power-of-two upper bound followed by integer Newton steps.
+
+The predicate helpers put the expected result last, matching List.isLength.
+isGcd and isLcm verify the greatest/least result, not merely a common divisor
+or multiple. They reject negative expected values. isSqrt checks
+`r*r <= n && n < (r+1)*(r+1)` and returns False for negative n or r. It verifies
+the floor root, so isSqrt 48 6 is True. GCD/LCM early rejection can save work;
+valid candidates still require proving coprimality. Budget snapshots compare
+each predicate with computing the result and comparing it. They measure complete
+compiled validators, including argument binding, comparisons and assertions.
+
+### `Rational`
+
+`Rational.rational` is a little type with a hidden constructor. `Rational.new`
+accepts independently Big/little integer numerator and denominator, rejects a
+zero denominator, reduces by gcd and makes the denominator positive. Zero is
+always 0/1. This arithmetic type is separate from Cardano.Tx.Rational, which
+preserves the ledger's constructor encoding without arithmetic normalization.
+
+```nash
+new : (Lift int 'n, Lift int 'd) => 'n -> 'd -> rational
+numerator : rational -> int
+denominator : rational -> int
+add : rational -> rational -> rational
+sub : rational -> rational -> rational
+mul : rational -> rational -> rational
+div : rational -> rational -> rational
+negate : rational -> rational
+abs : rational -> rational
+compare : rational -> rational -> ordering
+floor : rational -> int
+ceiling : rational -> int
+truncate : rational -> int
+```
+
+Eq, Ord, Num, FromInt and Show instances support equality, ordering, arithmetic
+operators, integer literals and `show` as normalized `numerator/denominator`.
+Division uses Rational.div and fails when the divisor is zero. Floor rounds
+toward negative infinity, ceiling toward positive infinity, and truncate toward
+zero. All arithmetic is exact integer arithmetic without floating-point conversion.
+
+### `Crypto`
+
+Hash helpers live in Crypto rather than Bytes. Crypto is implicitly available as a qualified module. Every argument accepts
+bytes or Bytes independently; hashes return little bytes and verification returns
+little bool. Helpers only call lower and the corresponding real Plutus builtin.
+They do not encode Data, hash messages implicitly, repair malformed lengths or
+catch builtin failures. Builtin availability follows the compiler's target policy.
+
+| Helper | Inputs and result |
+|---|---|
+| sha2_256, sha3_256, blake2b_224, blake2b_256, keccak_256, ripemd_160 | bytes/Bytes -> bytes |
+| verifyEd25519Signature | key, message, signature -> bool |
+| verifyEcdsaSecp256k1Signature | key, digest, signature -> bool |
+| verifySchnorrSecp256k1Signature | key, message, signature -> bool |
+
+Ed25519 uses a 32-byte public key and 64-byte signature, with an arbitrary-length
+message. ECDSA uses a SEC1 public key, a precomputed 32-byte digest and compact
+64-byte r||s signature; high-S signatures return False. Use compressed 33-byte
+keys for ledger portability; the current Nash runtime also parses uncompressed
+65-byte SEC1 keys. Schnorr uses a 32-byte x-only public key, 64-byte signature and
+an arbitrary-length message (the vectors include a one-byte message).
+
+Wrong required lengths and invalid SEC1/x-only key encodings fail execution;
+a well-formed signature that does not verify returns False. Keccak-256 and
+SHA3-256 are different algorithms. Existing BLS operations remain in Builtin;
+Crypto adds no aliases for operations without Big byte inputs.
+
+Known-answer fixtures cover all nine helpers, nonempty hashes, valid and invalid
+signatures, independently mixed Big/little arguments and malformed inputs. Their
+provenance is in `crates/nash-driver/tests/fixtures/crypto/README.md`.
 
 ### `Bytes`
 
@@ -698,12 +782,6 @@ slice : (Lift int 's, Lift int 'n, Lift bytes 'b) => 's -> 'n -> 'b -> bytes
 take : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
 drop : (Lift int 'n, Lift bytes 'b) => 'n -> 'b -> bytes
 concat : (Lift (list 'b) ('f 'b), Lift bytes 'b) => ('f 'b) -> bytes
-sha2_256 : Lift bytes 'b => 'b -> bytes
-sha3_256 : Lift bytes 'b => 'b -> bytes
-blake2b_256 : Lift bytes 'b => 'b -> bytes
-blake2b_224 : Lift bytes 'b => 'b -> bytes
-keccak_256 : Lift bytes 'b => 'b -> bytes
-ripemd_160 : Lift bytes 'b => 'b -> bytes
 complement : Lift bytes 'b => 'b -> bytes
 countSetBits : Lift bytes 'b => 'b -> int
 findFirstSetBit : Lift bytes 'b => 'b -> int

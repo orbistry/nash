@@ -86,14 +86,6 @@ tests
         assert (Bytes.countSetBits bigBytes == 10)
         assert (Bytes.findFirstSetBit #"08" == 3)
         assert (Bytes.findFirstSetBit #"00" == -1)
-    test "hashes" = do
-        assert (Bytes.sha2_256 #"" == #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-        assert (Bytes.sha3_256 #"" == #"a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a")
-        assert (Bytes.blake2b_256 #"" == #"0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8")
-        assert (Bytes.blake2b_224 #"" == #"836cc68931c2e4e3e838602eca1902591d216837bafddfe6f0c8cb07")
-    test "hashes 2" = do
-        assert (Bytes.keccak_256 #"" == #"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
-        assert (Bytes.ripemd_160 #"" == #"9c1185a5c5e9fc54612808977ee8f548b2258d31")
     test "byte index out of bounds" fail = do
         assert (Bytes.at #"" 0 == 0)
     test "text helpers" = do

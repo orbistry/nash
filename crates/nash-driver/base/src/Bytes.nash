@@ -1,4 +1,4 @@
-module Bytes exposing (append, compare, min, max, length, at, slice, take, drop, concat, sha2_256, sha3_256, blake2b_256, blake2b_224, keccak_256, ripemd_160, and, or, xor, complement, readBit, writeBits, shift, rotate, countSetBits, findFirstSetBit, toHex)
+module Bytes exposing (append, compare, min, max, length, at, slice, take, drop, concat, and, or, xor, complement, readBit, writeBits, shift, rotate, countSetBits, findFirstSetBit, toHex)
 
 import Literal
 import Lift exposing (Lift)
@@ -49,23 +49,6 @@ drop count value =
 concat : (Lift (list 'b) ('f 'b), Lift bytes 'b) => ('f 'b) -> bytes
 concat values = List.foldr (\x acc -> Builtin.appendByteString (lower x) acc) #"" values
 
-sha2_256 : Lift bytes 'b => 'b -> bytes
-sha2_256 value = Builtin.sha2_256 (lower value)
-
-sha3_256 : Lift bytes 'b => 'b -> bytes
-sha3_256 value = Builtin.sha3_256 (lower value)
-
-blake2b_256 : Lift bytes 'b => 'b -> bytes
-blake2b_256 value = Builtin.blake2b_256 (lower value)
-
-blake2b_224 : Lift bytes 'b => 'b -> bytes
-blake2b_224 value = Builtin.blake2b_224 (lower value)
-
-keccak_256 : Lift bytes 'b => 'b -> bytes
-keccak_256 value = Builtin.keccak_256 (lower value)
-
-ripemd_160 : Lift bytes 'b => 'b -> bytes
-ripemd_160 value = Builtin.ripemd_160 (lower value)
 
 complement : Lift bytes 'b => 'b -> bytes
 complement value = Builtin.complementByteString (lower value)

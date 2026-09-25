@@ -193,28 +193,85 @@ async fn integer_width_bound_costs() {
             ),
         ] {
             let source = format!("    assert (({expression}) == {expected})");
-            let output = compile(&source).await;
-            let arena = Arena::new();
-            let program = syn::parse_program(&arena, &output.uplc).unwrap();
-            let result = program
-                .apply(
-                    &arena,
-                    Term::data(
-                        &arena,
-                        nash_plutus::data::PlutusData::integer_from(&arena, 0),
-                    ),
-                )
-                .eval(&arena);
-            assert!(
-                result.term.is_ok(),
-                "{name} width {width}: {:?}",
-                result.term
-            );
-            let budget = result.info.consumed_budget;
-            report.push_str(&format!(
-                "width={width} {name}: cpu={} memory={}\n",
-                budget.cpu, budget.mem
-            ));
+            report.push_str(&measure_budget(&format!("width={width} {name}"), &source).await);
+            sources.push(source);
+        }
+    }
+    insta::with_settings!({description => sources.join("\n"), omit_expression => true}, {
+        insta::assert_snapshot!(report);
+    });
+}
+
+async fn measure_budget(name: &str, source: &str) -> String {
+    let output = compile(source).await;
+    let arena = Arena::new();
+    let program = syn::parse_program(&arena, &output.uplc).unwrap();
+    let result = program
+        .apply(
+            &arena,
+            Term::data(
+                &arena,
+                nash_plutus::data::PlutusData::integer_from(&arena, 0),
+            ),
+        )
+        .eval(&arena);
+    assert!(result.term.is_ok(), "{name}: {:?}", result.term);
+    let budget = result.info.consumed_budget;
+    format!("{name}: cpu={} memory={}\n", budget.cpu, budget.mem)
+}
+
+#[tokio::test]
+async fn integer_predicate_costs() {
+    let mut report = String::new();
+    let mut sources = Vec::new();
+    for (name, computed, predicate, expected) in [
+        (
+            "gcd_valid",
+            "Int.gcd 48 18 == 6",
+            "Int.isGcd 48 18 6",
+            "True",
+        ),
+        (
+            "gcd_coprime",
+            "Int.gcd 6765 4181 == 1",
+            "Int.isGcd 6765 4181 1",
+            "True",
+        ),
+        (
+            "gcd_reject",
+            "Int.gcd 6765 4181 == 5000",
+            "Int.isGcd 6765 4181 5000",
+            "False",
+        ),
+        (
+            "lcm_valid",
+            "Int.lcm 48 18 == 144",
+            "Int.isLcm 48 18 144",
+            "True",
+        ),
+        (
+            "lcm_reject",
+            "Int.lcm 48 18 == 143",
+            "Int.isLcm 48 18 143",
+            "False",
+        ),
+        (
+            "lcm_multiple",
+            "Int.lcm 48 18 == 288",
+            "Int.isLcm 48 18 288",
+            "False",
+        ),
+        ("sqrt_small", "Int.isqrt 48 == 6", "Int.isSqrt 48 6", "True"),
+        (
+            "sqrt_large",
+            "Int.isqrt (Int.fromBytes True #\"0100000000000000020000000000000001\") == 18446744073709551617",
+            "Int.isSqrt (Int.fromBytes True #\"0100000000000000020000000000000001\") 18446744073709551617",
+            "True",
+        ),
+    ] {
+        for (kind, expression) in [("compute", computed), ("predicate", predicate)] {
+            let source = format!("    assert (({expression}) == {expected})");
+            report.push_str(&measure_budget(&format!("{name} {kind}"), &source).await);
             sources.push(source);
         }
     }

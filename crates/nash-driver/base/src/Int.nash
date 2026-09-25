@@ -1,5 +1,6 @@
-module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, pow2, powMod, toBytes, fromBytes, toString)
+module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, pow2, powMod, gcd, lcm, isqrt, isGcd, isLcm, isSqrt, toBytes, fromBytes, toString)
 
+import Primitive exposing (type bool(..))
 import Prelude exposing (..)
 import Lift exposing (Lift)
 import Builtin
@@ -106,3 +107,76 @@ toString value = showInt (lower value)
 
 showInt : int -> string
 showInt = Show.show
+
+gcd : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+gcd left right = gcdInt (abs left) (abs right)
+
+gcdInt : int -> int -> int
+gcdInt a b = if b == 0 then a else gcdInt b (Builtin.modInteger a b)
+
+lcm : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+lcm left right =
+    let a : int
+        a = lower left
+        b : int
+        b = lower right
+    in
+    if a == 0 || b == 0 then 0
+    else abs (Builtin.quotientInteger a (gcd a b) * b)
+
+isqrt : Lift int 'n => 'n -> int
+isqrt value =
+    let n : int
+        n = lower value
+    in
+    if n < 0 then fail
+    else if n < 2 then n
+    else sqrtNewton n (sqrtUpper n 1)
+
+sqrtUpper : int -> int -> int
+sqrtUpper remaining bound =
+    if remaining == 0 then bound
+    else sqrtUpper (Builtin.quotientInteger remaining 4) (bound * 2)
+
+sqrtNewton : int -> int -> int
+sqrtNewton n current =
+    let next = Builtin.quotientInteger (current + Builtin.quotientInteger n current) 2 in
+    if next >= current then current else sqrtNewton n next
+
+isGcd : (Lift int 'a, Lift int 'b, Lift int 'g) => 'a -> 'b -> 'g -> bool
+isGcd left right expected =
+    let a = abs left
+        b = abs right
+        g : int
+        g = lower expected
+    in
+    if g < 0 then False
+    else if g == 0 then a == 0 && b == 0
+    else if g == 1 then gcdInt a b == 1
+    else if Builtin.modInteger a g /= 0 then False
+    else if Builtin.modInteger b g /= 0 then False
+    else gcdInt (Builtin.quotientInteger a g) (Builtin.quotientInteger b g) == 1
+
+isLcm : (Lift int 'a, Lift int 'b, Lift int 'm) => 'a -> 'b -> 'm -> bool
+isLcm left right expected =
+    let a = abs left
+        b = abs right
+        m : int
+        m = lower expected
+    in
+    if m < 0 then False
+    else if a == 0 || b == 0 then m == 0
+    else if m == 0 then False
+    else if Builtin.modInteger m a /= 0 then False
+    else if Builtin.modInteger m b /= 0 then False
+    else gcdInt (Builtin.quotientInteger m a) (Builtin.quotientInteger m b) == 1
+
+isSqrt : (Lift int 'n, Lift int 'r) => 'n -> 'r -> bool
+isSqrt value expected =
+    let n : int
+        n = lower value
+        root : int
+        root = lower expected
+    in
+    if n < 0 || root < 0 then False
+    else root * root <= n && n < (root + 1) * (root + 1)

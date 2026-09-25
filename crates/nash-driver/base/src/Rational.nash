@@ -1,0 +1,97 @@
+module Rational exposing (type rational, new, numerator, denominator, add, sub, mul, div, negate, abs, compare, floor, ceiling, truncate)
+
+import Prelude exposing (..)
+import Lift exposing (Lift)
+import Eq exposing (Eq)
+import Ord exposing (Ord)
+import Num exposing (Num)
+import Literal exposing (FromInt)
+import Show exposing (Show)
+import Ordering exposing (type ordering)
+import Int
+import Builtin
+
+type rational = Rational int int
+
+new : (Lift int 'n, Lift int 'd) => 'n -> 'd -> rational
+new top bottom =
+    let n : int
+        n = lower top
+        d : int
+        d = lower bottom
+    in
+    if d == 0 then fail
+    else
+        let divisor = Int.gcd n d
+            sign = if d < 0 then -1 else 1
+        in
+        Rational (Int.quot n divisor * sign) (Int.quot d divisor * sign)
+
+numerator : rational -> int
+numerator (Rational n _) = n
+
+denominator : rational -> int
+denominator (Rational _ d) = d
+
+add : rational -> rational -> rational
+add = addRational
+
+addRational : rational -> rational -> rational
+addRational (Rational a b) (Rational c d) = new (a * d + c * b) (b * d)
+
+sub : rational -> rational -> rational
+sub = subRational
+
+subRational : rational -> rational -> rational
+subRational (Rational a b) (Rational c d) = new (a * d - c * b) (b * d)
+
+mul : rational -> rational -> rational
+mul = mulRational
+
+mulRational : rational -> rational -> rational
+mulRational (Rational a b) (Rational c d) = new (a * c) (b * d)
+
+div : rational -> rational -> rational
+div (Rational a b) (Rational c d) = new (a * d) (b * c)
+
+negate : rational -> rational
+negate = negateRational
+
+negateRational : rational -> rational
+negateRational (Rational n d) = Rational (Int.negate n) d
+
+abs : rational -> rational
+abs (Rational n d) = Rational (Int.abs n) d
+
+compare : rational -> rational -> ordering
+compare = compareRational
+
+compareRational : rational -> rational -> ordering
+compareRational (Rational a b) (Rational c d) = Int.compare (a * d) (c * b)
+
+floor : rational -> int
+floor (Rational n d) = Int.div n d
+
+ceiling : rational -> int
+ceiling (Rational n d) = Int.negate (Int.div (Int.negate n) d)
+
+truncate : rational -> int
+truncate (Rational n d) = Int.quot n d
+
+impl Eq rational where
+    eq (Rational a b) (Rational c d) = a == c && b == d
+
+impl Ord rational where
+    compare = compareRational
+
+impl Num rational where
+    add = addRational
+    sub = subRational
+    mul = mulRational
+    negate = negateRational
+
+impl FromInt rational where
+    fromInt n = Rational n 1
+
+impl Show rational where
+    show (Rational n d) = Builtin.appendString (Int.toString n) (Builtin.appendString "/" (Int.toString d))

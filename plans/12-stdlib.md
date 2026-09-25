@@ -3,7 +3,8 @@
 Goal: write `crates/nash-driver/base/` in Nash per [docs/stdlib.md](../docs/stdlib.md) and
 wire it into the compiler: embedded package, default imports, the
 synthetic `Builtin` module, the trait modules and twin types, the type
-modules, decoders, `Prop`, `Test`, `Ast`, `Cardano.*`.
+modules, Data traits, `Prop`, `Test`, `Ast`, `Cardano.*`, integer math,
+`Rational` and `Crypto`.
 
 Prerequisites, by chunk (each chunk's Nash must type-check with the
 compiler features available when it lands):
@@ -17,6 +18,8 @@ compiler features available when it lands):
 | 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `prng` protocol, runner) |
 | 10 `Ast`, `Derive` | plans/11 chunk 4 (tags) and chunk 10 |
 | 11 `Cardano.*` | chunk 7 |
+| 12 integer math and Rational | chunks 5–6 |
+| 13 Crypto | chunks 3 and 6; existing Plutus crypto builtins |
 
 Module layout is docs/stdlib.md "Layout": one file per trait, one module
 per type pair named by the uppercase name, helpers accepting either outer representation
@@ -55,8 +58,8 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 11 implementation (2026-09-25). Base currently
-ships 32 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+Reconciled with chunks 12 and 13 implementation (2026-09-25). Base currently
+ships 34 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|
@@ -70,7 +73,9 @@ ships 32 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 8 Prop | complete | none |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
-| 11 Cardano | implemented | Haskell codec fixtures, native value helpers, interval comparisons |
+| 11 Cardano | complete | none |
+| 12 integer math / Rational | complete | none |
+| 13 Crypto | complete | none |
 
 Chunk 8 records its historical validation; chunk 11 adds executed Haskell
 comparisons and reruns the full workspace checks.
@@ -239,7 +244,8 @@ documented builtin failure behavior.
 Tests in `base_traits.rs` compile embedded Base, then execute Nash fixtures
 for Lists and TypeHelpers as well as the existing trait fixtures. They cover
 mixed representations, preserved elements, callback results, empty and invalid
-inputs, stable ordering, hashes, UTF-8, and lazy booleans. No CLI subprocesses.
+inputs, stable ordering, UTF-8, and lazy booleans. Hash coverage now lives in
+chunk 13's Crypto fixture. No CLI subprocesses.
 
 **Validation:** formatting and strict Clippy passed; 3,386 workspace tests
 passed, 3 ignored. Snapshot checks passed with no unreferenced snapshots.
@@ -487,6 +493,54 @@ reproduces all ten committed CBOR fixtures byte for byte.
 
 
 ---
+
+## Chunk 12: integer math and `Rational` — complete
+
+- [x] Add Int.gcd, Int.lcm and Int.isqrt, accepting Big/little integers and returning int.
+- [x] Use nonnegative gcd/lcm; gcd(0,0) = lcm(0,n) = 0. isqrt returns the floor
+  of the nonnegative square root and fails for a negative input.
+- [x] Add isGcd/isLcm/isSqrt with input arguments first and expected result last.
+  Reject negative expected values; isSqrt returns False for negative input.
+  Verify equivalence and benchmark CPU/memory against computing then comparing.
+- [x] Add a little Rational.rational type with hidden constructor. Rational.new
+  accepts Big/little numerator and denominator, reduces by gcd and keeps the
+  denominator positive. Zero normalizes to 0/1; zero denominator fails.
+- [x] Supply numerator/denominator, add/sub/mul/div, negate/abs, comparison,
+  floor/ceiling/truncate and little Eq/Ord/Num/FromInt/Show instances.
+- [x] Keep this normalized arithmetic type separate from Cardano.Tx.Rational's
+  exact ledger wire representation.
+- [x] Verify signs, zeros, large integers, square boundaries and exact fractions
+  against Python's math/fractions reference using source snapshot tests.
+- [x] Update implicit imports, docs and changesets; run the workspace checks.
+
+## Chunk 13: `Crypto` — complete
+
+- [x] Move the existing Bytes hash helpers into Crypto and provide thin Nash helpers for SHA-256, SHA3-256, Blake2b-224/256,
+  Keccak-256, RIPEMD-160, Ed25519, ECDSA-secp256k1 and Schnorr-secp256k1.
+- [x] Accept Big/little bytes independently for each input; return little bytes
+  or bool. Call the real Plutus builtin directly, without implicit hashing or
+  Data encoding, retries, length repair or failure interception.
+- [x] Document key/signature formats, message/prehash expectations and builtin
+  malformed-input behavior. Existing BLS operations remain available through
+  Builtin; this chunk does not duplicate APIs without Big byte inputs.
+- [x] Execute known-answer snapshots for every helper, valid/invalid signatures,
+  mixed Big/little arguments and malformed input. Keep vector provenance.
+- [x] Update implicit imports, docs and changesets; run the workspace checks.
+
+Implementation: Int.nash, Rational.nash and Crypto.nash. The six hash wrappers
+moved from Bytes into Crypto; their duplicate general-helper snapshots were
+removed. Rational and Crypto are implicit qualified modules.
+
+Validation: Python math/Fraction exact-reference fixtures, existing Plutus
+signature conformance vectors, 241 Nash tests including small-range predicate
+equivalence checks, and full-validator budget snapshots. Formatting, strict
+all-target/all-feature Clippy and the full workspace suite passed: 3,456 tests,
+3 ignored. The separate signature conformance run passed all 83 cases.
+
+Budget results in `testing_base__integer_predicate_costs.snap`: large isSqrt
+used 6,236,984 CPU / 27,424 memory versus 67,141,424 / 277,820 for computing and
+comparing. isGcd/isLcm save work on early rejection but can cost more for valid
+candidates; no general claim of cheaper verification is made.
 
 ## Test harness
 

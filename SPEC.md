@@ -67,7 +67,7 @@ Implementation plans (Plan 08 is deferred; Plans 09 and 10 are complete):
 - [x] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)
 - [x] 10 Testing: `tests` block, props, generators, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
-- [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md) (chunks 1–9 and 11 complete; chunk 10 Ast/Derive deferred)
+- [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md) (chunks 1–9 and 11–13 complete; chunk 10 Ast/Derive deferred)
 - [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md)
 - [x] Representation-classed impl heads: `Big`/`Little` blankets and concrete little impls coexist — [plans/repr-classed-impl-heads.md](plans/repr-classed-impl-heads.md)
 

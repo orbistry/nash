@@ -1,0 +1,155 @@
+module Main exposing (..)
+
+bigAbc : Bytes
+bigAbc = #"616263"
+bigEmpty : Bytes
+bigEmpty = #""
+
+edKey : bytes
+edKey = #"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+edBigKey : Bytes
+edBigKey = #"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+
+edMessage : bytes
+edMessage = #""
+edBigMessage : Bytes
+edBigMessage = #""
+
+edSignature : bytes
+edSignature = #"e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+edBigSignature : Bytes
+edBigSignature = #"e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+
+ecdsaKey : bytes
+ecdsaKey = #"032e433589dce61863199171f4d1e3fa946a5832621fcd29559940a0950f96fb6f"
+ecdsaBigKey : Bytes
+ecdsaBigKey = #"032e433589dce61863199171f4d1e3fa946a5832621fcd29559940a0950f96fb6f"
+
+ecdsaMessage : bytes
+ecdsaMessage = #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ecdsaBigMessage : Bytes
+ecdsaBigMessage = #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+ecdsaSignature : bytes
+ecdsaSignature = #"4941155e2303988a1be97a021fbaf9fe6064d05ea694bc5e89328f297154e5c63a2f3e7b5f509294a4c2e22feb697a16b792fabfebe9d0f38403b1c929836b5a"
+ecdsaBigSignature : Bytes
+ecdsaBigSignature = #"4941155e2303988a1be97a021fbaf9fe6064d05ea694bc5e89328f297154e5c63a2f3e7b5f509294a4c2e22feb697a16b792fabfebe9d0f38403b1c929836b5a"
+
+schnorrKey : bytes
+schnorrKey = #"778caa53b4393ac467774d09497a87224bf9fab6f6e68b23086497324d6fd117"
+schnorrBigKey : Bytes
+schnorrBigKey = #"778caa53b4393ac467774d09497a87224bf9fab6f6e68b23086497324d6fd117"
+
+schnorrMessage : bytes
+schnorrMessage = #"11"
+schnorrBigMessage : Bytes
+schnorrBigMessage = #"11"
+
+schnorrSignature : bytes
+schnorrSignature = #"08a20a0afef64124649232e0693c583ab1b9934ae63b4c3511f3ae1134c6a303ea3173bfea6683bd101fa5aa5dbc1996fe7cacfc5a577d33ec14564cec2bacbf"
+schnorrBigSignature : Bytes
+schnorrBigSignature = #"08a20a0afef64124649232e0693c583ab1b9934ae63b4c3511f3ae1134c6a303ea3173bfea6683bd101fa5aa5dbc1996fe7cacfc5a577d33ec14564cec2bacbf"
+
+tests
+    test "sha2_256 empty" = do
+        assert (Crypto.sha2_256 #"" == #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    test "sha2_256 Big empty" = do
+        assert (Crypto.sha2_256 bigEmpty == #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    test "sha2_256 abc" = do
+        assert (Crypto.sha2_256 #"616263" == #"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    test "sha2_256 Big abc" = do
+        assert (Crypto.sha2_256 bigAbc == #"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    test "sha3_256 empty" = do
+        assert (Crypto.sha3_256 #"" == #"a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a")
+    test "sha3_256 Big empty" = do
+        assert (Crypto.sha3_256 bigEmpty == #"a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a")
+    test "sha3_256 abc" = do
+        assert (Crypto.sha3_256 #"616263" == #"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532")
+    test "sha3_256 Big abc" = do
+        assert (Crypto.sha3_256 bigAbc == #"3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532")
+    test "blake2b_224 empty" = do
+        assert (Crypto.blake2b_224 #"" == #"836cc68931c2e4e3e838602eca1902591d216837bafddfe6f0c8cb07")
+    test "blake2b_224 Big empty" = do
+        assert (Crypto.blake2b_224 bigEmpty == #"836cc68931c2e4e3e838602eca1902591d216837bafddfe6f0c8cb07")
+    test "blake2b_224 abc" = do
+        assert (Crypto.blake2b_224 #"616263" == #"9bd237b02a29e43bdd6738afa5b53ff0eee178d6210b618e4511aec8")
+    test "blake2b_224 Big abc" = do
+        assert (Crypto.blake2b_224 bigAbc == #"9bd237b02a29e43bdd6738afa5b53ff0eee178d6210b618e4511aec8")
+    test "blake2b_256 empty" = do
+        assert (Crypto.blake2b_256 #"" == #"0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8")
+    test "blake2b_256 Big empty" = do
+        assert (Crypto.blake2b_256 bigEmpty == #"0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8")
+    test "blake2b_256 abc" = do
+        assert (Crypto.blake2b_256 #"616263" == #"bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319")
+    test "blake2b_256 Big abc" = do
+        assert (Crypto.blake2b_256 bigAbc == #"bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319")
+    test "keccak_256 empty" = do
+        assert (Crypto.keccak_256 #"" == #"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+    test "keccak_256 Big empty" = do
+        assert (Crypto.keccak_256 bigEmpty == #"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+    test "ripemd_160 empty" = do
+        assert (Crypto.ripemd_160 #"" == #"9c1185a5c5e9fc54612808977ee8f548b2258d31")
+    test "ripemd_160 Big empty" = do
+        assert (Crypto.ripemd_160 bigEmpty == #"9c1185a5c5e9fc54612808977ee8f548b2258d31")
+    test "ripemd_160 abc" = do
+        assert (Crypto.ripemd_160 #"616263" == #"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")
+    test "ripemd_160 Big abc" = do
+        assert (Crypto.ripemd_160 bigAbc == #"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")
+    test "keccak nonempty conformance" = do
+        assert (Crypto.keccak_256 #"AAFDC9243D3D4A096558A360CC27C8D862F0BE73DB5E88AA55" == #"6FFFA070B865BE3EE766DC2DB49B6AA55C369F7DE3703ADA2612D754145C01E6")
+    test "verifyEd25519Signature valid" = do
+        assert (Crypto.verifyEd25519Signature edKey edMessage edSignature)
+    test "verifyEd25519Signature Big Key" = do
+        assert (Crypto.verifyEd25519Signature edBigKey edMessage edSignature)
+    test "verifyEd25519Signature Big Message" = do
+        assert (Crypto.verifyEd25519Signature edKey edBigMessage edSignature)
+    test "verifyEd25519Signature Big Signature" = do
+        assert (Crypto.verifyEd25519Signature edKey edMessage edBigSignature)
+    test "verifyEd25519Signature all Big" = do
+        assert (Crypto.verifyEd25519Signature edBigKey edBigMessage edBigSignature)
+    test "verifyEd25519Signature invalid conformance" = do
+        assert (not (Crypto.verifyEd25519Signature #"6df9340c138cc188b5fe4464ebaa3f7fc206a2d55c3434707e74c9fc04e20ebb" #"5f4c8989" #"124f6fc6b0d100842769e71bd530664d888df8507df6c56dedfdb509aeb93416e26b918d38aa06305df3095697c18b2aa832eaa52edc0ae49fbae5a85e150c07"))
+    test "verifyEd25519Signature wrong key length" fail = do
+        let _ = Crypto.verifyEd25519Signature #"" edMessage edSignature in ()
+    test "verifyEd25519Signature wrong signature length" fail = do
+        let _ = Crypto.verifyEd25519Signature edKey edMessage #"" in ()
+    test "verifyEd25519Signature changed message" = do
+        assert (not (Crypto.verifyEd25519Signature edKey #"12" edSignature))
+    test "verifyEcdsaSecp256k1Signature valid" = do
+        assert (Crypto.verifyEcdsaSecp256k1Signature ecdsaKey ecdsaMessage ecdsaSignature)
+    test "verifyEcdsaSecp256k1Signature Big Key" = do
+        assert (Crypto.verifyEcdsaSecp256k1Signature ecdsaBigKey ecdsaMessage ecdsaSignature)
+    test "verifyEcdsaSecp256k1Signature Big Message" = do
+        assert (Crypto.verifyEcdsaSecp256k1Signature ecdsaKey ecdsaBigMessage ecdsaSignature)
+    test "verifyEcdsaSecp256k1Signature Big Signature" = do
+        assert (Crypto.verifyEcdsaSecp256k1Signature ecdsaKey ecdsaMessage ecdsaBigSignature)
+    test "verifyEcdsaSecp256k1Signature all Big" = do
+        assert (Crypto.verifyEcdsaSecp256k1Signature ecdsaBigKey ecdsaBigMessage ecdsaBigSignature)
+    test "verifyEcdsaSecp256k1Signature invalid conformance" = do
+        assert (not (Crypto.verifyEcdsaSecp256k1Signature #"032e433589dce61863199171f4d1e3fa946a5832621fcd29559940a0950f96fb6f" #"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" #"603e6e7bf67152188204f76f6274d38c477bdbc3954cdaa44e4ef49691a517ded5eaad30c2e69e3e9b124bcc48fa0e4d0aa0dfdb4ca9d537ea1dcd46c94b8f56"))
+    test "verifyEcdsaSecp256k1Signature wrong key length" fail = do
+        let _ = Crypto.verifyEcdsaSecp256k1Signature #"" ecdsaMessage ecdsaSignature in ()
+    test "verifyEcdsaSecp256k1Signature wrong signature length" fail = do
+        let _ = Crypto.verifyEcdsaSecp256k1Signature ecdsaKey ecdsaMessage #"" in ()
+    test "verifyEcdsaSecp256k1Signature changed message" = do
+        assert (not (Crypto.verifyEcdsaSecp256k1Signature ecdsaKey #"0000000000000000000000000000000000000000000000000000000000000000" ecdsaSignature))
+    test "verifySchnorrSecp256k1Signature valid" = do
+        assert (Crypto.verifySchnorrSecp256k1Signature schnorrKey schnorrMessage schnorrSignature)
+    test "verifySchnorrSecp256k1Signature Big Key" = do
+        assert (Crypto.verifySchnorrSecp256k1Signature schnorrBigKey schnorrMessage schnorrSignature)
+    test "verifySchnorrSecp256k1Signature Big Message" = do
+        assert (Crypto.verifySchnorrSecp256k1Signature schnorrKey schnorrBigMessage schnorrSignature)
+    test "verifySchnorrSecp256k1Signature Big Signature" = do
+        assert (Crypto.verifySchnorrSecp256k1Signature schnorrKey schnorrMessage schnorrBigSignature)
+    test "verifySchnorrSecp256k1Signature all Big" = do
+        assert (Crypto.verifySchnorrSecp256k1Signature schnorrBigKey schnorrBigMessage schnorrBigSignature)
+    test "verifySchnorrSecp256k1Signature invalid conformance" = do
+        assert (not (Crypto.verifySchnorrSecp256k1Signature #"dff1d77f2a671c5f36183726db2341be58feae1da2deced843240f7b502ba659" #"243f6a8885a308d313198a2e03707344a4093822299f31d0082efa98ec4e6c89" #"fff97bd5755eeea420453a14355235d382f6472f8568a18b2f057a14602975563cc27944640ac607cd107ae10923d9ef7a73c643e166be5ebeafa34b1ac553e2"))
+    test "verifySchnorrSecp256k1Signature wrong key length" fail = do
+        let _ = Crypto.verifySchnorrSecp256k1Signature #"" schnorrMessage schnorrSignature in ()
+    test "verifySchnorrSecp256k1Signature wrong signature length" fail = do
+        let _ = Crypto.verifySchnorrSecp256k1Signature schnorrKey schnorrMessage #"" in ()
+    test "verifySchnorrSecp256k1Signature changed message" = do
+        assert (not (Crypto.verifySchnorrSecp256k1Signature schnorrKey #"12" schnorrSignature))
+    test "ECDSA requires digest" fail = do
+        let _ = Crypto.verifyEcdsaSecp256k1Signature ecdsaKey #"" ecdsaSignature in ()

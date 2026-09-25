@@ -31,6 +31,8 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Ordering", &["Ordering", "type ordering"]),
     ("Cons", &["type cons"]),
     ("Int", &[]),
+    ("Rational", &[]),
+    ("Crypto", &[]),
     ("Bytes", &[]),
     ("String", &[]),
     ("List", &[]),

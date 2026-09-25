@@ -1,0 +1,170 @@
+module Main exposing (..)
+
+import Rational exposing (type rational)
+
+big : Int
+big = lift -4
+half = Rational.new 1 2
+third = Rational.new 1 3
+literal : rational
+literal = 2
+
+tests
+    test "normalize mixed inputs and signs" = do
+        assert (Rational.new 2 big == Rational.new -1 2)
+    test "normalize zero" = do
+        assert (Rational.denominator (Rational.new 0 -5) == 1)
+    test "numerator" = do
+        assert (Rational.numerator (Rational.new 4 6) == 2)
+    test "denominator" = do
+        assert (Rational.denominator (Rational.new 4 6) == 3)
+    test "addition" = do
+        assert (half + third == Rational.new 5 6)
+    test "subtraction" = do
+        assert (half - third == Rational.new 1 6)
+    test "multiplication" = do
+        assert (half * third == Rational.new 1 6)
+    test "division" = do
+        assert (Rational.div half third == Rational.new 3 2)
+    test "negate" = do
+        assert (-half == Rational.new -1 2)
+    test "abs" = do
+        assert (Rational.abs (-half) == half)
+    test "compare" = do
+        assert (third < half)
+    test "integer literal" = do
+        assert (literal == Rational.new 2 1)
+    test "show" = do
+        assert (show (Rational.new 2 -4) == "-1/2")
+    test "floor negative" = do
+        assert (Rational.floor (Rational.new -7 3) == -3)
+    test "ceiling negative" = do
+        assert (Rational.ceiling (Rational.new -7 3) == -2)
+    test "truncate negative" = do
+        assert (Rational.truncate (Rational.new -7 3) == -2)
+    test "floor positive" = do
+        assert (Rational.floor (Rational.new 7 3) == 2)
+    test "ceiling positive" = do
+        assert (Rational.ceiling (Rational.new 7 3) == 3)
+    test "zero denominator fails" fail = do
+        let _ = Rational.new 1 0 in ()
+    test "division by zero fails" fail = do
+        let _ = Rational.div half (Rational.new 0 1) in ()
+    test "oracle normalize 0" = do
+        assert ((Rational.new (0) (-7)) == Rational.new (0) 1)
+    test "oracle floor 0" = do
+        assert (Rational.floor (Rational.new (0) (-7)) == (0))
+    test "oracle ceiling 0" = do
+        assert (Rational.ceiling (Rational.new (0) (-7)) == (0))
+    test "oracle truncate 0" = do
+        assert (Rational.truncate (Rational.new (0) (-7)) == (0))
+    test "oracle normalize 1" = do
+        assert ((Rational.new (6) (-8)) == Rational.new (-3) 4)
+    test "oracle floor 1" = do
+        assert (Rational.floor (Rational.new (6) (-8)) == (-1))
+    test "oracle ceiling 1" = do
+        assert (Rational.ceiling (Rational.new (6) (-8)) == (0))
+    test "oracle truncate 1" = do
+        assert (Rational.truncate (Rational.new (6) (-8)) == (0))
+    test "oracle normalize 2" = do
+        assert ((Rational.new (-6) (-8)) == Rational.new (3) 4)
+    test "oracle floor 2" = do
+        assert (Rational.floor (Rational.new (-6) (-8)) == (0))
+    test "oracle ceiling 2" = do
+        assert (Rational.ceiling (Rational.new (-6) (-8)) == (1))
+    test "oracle truncate 2" = do
+        assert (Rational.truncate (Rational.new (-6) (-8)) == (0))
+    test "oracle normalize 3" = do
+        assert ((Rational.new (7) (3)) == Rational.new (7) 3)
+    test "oracle floor 3" = do
+        assert (Rational.floor (Rational.new (7) (3)) == (2))
+    test "oracle ceiling 3" = do
+        assert (Rational.ceiling (Rational.new (7) (3)) == (3))
+    test "oracle truncate 3" = do
+        assert (Rational.truncate (Rational.new (7) (3)) == (2))
+    test "oracle normalize 4" = do
+        assert ((Rational.new (-7) (3)) == Rational.new (-7) 3)
+    test "oracle floor 4" = do
+        assert (Rational.floor (Rational.new (-7) (3)) == (-3))
+    test "oracle ceiling 4" = do
+        assert (Rational.ceiling (Rational.new (-7) (3)) == (-2))
+    test "oracle truncate 4" = do
+        assert (Rational.truncate (Rational.new (-7) (3)) == (-2))
+    test "oracle normalize 5" = do
+        assert ((Rational.new (6) (3)) == Rational.new (2) 1)
+    test "oracle floor 5" = do
+        assert (Rational.floor (Rational.new (6) (3)) == (2))
+    test "oracle ceiling 5" = do
+        assert (Rational.ceiling (Rational.new (6) (3)) == (2))
+    test "oracle truncate 5" = do
+        assert (Rational.truncate (Rational.new (6) (3)) == (2))
+    test "oracle normalize 6" = do
+        assert ((Rational.new (-6) (3)) == Rational.new (-2) 1)
+    test "oracle floor 6" = do
+        assert (Rational.floor (Rational.new (-6) (3)) == (-2))
+    test "oracle ceiling 6" = do
+        assert (Rational.ceiling (Rational.new (-6) (3)) == (-2))
+    test "oracle truncate 6" = do
+        assert (Rational.truncate (Rational.new (-6) (3)) == (-2))
+    test "oracle normalize 7" = do
+        assert ((Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) ((Int.fromBytes True #"0300000000000000000000000000000003"))) == Rational.new (1) 3)
+    test "oracle floor 7" = do
+        assert (Rational.floor (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) ((Int.fromBytes True #"0300000000000000000000000000000003"))) == (0))
+    test "oracle ceiling 7" = do
+        assert (Rational.ceiling (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) ((Int.fromBytes True #"0300000000000000000000000000000003"))) == (1))
+    test "oracle truncate 7" = do
+        assert (Rational.truncate (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) ((Int.fromBytes True #"0300000000000000000000000000000003"))) == (0))
+    test "oracle add 0" = do
+        assert (Rational.add (Rational.new (-2) 3) (Rational.new (5) 6) == (Rational.new (1) 6))
+    test "oracle sub 0" = do
+        assert (Rational.sub (Rational.new (-2) 3) (Rational.new (5) 6) == (Rational.new (-3) 2))
+    test "oracle mul 0" = do
+        assert (Rational.mul (Rational.new (-2) 3) (Rational.new (5) 6) == (Rational.new (-5) 9))
+    test "oracle div 0" = do
+        assert (Rational.div (Rational.new (-2) 3) (Rational.new (5) 6) == (Rational.new (-4) 5))
+    test "oracle compare 0" = do
+        assert (Rational.compare (Rational.new (-2) 3) (Rational.new (5) 6) == LT)
+    test "oracle add 1" = do
+        assert (Rational.add (Rational.new (7) 12) (Rational.new (-14) 9) == (Rational.new (-35) 36))
+    test "oracle sub 1" = do
+        assert (Rational.sub (Rational.new (7) 12) (Rational.new (-14) 9) == (Rational.new (77) 36))
+    test "oracle mul 1" = do
+        assert (Rational.mul (Rational.new (7) 12) (Rational.new (-14) 9) == (Rational.new (-49) 54))
+    test "oracle div 1" = do
+        assert (Rational.div (Rational.new (7) 12) (Rational.new (-14) 9) == (Rational.new (-3) 8))
+    test "oracle compare 1" = do
+        assert (Rational.compare (Rational.new (7) 12) (Rational.new (-14) 9) == GT)
+    test "oracle add 2" = do
+        assert (Rational.add (Rational.new (0) 1) (Rational.new (-5) 7) == (Rational.new (-5) 7))
+    test "oracle sub 2" = do
+        assert (Rational.sub (Rational.new (0) 1) (Rational.new (-5) 7) == (Rational.new (5) 7))
+    test "oracle mul 2" = do
+        assert (Rational.mul (Rational.new (0) 1) (Rational.new (-5) 7) == (Rational.new (0) 1))
+    test "oracle div 2" = do
+        assert (Rational.div (Rational.new (0) 1) (Rational.new (-5) 7) == (Rational.new (0) 1))
+    test "oracle compare 2" = do
+        assert (Rational.compare (Rational.new (0) 1) (Rational.new (-5) 7) == GT)
+    test "oracle add 3" = do
+        assert (Rational.add (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Rational.new ((Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Int.fromBytes True #"0100000000000000000000000000000001")) == (Rational.new ((Int.fromBytes True #"020000000000000000000000000000000000000000000000000000000000000002")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")))
+    test "oracle sub 3" = do
+        assert (Rational.sub (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Rational.new ((Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Int.fromBytes True #"0100000000000000000000000000000001")) == (Rational.new ((Int.fromBytes True #"0400000000000000000000000000000000")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")))
+    test "oracle mul 3" = do
+        assert (Rational.mul (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Rational.new ((Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Int.fromBytes True #"0100000000000000000000000000000001")) == (Rational.new (1) 1))
+    test "oracle div 3" = do
+        assert (Rational.div (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Rational.new ((Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Int.fromBytes True #"0100000000000000000000000000000001")) == (Rational.new ((Int.fromBytes True #"010000000000000000000000000000000200000000000000000000000000000001")) (Int.fromBytes True #"fffffffffffffffffffffffffffffffe00000000000000000000000000000001")))
+    test "oracle compare 3" = do
+        assert (Rational.compare (Rational.new ((Int.fromBytes True #"0100000000000000000000000000000001")) (Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Rational.new ((Int.fromBytes True #"ffffffffffffffffffffffffffffffff")) (Int.fromBytes True #"0100000000000000000000000000000001")) == GT)
+    test "oracle add 4" = do
+        assert (Rational.add (Rational.new (1) 2) (Rational.new (1) 2) == (Rational.new (1) 1))
+    test "oracle sub 4" = do
+        assert (Rational.sub (Rational.new (1) 2) (Rational.new (1) 2) == (Rational.new (0) 1))
+    test "oracle mul 4" = do
+        assert (Rational.mul (Rational.new (1) 2) (Rational.new (1) 2) == (Rational.new (1) 4))
+    test "oracle div 4" = do
+        assert (Rational.div (Rational.new (1) 2) (Rational.new (1) 2) == (Rational.new (1) 1))
+    test "oracle compare 4" = do
+        assert (Rational.compare (Rational.new (1) 2) (Rational.new (1) 2) == EQ)
+    test "zero over zero fails" fail = do
+        let _ = Rational.new 0 0 in ()
+    test "zero divided by zero fails" fail = do
+        let _ = Rational.div (Rational.new 0 1) (Rational.new 0 1) in ()

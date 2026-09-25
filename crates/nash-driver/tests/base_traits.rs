@@ -129,3 +129,7 @@ base_snapshot!(representation_classes, "fixtures/base-traits/Classed.nash");
 base_snapshot!(prop_helpers, "fixtures/base-traits/PropHelpers.nash");
 base_snapshot!(cardano_value, "fixtures/base-traits/CardanoValue.nash");
 base_snapshot!(cardano_helpers, "fixtures/base-traits/Cardano.nash");
+
+base_snapshot!(integer_math, "fixtures/base-traits/IntegerMath.nash");
+base_snapshot!(rational_math, "fixtures/base-traits/Rational.nash");
+base_snapshot!(crypto_helpers, "fixtures/base-traits/Crypto.nash");
