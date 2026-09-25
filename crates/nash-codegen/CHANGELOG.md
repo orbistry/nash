@@ -1,5 +1,13 @@
 # nash-codegen
 
+## 0.4.1 — 2026-09-25
+
+### Patch changes
+
+- [95d828a2](https://github.com/orbistry/nash/commit/95d828a2602340ace632a79f28f74e49c54d2755) Distinguish implementation heads by compiler-owned representation classes. Allow disjoint Big and Little blankets, preserve representation bounds during selection and evidence resolution, and accept inline Little bounds. — Thanks @MicroProofs!
+- [feeb1edb](https://github.com/orbistry/nash/commit/feeb1edbecdb0b402023d99d5867e671eb57b336) Use nested Choice/Group traces for property generation, strict replay, and reduction. Compose generator functions through ordinary Functor, Applicative, and Monad instances in Nash. Preserve reduced replay trees in runner outcomes. Retain concrete little type layouts when specializing generic trait helpers. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.11.0, nash-can@0.11.0, nash-ir@0.3.2, nash-solve@0.9.0, nash-test@0.4.0
+
 ## 0.4.0 — 2026-09-22
 
 ### Minor changes

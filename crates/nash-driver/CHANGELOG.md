@@ -1,5 +1,24 @@
 # nash-driver
 
+## 0.10.0 — 2026-09-25
+
+### Minor changes
+
+- [04cb160c](https://github.com/orbistry/nash/commit/04cb160ceb213899c13b13e5e7b9b3d4e8b27a8c) Use consumed-draw feedback to repair unsuccessful property reductions. Reconstruct boundary proposals in Nash and validate them with strict replay. Add adaptive draw deletion, joint numeric reduction, whole-draw reordering, and coordinated decrement/deletion passes. — Thanks @MicroProofs!
+- [2ebeab1f](https://github.com/orbistry/nash/commit/2ebeab1f4f0502b06a025c755b7ad14611f6bf6b) Add composable Data decoders, encoders, and Map helpers to bundled Base. Embed nested Base modules with implicit qualified imports. Make Data.tag and Data.fields direct constructor accessors. — Thanks @MicroProofs!
+- [9cc6614c](https://github.com/orbistry/nash/commit/9cc6614cae8d4b42d8a812dc142abaa6ee6ff324) Infer missing components of multi-parameter constraints from unique compatible implementations or supplied dictionaries. Retain connected hidden variables in generic signatures, account for identity Lift, and reject ambiguous conversions. Map.keys and Map.values now accept Big maps or little pair lists and return little lists with unchanged element types. — Thanks @MicroProofs!
+- [feeb1edb](https://github.com/orbistry/nash/commit/feeb1edbecdb0b402023d99d5867e671eb57b336) Use nested Choice/Group traces for property generation, strict replay, and reduction. Compose generator functions through ordinary Functor, Applicative, and Monad instances in Nash. Preserve reduced replay trees in runner outcomes. Retain concrete little type layouts when specializing generic trait helpers. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [22000039](https://github.com/orbistry/nash/commit/2200003953d11882ea9e03c8ed0876b3ed56ef33) Use Monad and Functor operations in property list and byte generators while preserving replay group boundaries. — Thanks @MicroProofs!
+- [1a46ff5a](https://github.com/orbistry/nash/commit/1a46ff5a755fe4b139db28326f5834e1f19559fe) Exercise nested little choice traces through compiled Nash generators and the
+  CEK, including Rust-side group deletion, strict replay boundaries, dependent
+  bounds, and consumed-trace normalization. — Thanks @MicroProofs!
+- [940d8d58](https://github.com/orbistry/nash/commit/940d8d58e5df0dcb08e6dd14a1b9761c2329f4c5) Evaluate rebuilt property candidates without regenerating them through replay, cache their complete outcomes, and express list element grouping through Monad.bind. — Thanks @MicroProofs!
+- [661376a3](https://github.com/orbistry/nash/commit/661376a3f9d003420b3868c322c09cd277b2ed51) Normalize recorded property traces in Rust instead of reversing groups during Nash execution. Remove the unused Test.assertFailed helper. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.11.0, nash-can@0.11.0, nash-codegen@0.4.1, nash-constrain@0.8.1, nash-nitpick@0.3.2, nash-parse@0.8.0, nash-report@0.5.2, nash-solve@0.9.0, nash-source@0.9.0, nash-test@0.4.0
+
 ## 0.9.0 — 2026-09-22
 
 ### Minor changes

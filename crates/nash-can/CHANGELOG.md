@@ -1,5 +1,17 @@
 # nash-can
 
+## 0.11.0 — 2026-09-25
+
+### Minor changes
+
+- [95d828a2](https://github.com/orbistry/nash/commit/95d828a2602340ace632a79f28f74e49c54d2755) Distinguish implementation heads by compiler-owned representation classes. Allow disjoint Big and Little blankets, preserve representation bounds during selection and evidence resolution, and accept inline Little bounds. — Thanks @MicroProofs!
+- [9cc6614c](https://github.com/orbistry/nash/commit/9cc6614cae8d4b42d8a812dc142abaa6ee6ff324) Infer missing components of multi-parameter constraints from unique compatible implementations or supplied dictionaries. Retain connected hidden variables in generic signatures, account for identity Lift, and reject ambiguous conversions. Map.keys and Map.values now accept Big maps or little pair lists and return little lists with unchanged element types. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [2ebeab1f](https://github.com/orbistry/nash/commit/2ebeab1f4f0502b06a025c755b7ad14611f6bf6b) Add composable Data decoders, encoders, and Map helpers to bundled Base. Embed nested Base modules with implicit qualified imports. Make Data.tag and Data.fields direct constructor accessors. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.11.0, nash-source@0.9.0
+
 ## 0.10.0 — 2026-09-22
 
 ### Minor changes

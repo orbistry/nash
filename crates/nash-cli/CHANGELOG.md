@@ -1,5 +1,11 @@
 # nash-cli
 
+## 0.6.2 — 2026-09-25
+
+### Patch changes
+
+- Updated dependencies: nash-codegen@0.4.1, nash-driver@0.10.0, nash-language-server@0.4.4, nash-report@0.5.2, nash-test@0.4.0
+
 ## 0.6.1 — 2026-09-22
 
 ### Patch changes

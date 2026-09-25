@@ -1,5 +1,12 @@
 # nash-report
 
+## 0.5.2 — 2026-09-25
+
+### Patch changes
+
+- [95d828a2](https://github.com/orbistry/nash/commit/95d828a2602340ace632a79f28f74e49c54d2755) Distinguish implementation heads by compiler-owned representation classes. Allow disjoint Big and Little blankets, preserve representation bounds during selection and evidence resolution, and accept inline Little bounds. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.11.0, nash-can@0.11.0, nash-constrain@0.8.1, nash-nitpick@0.3.2, nash-parse@0.8.0, nash-source@0.9.0
+
 ## 0.5.1 — 2026-09-22
 
 ### Patch changes
