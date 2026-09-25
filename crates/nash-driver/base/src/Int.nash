@@ -81,14 +81,16 @@ pow2 exponent =
         e = lower exponent
     in if e < 0 then fail else powerOfTwo e
 
+smallPowersOfTwo : array int
+smallPowersOfTwo = comptime (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256])
+
 powerOfTwo : int -> int
 powerOfTwo e =
-    -- Local powers are at most 256, so modulus 257 leaves them unchanged.
-    if e <= 8 then Builtin.expModInteger 2 e 257
+    if e <= 8 then Builtin.indexArray smallPowersOfTwo e
     else
         let bands = quot (e - 1) 8
             bits = rem (e - 1) 8 + 1
-        in power 256 bands * Builtin.expModInteger 2 bits 257
+        in power 256 bands * Builtin.indexArray smallPowersOfTwo bits
 
 powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
 powMod n e m = Builtin.expModInteger (lower n) (lower e) (lower m)

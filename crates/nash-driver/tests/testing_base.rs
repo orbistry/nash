@@ -196,6 +196,18 @@ async fn integer_width_bound_costs() {
                 "expMod",
                 format!("{scale} * Builtin.expModInteger 2 {local} 257 - 1"),
             ),
+            (
+                "array",
+                format!(
+                    "{scale} * Builtin.indexArray (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256]) {local} - 1"
+                ),
+            ),
+            (
+                "constantArray",
+                format!(
+                    "{scale} * Builtin.indexArray (comptime (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256])) {local} - 1"
+                ),
+            ),
         ] {
             let source = format!("    assert (({expression}) == {expected})");
             let output = compile(&source).await;

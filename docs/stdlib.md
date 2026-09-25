@@ -772,9 +772,9 @@ Predicates, comparators, and filterMap callbacks accept either outer representat
 item then accumulator. Native dropList handles list skipping.
 
 Int.pow and Int.pow2 reject negative exponents and return 1 for exponent zero.
-Int.pow2 computes exact powers of two: local powers through eight bits use
-expModInteger with modulus 257; larger exponents combine that result with a
-power of 256. Int.pow uses this path for base 2 and exponentiation by squaring
+Int.pow2 computes exact powers of two: local powers through eight bits index
+a compile-time constant array; larger exponents combine that result with a
+power of 256. The array is embedded directly and is not constructed at runtime. Int.pow uses this path for base 2 and exponentiation by squaring
 for other bases. These helpers impose no fixed result-size limit. Int.powMod
 uses Plutus expModInteger semantics, including its invalid-modulus and modular
 inverse failures. Int.toBytes rejects negative values, invalid sizes and values
@@ -980,7 +980,6 @@ listOf : generator 'a -> generator (list 'a)   -- length 0..20
 listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
 oneOf : cons (generator 'a) -> generator 'a
 frequency : Lift int 'w => cons ('w, generator 'a) -> generator 'a
-suchThat : ('a -> bool) -> generator 'a -> generator 'a       -- gives up after 100 draws
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 ```
 
@@ -1005,19 +1004,14 @@ smaller values (testing.md "Shrinking"):
   by a factor of four. Each width within a band is equally likely. It then
   samples from zero through 2^width - 1; zero has roughly 9% probability,
   rather than being the stopping result. Zero needs no sign choice. `intAtLeast lo` adds such a nonnegative magnitude to `lo`.
-  The local 1–8-bit power uses `Int.pow2`, backed by `expModInteger 2 bits 257`, which is exact
-  because the result is at most 256. Wider bands multiply the scale by 256.
+  The local 1–8-bit power uses `Int.pow2`, backed by a compile-time constant
+  array. Wider bands multiply the scale by 256.
   There is no fixed integer-size ceiling; VM budgets still apply.
 - never consume choices on a path that cannot fail differently.
 
 `frequency` uses relative integer weights. Zero entries are skipped, negative
 weights fail before drawing, and empty/all-zero input returns None. Totals may
 exceed u64; selection uses the same bounded chunk sampler as `intBetween`.
-
-`suchThat predicate generator` makes at most 100 attempts, grouping each draw.
-Rejected values advance state; success on attempt 100 is accepted. Exhausting
-attempts or an underlying draw returning None returns None. Replay uses only
-recorded choices and never borrows from a sibling group or adds randomness.
 
 `bool` uses one 0/1 choice. `option` groups its presence choice and, when present,
 its payload. `bytesBetween` uses inclusive length bounds; `bytesExactly` fixes

@@ -36,6 +36,8 @@ tests
         assert (Int.abs bigInt == 7)
         assert (Int.pow 2 10 == 1024)
         assert (Int.pow bigInt 0 == 1)
+    test "every small power lookup" = do
+        assert (List.map Int.pow2 (List.range 0 9) == [1, 2, 4, 8, 16, 32, 64, 128, 256])
     test "exact powers of two across byte boundaries" = do
         assert (Int.pow2 0 == 1)
         assert (Int.pow2 bigInt == 128)

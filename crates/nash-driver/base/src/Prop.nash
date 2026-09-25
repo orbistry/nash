@@ -1,4 +1,4 @@
-module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, bool, option, bytesBetween, bytesExactly, frequency, suchThat, intAtLeast)
+module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, bool, option, bytesBetween, bytesExactly, frequency, intAtLeast)
 
 import Builtin
 import Int
@@ -251,16 +251,6 @@ weighted index entries = case entries of
         let n = lower weight in
         if index < n then group item
         else weighted (index - n) rest
-
-suchThat : ('a -> bool) -> generator 'a -> generator 'a
-suchThat predicate item = retry 100 predicate item
-
-retry : int -> ('a -> bool) -> generator 'a -> generator 'a
-retry remaining predicate item state =
-    if remaining == 0 then None
-    else do
-        (value, next) <- group item state
-        if predicate value then Some (value, next) else retry (remaining - 1) predicate item next
 
 packBytes : list int -> bytes
 packBytes values =

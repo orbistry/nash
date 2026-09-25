@@ -294,7 +294,7 @@ passed, 3 ignored. Snapshot tests run without a custom Rust stack setting.
 - [x] Use nested little Choice/Group traces with strict replay, consumed-trace reduction, and ordinary generator Functor/Applicative/Monad instances.
 - [x] Rebuild structures in Nash and evaluate the prepared property once, with consumed-draw feedback for reduction.
 - [x] Ship choice, constant, intBetween, intAtLeast, int, bool, option, listOf,
-  listBetween, tuple2, oneOf, frequency, suchThat, bytes, bytesBetween and
+  listBetween, tuple2, oneOf, frequency, bytes, bytesBetween and
   bytesExactly; sequence draws with generator do or explicit state.
 - [x] Use arbitrary-precision integer generation built from u64 choices; normalize
   Big/little bounds and weights. Arbitrary Data generation is out of scope.
@@ -331,7 +331,7 @@ sampling, replay and shrinking; preserve their behavior when extending APIs.
 `PropHelpers.nash` runs through the shared in-process Base snapshot runner.
 It covers arbitrary-size bounds and offsets, strict replay after rejected wide
 samples, weights above u64, invalid/zero weights, optional draws, byte bounds,
-filter attempts 100/101, and isolated replay groups. The tuple2 do rewrite
+and isolated replay groups. The tuple2 do rewrite
 preserves the two recorded groups and unused sibling choices.
 
 Generated properties verify integer ranges and byte lengths. Counterexample
@@ -342,10 +342,11 @@ exercise seeded/replayed choices, malformed traces and the Rust runner.
 Nonnegative offsets use small-biased bit widths rather than zero-or-u64 chunks.
 A seeded 256-draw snapshot checks zero, small nonzero and larger offsets; explicit
 replay cases cover 1, 2, 10, 100, 255, 256 and values beyond u64.
-CEK measurements showed exact modular powers cheaper than the previous
-Int.pow implementation. Int.pow2 now provides that reusable exact operation,
-and Int.pow selects it for base 2. A budget snapshot covers both public helpers
-and direct modular bound expressions. Prop uses Int.pow2 for its local width.
+CEK measurements compared repeated squaring, modular powers, runtime array
+construction and constant-array lookup. The compile-time array uses less CPU
+and memory than the modular builtin, so Int.pow2 uses it for local powers;
+Int.pow selects the same path for base 2. Budget snapshots retain the public
+helpers and the competing bound expressions. Prop uses Int.pow2 for its local width.
 
 The generator distribution changed for the wide branch of Prop.int; older
 recordings using its previous signed-64-bit layout are not replay-compatible.
