@@ -108,6 +108,7 @@ import Option exposing (Option, type option(..))
 import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
 import Builtin
+import Function
 import Int
 import Rational
 import Crypto

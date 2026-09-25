@@ -30,6 +30,7 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Option", &["Option", "type option"]),
     ("Ordering", &["Ordering", "type ordering"]),
     ("Cons", &["type cons"]),
+    ("Function", &[]),
     ("Int", &[]),
     ("Rational", &[]),
     ("Crypto", &[]),
