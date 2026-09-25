@@ -1,0 +1,45 @@
+module Cardano.Value exposing (Value, empty, singleton, insert, lovelace, quantityOf, add, contains, scale)
+
+import Lift exposing (Lift)
+import Data exposing (FromData, ToData, Validate)
+
+type alias Value = Map Bytes (Map Bytes Int)
+
+impl Lift value Value where
+    lift value = fromData (Builtin.valueData value)
+    lower value = Builtin.unValueData (toData value)
+
+impl Validate Value where
+    validate raw =
+        let
+            checked : Map Bytes (Map Bytes Int)
+            checked = validate raw
+        in
+        fromData (toData checked)
+
+empty : value
+empty = Builtin.unValueData (toData emptyMap)
+
+emptyMap : Value
+emptyMap = Builtin.mapData []
+
+singleton : (Lift bytes 'p, Lift bytes 't, Lift int 'n) => 'p -> 't -> 'n -> value
+singleton policy token amount = insert policy token amount empty
+
+insert : (Lift bytes 'p, Lift bytes 't, Lift int 'n, Lift value 'v) => 'p -> 't -> 'n -> 'v -> value
+insert policy token amount value = Builtin.insertCoin (lower policy) (lower token) (lower amount) (lower value)
+
+lovelace : Lift value 'v => 'v -> int
+lovelace value = quantityOf #"" #"" value
+
+quantityOf : (Lift bytes 'p, Lift bytes 't, Lift value 'v) => 'p -> 't -> 'v -> int
+quantityOf policy token value = Builtin.lookupCoin (lower policy) (lower token) (lower value)
+
+add : (Lift value 'a, Lift value 'b) => 'a -> 'b -> value
+add left right = Builtin.unionValue (lower left) (lower right)
+
+contains : (Lift value 'a, Lift value 'b) => 'a -> 'b -> bool
+contains left right = Builtin.valueContains (lower left) (lower right)
+
+scale : (Lift int 'n, Lift value 'v) => 'n -> 'v -> value
+scale amount value = Builtin.scaleValue (lower amount) (lower value)

@@ -1,4 +1,6 @@
 //! Shared executable Core fixture harness.
+use std::collections::BTreeMap;
+
 use nash_ir::core::Core;
 use nash_plutus::{
     arena::Arena,
@@ -7,6 +9,55 @@ use nash_plutus::{
     pretty,
     program::{Program, Version},
 };
+
+pub fn dependency_order<'a>(
+    sources: impl IntoIterator<Item = (&'a str, Option<nash_ast::PackageName<'a>>)>,
+) -> Vec<(&'a str, Option<nash_ast::PackageName<'a>>)> {
+    let bump = bumpalo::Bump::new();
+    let sources: BTreeMap<_, _> = sources
+        .into_iter()
+        .map(|(source, package)| {
+            let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
+            (parsed.name.unwrap().value, (source, package, parsed))
+        })
+        .collect();
+    let uri = |name| url::Url::parse(&format!("file:///fixtures/{name}.nash")).unwrap();
+    let mut graph = nash_driver::DepGraph::new();
+    let mut modules = BTreeMap::new();
+    for (name, (source, package, parsed)) in &sources {
+        let mut imports: Vec<_> = parsed
+            .imports
+            .iter()
+            .chain(
+                parsed
+                    .tests
+                    .into_iter()
+                    .flat_map(|tests| tests.imports.iter()),
+            )
+            .map(|import| uri(import.import.value))
+            .collect();
+        if *package != Some(nash_ast::primitives::BASE) {
+            // Fixture applications receive all supplied Base interfaces.
+            imports.extend(
+                sources
+                    .iter()
+                    .filter(|(_, (_, package, _))| *package == Some(nash_ast::primitives::BASE))
+                    .map(|(name, _)| uri(name)),
+            );
+        }
+        imports.sort();
+        imports.dedup();
+        let module_uri = uri(name);
+        graph.add_module(module_uri.clone(), imports);
+        modules.insert(module_uri, (*source, *package));
+    }
+    graph.compute_order().expect("acyclic fixture imports");
+    graph
+        .order
+        .iter()
+        .filter_map(|uri| modules.remove(uri))
+        .collect()
+}
 
 pub struct Evaluated {
     pub uplc: String,

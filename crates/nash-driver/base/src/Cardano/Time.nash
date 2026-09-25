@@ -1,0 +1,85 @@
+module Cardano.Time exposing (Extended(..), IntervalBound(..), Interval(..), interval, from, to, always, never, member, contains, isEmpty)
+
+import Prelude exposing (..)
+import Primitive exposing (type bool(..))
+import Num
+import Data exposing (Validate)
+import Bool exposing (Bool)
+import Lift exposing (Lift)
+
+type Extended = NegInf | Finite Int | PosInf
+
+type IntervalBound = IntervalBound { bound : Extended, inclusive : Bool }
+
+type Interval = Interval { lowerBound : IntervalBound, upperBound : IntervalBound }
+
+impl Validate Extended where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, []) -> NegInf
+            pair(1, [f0]) -> Finite (validate f0)
+            pair(2, []) -> PosInf
+            _ -> fail
+
+impl Validate IntervalBound where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, [f0, f1]) -> IntervalBound (validate f0) (validate f1)
+            _ -> fail
+
+impl Validate Interval where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, [f0, f1]) -> Interval (validate f0) (validate f1)
+            _ -> fail
+
+type endpoint = Negative | At int | Positive
+
+inclusiveEndpoint : int -> IntervalBound -> endpoint
+inclusiveEndpoint step (IntervalBound bound closed) =
+    case bound of
+        NegInf -> Negative
+        PosInf -> Positive
+        Finite value -> At (lower value + (if lower closed then 0 else step))
+
+endpointLe : endpoint -> endpoint -> bool
+endpointLe left right =
+    case (left, right) of
+        (Negative, _) -> True
+        (_, Positive) -> True
+        (Positive, _) -> False
+        (_, Negative) -> False
+        (At a, At b) -> a <= b
+
+isEmpty : Interval -> bool
+isEmpty (Interval lo hi) =
+    Bool.not (endpointLe (inclusiveEndpoint 1 lo) (inclusiveEndpoint -1 hi))
+
+contains : Interval -> Interval -> bool
+contains outer inner =
+    if isEmpty inner then True
+    else if isEmpty outer then False
+    else
+        endpointLe (inclusiveEndpoint 1 outer.lowerBound) (inclusiveEndpoint 1 inner.lowerBound)
+        && endpointLe (inclusiveEndpoint -1 inner.upperBound) (inclusiveEndpoint -1 outer.upperBound)
+
+member : Lift int 'n => 'n -> Interval -> bool
+member point (Interval lo hi) =
+    endpointLe (inclusiveEndpoint 1 lo) (At (lower point))
+    && endpointLe (At (lower point)) (inclusiveEndpoint -1 hi)
+
+interval : (Lift int 'a, Lift int 'b) => 'a -> 'b -> Interval
+interval start end =
+    Interval (IntervalBound (Finite (lift (lower start))) Bool.True) (IntervalBound (Finite (lift (lower end))) Bool.True)
+
+from : Lift int 'a => 'a -> Interval
+from start = Interval (IntervalBound (Finite (lift (lower start))) Bool.True) (IntervalBound PosInf Bool.True)
+
+to : Lift int 'a => 'a -> Interval
+to end = Interval (IntervalBound NegInf Bool.True) (IntervalBound (Finite (lift (lower end))) Bool.True)
+
+always : Interval
+always = Interval (IntervalBound NegInf Bool.True) (IntervalBound PosInf Bool.True)
+
+never : Interval
+never = Interval (IntervalBound PosInf Bool.True) (IntervalBound NegInf Bool.True)

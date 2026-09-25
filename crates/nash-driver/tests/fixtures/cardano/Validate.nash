@@ -1,0 +1,11 @@
+validator module Validate exposing (main)
+
+import Cardano.Tx exposing (ScriptContext)
+
+main : Data -> unit
+main raw =
+    let
+        context : ScriptContext
+        context = validate raw
+    in
+    ()

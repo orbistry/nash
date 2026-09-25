@@ -6,6 +6,7 @@ import Lift exposing (Lift)
 import Functor
 import Applicative exposing (Applicative)
 import Monad exposing (Monad)
+import Data exposing (Validate)
 
 type option 'a = Some 'a | None
 type Option 'a = Some 'a | None
@@ -84,3 +85,10 @@ unwrap value =
 
 lowerOuter : Lift (option 'a) ('f 'a) => 'f 'a -> option 'a
 lowerOuter = lower
+
+impl Validate 'a => Validate (Option 'a) where
+    validate value =
+        case Builtin.unConstrData value of
+            pair(0, [item]) -> Option.Some (validate item)
+            pair(1, []) -> Option.None
+            _ -> fail

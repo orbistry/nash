@@ -55,8 +55,8 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 8 implementation (2026-09-25). Base currently
-ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+Reconciled with chunk 11 implementation (2026-09-25). Base currently
+ships 34 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|
@@ -70,9 +70,10 @@ ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 8 Prop | complete | none |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
-| 11 Cardano | not implemented in Base | library modules and ledger golden tests |
+| 11 Cardano | implemented | Haskell codec fixtures, native value helpers, interval comparisons |
 
-Latest full validation is recorded with chunk 8 below.
+Chunk 8 records its historical validation; chunk 11 adds executed Haskell
+comparisons and reruns the full workspace checks.
 Tests use compiler libraries and the evaluator, never a Nash CLI subprocess.
 
 ## Chunk 1: package skeleton and embedding — complete
@@ -450,61 +451,38 @@ None; see plans/11.
 
 ---
 
-## Chunk 11: `Cardano.*` — not implemented in Base
+## Chunk 11: `Cardano.*` — implemented
 
-- [ ] Ship Cardano.Tx, Cardano.Address, Cardano.Value and Cardano.Time.
-- [ ] Add real ledger context fixtures and decoding tests.
+- [x] Ship Cardano.Tx, Cardano.Address, Cardano.Value and Cardano.Time.
+- [x] Add Haskell-generated V3 context fixtures and decoding tests.
+- [x] Compare exact CBOR bytes and discrete interval behavior with executed Haskell.
 
-The vesting example's Cardano helpers are fixtures, not the planned library.
+The four modules live in `crates/nash-driver/base/src/Cardano/`. Big
+constructor layouts follow the Plutus V3 API at revision
+`39981dd733ae276975958e40b0291ce1b24781d5`. ScriptInfo and ScriptPurpose are
+separate; V3 transaction IDs are transparent bytes. Validation is explicit
+Nash source and checks recursive wire representations. Native value
+helpers use the actual Plutus value builtins, normalize Big/little inputs,
+and return little values.
 
-**Files**
+`crates/nash-driver/tests/cardano.rs` checks seven synthetic Haskell
+contexts, exact CBOR serialization, malformed contexts, and the Haskell
+interval results (100 intervals, 500 membership checks, 10,000 containment
+pairs). Fixtures and the executable Haskell oracle are under
+`crates/nash-driver/tests/fixtures/cardano/`. The Base snapshot harness
+covers value operations, interval builders, and malformed nested values.
+All Nash tests call the driver and evaluator directly. Codegen source fixtures
+also use the driver dependency sorter instead of relying on a hand-ordered
+module list.
 
-- `crates/nash-driver/base/src/Cardano/Tx.nash`, `Cardano/Address.nash`, `Cardano/Value.nash`, `Cardano/Time.nash`
-- `tests/base/cardano/golden/*.cbor` (real V3 script contexts)
-- `tests/base/cardano/src/CardanoTests.nash`
+The vesting example's former Cardano.Tx stub is now VestingTx, preserving
+its small testing context without colliding with the bundled ledger module.
 
-**Change**
+Validation: formatting and strict all-target/all-feature Clippy pass; the full
+workspace has 3,451 passing tests and three existing ignored tests. Running
+the documented Haskell regeneration command from a fresh pinned checkout
+reproduces all ten committed CBOR fixtures byte for byte.
 
-Big ADTs for the V3 `ScriptContext` per docs/stdlib.md, `Lift value Value`,
-interval helpers. Golden tests decode real contexts with
-`Validate.validate` and check a few fields.
-
-**Code** (`crates/nash-driver/base/src/Cardano/Value.nash` excerpt)
-
-```elm
-module Cardano.Value exposing (..)
-
-import Builtin
-
-type alias Value = Map Bytes (Map Bytes Int)
-
-impl Lift value Value where
-    lift = fromData << Builtin.valueData
-    lower = Builtin.unValueData << toData
-
-lovelace : Value -> int
-lovelace v = Builtin.lookupCoin #"" #"" (lower v)
-
-quantityOf : bytes -> bytes -> Value -> int
-quantityOf policy name v = Builtin.lookupCoin policy name (lower v)
-```
-
-Note the naming: `lift : value -> Value` here goes from Const to Big,
-matching `Lift 'small 'big`'s direction (little is small).
-
-**Elm/Aiken reference**
-
-Aiken `stdlib/lib/cardano/transaction.ak`, `cardano/address.ak`,
-`cardano/assets.ak` for field order and constructor tags (they match the
-ledger). Plutus `plutus-ledger-api` `V3/Contexts.hs` is the source of
-truth for the encoding.
-
-**Tests**
-
-`tests/base/cardano/src/CardanoTests.nash`: `validate` on each golden context succeeds with a typed value; `Tx.inputs` length matches; `lovelace` of the first output
-matches the fixture.
-
-**Done when** all fixtures decode and the in-process Base compilation tests stays green.
 
 ---
 

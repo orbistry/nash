@@ -1,0 +1,24 @@
+---
+source: crates/nash-driver/tests/cardano.rs
+description: "validator module Validate exposing (main)\n\nimport Cardano.Tx exposing (ScriptContext)\n\nmain : Data -> unit\nmain raw =\n    let\n        context : ScriptContext\n        context = validate raw\n    in\n    ()\n"
+---
+valid context: Ok(Constant(Unit))
+wrong context tag: Err(ExplicitErrorTerm)
+missing context field: Err(ExplicitErrorTerm)
+extra context field: Err(ExplicitErrorTerm)
+wrong inputs shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong reference inputs shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong outputs shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong fee shape: Err(Runtime(MalFormedData(ByteString([119, 114, 111, 110, 103]))))
+wrong mint shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong certificates shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong withdrawals shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong validity range shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong signatories shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong redeemers shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong datums shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong transaction id shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong votes shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong proposals shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong current treasury shape: Err(Runtime(MalFormedData(Integer(0))))
+wrong treasury donation shape: Err(Runtime(MalFormedData(Integer(0))))

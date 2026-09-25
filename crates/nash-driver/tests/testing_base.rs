@@ -1,27 +1,10 @@
 //! Execute the real core testing helpers through production code generation.
-use std::sync::Arc;
+mod support;
 
-use nash_driver::{Database, InMemorySource, build_graph, build_with};
 use nash_plutus::{arena::Arena, syn, term::Term};
-use tokio::sync::Mutex;
-use url::Url;
 
 async fn compile(body: &str) -> nash_driver::build::ValidatorOutput {
-    let memory = InMemorySource::new();
-    let mut origins = nash_driver::bundled_base::modules();
-    let uri = Url::parse("file:///project/src/TestingCore.nash").unwrap();
-    memory.insert(uri.clone(), format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\none value = Cons.Cons value Cons.Nil\ntwo a b = Cons.Cons a (one b)\ng = Prop.Group\nc = Prop.Choice\nreplay : Cons.cons Prop.choiceTree -> prng\nreplay values = Replayed values Cons.Nil\nmain : Data -> unit\nmain _ =\n{body}\n"));
-    origins.insert(uri, None);
-    let db = Arc::new(Mutex::new(Database::new(memory)));
-    let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
-        .await
-        .unwrap();
-    let (report, result) = build_with(db, &graph, &origins, |solved| {
-        nash_driver::build::build_validators(solved, nash_config::Build::default())
-    })
-    .await;
-    assert!(report.is_success(), "{report:#?}");
-    result.unwrap().unwrap().remove(0)
+    support::compile_validator(&format!("validator module TestingCore exposing (main)\nimport Primitive exposing (type bool(..))\nimport Builtin\nimport Prelude exposing (..)\nimport Literal\nimport Num exposing (Num)\nimport Lift exposing (Lift)\nimport Prop exposing (type prng(..))\nimport Option exposing (type option(..))\nimport Test\nimport Cons\nimport List\none value = Cons.Cons value Cons.Nil\ntwo a b = Cons.Cons a (one b)\ng = Prop.Group\nc = Prop.Choice\nreplay : Cons.cons Prop.choiceTree -> prng\nreplay values = Replayed values Cons.Nil\nmain : Data -> unit\nmain _ =\n{body}\n")).await
 }
 
 #[tokio::test]

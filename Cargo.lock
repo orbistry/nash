@@ -1948,6 +1948,7 @@ dependencies = [
  "nash-can",
  "nash-config",
  "nash-constrain",
+ "nash-driver",
  "nash-ir",
  "nash-nitpick",
  "nash-parse",
@@ -1957,6 +1958,7 @@ dependencies = [
  "nash-test",
  "serde_json",
  "thiserror 2.0.21",
+ "url",
 ]
 
 [[package]]

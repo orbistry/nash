@@ -27,7 +27,7 @@ fn compile_selected(
     let bump = arena.as_bump();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     let mut modules = Vec::new();
-    for (text, package) in [
+    for (text, package) in crate::harness::dependency_order([
         (
             include_str!("../../tests/fixtures/VestingLiteral.nash"),
             Some(primitives::BASE),
@@ -38,6 +38,14 @@ fn compile_selected(
         ),
         (
             include_str!("../../../nash-driver/base/src/Lift.nash"),
+            Some(primitives::BASE),
+        ),
+        (
+            include_str!("../../../nash-driver/base/src/Eq.nash"),
+            Some(primitives::BASE),
+        ),
+        (
+            include_str!("../../../nash-driver/base/src/Data.nash"),
             Some(primitives::BASE),
         ),
         (
@@ -77,7 +85,7 @@ fn compile_selected(
             Some(primitives::BASE),
         ),
         (source, None),
-    ] {
+    ]) {
         let text = bump.alloc_str(text);
         let parsed = nash_parse::Parser::new(bump, text)
             .module()

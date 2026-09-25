@@ -1,4 +1,4 @@
-module Cardano.Tx exposing (currentSlot, signedBy)
+module VestingTx exposing (currentSlot, signedBy)
 
 import Builtin exposing (..)
 import Lift exposing (Lift)

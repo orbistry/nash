@@ -2,7 +2,7 @@ validator module Vesting exposing (main)
 
 import Builtin exposing (..)
 import Lift exposing (Lift)
-import Cardano.Tx exposing (currentSlot, signedBy)
+import VestingTx exposing (currentSlot, signedBy)
 
 type Datum = Datum { owner : Bytes, deadline : Int }
 

@@ -1,0 +1,63 @@
+module Main exposing (..)
+
+import Cardano.Time as Time
+import Cardano.Tx as Tx
+import Cardano.Address as Address
+import Cardano.Value as Value exposing (Value)
+
+checkBool : Data -> bool
+checkBool raw = let checked : Bool
+                    checked = validate raw
+                in lower checked
+checkOption : Data -> option Int
+checkOption raw = let checked : Option Int
+                      checked = validate raw
+                  in lower checked
+checkCommittee raw = let checked : Tx.Committee
+                         checked = validate raw
+                     in toData checked
+checkAddress raw = let checked : Address.Address
+                       checked = validate raw
+                   in toData checked
+checkValue raw = let checked : Value
+                     checked = validate raw
+                 in toData checked
+
+committee = Tx.Committee (Builtin.mapData []) (Tx.Rational 2 3)
+
+bigStart : Int
+bigStart = lift (-10)
+
+tests
+    test "closed interval builders accept Big endpoints" = do
+        assert (Time.member bigStart (Time.interval bigStart 20))
+        assert (Time.member 20 (Time.interval bigStart 20))
+        assert (Bool.not (Time.member 21 (Time.interval bigStart 20)))
+        assert (Time.contains Time.always (Time.interval bigStart 20))
+        assert (Time.contains (Time.from bigStart) (Time.to -20) == False)
+        assert (Time.contains (Time.interval 0 1) Time.never)
+        assert (Time.isEmpty Time.never)
+        assert (Time.member -999 (Time.to 20))
+        assert (Time.member 999 (Time.from 20))
+    test "committee validates rational tuple representation" = do
+        assert (checkCommittee (toData committee) == toData committee)
+    test "Bool invalid tag" fail = do
+        let _ = checkBool (Builtin.constrData 2 []) in ()
+    test "Bool extra field" fail = do
+        let _ = checkBool (Builtin.constrData 0 [Data.Encode.int 1]) in ()
+    test "Option missing field" fail = do
+        let _ = checkOption (Builtin.constrData 0 []) in ()
+    test "Option wrong element" fail = do
+        let _ = checkOption (Builtin.constrData 0 [Data.Encode.bytes #"aa"]) in ()
+    test "Option extra field" fail = do
+        let _ = checkOption (Builtin.constrData 1 [Data.Encode.int 1]) in ()
+    test "record rejects wrong tag" fail = do
+        let _ = checkAddress (Builtin.constrData 1 [toData (Address.PubKeyCredential (lift #"aa")), Builtin.constrData 1 []]) in ()
+    test "record rejects missing field" fail = do
+        let _ = checkAddress (Builtin.constrData 0 []) in ()
+    test "record rejects extra field" fail = do
+        let _ = checkAddress (Builtin.constrData 0 [toData (Address.PubKeyCredential (lift #"aa")), Builtin.constrData 1 [], Data.Encode.int 1]) in ()
+    test "record rejects invalid nested credential" fail = do
+        let _ = checkAddress (Builtin.constrData 0 [Builtin.constrData 2 [], Builtin.constrData 1 []]) in ()
+    test "Value rejects non-map" fail = do
+        let _ = checkValue (Data.Encode.int 1) in ()

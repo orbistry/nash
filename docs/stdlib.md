@@ -57,7 +57,7 @@ crates/nash-driver/base/
     Test.nash             label, property preparation and assertion reporting
     Ast.nash              macro AST: little ADTs over cons (see macros.md)
     Derive.nash           @derive
-    Cardano/Tx.nash       script context (sketch)
+    Cardano/Tx.nash       V3 script context and governance types
     Cardano/Address.nash
     Cardano/Value.nash
     Cardano/Time.nash
@@ -110,10 +110,19 @@ import Option exposing (Option, type option(..))
 import Ordering exposing (Ordering, type ordering(..))
 import Cons exposing (type cons(..))
 import Builtin
+import Int
+import Bytes
+import String
+import List
+import Map
 import Pair
 import Array
 import Prop
 import Test
+import Cardano.Tx
+import Cardano.Address
+import Cardano.Value
+import Cardano.Time
 ```
 
 Consequences, matching representation.md "Prelude twins":
@@ -1057,63 +1066,89 @@ and the per-trait derivations. Both are plain Nash with no `Data` or
 imports `Prelude`, `Cons`, and the trait modules; neither is imported by
 anything else in core, so no cycle.
 
-## `Cardano.*` (sketch)
+## `Cardano.*`
 
-Big ADTs mirroring the Plutus V3 `ScriptContext`. Ledger types are
-`Constr` nodes, so they are declared as **constructors with labeled
-fields** (`Constr i [fields]`, representation.md), never as record
-aliases (which would encode as `List`). Nothing is decoded until a field
-is touched, because Big values are `Data` until `lower`ed.
+The bundled `Cardano.Tx`, `Cardano.Address`, `Cardano.Time`, and
+`Cardano.Value` modules use the Plutus V3 Data encodings. Import these
+modules to expose short names; qualified names are available by default.
+Their source ships with the compiler like the rest of Base.
+
+| Module | Public types and operations |
+| --- | --- |
+| `Cardano.Tx` | `ScriptContext`, `ScriptInfo`, `ScriptPurpose`, `Tx`, `Input`, `OutputReference`, `Output`, `Datum`; certificates, delegatees, representatives, voters, votes, proposals, governance actions, committees, constitutions, protocol versions, and rational wire pairs |
+| `Cardano.Address` | `Address`, `Credential`, `StakingCredential` |
+| `Cardano.Time` | `Extended`, `IntervalBound`, `Interval`; `interval`, `from`, `to`, `always`, `never`, `member`, `contains`, `isEmpty` |
+| `Cardano.Value` | `Value`; `empty`, `singleton`, `insert`, `lovelace`, `quantityOf`, `add`, `contains`, `scale` |
+
+Ledger constructor types use Big nominal ADTs, including labeled
+constructors. Record aliases would introduce the wrong List encoding.
+V3 transaction IDs, hashes, credentials wrapped by governance newtypes,
+and integer newtypes retain their underlying wire representation.
+`Rational` encodes as `Constr 0 [numerator, denominator]`, matching the
+Haskell tuple encoding; a native Nash tuple would use Term representation.
+
+`ScriptContext` contains `tx : Tx`, `redeemer : Data`, and
+`scriptInfo : ScriptInfo`, in that order. Its spending info contains an
+output reference and an optional datum. The separate `ScriptPurpose`
+used as a redeemer-map key contains only the output reference for spending.
+Both enums use the ledger's minting, spending, rewarding, certifying,
+voting, and proposing order (tags 0 through 5).
+
+`Tx` fields follow the ledger order: inputs, reference inputs, outputs,
+fee, mint, certificates, withdrawals, validity range, extra signatories,
+redeemers, datums, ID, votes, proposals, current treasury, treasury donation.
+The source declarations in `base/src/Cardano/Tx.nash` define all nested
+field types and constructor orders.
+
+Every Big Cardano type has an explicit Nash `Validate` implementation.
+These check constructor tags, exact field counts, and recursive field
+representations. `Bool` and `Option` validation lives in their own modules.
+This validates the wire shape, not ledger validity: it does not enforce
+hash lengths, transaction balancing, governance rules, or normalize a
+rational's numerator and denominator. `fromData` remains the universal
+unchecked cast. Codegen adds no Cardano decoder.
+
+### Native values
 
 ```elm
-module Cardano.Tx exposing (..)
+type alias Value = Map Bytes (Map Bytes Int)
 
-import Cardano.Address exposing (Address, Credential)
-import Cardano.Value exposing (Value)
-import Cardano.Time exposing (Interval)
-
-type ScriptContext = ScriptContext { tx : Tx, redeemer : Data, purpose : ScriptPurpose }
-
-type ScriptPurpose
-    = Minting Bytes
-    | Spending OutputReference (Option Data)
-    | Withdrawing Credential
-    | Publishing Int Certificate
-    | Voting Voter
-    | Proposing Int Proposal
-
-type Tx = Tx
-    { inputs : List Input
-    , referenceInputs : List Input
-    , outputs : List Output
-    , fee : Int
-    , mint : Value
-    , certificates : List Certificate
-    , withdrawals : Map Credential Int
-    , validityRange : Interval
-    , extraSignatories : List Bytes
-    , redeemers : Map ScriptPurpose Data
-    , datums : Map Bytes Data
-    , id : Bytes
-    , votes : Map Voter (Map GovernanceActionId Vote)
-    , proposals : List Proposal
-    , currentTreasury : Option Int
-    , treasuryDonation : Option Int
-    }
-
-type Input = Input { outputReference : OutputReference, output : Output }
-type OutputReference = OutputReference { txId : Bytes, index : Int }
-type Output = Output { address : Address, value : Value, datum : Datum, script : Option Bytes }
-type Datum = NoDatum | DatumHash Bytes | InlineDatum Data
+impl Lift value Value where
+    lift value = fromData (Builtin.valueData value)
+    lower value = Builtin.unValueData (toData value)
 ```
 
-`Cardano.Value` wraps the `value` builtin type (`lookupCoin`, `unionValue`,
-`valueContains`, `scaleValue`) with `Lift value Value` via
-`valueData`/`unValueData`, where `type alias Value = Map Bytes (Map Bytes Int)`
-(a `Map`, which is the ledger encoding). `Cardano.Address` and
-`Cardano.Time` (`Interval`, `IntervalBound`) follow the same pattern. Field
-order and constructor tags must match the ledger's `Data` encoding
-exactly; each is covered by a golden test against a real transaction.
+Value helpers accept Big or little inputs and return little `value`,
+`int`, or `bool`. They call `insertCoin`, `lookupCoin`, `unionValue`,
+`valueContains`, and `scaleValue` directly. `insert` replaces a quantity;
+zero removes that coin. `add` sums quantities. Signed amounts support mint
+and burn values.
+
+`Validate Value` checks the nested map representation. Converting it with
+`lower` also applies `unValueData`'s constraints: sorted unique keys of at
+most 32 bytes, nonempty inner maps, and nonzero signed 128-bit quantities.
+Native arithmetic can fail on overflow, and `contains` rejects negative
+quantities. Builtin availability follows the compiler's target policy;
+shipping these helpers is not a statement about mainnet activation.
+
+### Time intervals
+
+Time is an integer number of POSIX milliseconds. `interval start end`
+includes both endpoints; `from` and `to` include their finite endpoint.
+`member`, `contains`, and `isEmpty` return little booleans. Finite open
+lower bounds compare as `n + 1`; finite open upper bounds as `n - 1`.
+Infinity closure flags have no effect. Every interval contains an empty
+interval, including `never`. These predicates follow the Haskell discrete
+interval implementation, including equal infinity endpoints.
+
+The in-process tests compare seven synthetic contexts with CBOR emitted
+by the pinned Plutus Haskell API, including exact serialized bytes. They
+also compare 100 intervals, 500 membership checks, and 10,000 containment
+pairs with executed Haskell results. Native value arithmetic and positive
+containment also match the Haskell value oracle; zero-entry normalization and
+negative containment follow the native builtin contracts above. The fixture source and regeneration
+command are in `crates/nash-driver/tests/fixtures/cardano/reference/`.
+These are codec fixtures, not transactions captured from the chain.
 
 ## Tracing and failure
 
@@ -1128,6 +1163,5 @@ message emission; silent builds still fail. Failure lowers to UPLC error.
 1. **`Prop`/`Test` as default imports.** Elm does not default-import test
    modules. Alternative: `tests` blocks get their own implicit
    `import Prop` / `import Test exposing (assert, label)` only.
-2. **`value` builtins** (`InsertCoin` .. `ScaleValue`) exist in
-   `nash-plutus` but not in Plutus V3 mainnet; the table types them and
-   `nash build` gates them on the target version.
+2. Keep **`value` builtin** availability aligned with the compiler target
+   policy; ledger deployment status is independent of these library wrappers.

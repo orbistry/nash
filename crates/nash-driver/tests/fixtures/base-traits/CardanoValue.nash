@@ -1,0 +1,23 @@
+module Main exposing (..)
+
+big : Cardano.Value.Value
+big = lift (Cardano.Value.singleton #"aa" #"01" 5)
+
+tests
+    test "native value operations accept Big and little values" = do
+        assert (Cardano.Value.quantityOf #"aa" #"01" big == 5)
+        assert (Cardano.Value.quantityOf #"aa" #"02" big == 0)
+        assert (Cardano.Value.lovelace (Cardano.Value.singleton #"" #"" 100) == 100)
+        assert (Cardano.Value.quantityOf #"aa" #"01" (Cardano.Value.add big big) == 10)
+        assert (Cardano.Value.quantityOf #"aa" #"01" (Cardano.Value.scale -2 big) == -10)
+        assert (Cardano.Value.contains (Cardano.Value.scale 2 big) big)
+        assert (Cardano.Value.quantityOf #"aa" #"01" (Cardano.Value.insert #"aa" #"01" 0 big) == 0)
+    test "wire representation is a nested map" = do
+        assert (Data.serialise (toData big) == #"a141aaa1410105")
+        assert (Cardano.Value.lovelace Cardano.Value.empty == 0)
+        assert (Builtin.valueData (lower big) == toData big)
+    test "zero quantities are removed by native arithmetic" = do
+        assert (Cardano.Value.scale 0 big == Cardano.Value.empty)
+        assert (Cardano.Value.add big (Cardano.Value.scale -1 big) == Cardano.Value.empty)
+    test "native containment rejects negative quantities" fail = do
+        assert (Cardano.Value.contains (Cardano.Value.scale -1 big) (Cardano.Value.scale -1 big))

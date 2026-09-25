@@ -1,0 +1,8 @@
+---
+source: crates/nash-driver/tests/base_traits.rs
+description: "module Main exposing (..)\n\nbig : Cardano.Value.Value\nbig = lift (Cardano.Value.singleton #\"aa\" #\"01\" 5)\n\ntests\n    test \"native value operations accept Big and little values\" = do\n        assert (Cardano.Value.quantityOf #\"aa\" #\"01\" big == 5)\n        assert (Cardano.Value.quantityOf #\"aa\" #\"02\" big == 0)\n        assert (Cardano.Value.lovelace (Cardano.Value.singleton #\"\" #\"\" 100) == 100)\n        assert (Cardano.Value.quantityOf #\"aa\" #\"01\" (Cardano.Value.add big big) == 10)\n        assert (Cardano.Value.quantityOf #\"aa\" #\"01\" (Cardano.Value.scale -2 big) == -10)\n        assert (Cardano.Value.contains (Cardano.Value.scale 2 big) big)\n        assert (Cardano.Value.quantityOf #\"aa\" #\"01\" (Cardano.Value.insert #\"aa\" #\"01\" 0 big) == 0)\n    test \"wire representation is a nested map\" = do\n        assert (Data.serialise (toData big) == #\"a141aaa1410105\")\n        assert (Cardano.Value.lovelace Cardano.Value.empty == 0)\n        assert (Builtin.valueData (lower big) == toData big)\n    test \"zero quantities are removed by native arithmetic\" = do\n        assert (Cardano.Value.scale 0 big == Cardano.Value.empty)\n        assert (Cardano.Value.add big (Cardano.Value.scale -1 big) == Cardano.Value.empty)\n    test \"native containment rejects negative quantities\" fail = do\n        assert (Cardano.Value.contains (Cardano.Value.scale -1 big) (Cardano.Value.scale -1 big))\n"
+---
+native value operations accept Big and little values: Pass; traces: []
+wire representation is a nested map: Pass; traces: []
+zero quantities are removed by native arithmetic: Pass; traces: []
+native containment rejects negative quantities: Pass; traces: []

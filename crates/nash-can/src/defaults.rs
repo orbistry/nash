@@ -41,6 +41,10 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Array", &[]),
     ("Prop", &[]),
     ("Test", &[]),
+    ("Cardano.Tx", &[]),
+    ("Cardano.Address", &[]),
+    ("Cardano.Value", &[]),
+    ("Cardano.Time", &[]),
 ];
 
 pub fn imports<'a>(

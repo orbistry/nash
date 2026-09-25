@@ -1,0 +1,24 @@
+validator module Intervals exposing (main)
+
+import Cardano.Time as Time exposing (Interval)
+
+main : Data -> unit
+main raw =
+    case raw of
+        Constr pair(0, [rangeData, emptyData, memberData, rangesData, containsData]) ->
+            let
+                range : Interval
+                range = validate rangeData
+                expectedEmpty : Bool
+                expectedEmpty = validate emptyData
+                expectedMembers : List Bool
+                expectedMembers = validate memberData
+                ranges : List Interval
+                ranges = validate rangesData
+                expectedContains : List Bool
+                expectedContains = validate containsData
+                _ = assert (Time.isEmpty range == lower expectedEmpty)
+                _ = assert (List.map (\point -> Time.member point range) [-2, -1, 0, 1, 2] == List.map lower expectedMembers)
+            in
+            assert (List.map (Time.contains range) ranges == List.map lower expectedContains)
+        _ -> fail

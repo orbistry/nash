@@ -162,7 +162,7 @@ fn with_base_modules(
     let bump = arena.as_bump();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     let mut units = Vec::new();
-    for (source, package) in modules {
+    for (source, package) in crate::harness::dependency_order(modules) {
         let source = bump.alloc_str(source);
         let parsed = nash_parse::Parser::new(bump, source).module().unwrap();
         let canonical = nash_can::canonicalize(
@@ -188,7 +188,13 @@ fn with_base_modules(
         units.push(Unit { canonical, solved });
     }
     let root = QualifiedName {
-        home: units.last().unwrap().canonical.module.name,
+        home: units
+            .iter()
+            .find(|unit| unit.canonical.module.name.package.is_none())
+            .unwrap()
+            .canonical
+            .module
+            .name,
         name: "main",
     };
     let build = Build::new(units.iter().map(|u| Input {

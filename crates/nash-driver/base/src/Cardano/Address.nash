@@ -1,0 +1,32 @@
+module Cardano.Address exposing (..)
+
+import Data exposing (Validate)
+import Eq
+import Literal
+import Option exposing (Option)
+
+type Credential = PubKeyCredential Bytes | ScriptCredential Bytes
+
+type StakingCredential = StakingHash Credential | StakingPtr Int Int Int
+
+type Address = Address { paymentCredential : Credential, stakingCredential : Option StakingCredential }
+
+impl Validate Credential where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, [f0]) -> PubKeyCredential (validate f0)
+            pair(1, [f0]) -> ScriptCredential (validate f0)
+            _ -> fail
+
+impl Validate StakingCredential where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, [f0]) -> StakingHash (validate f0)
+            pair(1, [f0, f1, f2]) -> StakingPtr (validate f0) (validate f1) (validate f2)
+            _ -> fail
+
+impl Validate Address where
+    validate raw =
+        case Builtin.unConstrData raw of
+            pair(0, [f0, f1]) -> Address (validate f0) (validate f1)
+            _ -> fail

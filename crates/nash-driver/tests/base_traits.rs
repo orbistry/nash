@@ -124,3 +124,5 @@ base_snapshot!(map_helpers, "fixtures/base-traits/Maps.nash");
 base_snapshot!(representation_classes, "fixtures/base-traits/Classed.nash");
 
 base_snapshot!(prop_helpers, "fixtures/base-traits/PropHelpers.nash");
+base_snapshot!(cardano_value, "fixtures/base-traits/CardanoValue.nash");
+base_snapshot!(cardano_helpers, "fixtures/base-traits/Cardano.nash");

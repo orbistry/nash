@@ -2088,7 +2088,7 @@ text round-trips to.
 **Change**
 
 No new code. One integration test that compiles the overview's `Vesting`
-validator with the stub `Cardano.Tx` helpers written in Nash inside the
+validator with the stub `VestingTx` helpers written in Nash inside the
 fixture, snapshots the pretty UPLC and the `Core`, and evaluates it four
 ways with `Program::apply`:
 

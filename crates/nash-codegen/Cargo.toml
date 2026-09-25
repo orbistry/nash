@@ -20,6 +20,8 @@ nash-config = { path = "../nash-config", version = "0.5.0" }
 thiserror.workspace = true
 
 [dev-dependencies]
+nash-driver = { path = "../nash-driver" }
+url.workspace = true
 nash-parse = { path = "../nash-parse" }
 nash-constrain = { path = "../nash-constrain" }
 nash-nitpick = { path = "../nash-nitpick" }

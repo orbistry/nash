@@ -1,0 +1,22 @@
+validator module Values exposing (main)
+
+import Cardano.Value as Value
+
+coin = Value.singleton #"706f6c696379" #"6173736574" 5
+quantity value = Value.quantityOf #"706f6c696379" #"6173736574" value
+
+main : Data -> unit
+main raw =
+    case raw of
+        Constr pair(0, [amountData, comparisonData]) ->
+            let
+                amounts : List Int
+                amounts = validate amountData
+                comparisons : List Bool
+                comparisons = validate comparisonData
+                actualAmounts = [quantity coin, Value.quantityOf #"706f6c696379" #"6d697373696e67" coin, Value.quantityOf #"6d697373696e67" #"6173736574" coin, quantity (Value.add coin coin), quantity (Value.scale -2 coin), quantity (Value.singleton #"706f6c696379" #"6173736574" 0)]
+                actualComparisons = [Value.contains (Value.scale 2 coin) coin, Value.contains coin (Value.scale 2 coin), Value.contains coin (Value.singleton #"706f6c696379" #"6d697373696e67" 1)]
+                _ = assert (actualAmounts == List.map lower amounts)
+            in
+            assert (actualComparisons == List.map lower comparisons)
+        _ -> fail
