@@ -1,4 +1,4 @@
-module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes)
+module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, bool, option, bytesBetween, bytesExactly, frequency, suchThat, intAtLeast)
 
 import Builtin
 import Functor
@@ -99,13 +99,42 @@ intBetweenInt lo hi =
     if hi < lo then (fail "Prop.intBetween has reversed bounds")
     else if hi == lo then constant lo
     else
-        let draw = choice (hi - lo) in
+        let draw = bounded (hi - lo) in
         \state ->
             case draw state of
                 None -> None
                 Some (n, next) -> Some (lo + n, next)
 
--- Signed 64-bit values, with small-width draws favored.
+-- Bounded offsets; large ranges use whole 64-bit chunks and rejection.
+bounded : int -> generator int
+bounded maximum =
+    if maximum <= 18446744073709551615 then choice maximum
+    else do
+        high <- bounded (maximum / 18446744073709551616)
+        low <- choice 18446744073709551615
+        let value = high * 18446744073709551616 + low in
+            if value <= maximum then Applicative.pure value else bounded maximum
+
+-- Stop with probability 3/4; otherwise append a chunk. No fixed size ceiling.
+natural : generator int
+natural = naturalFrom 1
+
+naturalFrom : int -> generator int
+naturalFrom place = do
+    continue <- choice 3
+    case continue of
+        3 -> do
+            digit <- choice 18446744073709551615
+            rest <- naturalFrom (place * 18446744073709551616)
+            Applicative.pure (digit * place + rest)
+        _ -> Applicative.pure 0
+
+intAtLeast : Lift int 'n => 'n -> generator int
+intAtLeast minimum =
+    let lo = lower minimum in
+    Functor.map (\offset -> lo + offset) natural
+
+-- Favor small values; the wide branch has no fixed integer ceiling.
 int : generator int
 int state =
     case choice 2 state of
@@ -114,7 +143,16 @@ int state =
             case width of
                 0 -> choice 255 next
                 1 -> intBetween -32768 32767 next
-                _ -> intBetween -9223372036854775808 9223372036854775807 next
+                _ -> signed next
+
+signed : generator int
+signed = do
+    magnitude <- natural
+    case magnitude of
+        0 -> Applicative.pure 0
+        _ -> do
+            negative <- bool
+            Applicative.pure (if negative then -magnitude else magnitude)
 
 listOf : generator 'a -> generator (list 'a)
 listOf = listBetween 0 20
@@ -146,13 +184,10 @@ listIteration required item state = do
         _ -> (Monad.bind item (\value -> Applicative.pure (Some value))) next
 
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
-tuple2 first second state =
-    case group first state of
-        None -> None
-        Some (a, next) ->
-            case group second next of
-                None -> None
-                Some (b, final) -> Some ((a, b), final)
+tuple2 first second = do
+    a <- first
+    b <- second
+    Applicative.pure (a, b)
 
 -- Generators contain functions, so use the Term-representation Cons list.
 oneOf : cons (generator 'a) -> generator 'a
@@ -173,7 +208,59 @@ pick index generators =
         Cons first rest -> if index == 0 then group first else pick (index - 1) rest
 
 bytes : generator bytes
-bytes = Functor.map packBytes (listBetween 0 32 (choice 255))
+bytes = bytesBetween 0 32
+
+bool : generator bool
+bool = Functor.map (\n -> n == 1) (choice 1)
+
+option : generator 'a -> generator (option 'a)
+option item = do
+    present <- bool
+    if present then Functor.map Some (group item) else Applicative.pure None
+
+bytesBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator bytes
+bytesBetween lo hi = Functor.map packBytes (listBetween lo hi (choice 255))
+
+bytesExactly : Lift int 'n => 'n -> generator bytes
+bytesExactly count =
+    let n = lower count in
+    bytesBetween n n
+
+frequency : Lift int 'w => cons ('w, generator 'a) -> generator 'a
+frequency entries =
+    let total = totalWeight entries in
+    if total == 0 then \_ -> None
+    else
+        let draw = bounded (total - 1) in
+        \state -> do
+            (index, next) <- draw state
+            weighted index entries next
+
+totalWeight : Lift int 'w => cons ('w, generator 'a) -> int
+totalWeight entries = case entries of
+    Nil -> 0
+    Cons (weight, _) rest ->
+        let n = lower weight in
+        if n < 0 then (fail "Prop.frequency requires nonnegative weights")
+        else n + totalWeight rest
+
+weighted : Lift int 'w => int -> cons ('w, generator 'a) -> generator 'a
+weighted index entries = case entries of
+    Nil -> \_ -> None
+    Cons (weight, item) rest ->
+        let n = lower weight in
+        if index < n then group item
+        else weighted (index - n) rest
+
+suchThat : ('a -> bool) -> generator 'a -> generator 'a
+suchThat predicate item = retry 100 predicate item
+
+retry : int -> ('a -> bool) -> generator 'a -> generator 'a
+retry remaining predicate item state =
+    if remaining == 0 then None
+    else do
+        (value, next) <- group item state
+        if predicate value then Some (value, next) else retry (remaining - 1) predicate item next
 
 packBytes : list int -> bytes
 packBytes values =

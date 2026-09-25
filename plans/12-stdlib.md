@@ -55,7 +55,7 @@ replace the tested PRNG, replay, label, and assertion protocols.
 
 ## Current status
 
-Reconciled with chunk 7 implementation (2026-09-23). Base currently
+Reconciled with chunk 8 implementation (2026-09-25). Base currently
 ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
@@ -67,12 +67,12 @@ ships 30 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 | 5 traits / operators | complete | none |
 | 6 type modules | complete | none |
 | 7 Data / Map | complete | — |
-| 8 Prop | implemented foundation from Plan 10 | audit full planned API and property coverage |
+| 8 Prop | complete | none |
 | 9 Test | complete through Plan 10 | preserve existing runner protocol |
 | 10 Ast / Derive | not implemented | requires Plan 11 |
 | 11 Cardano | not implemented in Base | library modules and ledger golden tests |
 
-Latest full validation: 3,386 tests passed, 3 ignored; strict Clippy passed.
+Latest full validation is recorded with chunk 8 below.
 Tests use compiler libraries and the evaluator, never a Nash CLI subprocess.
 
 ## Chunk 1: package skeleton and embedding — complete
@@ -288,17 +288,20 @@ passed, 3 ignored. Snapshot tests run without a custom Rust stack setting.
 
 ---
 
-## Chunk 8: `Prop` — foundation implemented through Plan 10
+## Chunk 8: `Prop` — complete
 
 - [x] Ship prng/generator types, choice bounds, seeded draws and validated replay.
 - [x] Use nested little Choice/Group traces with strict replay, consumed-trace reduction, and ordinary generator Functor/Applicative/Monad instances.
 - [x] Rebuild structures in Nash and evaluate the prepared property once, with consumed-draw feedback for reduction.
-- [x] Ship direct generation functions: choice, constant, intBetween, int, listOf,
-  listBetween, tuple2, oneOf and bytes; sequence draws with explicit state.
+- [x] Ship choice, constant, intBetween, intAtLeast, int, bool, option, listOf,
+  listBetween, tuple2, oneOf, frequency, suchThat, bytes, bytesBetween and
+  bytesExactly; sequence draws with generator do or explicit state.
+- [x] Use arbitrary-precision integer generation built from u64 choices; normalize
+  Big/little bounds and weights. Arbitrary Data generation is out of scope.
 - [x] Test Nash generators against the Rust runner and replay protocol in
   `crates/nash-driver/tests/testing_base.rs`.
-- [ ] Audit the complete docs/stdlib.md generator API and remaining properties.
-- [ ] Verify the specific shrinking/range properties listed below.
+- [x] Audit the complete docs/stdlib.md generator API and remaining properties.
+- [x] Verify the specific shrinking/range properties listed below.
 
 Extend the existing implementation; do not replace its tested protocol.
 
@@ -312,7 +315,7 @@ Extend the existing implementation; do not replace its tested protocol.
 docs/testing.md "Generators", verbatim: the **little** `prng` ADT that the
 runner builds as native constructor terms, the `generator 'a` function alias,
 direct draws or ordinary Monad composition, `choice` as the single primitive
-over `u64` integer choices (not Aiken's bytes), and the generators listed
+over `u64` integer choices, and the generators listed
 in docs/stdlib.md "`Prop`" built on `choice`.
 
 **Implementation and protocol**
@@ -323,21 +326,25 @@ Choices are u64 integers. Invalid bounds fail; exhausted or invalid replay
 returns None. Seeded/Replayed payloads use little types. The existing runner owns
 sampling, replay and shrinking; preserve their behavior when extending APIs.
 
-**Elm/Aiken reference**
+**Acceptance coverage**
 
-Aiken `stdlib/lib/aiken/` (`rand`, `int`, `list`, `bool`,
-`bytearray`) and `crates/aiken-lang/src/test_framework.rs` `Prng`
-(constructor tags: `Seeded = 0`, `Replayed = 1`; `Some = 0`, `None = 1`
-must match the little `option` layout in plans/04). Nash differs in the
-choice element type: `int`, not bytes (testing.md "Open questions").
+`PropHelpers.nash` runs through the shared in-process Base snapshot runner.
+It covers arbitrary-size bounds and offsets, strict replay after rejected wide
+samples, weights above u64, invalid/zero weights, optional draws, byte bounds,
+filter attempts 100/101, and isolated replay groups. The tuple2 do rewrite
+preserves the two recorded groups and unused sibling choices.
 
-**Tests**
+Generated properties verify integer ranges and byte lengths. Counterexample
+snapshots show listOf int reducing to both `[]` and `[0]`, and a wide-range
+counterexample reducing to its lower bound. Existing protocol tests continue to
+exercise seeded/replayed choices, malformed traces and the Rust runner.
 
-- `tests` block: `choice 10 (Seeded #"" Cons.Nil)` is `Some`; `choice 10 (Replayed Cons.Nil Cons.Nil)` is `None`; `choice 10 (Replayed (Cons.singleton (Choice 11)) Cons.Nil)` is `None` (over bound); `intBetween 3 3` is `3`.
-- `prop "intBetween in range"`: `let lo via int; n via intBetween 0 1000` then `intBetween lo (lo + n)` called directly with a PRNG state stays in range.
-- Rust (plans/10 chunk 6): a shrink test that a failing `listOf int` counterexample shrinks to `[0]` or `[]`.
+The generator distribution changed for the wide branch of Prop.int; older
+recordings using its previous signed-64-bit layout are not replay-compatible.
+No PRNG wire tags, runner protocol, reducer passes or codegen behavior changed.
 
-**Done when** the in-process Base test runner runs the props with the plans/10 runner.
+Validation: formatting and strict Clippy passed; 3,444 workspace tests passed,
+3 ignored.
 
 ---
 

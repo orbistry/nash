@@ -1,0 +1,131 @@
+module Main exposing (..)
+
+import Cons exposing (type cons(..))
+
+replay choices = Prop.Replayed choices Nil
+c = Prop.Choice
+g = Prop.Group
+one x = Cons x Nil
+two x y = Cons x (one y)
+
+value generator state = case generator state of
+    Some (result, _) -> Some result
+    None -> None
+
+seed = Prop.Seeded #"" Nil
+weights : cons (int, Prop.generator int)
+weights = Cons (0, \_ -> fail) (Cons (3, Prop.constant 10) (Cons (1, Prop.constant 20) Nil))
+emptyWeights : cons (int, Prop.generator int)
+emptyWeights = Nil
+bigWeight : Int
+bigWeight = 2
+bigCount : Int
+bigCount = 3
+
+attempts n =
+    if n == 0 then one (g (one (c 1)))
+    else Cons (g (one (c 0))) (attempts (n - 1))
+
+byteDraw n = g (one (g (one (c n))))
+
+rebuild choices = Prop.Rebuilding choices Nil
+huge : Int
+huge = lift (18446744073709551616 * 18446744073709551616)
+
+hugeLittle : int
+hugeLittle = lower huge
+never : Prop.generator int
+never _ = fail
+
+tests
+    test "wide range strict replay isolates rejected attempts" = do
+        assert (value (Prop.intBetween 0 18446744073709551616) (replay (Cons (g (one (c 1))) (Cons (g (one (c 1))) (two (g (one (c 1))) (g (one (c 0))))))) == Some 18446744073709551616)
+    test "weight totals can exceed one choice" = do
+        let options = two (18446744073709551616, Prop.constant 10) (1, Prop.constant 20) in
+            assert (value (Prop.frequency options) (rebuild [1, 0]) == Some 20)
+        let options = two (18446744073709551616, Prop.constant 10) (1, Prop.constant 20) in
+            assert (value (Prop.frequency options) (rebuild [0, 18446744073709551615]) == Some 10)
+    test "reversed byte lengths fail" fail = do
+        case Prop.bytesBetween 3 2 of
+            _ -> ()
+    prop "wide range counterexample replays and reduces" fail once =
+        let n via Prop.intBetween hugeLittle (hugeLittle * 2) in
+        do
+            assert (n < 0)
+    test "arbitrary integer offsets preserve large lower bounds" = do
+        assert (value (Prop.intAtLeast huge) (rebuild [0]) == Some (lower huge))
+        assert (value (Prop.intAtLeast (-hugeLittle)) (rebuild [3, 0, 3, 1, 0]) == Some (18446744073709551616 - lower huge))
+        assert (value Prop.int (rebuild [2, 3, 0, 3, 1, 0, 0]) == Some 18446744073709551616)
+        assert (value Prop.int (rebuild [2, 3, 0, 3, 1, 0, 1]) == Some (-18446744073709551616))
+    test "wide bounded generation rejects overshoot then retries" = do
+        assert (value (Prop.intBetween 0 18446744073709551616) (rebuild [1, 1, 1, 0]) == Some 18446744073709551616)
+        assert (value (Prop.intBetween 0 18446744073709551616) (rebuild [1, 1]) == None)
+    prop "arbitrary integer lower bound" =
+        let n via Prop.intAtLeast huge in
+        do
+            assert (n >= lower huge)
+    test "boolean choices" = do
+        assert (value Prop.bool (replay (one (c 0))) == Some False)
+        assert (value Prop.bool (replay (one (c 1))) == Some True)
+    test "optional draw preserves absence and groups the payload" = do
+        assert (value (Prop.option never) (replay (one (g (one (c 0))))) == Some None)
+        assert (value (Prop.option (Prop.choice 9)) (replay (two (g (one (c 1))) (g (one (c 7))))) == Some (Some 7))
+    test "tuple bind preserves groups and remaining siblings" = do
+        case Prop.tuple2 (Prop.choice 9) (Prop.choice 9) (replay (Cons (g (one (c 4))) (Cons (g (one (c 5))) (one (c 8))))) of
+            Some ((4, 5), Prop.Replayed rest used) ->
+                case (rest, used) of
+                    (Cons (Prop.Choice 8) Nil, Cons (Prop.Group (Cons (Prop.Choice 5) Nil)) (Cons (Prop.Group (Cons (Prop.Choice 4) Nil)) Nil)) -> ()
+                    _ -> fail
+            _ -> fail
+    test "weighted endpoints skip zero weights" = do
+        assert (value (Prop.frequency weights) (replay (two (c 0) (g Nil))) == Some 10)
+        assert (value (Prop.frequency weights) (replay (two (c 2) (g Nil))) == Some 10)
+        assert (value (Prop.frequency weights) (replay (two (c 3) (g Nil))) == Some 20)
+        assert (value (Prop.frequency (one (bigWeight, Prop.constant 9))) seed == Some 9)
+        assert (value (Prop.frequency emptyWeights) seed == None)
+        assert (value (Prop.frequency (one (0, Prop.constant 9))) seed == None)
+    test "negative weights fail even after a positive entry" fail = do
+        case Prop.frequency (Cons (1, Prop.constant 1) (one (-1, Prop.constant 2))) of
+            _ -> ()
+    test "filter retries recorded groups and keeps remaining siblings" = do
+        case Prop.suchThat (\n -> n > 0) (Prop.choice 9) (replay (Cons (g (one (c 0))) (Cons (g (one (c 4))) (one (c 8))))) of
+            Some (4, Prop.Replayed (Cons (Prop.Choice 8) Nil) _) -> ()
+            _ -> fail
+        assert (value (Prop.suchThat (\n -> n > 0) (Prop.choice 9)) (replay (one (g (one (c 0))))) == None)
+        assert (value (Prop.suchThat (\_ -> False) (Prop.constant 1)) seed == None)
+    test "filter allows exactly 100 attempts" = do
+        assert (value (Prop.suchThat (\n -> n == 1) (Prop.choice 1)) (replay (attempts 99)) == Some 1)
+        assert (value (Prop.suchThat (\n -> n == 1) (Prop.choice 1)) (replay (attempts 100)) == None)
+    test "filter cannot borrow choices from the next attempt" = do
+        assert (value (Prop.suchThat (\_ -> True) (Prop.choice 1)) (replay (two (g Nil) (g (one (c 1))))) == None)
+    test "exact byte replay includes both endpoints" = do
+        assert (value (Prop.bytesExactly 2) (replay (two (byteDraw 0) (byteDraw 255))) == Some #"00ff")
+        assert (value (Prop.bytesExactly 2) (replay (one (byteDraw 0))) == None)
+    test "exact bytes normalize Big counts" = do
+        case value (Prop.bytesExactly bigCount) seed of
+            Some bytes -> assert (Bytes.length bytes == 3)
+            None -> fail
+        assert (value (Prop.bytesExactly 0) (replay Nil) == Some #"")
+    test "negative byte count fails" fail = do
+        case Prop.bytesExactly -1 of
+            _ -> ()
+    prop "byte length in bounds" =
+        let bytes via Prop.bytesBetween 2 7 in
+        do
+            assert (Bytes.length bytes >= 2 && Bytes.length bytes <= 7)
+    prop "generated integer bounds" =
+        let lo via Prop.int
+            span via Prop.intBetween 0 1000
+        in
+        do
+            case value (Prop.intBetween lo (lo + span)) seed of
+                Some n -> assert (n >= lo && n <= lo + span)
+                None -> fail
+    prop "listOf reduces to empty" fail once =
+        let items via Prop.listOf Prop.int in
+        do
+            assert (List.length items < 0)
+    prop "listOf reduces to one zero" fail once =
+        let items via Prop.listOf Prop.int in
+        do
+            assert (List.length items == 0)

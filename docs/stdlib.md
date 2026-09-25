@@ -280,7 +280,7 @@ mapping can change element representations within Storable; it cannot produce Te
 elements. Builtin pair has no Functor impl: `mkPairData` accepts only Big
 components, not arbitrary Storable components needed by `map`. Pair.fst,
 Pair.snd and Pair.make remain the specified projection/construction helpers.
-Generation functions have no Functor, Applicative or Monad instances.
+The Prop.generator alias implements Functor, Applicative and Monad.
 
 ### Equality at the Big boundary
 
@@ -941,9 +941,9 @@ constructor shapes above. Map encoding preserves order and duplicates.
 
 ## `Prop`
 
-Plan 10 supplies the executable core subset. `oneOf` uses `Cons.cons` because
-generators contain functions and cannot inhabit the native Storable-only list.
-Further helpers below remain Plan 12 work. See testing.md "Generators": `prng` is little, choices are `int`s, the
+Plan 10 supplies the runner protocol; Plan 12 supplies the generator API.
+`oneOf` uses `Cons.cons` because generators contain functions and cannot inhabit the native Storable-only list.
+See testing.md "Generators": `prng` is little, choices are `int`s, the
 primitive is `choice`.
 
 ```elm
@@ -963,20 +963,19 @@ choice : Lift int 'n => 'n -> generator int
 
 group : generator 'a -> generator 'a
 constant : 'a -> generator 'a
-int : generator int                         -- small-biased, full range possible
+int : generator int                         -- small-biased, arbitrary precision
 intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
-intAtLeast : int -> generator int
+intAtLeast : Lift int 'n => 'n -> generator int
 bool : generator bool
 bytes : generator bytes                     -- length 0..32
-bytesBetween : int -> int -> generator bytes
-bytesExactly : int -> generator bytes
+bytesBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator bytes
+bytesExactly : Lift int 'n => 'n -> generator bytes
 option : generator 'a -> generator (option 'a)
 listOf : generator 'a -> generator (list 'a)   -- length 0..20
 listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
 oneOf : cons (generator 'a) -> generator 'a
-frequency : cons (int, generator 'a) -> generator 'a
+frequency : Lift int 'w => cons ('w, generator 'a) -> generator 'a
 suchThat : ('a -> bool) -> generator 'a -> generator 'a       -- gives up after 100 draws
-data : generator Data                        -- arbitrary well-formed Data, depth-bounded
 tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
 ```
 
@@ -991,10 +990,32 @@ smaller values (testing.md "Shrinking"):
 
 - draw sizes before contents (`listOf` draws `choice 1` per element as a
   continue bit, where `0` means stop);
-- `intBetween lo hi` is `lo + choice (hi - lo)`; `int` draws a width with
-  `choice 2` (0: `choice 255`, 1: 16-bit, 2: 64-bit) so small draws give
-  small magnitudes;
+- `intBetween lo hi` has inclusive endpoints. Small spans use one choice;
+  larger spans assemble 64-bit chunks and reject offsets beyond the span,
+  avoiding clamping or wrapping the final chunk. Primitive draws retain the
+  existing hash-modulo distribution. Equal endpoints consume no choices.
+- `int` selects one of three branches: 0..255, signed 16-bit, or an
+  arbitrary-precision signed magnitude. The magnitude stops with probability
+  3/4 at each step, otherwise drawing another 64-bit chunk. Zero needs no sign
+  choice. `intAtLeast lo` adds such a nonnegative magnitude to `lo`.
+  There is no fixed integer-size ceiling; VM budgets still apply.
 - never consume choices on a path that cannot fail differently.
+
+`frequency` uses relative integer weights. Zero entries are skipped, negative
+weights fail before drawing, and empty/all-zero input returns None. Totals may
+exceed u64; selection uses the same bounded chunk sampler as `intBetween`.
+
+`suchThat predicate generator` makes at most 100 attempts, grouping each draw.
+Rejected values advance state; success on attempt 100 is accepted. Exhausting
+attempts or an underlying draw returning None returns None. Replay uses only
+recorded choices and never borrows from a sibling group or adds randomness.
+
+`bool` uses one 0/1 choice. `option` groups its presence choice and, when present,
+its payload. `bytesBetween` uses inclusive length bounds; `bytesExactly` fixes
+both bounds to its count. Negative lengths and reversed bounds fail. All bound
+helpers normalize Big/little inputs and return little outer representations.
+Arbitrary Data generation is outside this chunk; build domain generators with
+ordinary composition instead.
 
 The `prop` desugaring, the preparation programs, and the runner protocol
 are in testing.md and plans/10.

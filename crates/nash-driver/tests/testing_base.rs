@@ -96,12 +96,9 @@ async fn generation_functions_thread_choices() {
             "#\"41\"",
         ),
         ("Prop.int", "two (c 0) (c 42)", "42"),
-        (
-            "Prop.int",
-            "two (c 2) (c 18446744073709551615)",
-            "9223372036854775807",
-        ),
-        ("Prop.int", "two (c 2) (c 0)", "(-9223372036854775808)"),
+        ("Prop.int", "two (c 1) (c 65535)", "32767"),
+        ("Prop.int", "two (c 1) (c 0)", "(-32768)"),
+        ("Prop.int", "two (c 2) (g (one (g (one (c 0)))))", "0"),
         (
             "Prop.oneOf (Cons.Cons (Prop.constant 0) (Cons.Cons (Prop.choice 10) Cons.Nil))",
             "two (c 1) (g (one (c 7)))",
