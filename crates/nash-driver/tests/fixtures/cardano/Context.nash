@@ -100,6 +100,7 @@ check raw encoded =
                         (SpendingScript ref Option.None)
                 _ -> ScriptContext tx (toData (integer 27)) (List.at index infos |> Option.unwrap)
         _ = assert (context == expected)
+        _ = assert (decode raw == Some expected)
         _ = assert (Data.serialise (toData expected) == encoded)
         _ = assert (Value.lovelace (List.at 0 context.tx.outputs |> Option.unwrap).value == 100)
         _ = assert (Value.quantityOf #"706f6c696379" #"6173736574" context.tx.mint == -2)

@@ -3,7 +3,8 @@ module Bool exposing (Bool(..), not, and, or, xor)
 import Literal exposing (FromBool)
 import Primitive
 import Lift exposing (Lift)
-import Data exposing (Validate)
+import Data exposing (Validate, Decode)
+import Option exposing (type option(..))
 import Eq
 
 type Bool = False | True
@@ -36,3 +37,9 @@ impl Validate Bool where
             pair(0, []) -> Bool.False
             pair(1, []) -> Bool.True
             _ -> fail
+
+impl Decode Bool where
+    decode value = case value of
+        Primitive.Constr pair(0, []) -> Some Bool.False
+        Primitive.Constr pair(1, []) -> Some Bool.True
+        _ -> None

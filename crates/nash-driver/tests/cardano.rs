@@ -97,6 +97,8 @@ async fn ledger_interval_semantics() {
 async fn malformed_contexts() {
     let source = include_str!("fixtures/cardano/Validate.nash");
     let output = support::compile_validator(source).await;
+    let decode_source = include_str!("fixtures/cardano/Decode.nash");
+    let decoder = support::compile_validator(decode_source).await;
     let arena = Arena::new();
     let bytes = include_bytes!("fixtures/cardano/golden/context-0.cbor");
     let valid = PlutusData::from_cbor(&arena, bytes).unwrap();
@@ -174,9 +176,29 @@ async fn malformed_contexts() {
             .apply(&evaluation_arena, Term::data(&evaluation_arena, data))
             .eval(&evaluation_arena);
         assert_eq!(result.term.is_ok(), expected, "{name}: {:?}", result.term);
-        results.push_str(&format!("{name}: {:?}\n", result.term));
+        let input = PlutusData::constr(
+            &evaluation_arena,
+            0,
+            evaluation_arena.alloc_slice_copy(&[
+                PlutusData::integer_from(&evaluation_arena, i128::from(expected)),
+                data,
+            ]),
+        );
+        let decode_result = syn::parse_program(&evaluation_arena, &decoder.uplc)
+            .unwrap()
+            .apply(&evaluation_arena, Term::data(&evaluation_arena, input))
+            .eval(&evaluation_arena);
+        assert!(
+            decode_result.term.is_ok(),
+            "decode {name}: {:?}",
+            decode_result.term
+        );
+        results.push_str(&format!(
+            "{name}: validate {:?}; decode matches expected: {:?}\n",
+            result.term, decode_result.term
+        ));
     }
-    insta::with_settings!({description => source, omit_expression => true}, {
+    insta::with_settings!({description => format!("{source}\n{decode_source}"), omit_expression => true}, {
         insta::assert_snapshot!(results);
     });
 }

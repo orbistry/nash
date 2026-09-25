@@ -259,7 +259,7 @@ Benchmarks (`tests/budgets.rs`), each a fixture in `tests/fixtures/`:
 | `sum_static` | `replicate` / `sumTo` from plan 07 chunk 8 |
 | `data_match` | the four-clause `Data` match from plan 07 chunk 6 |
 | `validate_datum` | `validate` on a nested record |
-| `decoder_datum` | `Data.Decode` example from docs/data.md |
+| `decoder_datum` | `Decode` trait example from docs/data.md |
 
 **Aiken reference**: none; Aiken measures in `aiken-project` benchmarks
 and acceptance tests, not in unit tests.
@@ -735,7 +735,7 @@ CI runs `cargo test` including the budget gate.
 2. **`INLINE_LAMBDA_SIZE` and `CURRY_MIN_USES`** are constants. Making
    them `Options` fields is trivial if a project needs a size/cost
    trade-off knob.
-3. **Fusion of `Data.Decode` combinators** (docs/data.md) is not in this
+3. **Fusion of source decoding functions** (docs/data.md) is not in this
    plan. It would be a fifth pass after chunk 6, recognizing the
    monomorphized stdlib names.
 4. **Budget baselines on cost-model changes.** A nash-plutus cost-model

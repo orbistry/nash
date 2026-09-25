@@ -1026,7 +1026,7 @@ this chunk too (they are small and `ModuleBadEnd` needs
 `toDeclStartReport`).
 
 Nash edits: "Elm" → "Nash" in prose; the example module names
-(`Html.Attributes`, `Json.Decode`) become `Cardano.Tx`, `Data.Decoder`;
+(`Html.Attributes`, `Json.Decode`) become `Cardano.Tx`, `Cardano.Address`;
 the `(..)` note stays.
 
 **Code**

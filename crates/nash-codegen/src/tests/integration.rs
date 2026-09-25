@@ -57,7 +57,7 @@ fn compile_selected(
             Some(primitives::BASE),
         ),
         (
-            "module Option exposing (type option(..))\ntype option 'a = Some 'a | None\n",
+            include_str!("../../../nash-driver/base/src/Option.nash"),
             Some(primitives::BASE),
         ),
         (
@@ -82,6 +82,18 @@ fn compile_selected(
         ),
         (
             include_str!("../../../nash-driver/base/src/Test.nash"),
+            Some(primitives::BASE),
+        ),
+        (
+            include_str!("../../../nash-driver/base/src/Functor.nash"),
+            Some(primitives::BASE),
+        ),
+        (
+            include_str!("../../../nash-driver/base/src/Applicative.nash"),
+            Some(primitives::BASE),
+        ),
+        (
+            include_str!("../../../nash-driver/base/src/Monad.nash"),
             Some(primitives::BASE),
         ),
         (source, None),

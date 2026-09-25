@@ -1,0 +1,207 @@
+module Main exposing (..)
+
+type count = Count int
+
+impl ToData count where
+    toData (Count n) = toData n
+
+impl FromData count where
+    fromData raw = Count (fromData raw)
+
+impl Decode count where
+    decode raw = do
+        n <- decode raw
+        Some (Count n)
+
+asInt : Data -> option int
+asInt = decode
+asBytes : Data -> option bytes
+asBytes = decode
+asString : Data -> option string
+asString = decode
+asBool : Data -> option bool
+asBool = decode
+asUnit : Data -> option unit
+asUnit = decode
+asList : Data -> option (list int)
+asList = decode
+asBigList : Data -> option (List Int)
+asBigList = decode
+asMap : Data -> option (Map Int Bytes)
+asMap = decode
+asOption : Data -> option (option int)
+asOption = decode
+asBigOption : Data -> option (Option Int)
+asBigOption = decode
+asData : Data -> option Data
+asData = decode
+unchecked : Data -> Int
+unchecked = fromData
+checked : Data -> Int
+checked = validate
+little : Data -> int
+little = fromData
+text : Data -> string
+text = fromData
+countValue : count
+countValue = fromData (I 42)
+countDecoded : option count
+countDecoded = decode (I 42)
+
+entries = [Builtin.mkPairData (I 1) (B #"aa"), Builtin.mkPairData (I 1) (B #"bb")]
+
+number : int
+number = 42
+rawBytes : bytes
+rawBytes = #"aaff"
+yes : bool
+yes = True
+no : bool
+no = False
+numbers : list int
+numbers = [1, 2]
+bigOne : Int
+bigOne = 1
+firstBytes : Bytes
+firstBytes = #"aa"
+secondBytes : Bytes
+secondBytes = #"bb"
+three : int
+three = 3
+
+fromList : Data -> list int
+fromList = fromData
+fromOption : Data -> option int
+fromOption = fromData
+fromBool : Data -> bool
+fromBool = fromData
+fromUnit : Data -> unit
+fromUnit = fromData
+fromBytes : Data -> bytes
+fromBytes = fromData
+bigBool : Data -> option Bool
+bigBool = decode
+
+tests
+    test "little list unpacking" = do
+        assert (fromList (toData numbers) == numbers)
+    test "little option unpacking" = do
+        assert (fromOption (toData (Some number)) == Some number)
+    test "little bool unpacking" = do
+        assert (fromBool (toData yes) == yes)
+    test "little unit unpacking" = do
+        assert (fromUnit (toData ()) == ())
+    test "little bytes unpacking" = do
+        assert (fromBytes (toData rawBytes) == rawBytes)
+    test "Big Bool optional decoding" = do
+        assert (bigBool (toData yes) == Some Bool.True)
+    test "Big Bool optional rejection" = do
+        assert (bigBool (Builtin.constrData 0 [I 1]) == None)
+    test "little string unpacking rejects bad UTF8" fail = do
+        let _ = text (B #"80") in ()
+    test "little scalar conversions 1" = do
+        assert (toData number == I 42)
+    test "little scalar conversions 2" = do
+        assert (little (I 42) == 42)
+    test "little scalar conversions 3" = do
+        assert (asBytes (toData rawBytes) == Some #"aaff")
+    test "little scalar conversions 4" = do
+        assert (asString (toData "é") == Some "é")
+    test "little scalar conversions 5" = do
+        assert (text (toData "é") == "é")
+    test "little scalar conversions 6" = do
+        assert (asBool (toData yes) == Some True)
+    test "little scalar conversions 7" = do
+        assert (asBool (toData no) == Some False)
+    test "little scalar conversions 8" = do
+        assert (asUnit (toData ()) == Some ())
+    test "user little conversions and ordinary option composition 1" = do
+        assert (toData countValue == I 42)
+    test "user little conversions and ordinary option composition 2" = do
+        assert (case countDecoded of
+            Some (Count n) -> n == 42
+            None -> False)
+    test "Big blanket conversion remains unchecked 1" = do
+        assert (toData (unchecked (B #"aa")) == B #"aa")
+    test "Big blanket conversion remains unchecked 2" = do
+        assert (toData (checked (I 42)) == I 42)
+    test "independent validation fails" fail = do
+        let _ = checked (B #"aa") in ()
+    test "little unpacking fails" fail = do
+        let _ = little (B #"aa") in ()
+    test "scalar decode wrong shapes 1" = do
+        assert (asInt (B #"aa") == None)
+    test "scalar decode wrong shapes 2" = do
+        assert (asBytes (I 1) == None)
+    test "scalar decode wrong shapes 3" = do
+        assert (asString (I 1) == None)
+    test "scalar decode wrong shapes 4" = do
+        assert (asInt (List []) == None)
+    test "scalar decode wrong shapes 5" = do
+        assert (asInt (Map []) == None)
+    test "scalar decode wrong shapes 6" = do
+        assert (asInt (Builtin.constrData 0 []) == None)
+    test "boolean and unit exact shape 1" = do
+        assert (asBool (Builtin.constrData 2 []) == None)
+    test "boolean and unit exact shape 2" = do
+        assert (asBool (Builtin.constrData 0 [I 1]) == None)
+    test "boolean and unit exact shape 3" = do
+        assert (asBool (I 0) == None)
+    test "boolean and unit exact shape 4" = do
+        assert (asUnit (Builtin.constrData 1 []) == None)
+    test "boolean and unit exact shape 5" = do
+        assert (asUnit (Builtin.constrData 0 [I 1]) == None)
+    test "UTF8 accepts boundaries 1" = do
+        assert (asString (B #"00c280e0a080eda080") == None)
+    test "UTF8 accepts boundaries 2" = do
+        assert (asString (B #"00c280e0a080ed9fbff0908080f48fbfbf") /= None)
+    test "UTF8 rejects malformed sequences 1" = do
+        assert (asString (B #"80") == None)
+    test "UTF8 rejects malformed sequences 2" = do
+        assert (asString (B #"c080") == None)
+    test "UTF8 rejects malformed sequences 3" = do
+        assert (asString (B #"c2") == None)
+    test "UTF8 rejects malformed sequences 4" = do
+        assert (asString (B #"e08080") == None)
+    test "UTF8 rejects malformed sequences 5" = do
+        assert (asString (B #"eda080") == None)
+    test "UTF8 rejects malformed sequences 6" = do
+        assert (asString (B #"f0808080") == None)
+    test "UTF8 rejects malformed sequences 7" = do
+        assert (asString (B #"f4908080") == None)
+    test "UTF8 rejects malformed sequences 8" = do
+        assert (asString (B #"f5808080") == None)
+    test "little collection conversion 1" = do
+        assert (asList (toData numbers) == Some [1, 2])
+    test "little collection conversion 2" = do
+        assert (asList (List []) == Some [])
+    test "little collection conversion 3" = do
+        assert (asList (List [I 1, B #"aa"]) == None)
+    test "little collection conversion 4" = do
+        assert (asList (I 1) == None)
+    test "Big collection decode validates children 1" = do
+        assert (asBigList (List [I 1, I 2]) == Some (lift [1, 2]))
+    test "Big collection decode validates children 2" = do
+        assert (asBigList (List [B #"aa"]) == None)
+    test "Big collection decode validates children 3" = do
+        assert (asMap (Map entries) == Some (lift [Builtin.mkPairData bigOne firstBytes, Builtin.mkPairData bigOne secondBytes]))
+    test "Big collection decode validates children 4" = do
+        assert (asMap (Map [Builtin.mkPairData (B #"aa") (B #"bb")]) == None)
+    test "Big collection decode validates children 5" = do
+        assert (asMap (Map [Builtin.mkPairData (I 1) (I 2)]) == None)
+    test "optional values exact shape 1" = do
+        assert (asOption (toData (Some three)) == Some (Some 3))
+    test "optional values exact shape 2" = do
+        assert (asOption (Builtin.constrData 1 []) == Some None)
+    test "optional values exact shape 3" = do
+        assert (asOption (Builtin.constrData 0 []) == None)
+    test "optional values exact shape 4" = do
+        assert (asOption (Builtin.constrData 0 [B #"aa"]) == None)
+    test "optional values exact shape 5" = do
+        assert (asOption (Builtin.constrData 1 [I 1]) == None)
+    test "optional values exact shape 6" = do
+        assert (asBigOption (Builtin.constrData 0 [I 3]) == Some (Option.Some 3))
+    test "optional values exact shape 7" = do
+        assert (asBigOption (Builtin.constrData 0 [B #"aa"]) == None)
+    test "Data decode preserves any shape 1" = do
+        assert (asData (Map entries) == Some (Map entries))

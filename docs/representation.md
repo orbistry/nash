@@ -266,18 +266,19 @@ Rules:
 - String encoding is explicit through `String.toBytes` and `String.fromBytes`,
   not a Lift instance.
 
-### `ToData`, `FromData` and `Validate`
+### `ToData`, `FromData`, `Validate` and `Decode`
 
-Defined only for Big types:
+ToData, FromData and Decode accept any type. Validate requires Big; only the
+conversion blanket implementations require Big:
 
 ```elm
-trait ToData ('a : Big) where
+trait ToData 'a where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
     toData = Primitive.coerce
 
-trait FromData ('a : Big) where
+trait FromData 'a where
     fromData     : Data -> 'a
 
 impl FromData ('a : Big) where
@@ -287,7 +288,10 @@ trait Validate ('a : Big) where
     validate : Data -> 'a
 ```
 
-- `toData` uses `Primitive.coerce`. The ordinary blanket impl covers
+trait Decode 'a where
+    decode : Data -> option 'a
+
+- For Big types, `toData` uses `Primitive.coerce`. The ordinary blanket impl covers
   every Big type, including user ADTs, nominal aliases, lists and maps, without
   element `ToData` constraints. It preserves the existing runtime Data value
   and wire encoding without traversal or reconstruction.
@@ -298,12 +302,12 @@ trait Validate ('a : Big) where
   Malformed data fails only when a later operation needs its expected shape.
 - `Validate.validate` is the required method of a separate opt-in trait. Base Int and Bytes impls discard the result of a direct unwrapper call,
   relying on its failure behavior, then return the original coerced value.
-  List and Map impls unwrap directly and retain recursive source validation. Non-failing decoding uses `Data.Decode`.
+  List and Map impls unwrap directly and retain recursive source validation. Non-failing decoding uses `Data.decode`.
 
 Core provides explicit `Validate` impls for primitive and collection Big types.
 User Big ADTs opt into validation with `Validate` source impls; future
 `@derive(Validate)` macros will generate checked recursive `validate`.
-Neither conversion trait requires derivation: generated concrete impls would
+For Big types, neither conversion trait requires derivation: concrete impls would
 overlap their blanket impls and be rejected.
 There is no automatic compiler codec synthesis. Real UPLC builtin signatures
 carry nominal types: `iData : int -> Int`, `unIData : Int -> int`, and

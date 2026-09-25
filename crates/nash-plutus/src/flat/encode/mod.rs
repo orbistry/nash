@@ -44,62 +44,70 @@ fn encode_term<'a, V>(encoder: &mut Encoder, term: &'a Term<'a, V>) -> Result<()
 where
     V: Binder<'a>,
 {
-    match term {
-        Term::Var(name) => {
-            encode_term_tag(encoder, tag::VAR)?;
+    enum Work<'a, V> {
+        Term(&'a Term<'a, V>),
+        List(&'a [&'a Term<'a, V>]),
+    }
 
-            name.var_encode(encoder)?;
-        }
-        Term::Lambda { parameter, body } => {
-            encode_term_tag(encoder, tag::LAMBDA)?;
-
-            parameter.parameter_encode(encoder)?;
-
-            encode_term(encoder, body)?;
-        }
-        Term::Apply { function, argument } => {
-            encode_term_tag(encoder, tag::APPLY)?;
-
-            encode_term(encoder, function)?;
-
-            encode_term(encoder, argument)?;
-        }
-        Term::Delay(body) => {
-            encode_term_tag(encoder, tag::DELAY)?;
-
-            encode_term(encoder, body)?;
-        }
-        Term::Force(body) => {
-            encode_term_tag(encoder, tag::FORCE)?;
-
-            encode_term(encoder, body)?;
-        }
-        Term::Case { constr, branches } => {
-            encode_term_tag(encoder, tag::CASE)?;
-
-            encode_term(encoder, constr)?;
-
-            encoder.list_with(branches, |e, t| encode_term(e, t))?;
-        }
-        Term::Constr { tag, fields } => {
-            encode_term_tag(encoder, tag::CONSTR)?;
-
-            encoder.word(*tag);
-
-            encoder.list_with(fields, |e, t| encode_term(e, t))?;
-        }
-        Term::Constant(c) => {
-            encode_term_tag(encoder, tag::CONSTANT)?;
-
-            encode_constant(encoder, c)?;
-        }
-        Term::Builtin(b) => {
-            encode_term_tag(encoder, tag::BUILTIN)?;
-
-            encoder.bits(tag::BUILTIN_TAG_WIDTH as i64, **b as u8);
-        }
-        Term::Error => {
-            encode_term_tag(encoder, tag::ERROR)?;
+    let mut pending = vec![Work::Term(term)];
+    while let Some(work) = pending.pop() {
+        let term = match work {
+            Work::Term(term) => term,
+            Work::List(items) => {
+                if let Some((first, rest)) = items.split_first() {
+                    encoder.one();
+                    pending.push(Work::List(rest));
+                    pending.push(Work::Term(first));
+                } else {
+                    encoder.zero();
+                }
+                continue;
+            }
+        };
+        match term {
+            Term::Var(name) => {
+                encode_term_tag(encoder, tag::VAR)?;
+                name.var_encode(encoder)?;
+            }
+            Term::Lambda { parameter, body } => {
+                encode_term_tag(encoder, tag::LAMBDA)?;
+                parameter.parameter_encode(encoder)?;
+                pending.push(Work::Term(body));
+            }
+            Term::Apply { function, argument } => {
+                encode_term_tag(encoder, tag::APPLY)?;
+                pending.push(Work::Term(argument));
+                pending.push(Work::Term(function));
+            }
+            Term::Delay(body) => {
+                encode_term_tag(encoder, tag::DELAY)?;
+                pending.push(Work::Term(body));
+            }
+            Term::Force(body) => {
+                encode_term_tag(encoder, tag::FORCE)?;
+                pending.push(Work::Term(body));
+            }
+            Term::Case { constr, branches } => {
+                encode_term_tag(encoder, tag::CASE)?;
+                pending.push(Work::List(branches));
+                pending.push(Work::Term(constr));
+            }
+            Term::Constr { tag, fields } => {
+                encode_term_tag(encoder, tag::CONSTR)?;
+                encoder.word(*tag);
+                pending.push(Work::List(fields));
+            }
+            Term::Constant(c) => {
+                encode_term_tag(encoder, tag::CONSTANT)?;
+                encode_constant(encoder, c)?;
+            }
+            Term::Builtin(b) => {
+                encode_term_tag(encoder, tag::BUILTIN)?;
+                encoder.bits(tag::BUILTIN_TAG_WIDTH as i64, **b as u8);
+            }
+            Term::Error => {
+                encode_term_tag(encoder, tag::ERROR)?;
+            }
         }
     }
 
@@ -309,6 +317,22 @@ mod tests {
     use crate::arena::Arena;
     use crate::binder::DeBruijn;
     use crate::flat::decode;
+
+    #[test]
+    fn deeply_nested_delays_encode_without_call_stack_growth() {
+        let arena = Arena::new();
+        let mut term = Term::<DeBruijn>::error(&arena);
+        for _ in 0..20_000 {
+            term = term.delay(&arena);
+        }
+        let program = Program::new(&arena, crate::program::Version::plutus_v3(&arena), term);
+        let bytes = encode(program).unwrap();
+        // Version 1.1.0, 20,000 four-bit delay tags, then error and filler.
+        let mut expected = vec![1, 1, 0];
+        expected.extend(std::iter::repeat_n(0x11, 10_000));
+        expected.push(0x61);
+        assert_eq!(bytes, expected);
+    }
 
     #[test]
     fn cbor_wraps_flat_bytes_once() {

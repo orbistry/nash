@@ -1,16 +1,20 @@
-module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
+module Data exposing (ToData, FromData, Validate, Decode, serialise, tag, fields)
 
 import Builtin
+import Literal
+import Eq exposing (Eq)
+import Option exposing (Option, type option(..))
+import Monad exposing (Monad)
 
-import Primitive exposing (Data(..))
+import Primitive exposing (Big, Data(..), type bool(..))
 
-trait ToData ('a : Big) where
+trait ToData 'a where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
     toData = Primitive.coerce
 
-trait FromData ('a : Big) where
+trait FromData 'a where
     fromData : Data -> 'a
 
 impl FromData ('a : Big) where
@@ -73,3 +77,183 @@ mapList f values =
 
 pairValidate : (Validate 'k, Validate 'v) => pair Data Data -> pair 'k 'v
 pairValidate pair(key, value) = Builtin.mkPairData (validate key) (validate value)
+
+impl Validate 'a => Validate (Option 'a) where
+    validate value =
+        case Builtin.unConstrData value of
+            pair(0, [item]) -> Option.Some (validate item)
+            pair(1, []) -> Option.None
+            _ -> fail
+
+trait Decode 'a where
+    decode : Data -> option 'a
+
+impl ToData int where
+    toData value = Primitive.coerce (Builtin.iData value)
+
+impl FromData int where
+    fromData value = Builtin.unIData (Primitive.coerce value)
+
+impl Decode int where
+    decode value = case value of
+        I number -> Some number
+        _ -> None
+
+impl ToData bytes where
+    toData value = Primitive.coerce (Builtin.bData value)
+
+impl FromData bytes where
+    fromData value = Builtin.unBData (Primitive.coerce value)
+
+impl Decode bytes where
+    decode value = case value of
+        B raw -> Some raw
+        _ -> None
+
+impl ToData string where
+    toData value = toData (Builtin.encodeUtf8 value)
+
+impl FromData string where
+    fromData value = Builtin.decodeUtf8 (fromData value)
+
+impl Decode Data where
+    decode value = Some value
+
+impl Decode Int where
+    decode value = case value of
+        I _ -> Some (fromData value)
+        _ -> None
+
+impl Decode Bytes where
+    decode value = case value of
+        B _ -> Some (fromData value)
+        _ -> None
+
+impl ToData bool where
+    toData value = Builtin.constrData (if value then 1 else 0) []
+
+impl FromData bool where
+    fromData value = case Builtin.unConstrData value of
+        pair(0, []) -> False
+        pair(1, []) -> True
+        _ -> fail
+
+impl Decode bool where
+    decode value = case value of
+        Constr pair(0, []) -> Some False
+        Constr pair(1, []) -> Some True
+        _ -> None
+
+impl ToData unit where
+    toData _ = Builtin.constrData 0 []
+
+impl FromData unit where
+    fromData value = case Builtin.unConstrData value of
+        pair(0, []) -> ()
+        _ -> fail
+
+impl Decode unit where
+    decode value = case value of
+        Constr pair(0, []) -> Some ()
+        _ -> None
+
+impl ToData 'a => ToData (list 'a) where
+    toData values = Primitive.coerce (Builtin.listData (mapList toData values))
+
+impl FromData 'a => FromData (list 'a) where
+    fromData value = mapList fromData (Builtin.unListData (Primitive.coerce value))
+
+impl Decode 'a => Decode (list 'a) where
+    decode value = case value of
+        List items -> decodeList items
+        _ -> None
+
+decodeList : Decode 'a => list Data -> option (list 'a)
+decodeList values = case values of
+    [] -> Some []
+    first :: rest -> do
+        item <- decode first
+        items <- decodeList rest
+        Some (Builtin.mkCons item items)
+
+impl (Big 'a, Decode 'a) => Decode (List 'a) where
+    decode value = case value of
+        List items -> do
+            decoded <- decodeList items
+            Some (Builtin.listData decoded)
+        _ -> None
+
+impl (Big 'k, Big 'v, Decode 'k, Decode 'v) => Decode (Map 'k 'v) where
+    decode value = case value of
+        Map entries -> do
+            decoded <- decodeEntries entries
+            Some (Builtin.mapData decoded)
+        _ -> None
+
+decodeEntries : (Big 'k, Big 'v, Decode 'k, Decode 'v) => list (pair Data Data) -> option (list (pair 'k 'v))
+decodeEntries entries = case entries of
+    [] -> Some []
+    pair(key, value) :: rest -> do
+        k <- decode key
+        v <- decode value
+        tail <- decodeEntries rest
+        Some (Builtin.mkCons (Builtin.mkPairData k v) tail)
+
+impl ToData 'a => ToData (option 'a) where
+    toData value = case value of
+        Some item -> Builtin.constrData 0 [toData item]
+        None -> Builtin.constrData 1 []
+
+impl FromData 'a => FromData (option 'a) where
+    fromData value = case Builtin.unConstrData value of
+        pair(0, [item]) -> Some (fromData item)
+        pair(1, []) -> None
+        _ -> fail
+
+impl Decode 'a => Decode (option 'a) where
+    decode value = case value of
+        Constr pair(0, [item]) -> do
+            decoded <- decode item
+            Some (Some decoded)
+        Constr pair(1, []) -> Some None
+        _ -> None
+
+impl (Big 'a, Decode 'a) => Decode (Option 'a) where
+    decode value = case value of
+        Constr pair(0, [item]) -> do
+            decoded <- decode item
+            Some (Option.Some decoded)
+        Constr pair(1, []) -> Some Option.None
+        _ -> None
+
+impl Decode string where
+    decode value = case value of
+        B raw ->
+            if utf8 raw (Builtin.lengthOfByteString raw) 0 then Some (Builtin.decodeUtf8 raw)
+            else None
+        _ -> None
+
+utf8 : bytes -> int -> int -> bool
+utf8 raw size index =
+    if Builtin.equalsInteger index size then True
+    else
+        let first = Builtin.indexByteString raw index in
+        if Builtin.lessThanInteger first 128 then utf8 raw size (Builtin.addInteger index 1)
+        else if (if Builtin.lessThanEqualsInteger 194 first then Builtin.lessThanEqualsInteger first 223 else False) then continuation raw size (Builtin.addInteger index 1) 1 128 191
+        else if Builtin.equalsInteger first 224 then continuation raw size (Builtin.addInteger index 1) 2 160 191
+        else if (if Builtin.lessThanEqualsInteger 225 first then Builtin.lessThanEqualsInteger first 236 else False) then continuation raw size (Builtin.addInteger index 1) 2 128 191
+        else if Builtin.equalsInteger first 237 then continuation raw size (Builtin.addInteger index 1) 2 128 159
+        else if (if Builtin.lessThanEqualsInteger 238 first then Builtin.lessThanEqualsInteger first 239 else False) then continuation raw size (Builtin.addInteger index 1) 2 128 191
+        else if Builtin.equalsInteger first 240 then continuation raw size (Builtin.addInteger index 1) 3 144 191
+        else if (if Builtin.lessThanEqualsInteger 241 first then Builtin.lessThanEqualsInteger first 243 else False) then continuation raw size (Builtin.addInteger index 1) 3 128 191
+        else if Builtin.equalsInteger first 244 then continuation raw size (Builtin.addInteger index 1) 3 128 143
+        else False
+
+continuation : bytes -> int -> int -> int -> int -> int -> bool
+continuation raw size index remaining low high =
+    if Builtin.equalsInteger remaining 0 then utf8 raw size index
+    else if Builtin.lessThanEqualsInteger size index then False
+    else
+        let next = Builtin.indexByteString raw index in
+        if (if Builtin.lessThanInteger next low then True else Builtin.lessThanInteger high next) then False
+        else continuation raw size (Builtin.addInteger index 1) (Builtin.subtractInteger remaining 1) 128 191

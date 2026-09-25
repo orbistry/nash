@@ -2833,13 +2833,14 @@ bool to Unit reports MissingImpl at the original outer `lift` call. Option's
 Functor/Applicative/Monad impls and remaining helpers are still pending;
 this does not complete the hierarchy. Formatting, strict Clippy, 1,912 tests
 and snapshot hygiene pass; no Rust crate changes in this source-only step.
-Data defines Big-bounded ToData, FromData and Validate traits, plus
+Data defines unrestricted ToData/FromData traits and Big-bounded Validate, plus
 serialise/tag/fields. ToData and FromData each have an ordinary blanket Big
-impl defining its method as Primitive.coerce. Both conversions preserve the
+impl defining its method as Primitive.coerce. Both Big conversions preserve the
 runtime Data value without traversal or shape checks. Every Big type is
 covered, including user ADTs, nominal record aliases and collections, with
-no element conversion or validation prerequisites. Little unit remains
-ineligible; nominal Int is covered automatically.
+no element conversion or validation prerequisites. Plan 12 adds explicit little
+conversions, including unit, and independent optional Decode; nominal Int is
+covered automatically.
 Validate is separate and opt-in. Core Data accepts every shape; Int and Bytes
 check shape, while List and Map recursively validate their contents through
 Validate constraints. User ADTs provide source Validate impls until future

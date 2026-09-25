@@ -1,9 +1,11 @@
 module Cardano.Time exposing (Extended(..), IntervalBound(..), Interval(..), interval, from, to, always, never, member, contains, isEmpty)
 
+import Monad exposing (Monad)
+import Option exposing (type option(..))
 import Prelude exposing (..)
-import Primitive exposing (type bool(..))
+import Primitive exposing (Data(..), type bool(..))
 import Num
-import Data exposing (Validate)
+import Data exposing (Validate, Decode)
 import Bool exposing (Bool)
 import Lift exposing (Lift)
 
@@ -83,3 +85,31 @@ always = Interval (IntervalBound NegInf Bool.True) (IntervalBound PosInf Bool.Tr
 
 never : Interval
 never = Interval (IntervalBound PosInf Bool.True) (IntervalBound NegInf Bool.True)
+
+impl Decode Extended where
+    decode raw =
+        case raw of
+            Constr pair(0, []) -> Some NegInf
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (Finite d0)
+            Constr pair(2, []) -> Some PosInf
+            _ -> None
+
+impl Decode IntervalBound where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (IntervalBound d0 d1)
+            _ -> None
+
+impl Decode Interval where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Interval d0 d1)
+            _ -> None

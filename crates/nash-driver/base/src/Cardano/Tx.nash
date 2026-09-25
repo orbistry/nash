@@ -1,9 +1,11 @@
 module Cardano.Tx exposing (..)
 
-import Data exposing (Validate)
+import Primitive exposing (Data(..))
+import Monad exposing (Monad)
+import Data exposing (Validate, Decode)
 import Eq
 import Literal
-import Option exposing (Option)
+import Option exposing (Option, type option(..))
 import Cardano.Address exposing (Address, Credential)
 import Cardano.Time exposing (Interval)
 import Cardano.Value exposing (Value)
@@ -219,3 +221,309 @@ impl Validate ScriptContext where
         case Builtin.unConstrData raw of
             pair(0, [f0, f1, f2]) -> ScriptContext (validate f0) (validate f1) (validate f2)
             _ -> fail
+
+impl Decode DRep where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (DRep d0)
+            Constr pair(1, []) -> Some DRepAlwaysAbstain
+            Constr pair(2, []) -> Some DRepAlwaysNoConfidence
+            _ -> None
+
+impl Decode Delegatee where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (DelegStake d0)
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (DelegVote d0)
+            Constr pair(2, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (DelegStakeVote d0 d1)
+            _ -> None
+
+impl Decode Certificate where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (RegStaking d0 d1)
+            Constr pair(1, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (UnRegStaking d0 d1)
+            Constr pair(2, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (DelegStaking d0 d1)
+            Constr pair(3, [f0, f1, f2]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                Some (RegDeleg d0 d1 d2)
+            Constr pair(4, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (RegDRep d0 d1)
+            Constr pair(5, [f0]) -> do
+                d0 <- decode f0
+                Some (UpdateDRep d0)
+            Constr pair(6, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (UnRegDRep d0 d1)
+            Constr pair(7, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (PoolRegister d0 d1)
+            Constr pair(8, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (PoolRetire d0 d1)
+            Constr pair(9, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (AuthHotCommittee d0 d1)
+            Constr pair(10, [f0]) -> do
+                d0 <- decode f0
+                Some (ResignColdCommittee d0)
+            _ -> None
+
+impl Decode Voter where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (CommitteeVoter d0)
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (DRepVoter d0)
+            Constr pair(2, [f0]) -> do
+                d0 <- decode f0
+                Some (StakePoolVoter d0)
+            _ -> None
+
+impl Decode Vote where
+    decode raw =
+        case raw of
+            Constr pair(0, []) -> Some VoteNo
+            Constr pair(1, []) -> Some VoteYes
+            Constr pair(2, []) -> Some Abstain
+            _ -> None
+
+impl Decode GovernanceActionId where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (GovernanceActionId d0 d1)
+            _ -> None
+
+impl Decode Rational where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Rational d0 d1)
+            _ -> None
+
+impl Decode Committee where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Committee d0 d1)
+            _ -> None
+
+impl Decode Constitution where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (Constitution d0)
+            _ -> None
+
+impl Decode ProtocolVersion where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (ProtocolVersion d0 d1)
+            _ -> None
+
+impl Decode GovernanceAction where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1, f2]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                Some (ParameterChange d0 d1 d2)
+            Constr pair(1, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (HardForkInitiation d0 d1)
+            Constr pair(2, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (TreasuryWithdrawals d0 d1)
+            Constr pair(3, [f0]) -> do
+                d0 <- decode f0
+                Some (NoConfidence d0)
+            Constr pair(4, [f0, f1, f2, f3]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                d3 <- decode f3
+                Some (UpdateCommittee d0 d1 d2 d3)
+            Constr pair(5, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (NewConstitution d0 d1)
+            Constr pair(6, []) -> Some InfoAction
+            _ -> None
+
+impl Decode Proposal where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1, f2]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                Some (Proposal d0 d1 d2)
+            _ -> None
+
+impl Decode OutputReference where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (OutputReference d0 d1)
+            _ -> None
+
+impl Decode Datum where
+    decode raw =
+        case raw of
+            Constr pair(0, []) -> Some NoDatum
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (DatumHash d0)
+            Constr pair(2, [f0]) -> do
+                d0 <- decode f0
+                Some (InlineDatum d0)
+            _ -> None
+
+impl Decode Output where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1, f2, f3]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                d3 <- decode f3
+                Some (Output d0 d1 d2 d3)
+            _ -> None
+
+impl Decode Input where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Input d0 d1)
+            _ -> None
+
+impl Decode ScriptPurpose where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (Minting d0)
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (Spending d0)
+            Constr pair(2, [f0]) -> do
+                d0 <- decode f0
+                Some (Rewarding d0)
+            Constr pair(3, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Certifying d0 d1)
+            Constr pair(4, [f0]) -> do
+                d0 <- decode f0
+                Some (Voting d0)
+            Constr pair(5, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Proposing d0 d1)
+            _ -> None
+
+impl Decode ScriptInfo where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (MintingScript d0)
+            Constr pair(1, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (SpendingScript d0 d1)
+            Constr pair(2, [f0]) -> do
+                d0 <- decode f0
+                Some (RewardingScript d0)
+            Constr pair(3, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (CertifyingScript d0 d1)
+            Constr pair(4, [f0]) -> do
+                d0 <- decode f0
+                Some (VotingScript d0)
+            Constr pair(5, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (ProposingScript d0 d1)
+            _ -> None
+
+impl Decode Tx where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                d3 <- decode f3
+                d4 <- decode f4
+                d5 <- decode f5
+                d6 <- decode f6
+                d7 <- decode f7
+                d8 <- decode f8
+                d9 <- decode f9
+                d10 <- decode f10
+                d11 <- decode f11
+                d12 <- decode f12
+                d13 <- decode f13
+                d14 <- decode f14
+                d15 <- decode f15
+                Some (Tx d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11 d12 d13 d14 d15)
+            _ -> None
+
+impl Decode ScriptContext where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1, f2]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                Some (ScriptContext d0 d1 d2)
+            _ -> None

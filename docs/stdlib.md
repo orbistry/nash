@@ -51,8 +51,6 @@ crates/nash-driver/base/
     Pair.nash             pair
     Array.nash            array
     Map.nash              Map (Big; its little form is `list (pair 'k 'v)`)
-    Data/Decode.nash      decoders
-    Data/Encode.nash      encoders
     Prop.nash             generators
     Test.nash             label, property preparation and assertion reporting
     Ast.nash              macro AST: little ADTs over cons (see macros.md)
@@ -74,8 +72,7 @@ Trait methods such as `Functor.map` retain their trait's container contract.
 `lift` and `lower` change only the outer representation; both have identity
 conversion for already-matching types. Recursive element conversion requires
 explicit mapping. There is no Big String: use `String.toBytes` / `fromBytes`
-for UTF-8 and `lift` / `lower` for bytes/Bytes. `Data`, `Data.Decode` and
-`Data.Encode` operate on Data itself. Map collection operations return little
+for UTF-8 and `lift` / `lower` for bytes/Bytes. `Data` owns conversion, validation and optional decoding traits. Map collection operations return little
 lists and preserve element types; `keys` and `values` also normalize Big inputs.
 
 ## Default imports
@@ -101,8 +98,6 @@ import Applicative exposing (Applicative)
 import Monad exposing (Monad)
 import Lift exposing (Lift)
 import Data exposing (ToData, FromData, Validate)
-import Data.Decode
-import Data.Encode
 import Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
 import Bool exposing (Bool, not, and, or, xor)
 import Unit exposing (Unit)
@@ -415,17 +410,18 @@ identity when both Lift arguments are already the same type. Map wrapping
 requires Big keys and values and does not convert its entries.
 
 ```elm
-module Data exposing (ToData, FromData, Validate, serialise, tag, fields)
+module Data exposing (ToData, FromData, Validate, Decode, serialise, tag, fields)
 
 import Primitive exposing (Data(..))
+import Option exposing (type option(..))
 
-trait ToData ('a : Big) where
+trait ToData 'a where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
     toData = Primitive.coerce
 
-trait FromData ('a : Big) where
+trait FromData 'a where
     fromData : Data -> 'a
 
 impl FromData ('a : Big) where
@@ -433,6 +429,9 @@ impl FromData ('a : Big) where
 
 trait Validate ('a : Big) where
     validate : Data -> 'a
+
+trait Decode 'a where
+    decode : Data -> option 'a
 
 -- Data itself requires no decoding.
 impl Validate Data where
@@ -469,9 +468,8 @@ validation constraints. The required
 the original value, while List and Map retain recursive source validation.
 `toData` uses `Primitive.coerce` directly in one ordinary blanket impl
 for every Big type. User ADTs, nominal aliases, lists and maps all qualify,
-without element `ToData` constraints or reconstruction. Additional concrete
-impls overlap this blanket impl and are rejected. Data.Decode provides the
-non-failing decoder API.
+without element `ToData` constraints or reconstruction. Concrete Big
+impls overlap this blanket impl and are rejected; little types use explicit impls. Data.decode provides optional checking through an independent Decode trait.
 
 ## Twin modules
 
@@ -897,61 +895,43 @@ Data pairs. Other helpers do not impose that restriction. There is no redundant
 `fromList`: a native pair list is already the little map representation. Use
 `lift` explicitly when a Big map is required.
 
-## `Data.Decode`, `Data.Encode`
+## Data conversion and checking
 
-`Data.tag : Data -> int` and `Data.fields : Data -> list Data` assume constructor
-Data and use `unConstrData`; other shapes fail. Recoverable decoding lives in
-`Data.Decode`, separately from the trapping `validate` trait.
+All four traits are defined in `Data.nash` and implicitly available to application modules:
 
-```elm
-type alias decoder 'a = Data -> option 'a
-run : decoder 'a -> Data -> option 'a
-int : decoder int
-bytes : decoder bytes
-string : decoder string
-bool : decoder bool
-data : decoder Data
-list : decoder 'a -> decoder (list 'a)
-map : decoder 'k -> decoder 'v -> decoder (Cons.cons ('k, 'v))
-constr : int -> decoder 'a -> decoder 'a
-field : int -> decoder 'a -> decoder 'a
-oneOf : Cons.cons (decoder 'a) -> decoder 'a
-reject : decoder 'a
-```
+| Trait | Method | Behavior |
+|---|---|---|
+| `ToData 'a` | `toData : 'a -> Data` | Encode a value |
+| `FromData 'a` | `fromData : Data -> 'a` | Convert without recursive validation guarantees |
+| `Validate ('a : Big)` | `validate : Data -> 'a` | Explicit recursive checks; fail on mismatch |
+| `Decode 'a` | `decode : Data -> option 'a` | Explicit checks; return None on mismatch |
 
-The decoder function alias implements `Functor`, `Applicative`, and `Monad`.
-Use `map`, `pure`, application or `do` for composition; no numbered mapping or
-field helpers are needed. Both application and bind decode against the same
-original input, and stop on the first `None`. `constr` checks the tag and passes
-the original node to its inner decoder. `field` selects a zero-based constructor
-field; negative/missing indices or non-constructor input return `None`. Extra
-fields are permitted. `oneOf` tries decoders in order and stops at first success;
-an empty sequence returns `None`. `reject` always returns `None` (`fail` is a
-language keyword).
+ToData and FromData accept any type. Only Big types receive blanket identity
+implementations. Little int, bytes, string, bool, unit, list and option have
+explicit conversions. Little collections convert their elements recursively;
+Big collections pass through unchanged. This does not change Lift/lower, which
+still preserve inner elements. User-defined little types can implement either
+conversion trait. Concrete Big conversion impls overlap the blanket and are rejected.
 
-`list` requires Storable decoded elements. Decoded maps use `Cons` of ordinary
-tuples so keys and values may be little types or functions; order and duplicates
-are retained. `oneOf` also uses `Cons` because decoders are functions.
+Decode and Validate are independent; neither calls or requires the other.
+Decode covers the little types above, Data, Int, Bytes, Bool, Option, List, Map
+and the Cardano types. Generic collection instances require their element's
+Decode instance. Native lists retain the Storable element restriction; native
+Map keys and values must be Big. No unchecked blanket Decode is provided.
 
-`bool` accepts only constructor tags 0 (False) and 1 (True), with no fields.
-`string` validates UTF-8 in Nash before calling `decodeUtf8`; malformed byte
-sequences return `None`. User-supplied decoder functions can still deliberately
-fail; the library does not catch VM failures.
+Use normal pattern matching and option's existing `do`, map and bind to combine
+optional results. There is no decoder alias, run function, or separate encoder
+or decoder module. A user implementation that calls fail still aborts execution;
+option does not catch VM errors.
 
-```elm
--- Data.Encode
-int : Lift int 'a => 'a -> Data
-bytes : Lift bytes 'a => 'a -> Data
-string : string -> Data
-bool : Lift bool 'a => 'a -> Data
-list : Lift (list 'a) ('f 'a) => ('a -> Data) -> 'f 'a -> Data
-constr : (Lift int 'n, Lift (list Data) ('f Data)) => 'n -> 'f Data -> Data
-map : ('k -> Data) -> ('v -> Data) -> Cons.cons ('k, 'v) -> Data
-```
+String conversion uses UTF-8 bytes. Decode checks UTF-8 before decodeUtf8;
+FromData string invokes decodeUtf8 directly and can fail. Bool accepts exactly
+constructor 0/1 with no fields; unit accepts constructor 0 with no fields.
+Map decoding retains ordering and duplicate keys.
 
-Encoders normalize outer inputs only; explicit element encoders decide how
-contents are represented. Strings use UTF-8 bytes, and booleans use the exact
-constructor shapes above. Map encoding preserves order and duplicates.
+`Data.tag` and `Data.fields` assume constructor Data and fail on other shapes.
+Use `Builtin.constrData` to construct raw constructor Data. `Data.serialise`
+converts Data to CBOR bytes; it is separate from ToData.
 
 ## `Prop`
 

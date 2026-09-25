@@ -56,7 +56,7 @@ replace the tested PRNG, replay, label, and assertion protocols.
 ## Current status
 
 Reconciled with chunk 11 implementation (2026-09-25). Base currently
-ships 34 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
+ships 32 embedded Nash modules. Plan 12 remains incomplete in `SPEC.md`.
 
 | Chunk | Status | Remaining work |
 |---|---|---|
@@ -251,10 +251,10 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 
 - [x] Ship Data.serialise, Data.tag and Data.fields alongside the Data traits.
 - [x] Make tag/fields direct constructor accessors; non-constructor input fails.
-- [x] Ship Data.Decode and Data.Encode with source snapshot and round-trip tests.
-- [x] Use decoder function aliases with Functor/Applicative/Monad composition.
-- [x] Decode map entries into Cons tuples; use Cons for decoder alternatives.
-- [x] Reject malformed UTF-8 through the recoverable string decoder.
+- [x] Consolidate conversion and checking traits in Data.nash; remove decoder combinators.
+- [x] Keep Big-only conversion blankets; add explicit little-type conversions.
+- [x] Provide independent Decode and Validate implementations.
+- [x] Reject malformed UTF-8 through optional string decoding.
 - [x] Ship right-biased Map.union returning a little list of pairs.
 - [x] Ship Map construction, lookup, update, removal, folding and collection helpers.
 - [x] Make Map.keys/values normalize Big input internally through Lift; relational
@@ -262,27 +262,29 @@ Read-only review covered API semantics, conversion evidence, and source snapshot
 - [x] Embed nested Base modules and include them in implicit qualified imports.
 - [x] Complete full workspace validation.
 
-Implementation: `base/src/Data.nash`, `base/src/Data/Decode.nash`,
-`base/src/Data/Encode.nash`, `base/src/Map.nash` under `crates/nash-driver`.
-Authoritative APIs and behavior are in `docs/stdlib.md` and `docs/data.md`.
+Implementation: `base/src/Data.nash` and `base/src/Map.nash` under
+`crates/nash-driver`, with type-specific instances in their owning modules.
+Authoritative APIs and behavior are in docs/stdlib.md and docs/data.md.
+Decode uses ordinary pattern matching and option composition. There is no
+separate decoder alias or combinator module. ToData/FromData accept all types,
+with blanket identity conversions for Big types only. Validate fails directly;
+Decode independently returns None for malformed values.
 
-Decoder composition uses the existing language traits and `do`, with no custom
-numbered mapping/field helpers and no new compiler decoder behavior. `constr`
-checks the tag and decodes the original node; `field` selects its zero-based
-field. Missing fields return None, extra fields are allowed. Recoverable
-UTF-8 validation is implemented in Nash. Functions supplied by the user can
-still fail explicitly.
-
-Decoded maps use Cons tuples because native pair construction requires Data
-components. Map operations preserve elements and return little collections;
+Map operations preserve elements and return little collections;
 construction uses native Data pairs. Construction/encoding does not deduplicate;
 get finds the first match, remove deletes all matches, insert appends one new
 entry after removing existing matches, and union is right-biased. A native pair
 list needs no fromList wrapper; explicit lift constructs its Big representation.
 
 Tests use the shared in-process Base snapshot runner, including integer/bytes/list
-round-trip properties, invalid UTF-8, decoder composition, function-valued map
-entries, duplicate keys, map ordering, and constructor accessor failures.
+round trips, invalid UTF-8, option composition, user little conversions,
+duplicate keys, map ordering, and constructor accessor failures.
+
+The Data trait consolidation also checks all seven Haskell context fixtures
+through independent Decode instances and rejects malformed contexts without
+trapping. Flat term encoding uses an iterative traversal for large decoders.
+Validation: formatting, strict all-target/all-feature Clippy, and the full
+workspace suite passed (3,452 tests, 3 ignored).
 
 Validation: formatting and strict Clippy passed; 3,432 workspace tests
 passed, 3 ignored. Snapshot tests run without a custom Rust stack setting.

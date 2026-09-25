@@ -1,9 +1,11 @@
 module Cardano.Address exposing (..)
 
-import Data exposing (Validate)
+import Primitive exposing (Data(..))
+import Monad exposing (Monad)
+import Data exposing (Validate, Decode)
 import Eq
 import Literal
-import Option exposing (Option)
+import Option exposing (Option, type option(..))
 
 type Credential = PubKeyCredential Bytes | ScriptCredential Bytes
 
@@ -30,3 +32,36 @@ impl Validate Address where
         case Builtin.unConstrData raw of
             pair(0, [f0, f1]) -> Address (validate f0) (validate f1)
             _ -> fail
+
+impl Decode Credential where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (PubKeyCredential d0)
+            Constr pair(1, [f0]) -> do
+                d0 <- decode f0
+                Some (ScriptCredential d0)
+            _ -> None
+
+impl Decode StakingCredential where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0]) -> do
+                d0 <- decode f0
+                Some (StakingHash d0)
+            Constr pair(1, [f0, f1, f2]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                d2 <- decode f2
+                Some (StakingPtr d0 d1 d2)
+            _ -> None
+
+impl Decode Address where
+    decode raw =
+        case raw of
+            Constr pair(0, [f0, f1]) -> do
+                d0 <- decode f0
+                d1 <- decode f1
+                Some (Address d0 d1)
+            _ -> None

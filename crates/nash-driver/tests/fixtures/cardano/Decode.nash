@@ -1,0 +1,15 @@
+validator module DecodeContext exposing (main)
+
+import Cardano.Tx exposing (ScriptContext)
+
+checked : Data -> option ScriptContext
+checked = decode
+
+main : Data -> unit
+main input =
+    case input of
+        Constr pair(0, [I expected, raw]) ->
+            case checked raw of
+                Some _ -> if expected == 1 then () else fail
+                None -> if expected == 0 then () else fail
+        _ -> fail

@@ -628,13 +628,13 @@ trait Functor 'f => Applicative 'f where       -- map is (<$>)
 trait Applicative 'm => Monad 'm where
     bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b      -- (>>=), `do`
 
-trait ToData ('a : Big) where
+trait ToData 'a where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
     toData = Primitive.coerce
 
-trait FromData ('a : Big) where
+trait FromData 'a where
     fromData : Data -> 'a                       -- unchecked identity
 
 impl FromData ('a : Big) where
@@ -642,6 +642,9 @@ impl FromData ('a : Big) where
 
 trait Validate ('a : Big) where
     validate : Data -> 'a                   -- required recursive validation; traps on bad data
+
+trait Decode 'a where
+    decode : Data -> option 'a
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
@@ -688,7 +691,8 @@ Notes:
   the module that declares the operator. Operator values and sections use
   the same scheme; each operator node owns its solved evidence.
 - Kinds: `ToData`/`FromData`/`Validate` and both `Lift` parameters have kind `Type`.
-  `ToData`/`FromData`/`Validate` require `Big` through their superclass predicates.
+  `Validate` requires `Big` through its superclass predicate. `ToData` and
+  `FromData` accept any type, with Big-only blanket implementations.
   `Lift` relates its concrete impl heads, with a compiler-owned reflexive
   rule for all types. `Functor`/`Applicative`/`Monad` parameters have the
   fixed kind `Type -> Type`; their method formation contexts enforce each

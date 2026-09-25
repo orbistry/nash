@@ -3,7 +3,7 @@
 `Data` is the Plutus `Data` value: the on-chain wire format for datums,
 redeemers and the script context. In Nash it is an ordinary Big type with
 five constructors that can be pattern matched, plus a small set of traits
-and a stdlib decoder library on top. Decisions follow
+for conversion and independent trapping or optional checks. Decisions follow
 [overview.md](overview.md); the representation of every other type is in
 [representation.md](representation.md); builtin lowering is in
 [codegen.md](codegen.md).
@@ -102,14 +102,14 @@ usually inspected when a full `validate` is too expensive.
 ## Traits
 
 ```elm
-trait ToData ('a : Big) where
+trait ToData 'a where
     toData : 'a -> Data
 
 impl ToData ('a : Big) where
     toData = Primitive.coerce
 
-trait FromData ('a : Big) where
-    fromData     : Data -> 'a     -- unchecked identity
+trait FromData 'a where
+    fromData     : Data -> 'a     -- Big blanket is unchecked identity
 
 impl FromData ('a : Big) where
     fromData = Primitive.coerce
@@ -117,31 +117,32 @@ impl FromData ('a : Big) where
 trait Validate ('a : Big) where
     validate : Data -> 'a     -- required recursive validation
 
+trait Decode 'a where
+    decode : Data -> option 'a
+
 trait Lift 'small 'big where
     lift  : 'small -> 'big
     lower : 'big -> 'small
 ```
 
-`ToData` and `FromData` apply to Big types. Core supplies an ordinary blanket
-impl for each trait, covering every Big type, including user ADTs, nominal
-record aliases, lists and maps. The impl bodies define the coercion methods directly;
-collection elements need no conversion or validation constraints. Neither
-conversion trait needs derivation, and concrete impls would overlap the
-blanket impls. `Validate` is separate and opt-in: core provides impls for
-`Int`, `Bytes`, `Data`, `List 'a` and `Map 'k 'v`; user types need a source
-`Validate` impl. `@derive(Validate)` remains future macro work.
+`ToData` and `FromData` accept all types. Their ordinary blanket implementations
+cover only Big types, including user ADTs, nominal record aliases, lists and
+maps. Big values need no traversal or element constraints. Little types use
+explicit implementations; user-defined little types may supply their own.
+`Validate` remains Big-only and opt-in. `Decode` accepts any type and returns
+`option`; it is independent of Validate. Neither is implemented through the other.
 
-`fromData` uses `Primitive.coerce`, an unchecked identity. It checks
+For Big types, `fromData` uses `Primitive.coerce`, an unchecked identity. It checks
 neither the outer Data shape nor nested fields. Malformed data fails only
 if a later operation needs the expected shape; a value that is never inspected
 can pass through unchanged. `Validate.validate` is the required method of a separate trait:
 core impls check the shape and recursively validate collection elements.
-`Data` itself accepts every Data shape. `Data.Decode` supplies non-failing
+`Data` itself accepts every Data shape. `Data.decode` supplies non-failing
 option-based decoding.
 
-`toData` uses `Primitive.coerce`: every Big value already has its Data
+For Big types, `toData` uses `Primitive.coerce`: every Big value already has its Data
 representation. Conversion preserves that value and its wire encoding without
-traversing or rebuilding it. Concrete `ToData` impls would overlap the blanket
+traversing or rebuilding it. Concrete Big `ToData` impls would overlap the blanket
 impl and are rejected.
 
 For example, validation is an ordinary source impl:
@@ -195,50 +196,37 @@ on actual builtin applications and preserve errors and evaluation order.
 
 ## Encoding and decoding
 
-`Data.Encode` contains ordinary Nash functions for integers, bytes, UTF-8
-strings, booleans, lists, maps and constructors. See [stdlib.md](stdlib.md#datadecode-dataencode)
-for their signatures. Encoders accept Big/little outer representations where
-applicable, and element encoders are explicit. `Data.tag` and `Data.fields`
-assume constructor Data and fail on other shapes.
-
-Labeled constructor fields encode flat: `type Datum = Datum { owner : Bytes,
-deadline : Int }` has two positional fields under tag 0. Alias records use a
-Data list instead.
-
-`Data.Decode.decoder 'a` is the function alias `Data -> option 'a`, with
-ordinary Functor, Applicative and Monad instances. Primitive decoders return
-`None` for the wrong shape; string decoding also rejects malformed UTF-8.
-`constr` checks a tag and keeps the original node; `field` selects a constructor
-field. Missing/negative indices return `None`; extra fields are allowed.
+The Data module owns ToData, FromData, Validate and Decode. See
+[stdlib.md](stdlib.md#data-conversion-and-checking) for their contracts.
+Use `toData` to encode little values or expose an existing Big representation;
+use `decode` for optional checks and `validate` for checks that fail execution.
 
 ```nash
-import Data.Decode as Decode
+import Data exposing (Decode)
 
-type alias datum = { owner : bytes, deadline : int }
+type datum = Datum bytes int
 
-datumDecoder : Decode.decoder datum
-datumDecoder = Decode.constr 0 <| do
-    owner <- Decode.field 0 Decode.bytes
-    deadline <- Decode.field 1 Decode.int
-    pure { owner = owner, deadline = deadline }
+impl Decode datum where
+    decode raw =
+        case raw of
+            Constr pair(0, [owner, deadline]) -> do
+                key <- decode owner
+                time <- decode deadline
+                Some (Datum key time)
+            _ -> None
 ```
 
-Use ordinary `map`, `pure`, application and `do` instead of custom mapping or
-binding helpers. `reject` always returns `None`; `oneOf` tries a `Cons` sequence
-of decoders, stopping at the first success. Function values cannot inhabit a
-native list. Similarly decoded maps use `Cons` of tuples so decoded components
-can be arbitrary little values. Native `Decode.list` retains its Storable
-constraint. Map encoding/decoding preserves duplicates and order.
-
-The library is implemented in Nash. There is no compiler-generated decoder or
-special codegen treatment of decoder combinators. A user-written decoder that
-calls `fail` still aborts evaluation; `None` is the recoverable failure result.
+This is normal source code using option's Monad instance. No decoder-specific
+combinators or codegen behavior are involved. Labeled Big constructor fields
+encode flat; Big alias records use Data lists instead. Raw constructor Data
+is constructed with Builtin.constrData. Data.tag and Data.fields assume that
+shape and fail on other shapes.
 
 ## Error cases
 
 | Situation | Where reported |
 |---|---|
-| `impl ToData` / `impl FromData` / `impl Validate` for a non-Big type | representation superclass check |
+| `impl Validate` for a non-Big type | representation superclass check |
 | `Constr` pattern with a Big field type (e.g. `Constr pair(0, [x : Int])`) | type check (fields of `Data` are `Const`) |
 | `fromData d` where the node shape is wrong | no check; a later operation requiring that shape can fail |
 | `validate d` where the node shape is wrong | runtime failure in source validation |
@@ -251,7 +239,7 @@ calls `fail` still aborts evaluation; `None` is the recoverable failure result.
 - **Kinds and representation** ([kinds.md](kinds.md)): `Data` has kind
   `Type` and representation `Big`; its constructor fields
   are `Const`.
-- **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Validate`, `Lift` are
+- **Traits** ([traits.md](traits.md)): `ToData`, `FromData`, `Validate`, `Decode`, `Lift` are
   ordinary traits with stdlib impls; deriving is a macro.
 - **Codegen** ([codegen.md](codegen.md)): typed builtins, Data patterns,
   the `Case(Data)` lowering.
@@ -259,5 +247,5 @@ calls `fail` still aborts evaluation; `None` is the recoverable failure result.
   or Const; for the Big ones, `Data` patterns and `validate` are how their
   shape is checked.
 - **Macros** ([macros.md](macros.md)): `@derive(Validate)`; conversion traits need no derivation.
-  A `field "owner"` form of `Data.Decode.field` that resolves the label
+  A future source macro that resolves a constructor field label
   through an alias in scope would be a macro, not a library function.

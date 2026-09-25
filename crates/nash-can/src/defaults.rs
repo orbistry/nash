@@ -20,9 +20,7 @@ pub const MODULES: &[(&str, &[&str])] = &[
     ("Applicative", &["Applicative"]),
     ("Monad", &["Monad"]),
     ("Lift", &["Lift"]),
-    ("Data", &["ToData", "FromData", "Validate"]),
-    ("Data.Decode", &[]),
-    ("Data.Encode", &[]),
+    ("Data", &["ToData", "FromData", "Validate", "Decode"]),
     (
         "Literal",
         &["FromInt", "FromString", "FromBytes", "FromBool", "FromUnit"],

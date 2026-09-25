@@ -1,7 +1,8 @@
 module Cardano.Value exposing (Value, empty, singleton, insert, lovelace, quantityOf, add, contains, scale)
 
+import Option exposing (type option(..))
 import Lift exposing (Lift)
-import Data exposing (FromData, ToData, Validate)
+import Data exposing (FromData, ToData, Validate, Decode)
 
 type alias Value = Map Bytes (Map Bytes Int)
 
@@ -43,3 +44,12 @@ contains left right = Builtin.valueContains (lower left) (lower right)
 
 scale : (Lift int 'n, Lift value 'v) => 'n -> 'v -> value
 scale amount value = Builtin.scaleValue (lower amount) (lower value)
+
+impl Decode Value where
+    decode raw =
+        let checked : option (Map Bytes (Map Bytes Int))
+            checked = decode raw
+        in
+        case checked of
+            Some value -> Some (fromData (toData value))
+            None -> None
