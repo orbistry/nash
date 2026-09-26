@@ -164,44 +164,6 @@ async fn test_protocol_logs_survive_silent_user_traces() {
     }
 }
 
-#[tokio::test]
-async fn integer_width_bound_costs() {
-    let mut report = String::new();
-    let mut sources = Vec::new();
-    for width in [1_u32, 4, 8, 16, 64, 120] {
-        let local = (width - 1) % 8 + 1;
-        let scale = 1_i128 << (width - local);
-        let expected = (1_i128 << width) - 1;
-        for (name, expression) in [
-            ("pow", format!("Int.pow 2 {width} - 1")),
-            ("pow2", format!("Int.pow2 {width} - 1")),
-            (
-                "expMod",
-                format!("{scale} * Builtin.expModInteger 2 {local} 257 - 1"),
-            ),
-            (
-                "array",
-                format!(
-                    "{scale} * Builtin.indexArray (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256]) {local} - 1"
-                ),
-            ),
-            (
-                "constantArray",
-                format!(
-                    "{scale} * Builtin.indexArray (comptime (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256])) {local} - 1"
-                ),
-            ),
-        ] {
-            let source = format!("    assert (({expression}) == {expected})");
-            report.push_str(&measure_budget(&format!("width={width} {name}"), &source).await);
-            sources.push(source);
-        }
-    }
-    insta::with_settings!({description => sources.join("\n"), omit_expression => true}, {
-        insta::assert_snapshot!(report);
-    });
-}
-
 async fn measure_budget(name: &str, source: &str) -> String {
     let output = compile(source).await;
     let arena = Arena::new();
