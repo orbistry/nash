@@ -1,0 +1,8 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "validator module Main exposing (main)\nmain context = ()\n"
+---
+validator module Main exposing ( main )
+
+
+main context = ()

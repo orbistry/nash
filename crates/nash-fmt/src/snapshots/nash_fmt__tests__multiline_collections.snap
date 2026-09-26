@@ -1,0 +1,28 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "list =\n    [ one\n    , two\n    , three\n    ]\nrecord =\n    { first = 1\n    , second = 2\n    }\ntuple =\n    ( 1\n    , 2\n    , 3\n    )\npipeline value =\n    value\n        |> first\n        |> second\n"
+---
+list =
+    [ one
+    , two
+    , three
+    ]
+
+
+record =
+    { first = 1
+    , second = 2
+    }
+
+
+tuple =
+    ( 1
+    , 2
+    , 3
+    )
+
+
+pipeline value =
+    value
+        |> first
+        |> second

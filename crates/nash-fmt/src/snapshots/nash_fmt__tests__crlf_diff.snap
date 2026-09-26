@@ -1,0 +1,13 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "x = 1\r\n"
+---
+nash::format
+
+  × This file needs formatting.
+  │
+  │     ╭─[Main.nash:1]
+  │ 1   │- x = 1 ␍
+  │   1 │+ x = 1
+  │     ╰────
+  help: Run `nash format` to apply formatting.

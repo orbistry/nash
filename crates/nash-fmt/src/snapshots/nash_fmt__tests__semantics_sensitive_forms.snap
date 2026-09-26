@@ -1,0 +1,26 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (type thing(..), Thing(..))\ntype thing = Small\ntype Thing = Positional ({ field : int }) | Labeled { field : int }\na = (assert x) + y\nb = (comptime f) x\nc = (fail \"reason\") + x\nd = f ({ field = 1 })\n"
+---
+module Main exposing ( type thing(..), Thing(..) )
+
+
+type thing
+    = Small
+
+
+type Thing
+    = Positional ({ field : int })
+    | Labeled { field : int }
+
+
+a = (assert x) + y
+
+
+b = (comptime f) x
+
+
+c = (fail "reason") + x
+
+
+d = f ({ field = 1 })

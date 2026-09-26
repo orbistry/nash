@@ -84,6 +84,7 @@ impl<'a> Parser<'a> {
                     None,
                 )?;
                 let end = message.map_or(keyword_end, |message| message.region.end);
+                parser.chomp(error::Keyword::Space)?;
                 Ok((
                     parser.alloc(Located::at(Region::new(start, end), build(message))),
                     end,

@@ -1,0 +1,26 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "a = \"héllo\\n\\\"world\\\"\"\nb = #\"deadbeef\"\nc = \"\"\"first\n  second\nthird\"\"\"\nd = -42\ne = ()\nf = []\ng = {}\n"
+---
+a = "héllo\n\"world\""
+
+
+b = #"deadbeef"
+
+
+c =
+    """first
+  second
+third"""
+
+
+d = -42
+
+
+e = ()
+
+
+f = []
+
+
+g = {}

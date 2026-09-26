@@ -16,6 +16,7 @@ name = "nash"
 path = "src/main.rs"
 
 [dependencies]
+nash-fmt = { path = "../nash-fmt", version = "0.1.0" }
 nash-codegen = { path = "../nash-codegen", version = "0.4.1" }
 clap.workspace = true
 color-print.workspace = true

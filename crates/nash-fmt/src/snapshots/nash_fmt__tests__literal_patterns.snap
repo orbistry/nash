@@ -1,0 +1,29 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "f x = case x of\n    42 -> True\n    _ -> fail\ng x = case x of\n    \"hello\" -> 1\n    _ -> 2\nh x = case x of\n    #\"00\" -> ()\n    _ -> ()\n"
+---
+f x =
+    case x of
+        42 ->
+            True
+
+        _ ->
+            fail
+
+
+g x =
+    case x of
+        "hello" ->
+            1
+
+        _ ->
+            2
+
+
+h x =
+    case x of
+        #"00" ->
+            ()
+
+        _ ->
+            ()

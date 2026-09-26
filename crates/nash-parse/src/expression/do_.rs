@@ -137,7 +137,7 @@ impl<'a> Parser<'a> {
         )?;
 
         let has_in = self
-            .check_indent(defs_end.line, defs_end.column, |_, _| ())
+            .check_explicit_indent(defs_end.line, defs_end.column, |_, _| ())
             .is_ok()
             && self.keyword_in(|_, _| ()).is_ok();
         let defs = self.alloc_slice_copy(&defs);

@@ -1,0 +1,7 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "-- leading  \r\nx = 1 -- trailing  \r\n"
+---
+-- leading  
+x =
+    1 -- trailing

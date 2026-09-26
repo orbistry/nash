@@ -1,0 +1,42 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "f x = if x == 1 then 2 else if x == 2 then 3 else 4\ng x = (if x then f else g) x\nh x = case x of\n    Some (a :: rest) -> case a of\n        Some n -> n\n        None -> 0\n    _ -> 0\ndestruct value = let pair(a,b) = value in a + b\n"
+---
+f x =
+    if x == 1 then
+        2
+    else if x == 2 then
+        3
+    else
+        4
+
+
+g x =
+    (
+        if x then
+            f
+        else
+            g
+    )
+        x
+
+
+h x =
+    case x of
+        Some (a :: rest) ->
+            case a of
+                Some n ->
+                    n
+
+                None ->
+                    0
+
+        _ ->
+            0
+
+
+destruct value =
+    let
+        pair(a, b) = value
+    in
+        a + b

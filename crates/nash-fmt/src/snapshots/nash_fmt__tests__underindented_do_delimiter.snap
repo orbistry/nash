@@ -1,0 +1,17 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "main = do\n    [ 1\n  ]\n"
+---
+nash::syntax::indentation
+
+  × Closing `]` is underindented.
+   ╭─[Main.nash:3:3]
+ 1 │ main = do
+ 2 │     [ 1
+   ·     ┬
+   ·     ╰── opened here
+ 3 │   ]
+   ·   ┬
+   ·   ╰── underindented closing delimiter
+   ╰────
+  help: Indent `]` to continue this construct.

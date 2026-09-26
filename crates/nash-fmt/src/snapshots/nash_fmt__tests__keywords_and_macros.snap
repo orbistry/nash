@@ -1,0 +1,23 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "@inline\nf x = trace \"read\" (assert (x > 0))\ng = comptime (1 + 2)\nh = Array.fromList!([1,2])\ni = do\n    x <- read\n    let y = x + 1\n    write y\n    pure y\n"
+---
+@inline
+f x =
+    trace "read"
+        assert (x > 0)
+
+
+g = comptime (1 + 2)
+
+
+h = Array.fromList!( [ 1, 2 ] )
+
+
+i =
+    do
+        x <- read
+        let
+            y = x + 1
+        write y
+        pure y

@@ -1,0 +1,12 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "f = [1,"
+---
+nash::syntax
+
+  × Expected an expression in a list.
+   ╭─[Main.nash:1:8]
+ 1 │ f = [1,
+   ·        ─
+   ╰────
+  help: Add an expression or `todo` for an unfinished body.

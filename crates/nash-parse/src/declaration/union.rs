@@ -111,7 +111,7 @@ impl<'a> Parser<'a> {
 
         self.chomp(CustomType::Space)?;
 
-        let (arguments, end) = if self.peek() == Some(b'{') {
+        let (arguments, end) = if self.peek() == Some(b'{') && self.peek_at(1) != Some(b'-') {
             self.check_indent(name_end.line, name_end.column, CustomType::IndentField)?;
             let opening = self.get_position();
             self.advance();

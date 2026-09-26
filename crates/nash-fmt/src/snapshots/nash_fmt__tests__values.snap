@@ -1,0 +1,8 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "x=42\ny a b=a+b\n"
+---
+x = 42
+
+
+y a b = a + b

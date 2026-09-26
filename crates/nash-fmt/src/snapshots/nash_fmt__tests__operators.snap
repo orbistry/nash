@@ -1,0 +1,26 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "infix left 6 (+) = add\na = (x + y) * z\nb = f (-x) (g y) (x |> h)\nc = (f x).field\nd = (+)\ne = (1 +)\nf = (+ 1)\ng = x |> f |> h\n"
+---
+infix left 6 (+) = add
+
+
+a = (x + y) * z
+
+
+b = f (-x) (g y) (x |> h)
+
+
+c = (f x).field
+
+
+d = (+)
+
+
+e = (1 +)
+
+
+f = (+ 1)
+
+
+g = x |> f |> h

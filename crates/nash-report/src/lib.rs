@@ -9,6 +9,7 @@
 pub mod canonicalize;
 pub mod code;
 pub mod doc;
+pub mod format;
 pub mod json;
 pub mod localizer;
 pub mod pattern;

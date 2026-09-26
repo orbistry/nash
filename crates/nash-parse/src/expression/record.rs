@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
 
         // Check indent after expression
         let (end_row, end_col) = self.position();
-        self.check_indent(end_row, end_col, Record::IndentEnd)?;
+        self.check_explicit_indent(end_row, end_col, Record::IndentEnd)?;
 
         // Build first field
         let first_field = self.alloc(FieldAssign {
@@ -196,7 +196,7 @@ impl<'a> Parser<'a> {
 
         // Check indent after expression
         let (end_row, end_col) = self.position();
-        self.check_indent(end_row, end_col, Record::IndentEnd)?;
+        self.check_explicit_indent(end_row, end_col, Record::IndentEnd)?;
 
         Ok(self.alloc(FieldAssign { field, value }))
     }

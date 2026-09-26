@@ -46,7 +46,7 @@ impl<'a> Parser<'a> {
                 })?;
 
                 // Check indent for "in" keyword
-                p.check_indent(defs_end.line, defs_end.column, Let::IndentIn)?;
+                p.check_explicit_indent(defs_end.line, defs_end.column, Let::IndentIn)?;
 
                 // Parse "in" keyword
                 p.keyword_in(Let::In)?;

@@ -1,0 +1,21 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "-- before\nmodule Main exposing (..)\n{-| Main docs -}\nimport Foo\n-- value comment\n{-| Value docs -}\nx = [ 1, -- first\n    2 -- second\n    ]\n-- end\n"
+---
+-- before
+module Main exposing (..)
+
+
+{-| Main docs -}
+
+
+import Foo
+
+
+-- value comment
+{-| Value docs -}
+x =
+    [ 1 -- first
+    , 2 -- second
+    ]
+-- end

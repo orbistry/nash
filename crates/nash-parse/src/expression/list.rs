@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
                     let (first, end) = p.list_expr()?;
 
                     // Check indent using expression's end position (not current parser position)
-                    p.check_indent(end.line, end.column, List::IndentEnd)?;
+                    p.check_explicit_indent(end.line, end.column, List::IndentEnd)?;
 
                     // Parse remaining elements
                     let mut elements = BumpVec::new_in(p.bump);
@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
                         elements.push(elem);
 
                         // Check indent using expression's end position
-                        p.check_indent(end.line, end.column, List::IndentEnd)?;
+                        p.check_explicit_indent(end.line, end.column, List::IndentEnd)?;
 
                         Ok(false) // Not done, continue loop
                     }),

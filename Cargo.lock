@@ -1921,6 +1921,7 @@ dependencies = [
  "nash-codegen",
  "nash-config",
  "nash-driver",
+ "nash-fmt",
  "nash-language-server",
  "nash-plutus",
  "nash-report",
@@ -2013,6 +2014,19 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "nash-fmt"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "indoc",
+ "insta",
+ "nash-parse",
+ "nash-region",
+ "nash-report",
+ "nash-source",
 ]
 
 [[package]]
@@ -2111,6 +2125,7 @@ dependencies = [
  "nash-source",
  "serde",
  "serde_json",
+ "similar",
  "unicode-width 0.1.14",
 ]
 

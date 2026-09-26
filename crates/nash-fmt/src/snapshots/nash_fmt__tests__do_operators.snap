@@ -1,0 +1,12 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "main = do\n    a +\n        b\n    source\n        |> transform\n        |> consume\n    next\n"
+---
+main =
+    do
+        a +
+            b
+        source
+            |> transform
+            |> consume
+        next

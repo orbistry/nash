@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
             let (condition, cond_end) = self.if_condition()?;
 
             // Parse `then`
-            self.check_indent(cond_end.line, cond_end.column, If::IndentThen)?;
+            self.check_explicit_indent(cond_end.line, cond_end.column, If::IndentThen)?;
             self.keyword_then(If::Then)?;
 
             // Parse then branch
@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
             let (then_branch, then_end) = self.if_then_branch()?;
 
             // Parse `else`
-            self.check_indent(then_end.line, then_end.column, If::IndentElse)?;
+            self.check_explicit_indent(then_end.line, then_end.column, If::IndentElse)?;
             self.keyword_else(If::Else)?;
 
             // Create the new branch

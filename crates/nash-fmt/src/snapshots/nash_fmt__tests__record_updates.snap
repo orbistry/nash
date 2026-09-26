@@ -1,0 +1,14 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "read = .field\nchange record = { record | first = 1, second = (f record.first) }\npositional = Thing ({ first = 1 })\nlabeled = Thing { first = 1 }\n"
+---
+read = .field
+
+
+change record = { record | first = 1, second = (f record.first) }
+
+
+positional = Thing ({ first = 1 })
+
+
+labeled = Thing { first = 1 }

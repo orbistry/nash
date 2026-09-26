@@ -1,0 +1,16 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "x : ( int\n    , int\n    )\nx = (1,2)\ntrait Example 'a where\n    method : { first : 'a\n        , second : 'a\n        } -> int\n"
+---
+x : ( int
+    , int
+    )
+x =
+    ( 1, 2 )
+
+
+trait Example 'a where
+    method : { first : 'a
+        , second : 'a
+        } ->
+            int

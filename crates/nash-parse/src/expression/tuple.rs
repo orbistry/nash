@@ -76,13 +76,13 @@ impl<'a> Parser<'a> {
                             |bump, error, row, col| Tuple::Expr(bump.alloc(error), row, col),
                             |p| p.chomp_expr_end(start, negated, vec![], neg_end),
                         )?;
-                        p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                        p.check_explicit_indent(end.line, end.column, Tuple::IndentEnd)?;
                         return p.chomp_tuple_end(start, full);
                     }
 
                     p.chomp_and_check_indent(Tuple::Space, Tuple::IndentExpr1)?;
                     let (right, end) = p.tuple_expr()?;
-                    p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                    p.check_explicit_indent(end.line, end.column, Tuple::IndentEnd)?;
                     p.chomp(Tuple::Space)?;
                     p.word1(b')', Tuple::OperatorClose)?;
                     Ok(p.add_end(
@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
                 }),
                 Box::new(|p: &mut Parser<'a>| {
                     let (first, end) = p.tuple_expr()?;
-                    p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                    p.check_explicit_indent(end.line, end.column, Tuple::IndentEnd)?;
                     p.chomp_tuple_end(start, first)
                 }),
             ],
@@ -183,7 +183,7 @@ impl<'a> Parser<'a> {
                         rest.push(elem);
 
                         // Check indent using expression's end position
-                        p.check_indent(end.line, end.column, Tuple::IndentEnd)?;
+                        p.check_explicit_indent(end.line, end.column, Tuple::IndentEnd)?;
 
                         Ok(false) // Not done, continue loop
                     }),

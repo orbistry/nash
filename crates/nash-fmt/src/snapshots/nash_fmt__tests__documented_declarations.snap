@@ -1,0 +1,35 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (..)\n{-| Overview\n@docs thing, run\n-}\n{-| A type. -}\ntype thing = Thing\n\n{-| An alias. -}\ntype alias other = int\n\n{-| A trait. -}\ntrait Trait 'a where\n    method : 'a -> int\n\n{-| An implementation. -}\nimpl Trait int where\n    method x = x\n\n{-| A function. -}\n@inline\nrun x = x\n"
+---
+module Main exposing (..)
+
+
+{-| Overview
+@docs thing, run
+-}
+
+
+{-| A type. -}
+type thing
+    = Thing
+
+
+{-| An alias. -}
+type alias other =
+    int
+
+
+{-| A trait. -}
+trait Trait 'a where
+    method : 'a -> int
+
+
+{-| An implementation. -}
+impl Trait int where
+    method x = x
+
+
+{-| A function. -}
+@inline
+run x = x

@@ -44,7 +44,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Consume whitespace and check that we're indented past the current indent level.
+    /// Consume whitespace and require indentation past the current level.
+    /// A closing delimiter may align with the current statement.
     ///
     /// Mirrors Elm's `Space.chompAndCheckIndent`.
     pub fn chomp_and_check_indent<E>(
@@ -57,7 +58,11 @@ impl<'a> Parser<'a> {
 
         match status {
             SpaceStatus::Good => {
-                if new_col > self.indent && new_col > 1 {
+                if new_col > 1
+                    && (new_col > self.indent
+                        || (new_col == self.indent
+                            && matches!(self.peek(), Some(b')' | b']' | b'}'))))
+                {
                     Ok(())
                 } else {
                     let (row, col) = if matches!(self.peek(), Some(b')' | b']' | b'}')) {
@@ -100,6 +105,21 @@ impl<'a> Parser<'a> {
                 (end_row, end_col)
             };
             Err(to_error(row, col))
+        }
+    }
+
+    /// Explicit continuation tokens may align with a statement. Ordinary
+    /// expression continuation stays strict so adjacent statements never merge.
+    pub(crate) fn check_explicit_indent<E>(
+        &self,
+        end_row: Row,
+        end_col: Col,
+        to_error: impl FnOnce(Row, Col) -> E,
+    ) -> Result<(), E> {
+        if self.col == self.indent && self.col > 1 {
+            Ok(())
+        } else {
+            self.check_indent(end_row, end_col, to_error)
         }
     }
 

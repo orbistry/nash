@@ -1,0 +1,6 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "-- hello\n"
+---
+
+-- hello

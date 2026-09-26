@@ -1,0 +1,26 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "type alias Func ('a : Little) = ('a -> int) -> (list 'a, pair int int)\nf pair(a,b) (x :: xs) { field } = (a,b,x,xs,field)\ng value = case value of\n    (Some [x, y] as both) -> both\n    Other.Value _ -> fail\n    _ -> todo \"later\"\nqualified : (Eq 'a, Other.Show 'a) => 'a -> string\nqualified x = Other.show x\n"
+---
+type alias Func ('a : Little) =
+    ('a -> int) -> ( list 'a, pair int int )
+
+
+f pair(a, b) (x :: xs) { field } = ( a, b, x, xs, field )
+
+
+g value =
+    case value of
+        Some [ x, y ] as both ->
+            both
+
+        Other.Value _ ->
+            fail
+
+        _ ->
+            todo "later"
+
+
+qualified : ( Eq 'a, Other.Show 'a ) => 'a -> string
+qualified x =
+    Other.show x

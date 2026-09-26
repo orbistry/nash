@@ -1,0 +1,33 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (..)\nf x = if x then [1,2] else [3]\ng x = let a = x in case a of\n    Some n -> n\n    _ -> 0\nrecord = { a=1,b=2 }\ntuple = (1, \"hello\", 0xff)\napply = List.map (\\x -> x + 1) [1,2]\n"
+---
+module Main exposing (..)
+
+
+f x =
+    if x then
+        [ 1, 2 ]
+    else
+        [ 3 ]
+
+
+g x =
+    let
+        a = x
+    in
+        case a of
+            Some n ->
+                n
+
+            _ ->
+                0
+
+
+record = { a = 1, b = 2 }
+
+
+tuple = ( 1, "hello", 0xff )
+
+
+apply = List.map (\x -> x + 1) [ 1, 2 ]

@@ -1,0 +1,21 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (..)\n\nx= 1  \ny =2"
+---
+nash::format
+
+  × This file needs formatting.
+  │
+  │     ╭─[src/Main.nash:1]
+  │ 1 1 │  module Main exposing (..)
+  │ 2 2 │
+  │ 3   │- x= 1··
+  │ 4   │- y =2
+  │     │  No newline at end of file
+  │   3 │+
+  │   4 │+ x = 1
+  │   5 │+
+  │   6 │+
+  │   7 │+ y = 2
+  │     ╰────
+  help: Run `nash format` to apply formatting.

@@ -1,0 +1,25 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (..)\ntests\n    import Prop\n    test \"truth\" = do\n        assert True\n    test \"failure\" fail within (cpu 1000, mem 50) = do\n        fail\n    prop \"identity\" fail once =\n        let\n            x via Prop.int\n            y via Prop.int\n        in\n        do\n            assert (x == y)\n"
+---
+module Main exposing (..)
+
+
+tests
+    import Prop
+
+    test "truth" =
+        do
+            assert True
+
+    test "failure" fail within (cpu 1000, mem 50) =
+        do
+            fail
+
+    prop "identity" fail once =
+        let
+            x via Prop.int
+            y via Prop.int
+        in
+            do
+                assert (x == y)

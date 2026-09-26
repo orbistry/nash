@@ -32,11 +32,11 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-codegen` | Can -> Core -> UPLC | new ([plans/07](plans/07-codegen.md)) |
 | `nash-test` | test runner, generation, shrinking | new ([plans/10](plans/10-testing.md)) |
 | `nash-macro` | macro expansion, comptime | new ([plans/11](plans/11-macros-comptime.md)) |
-| `nash-fmt` / `nash-docs` | formatter, docs | new ([plans/13](plans/13-fmt-docs.md)) |
+| `nash-fmt` / `nash-docs` | formatter, docs | formatter implemented; docs pending ([plans/13](plans/13-fmt-docs.md)) |
 | `nash-plutus` | UPLC terms, flat, CEK, cost models | done |
 | `nash-config` | `nash.jsonc` | done, extend |
 | `nash-driver` | build graph, caching | done, extend |
-| `nash-cli` | `nash` binary | `check`, `lsp`; add `build test fmt docs` |
+| `nash-cli` | `nash` binary | `check`, `build`, `test`, `format` (`fmt`), `lsp`; docs pending |
 | `nash-language-server` | LSP | live compiler diagnostics with UTF-16 ranges |
 | `crates/nash-driver/base/` | compiler-bundled `nash/base` foundation (Nash source) | implemented; remaining stdlib work ([plans/12](plans/12-stdlib.md)) |
 
@@ -68,7 +68,7 @@ Implementation plans (Plan 08 is deferred; Plans 09 and 10 are complete):
 - [x] 10 Testing: `tests` block, props, generators, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md)
 - [ ] 12 Stdlib `nash/base` — [plans/12-stdlib.md](plans/12-stdlib.md) (chunks 1–9 and 11–13 complete; chunk 10 Ast/Derive deferred)
-- [ ] 13 `nash fmt`, `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md) (chunk 1 comment preservation complete; chunks 2–7 pending)
+- [ ] 13 `nash format` (`fmt`), `nash docs` — [plans/13-fmt-docs.md](plans/13-fmt-docs.md) (chunks 1–5 formatter complete; chunks 6–7 docs pending)
 - [x] Representation-classed impl heads: `Big`/`Little` blankets and concrete little impls coexist — [plans/repr-classed-impl-heads.md](plans/repr-classed-impl-heads.md)
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.

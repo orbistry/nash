@@ -1,6 +1,6 @@
 # CLI
 
-The `nash` binary is `crates/nash-cli`. Every command loads the project from
+The `nash` binary is `crates/nash-cli`. The check, build, and test commands load the project from
 `PATH` (default `.`) by walking up to the nearest `nash.jsonc`, exactly like
 `Project::load` in `crates/nash-driver/src/project.rs` does today.
 
@@ -11,12 +11,12 @@ The `nash` binary is `crates/nash-cli`. Every command loads the project from
 | `nash check [PATH]` | exists | Parse, canonicalize and type check every module. Includes test blocks but does not execute them. No codegen. |
 | `nash build [PATH]` | exists | Exclude test blocks, check the frontend, then compile every validator module for its configured target. |
 | `nash test [PATH]` | exists | Check, compile and run project `test` and `prop` declarations. |
-| `nash fmt [PATH...]` | planned | Format files in place, or `--check` to report unformatted files. |
+| `nash format [PATH...]` | exists | Format files in place, or `--check` to show contextual formatting diffs. |
 | `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
 | `nash lsp` | exists | Language server over stdio. |
 | `nash init NAME` | planned | Create a project skeleton: `nash.jsonc`, `src/`, one validator module with a `tests` block. |
 
-Aliases: `nash c` for `check`, `nash b` for `build`; `nash t` for `test`.
+Aliases: `nash c` for `check`, `nash b` for `build`; `nash t` for `test`; `nash fmt` for `format`.
 
 Version proxying stays as it is: `nash` reads the `compiler` field of
 `nash.jsonc` and re-executes the matching downloaded compiler
@@ -59,12 +59,14 @@ See [target compatibility](validators.md#target-compatibility).
 | `--json` | off | Write one structured result document to stdout. |
 | `--coverage labels\|tests` | `labels` | Denominator of the label table: total labels, or total iterations. |
 
-`nash fmt`:
+`nash format` (alias `fmt`):
 
 | Flag | Effect |
 |---|---|
-| `--check` | Do not write. Exit `1` if any file would change. |
+| `--check` | Do not write. Show a miette-styled contextual diff and exit `1` if any file would change. Clean checks are silent. |
 | `--stdin` | Format stdin to stdout. |
+
+See [formatter behavior and testing](formatter.md).
 
 `nash check`:
 

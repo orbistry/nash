@@ -85,7 +85,7 @@ implementation, default imports, Prop and the full validator example.
 | Stdlib | `nash/base` package in-repo (`crates/nash-driver/base/`), implicit default imports like Elm's `core`. `Builtin` exposes only real UPLC builtin functions. Synthetic `Primitive` owns primitive types, representation traits, constructors, and unchecked `coerce`. Base ships embedded in `nash-driver`; applications need no explicit dependency or download. Defaults affect canonical scope, not source imports. One module per type pair named by the uppercase name (`List`, `Int`, ...); helpers accept Big or little outer inputs and return little outer results, preserving payload types. No Big `String`. |
 | Exposing little types | `exposing (type option(..), map)` — the `type` prefix marks a lowercase type in exposing/import lists. |
 | Target | Plutus V3, latest builtins (`case`/`constr`, bitwise, BLS, arrays, ledger `Value`). |
-| CLI v1 | `nash check`, `nash build`, `nash test`, `nash fmt`, `nash docs`, `nash lsp`. |
+| CLI v1 | `nash check`, `nash build`, `nash test`, `nash format` (alias `fmt`), `nash docs`, `nash lsp`. |
 | Optimizations | Inline single-use lets / small lambdas; builtin force caching; DCE + unused params; case-of-known-constructor + constant folding (via CEK). |
 
 ## Kinds and representation in one page
@@ -222,7 +222,7 @@ crates/
   nash-codegen         Can AST -> Core -> UPLC           (new)
   nash-test            test runner, generate driver, shrinker(new)
   nash-macro           expansion loop, Ast reification   (new)
-  nash-fmt             formatter                         (new)
+  nash-fmt             formatter
   nash-docs            doc generator                     (new)
   nash-plutus          UPLC runtime
   nash-config / nash-driver / nash-cli / nash-language-server

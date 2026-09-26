@@ -8,6 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+similar = "2.7.0"
 miette.workspace = true
 unicode-width = "0.1.14"
 serde.workspace = true

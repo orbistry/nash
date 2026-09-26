@@ -1,16 +1,15 @@
 # Plan 13: `nash-fmt` and `nash-docs`
 
-Goal: `nash fmt` (a layout-preserving pretty printer over the surface AST,
-comments included) and `nash docs` (static HTML and Markdown from
+Goal: `nash format` (alias `fmt`), a layout-preserving pretty printer over
+the surface AST including comments, and `nash docs` (static HTML and Markdown from
 `{-| -}` doc comments plus solved interfaces).
 
-Prerequisites: plans/01 (syntax: traits, tests block, attributes, `do`,
-macros) so the printer covers the whole surface AST; plans/11 chunk 12's
-`nash_source::print` is the non-preserving seed this plan replaces; the
-driver's interface map for `nash docs`.
+Prerequisites: the surface AST and parser from plans/01, including traits,
+tests, attributes, `do`, and macro calls. Documentation extraction also needs
+the driver's interface map.
 
 Crates touched: `nash-source`, `nash-parse`, new `nash-fmt`, new
-`nash-docs`, `nash-cli`.
+`nash-docs`, `nash-cli`, and `nash-report`.
 
 References:
 
@@ -62,202 +61,79 @@ those tasks belong to later chunks.
 
 ---
 
-## Chunk 2: `nash-fmt` document layer
+## Chunk 2: `nash-fmt` document layer — complete
 
-**Files**
+Implemented in `crates/nash-fmt/src/doc.rs` with groups, four-space nesting,
+soft/hard lines, and deferred line-comment suffixes. Groups stay flat when
+they fit the 80-column target. Literal and comment contents are preserved.
+The public entry point is `nash_fmt::format(&str)`; printer internals are private.
 
-- `crates/nash-fmt/Cargo.toml`, `src/lib.rs`, `src/doc.rs`
-
-**Change**
-
-A small Wadler/Leijen `Doc` with `group`, `nest`, `line`, `softline`,
-`hardline`, `text`, rendered at width 80 with 4-space indentation. Nash
-is layout-sensitive, so the renderer never joins lines that the layout
-rules need separate: `let`, `case`, `if` bodies, and `do` blocks are
-always broken (`hardline`), matching elm-format.
-
-**Code**
-
-```rust
-pub enum Doc<'a> {
-    Nil,
-    Text(&'a str),
-    Line,               // space when flat, newline when broken
-    SoftLine,           // nothing when flat, newline when broken
-    HardLine,           // always newline
-    Nest(u16, &'a Doc<'a>),
-    Group(&'a Doc<'a>),
-    Concat(&'a [&'a Doc<'a>]),
-}
-
-pub struct Printer<'a> { bump: &'a Bump }
-
-impl<'a> Printer<'a> {
-    pub fn render(&self, doc: &'a Doc<'a>, width: usize) -> String
-}
-```
-
-Rendering is the standard "fits" algorithm with a work stack; no
-backtracking beyond one group.
-
-**Tests**
-
-`group(text a, line, text b)` flat at width 80, broken at width 3;
-nesting under a broken group indents by 4.
-
-**Done when** the doc tests pass.
+Unit tests cover flat/broken groups and nesting. Shared formatter snapshots
+exercise the document layer through real Nash syntax.
 
 ---
 
-## Chunk 3: expressions, patterns, types
+## Chunk 3: expressions, patterns, types — complete
 
-**Files**
+Implemented in `expr.rs` and `types.rs`. Every currently parsed source AST
+variant has an explicit printer, including representation qualifiers,
+operator sections, pair patterns, labeled records, attributes, macro calls,
+and tests. Future quote/splice syntax awaits its own parser support.
 
-- `crates/nash-fmt/src/expr.rs`, `pattern.rs`, `typ.rs`, `layout.rs`
+- Layout-sensitive bodies use hard lines. Existing multiline collections and
+  applications stay multiline; other groups break when they exceed the target.
+- Broken collections use leading commas; pipes lead continuation lines.
+- Parentheses preserve operator grouping, nested application shape, and
+  positional record arguments. Record field values retain the term grouping
+  required by the grammar.
+- Original string, bytes, and number spelling comes from the source region.
 
-**Change**
-
-Print every `Expr`, `Pattern`, and `Type` variant. Layout-preservation
-rule: a node whose source region spans more than one line is printed
-broken; a single-line node is printed as a `group` (flat if it fits).
-That reproduces elm-format's "you chose multiline, we keep it" behaviour
-without an extra AST flag: `Located.region` already says.
-
-```rust
-// crates/nash-fmt/src/layout.rs
-pub fn is_multiline(region: Region) -> bool {
-    region.start.line != region.end.line
-}
-```
-
-Rules worth spelling out:
-
-- Calls: `f a b`; if multiline, arguments each on their own line indented.
-- Binary operator chains (`BinOps`): one operand per line when broken,
-  operator leading (`|> f` style for `|>`, `<|`; operator trailing for
-  arithmetic), following elm-format.
-- `if`/`case`/`let`: always broken, `let` definitions separated by a
-  blank line if the source had one (checked via comment/region gaps).
-- Lists, records, tuples: `[ a, b ]` flat; broken form puts `, ` at line
-  starts (elm-format style).
-- Lambdas: `\x y -> body`; body broken on its own line if multiline.
-- Strings: verbatim, including multi-line `"""`.
-- Attributes, `MacroCall`, `Quote`, `Splice`, `Comptime`, `Do`: printed
-  in their surface form; `do` blocks always broken.
-- `VarGlobal` never appears in user source; `unreachable!`.
-
-**Elm/Aiken reference**
-
-elm-format's `ElmFormat/Render/Box.hs` `formatExpression` (rules only).
-Aiken `crates/aiken-lang/src/format.rs` `Formatter::expr` (Rust code
-with the same structure, useful for the operator-chain and `when`
-layouts).
-
-**Tests** (`crates/nash-fmt/src/snapshots`)
-
-`assert_fmt_snapshot!(input)` snapshots the output; `assert_fmt_idempotent!(input)`
-asserts `fmt(fmt(x)) == fmt(x)`. Inputs: every expression form in
-`crates/nash-parse/src/expression/*` tests, flat and multiline, plus the
-operator chains above.
-
-**Done when** every parser expression snapshot input round-trips
-idempotently.
+The shared `assert_format_snapshot!` helper stores Nash input in the snapshot
+metadata and formatted Nash in the body. Every test reparses the output,
+compares the source trees with coordinates removed, and checks idempotence.
+All 35 shipped Base modules undergo the same structural and idempotence checks.
+The formatter crate currently has 31 unit tests, including report snapshots.
 
 ---
 
-## Chunk 4: declarations, module header, comment attachment
+## Chunk 4: declarations, module header, comments — complete
 
-**Files**
+Implemented in `declarations.rs` and `printer.rs`.
 
-- `crates/nash-fmt/src/module.rs`, `decl.rs`, `comments.rs`
+Headers, imports, exposing entries, infix declarations, traits, implementations,
+and tests retain source order. Formatting does not sort or deduplicate imports
+or inject Base/Prelude code. Declarations have two blank lines between them;
+local definitions and methods have one.
 
-**Change**
+The source-ordered comment cursor emits leading comments before the next node,
+retains identifiable trailing comments as line suffixes, and keeps closing
+collection comments inside their container. Documentation stays attached to
+its declaration. The structural comparison includes exact comment/doc contents.
 
-Print the module header (`module`/`validator module`, exposing list one
-per line if multiline, sorted never), imports (sorted by module name,
-deduplicated exposing lists), infix declarations, declarations in source
-order, traits, impls, macros, and the `tests` block. Two blank lines
-between top-level declarations, one inside `let`/`where`.
-
-Comment attachment: comments are a side table with regions. The printer
-walks declarations in order and, before printing a node, emits any
-comments whose region ends before the node's start and after the
-previous node's end ("leading" comments); comments on the same line
-after a node's end are "trailing" and printed after it with one space.
-Comments inside an expression are attached to the innermost enclosing
-`Located` whose region contains them, by the same leading/trailing rule.
-A comment the rules cannot place (inside a token gap with no enclosing
-node, e.g. between `if` and its condition) is printed as a leading
-comment of the node that follows it; nothing is ever dropped, which the
-idempotency tests check by counting comments before and after.
-
-**Code**
-
-```rust
-pub struct Comments<'a> {
-    all: &'a [&'a SourceComment<'a>],
-    next: usize,
-}
-
-impl<'a> Comments<'a> {
-    /// Comments strictly before `pos` that have not been emitted yet.
-    pub fn leading(&mut self, pos: Position) -> &'a [&'a SourceComment<'a>]
-    /// Comments starting on `line` after `pos`.
-    pub fn trailing(&mut self, pos: Position) -> Option<&'a SourceComment<'a>>
-}
-```
-
-**Elm/Aiken reference**
-
-elm-format `ElmFormat/Render/Box.hs` `formatModule`, `formatComment`;
-Aiken `format.rs` `Formatter::definitions` and `pop_doc_comments` for
-the side-table approach.
-
-**Tests**
-
-- Snapshot every declaration form with leading, trailing, and inner
-  comments.
-- `comments_preserved`: for each input, count of `--`/`{-` in output
-  equals count in input.
-- Idempotency over the whole `crates/nash-driver/base/` tree once it exists.
-
-**Done when** `nash fmt --check core/` reports no changes after one
-`nash fmt core/`.
+Formatter fixtures also exposed two parser whitespace defects: a doc comment
+after a constructor could be mistaken for labeled fields, and a `fail`/`todo`
+message did not consume following whitespace. Those parser paths are corrected. Explicit continuation tokens and collection
+closers can also align with a `do` statement, while ordinary application
+continuation remains strictly indented.
 
 ---
 
-## Chunk 5: `nash fmt` command
+## Chunk 5: `nash format` command (alias `fmt`) — complete
 
-**Files**
+Implemented in `crates/nash-cli/src/cmd/format.rs` and `cmd/mod.rs`.
 
-- `crates/nash-cli/src/cmd/fmt.rs`, `cmd/mod.rs`
+- `nash format [PATH...]` formats files and recursively visits directories.
+- `--check` writes nothing, is silent when clean, and exits 1 for differences.
+- `--stdin` formats one module from stdin to stdout.
+- Parse failures use Nash diagnostics and leave the affected file unchanged.
+- `similar::TextDiff` computes contextual changes; `nash-report::format` owns
+  gutters, file headings, colors, and integration with the existing miette
+  handler. Whitespace-only edits and missing final newlines are visible.
 
-**Change**
-
-`nash fmt [paths...]` formats in place; `--check` exits 1 and lists
-files that would change; `--stdin` reads one module from stdin and
-writes to stdout (for editors). Parse errors are reported through
-`nash-report` and the file is left untouched.
-
-```rust
-#[derive(clap::Args)]
-pub struct Args {
-    #[arg(default_value = ".")]
-    pub paths: Vec<PathBuf>,
-    #[arg(long)]
-    pub check: bool,
-    #[arg(long)]
-    pub stdin: bool,
-}
-```
-
-**Tests**
-
-CLI integration test with a temp dir: `--check` exit codes, in-place
-rewrite, `--stdin` round trip.
-
-**Done when** CI runs `nash fmt --check` on `crates/nash-driver/base/` and the repo's
-examples.
+Formatter, parse-error, and diff snapshots live only in `nash-fmt` unit tests.
+No formatter CLI integration/subprocess tests are added. The formatter does not
+rewrite the repository's Base sources as a side effect of this implementation.
+See [formatter behavior](../docs/formatter.md) for command and layout details.
 
 ---
 
@@ -358,10 +234,9 @@ publishes it for the repo.
 ## Order
 
 ```
-1 comments ─ 2 doc ─ 3 exprs ─ 4 decls+comments ─ 5 nash fmt
+1 comments ─ 2 doc ─ 3 exprs ─ 4 decls+comments ─ 5 nash format
 1 comments ─ 6 extract ─ 7 render + nash docs
 ```
 
 Chunk 6 depends only on chunk 1 and can run in parallel with 2–5.
-Plans/11 chunk 11 (macro diagnostics) switches its generated-code
-excerpts from `nash_source::print` to `nash-fmt` after chunk 4.
+Future macro diagnostics can use `nash-fmt` once they emit surface source.

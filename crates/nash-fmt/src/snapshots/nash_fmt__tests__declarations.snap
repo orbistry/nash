@@ -1,0 +1,31 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module Main exposing (Thing(..), Value, run)\nimport Foo as F exposing (item)\ntype Thing 'a = First 'a | Second\ntype alias Value = { first : int, second : string }\ntrait Eq 'a => Test 'a where\n    test : 'a -> bool\n    test _ = True\nimpl Test int where\n    test n = n == 0\nrun : int -> int\nrun n = n\n"
+---
+module Main exposing ( Thing(..), Value, run )
+
+
+import Foo as F exposing ( item )
+
+
+type Thing 'a
+    = First 'a
+    | Second
+
+
+type alias Value =
+    { first : int, second : string }
+
+
+trait Eq 'a => Test 'a where
+    test : 'a -> bool
+    test _ = True
+
+
+impl Test int where
+    test n = n == 0
+
+
+run : int -> int
+run n =
+    n
