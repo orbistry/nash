@@ -1,0 +1,16 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) ) => 'f 'a ->\n        'g 'a -> list 'a\nappend xs ys = appendList (lowerOuter xs) (lowerOuter ys)\n\nrender : Show 'a => 'a -> string\nrender value = show value\n\ntrait Example 'a where\n    append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) ) => 'f 'a -> 'g 'a -> list 'a\n"
+---
+append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) )
+    => 'f 'a -> 'g 'a -> list 'a
+append xs ys = appendList (lowerOuter xs) (lowerOuter ys)
+
+
+render : Show 'a => 'a -> string
+render value = show value
+
+
+trait Example 'a where
+    append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) )
+        => 'f 'a -> 'g 'a -> list 'a

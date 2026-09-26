@@ -1,13 +1,15 @@
-module Show exposing (Show, hexBytes)
+module Show exposing ( Show, hexBytes )
+
 
 import Builtin
-import Function exposing ((|>))
-
-import Primitive exposing (Data(..), type bool(..))
+import Function exposing ( (|>) )
+import Primitive exposing ( Data(..), type bool(..) )
 import Literal
+
 
 trait Show 'a where
     show : 'a -> string
+
 
 impl Show int where
     show n =
@@ -22,6 +24,7 @@ impl Show int where
                 |> decimal
                 |> Builtin.decodeUtf8
 
+
 decimal : int -> bytes
 decimal n =
     if Builtin.lessThanInteger n 10 then
@@ -29,20 +32,31 @@ decimal n =
     else
         Builtin.appendByteString
             (decimal (Builtin.quotientInteger n 10))
-            (Builtin.consByteString (Builtin.addInteger 48 (Builtin.remainderInteger n 10)) #"")
+            (
+                Builtin.consByteString
+                    (Builtin.addInteger 48 (Builtin.remainderInteger n 10))
+                    #""
+            )
+
 
 impl Show bytes where
     show value =
-        Builtin.appendString "#\"" (Builtin.appendString (Builtin.decodeUtf8 (hex value 0)) "\"")
+        Builtin.appendString
+            "#\""
+            (Builtin.appendString (Builtin.decodeUtf8 (hex value 0)) "\"")
+
 
 hexByte : int -> bytes
 hexByte byte =
     let
         digits = #"30313233343536373839616263646566"
+
         high = Builtin.indexByteString digits (Builtin.quotientInteger byte 16)
+
         low = Builtin.indexByteString digits (Builtin.remainderInteger byte 16)
     in
-    Builtin.consByteString high (Builtin.consByteString low #"")
+        Builtin.consByteString high (Builtin.consByteString low #"")
+
 
 hex : bytes -> int -> bytes
 hex value index =
@@ -50,71 +64,128 @@ hex value index =
         Builtin.appendByteString
             (hexByte (Builtin.indexByteString value index))
             (hex value (Builtin.addInteger index 1))
-    else #""
+    else
+        #""
+
 
 impl Show string where
     show value =
         Builtin.decodeUtf8
-            (Builtin.appendByteString #"22"
-                (Builtin.appendByteString (escaped (Builtin.encodeUtf8 value) 0) #"22"))
+            (
+                Builtin.appendByteString
+                    #"22"
+                    (
+                        Builtin.appendByteString
+                            (escaped (Builtin.encodeUtf8 value) 0)
+                            #"22"
+                    )
+            )
+
 
 escaped : bytes -> int -> bytes
 escaped value index =
     if Builtin.lessThanInteger index (Builtin.lengthOfByteString value) then
         let
             byte = Builtin.indexByteString value index
+
             rest = escaped value (Builtin.addInteger index 1)
+
             prefix =
-                if Builtin.equalsInteger byte 34 then #"5c22"
-                else if Builtin.equalsInteger byte 92 then #"5c5c"
-                else if Builtin.equalsInteger byte 10 then #"5c6e"
-                else if Builtin.equalsInteger byte 13 then #"5c72"
-                else if Builtin.equalsInteger byte 9 then #"5c74"
+                if Builtin.equalsInteger byte 34 then
+                    #"5c22"
+                else if Builtin.equalsInteger byte 92 then
+                    #"5c5c"
+                else if Builtin.equalsInteger byte 10 then
+                    #"5c6e"
+                else if Builtin.equalsInteger byte 13 then
+                    #"5c72"
+                else if Builtin.equalsInteger byte 9 then
+                    #"5c74"
                 else if Builtin.lessThanInteger byte 32 then
-                    Builtin.appendByteString #"5c757b3030" (Builtin.appendByteString (hexByte byte) #"7d")
-                else Builtin.consByteString byte #""
+                    Builtin.appendByteString
+                        #"5c757b3030"
+                        (Builtin.appendByteString (hexByte byte) #"7d")
+                else
+                    Builtin.consByteString byte #""
         in
-        Builtin.appendByteString prefix rest
-    else #""
+            Builtin.appendByteString prefix rest
+    else
+        #""
+
 
 impl Show bool where
-    show value = if value then "True" else "False"
+    show value =
+        if value then
+            "True"
+        else
+            "False"
+
 
 impl Show unit where
     show _ = "()"
 
+
 impl Show 'a => Show (list 'a) where
-    show values = Builtin.appendString "[" (Builtin.appendString (showItems values) "]")
+    show values =
+        Builtin.appendString "[" (Builtin.appendString (showItems values) "]")
+
 
 showItems : Show 'a => list 'a -> string
 showItems values =
     case values of
-        [] -> ""
+        [] ->
+            ""
+
         value :: rest ->
             let
                 first = show value
             in
-            case rest of
-                [] -> first
-                _ :: _ -> Builtin.appendString first (Builtin.appendString ", " (showItems rest))
+                case rest of
+                    [] ->
+                        first
 
-impl (Show 'a, Show 'b) => Show (pair 'a 'b) where
+                    _ :: _ ->
+                        Builtin.appendString
+                            first
+                            (Builtin.appendString ", " (showItems rest))
+
+
+impl ( Show 'a, Show 'b ) => Show (pair 'a 'b) where
     show value =
         let
             pair(first, second) = value
         in
-        Builtin.appendString "("
-            (Builtin.appendString (show first)
-                (Builtin.appendString ", " (Builtin.appendString (show second) ")")))
+            Builtin.appendString
+                "("
+                (
+                    Builtin.appendString
+                        (show first)
+                        (
+                            Builtin.appendString
+                                ", "
+                                (Builtin.appendString (show second) ")")
+                        )
+                )
+
 
 impl Show Data where
     show value =
         case value of
-            Constr payload -> Builtin.appendString "Constr " (show payload)
-            Map entries -> Builtin.appendString "Map " (show entries)
-            List values -> Builtin.appendString "List " (show values)
-            I integer -> Builtin.appendString "I " (show integer)
-            B bytes -> Builtin.appendString "B " (show bytes)
+            Constr payload ->
+                Builtin.appendString "Constr " (show payload)
+
+            Map entries ->
+                Builtin.appendString "Map " (show entries)
+
+            List values ->
+                Builtin.appendString "List " (show values)
+
+            I integer ->
+                Builtin.appendString "I " (show integer)
+
+            B bytes ->
+                Builtin.appendString "B " (show bytes)
+
 
 impl Show Int where
     show value =
@@ -122,11 +193,13 @@ impl Show Int where
             |> Builtin.unIData
             |> show
 
+
 impl Show Bytes where
     show value =
         value
             |> Builtin.unBData
             |> show
+
 
 impl Show 'a => Show (List 'a) where
     show value =
@@ -134,12 +207,14 @@ impl Show 'a => Show (List 'a) where
             |> Builtin.unListData
             |> show
 
-impl (Show 'k, Show 'v) => Show (Map 'k 'v) where
+
+impl ( Show 'k, Show 'v ) => Show (Map 'k 'v) where
     show value =
         value
             |> Builtin.unMapData
             |> show
             |> Builtin.appendString "Map "
+
 
 hexBytes : bytes -> string
 hexBytes value = Builtin.decodeUtf8 (hex value 0)

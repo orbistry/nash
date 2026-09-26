@@ -1,43 +1,81 @@
-module Ordering exposing (Ordering(..), type ordering(..), invert, then_)
+module Ordering exposing ( Ordering(..), type ordering(..), invert, then_ )
 
-import Primitive exposing (type bool(..))
-import Eq exposing (Eq)
-import Lift exposing (Lift)
 
-type ordering = LT | EQ | GT
+import Primitive exposing ( type bool(..) )
+import Eq exposing ( Eq )
+import Lift exposing ( Lift )
 
-type Ordering = LT | EQ | GT
+
+type ordering
+    = LT
+    | EQ
+    | GT
+
+
+type Ordering
+    = LT
+    | EQ
+    | GT
+
 
 invert : Lift ordering 'a => 'a -> ordering
 invert order =
     case lower order of
-        LT -> GT
-        EQ -> EQ
-        GT -> LT
+        LT ->
+            GT
 
-then_ : (Lift ordering 'a, Lift ordering 'b) => 'a -> 'b -> ordering
+        EQ ->
+            EQ
+
+        GT ->
+            LT
+
+
+then_ : ( Lift ordering 'a, Lift ordering 'b ) => 'a -> 'b -> ordering
 then_ first second =
     case lower first of
-        EQ -> lower second
-        order -> order
+        EQ ->
+            lower second
+
+        order ->
+            order
+
 
 impl Eq ordering where
     eq a b =
-        case (a, b) of
-            (LT, LT) -> True
-            (EQ, EQ) -> True
-            (GT, GT) -> True
-            _ -> False
+        case ( a, b ) of
+            ( LT, LT ) ->
+                True
+
+            ( EQ, EQ ) ->
+                True
+
+            ( GT, GT ) ->
+                True
+
+            _ ->
+                False
+
 
 impl Lift ordering Ordering where
     lift value =
         case value of
-            LT -> Ordering.LT
-            EQ -> Ordering.EQ
-            GT -> Ordering.GT
+            LT ->
+                Ordering.LT
+
+            EQ ->
+                Ordering.EQ
+
+            GT ->
+                Ordering.GT
+
     lower value =
         case value of
-            Ordering.LT -> LT
-            Ordering.EQ -> EQ
-            Ordering.GT -> GT
+            Ordering.LT ->
+                LT
 
+            Ordering.EQ ->
+                EQ
+
+            Ordering.GT ->
+                GT

@@ -1,86 +1,156 @@
-module Option exposing (Option(..), type option(..), withDefault, map, apply, map2, andThen, isSome, unwrap)
+module Option exposing
+    ( Option(..)
+    , type option(..)
+    , withDefault
+    , map
+    , apply
+    , map2
+    , andThen
+    , isSome
+    , unwrap
+    )
 
-import Primitive exposing (type bool(..))
-import Eq exposing (Eq)
-import Lift exposing (Lift)
+
+import Primitive exposing ( type bool(..) )
+import Eq exposing ( Eq )
+import Lift exposing ( Lift )
 import Functor
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
+import Applicative exposing ( Applicative )
+import Monad exposing ( Monad )
 
-type option 'a = Some 'a | None
-type Option 'a = Some 'a | None
+
+type option 'a
+    = Some 'a
+    | None
+
+
+type Option 'a
+    = Some 'a
+    | None
+
 
 impl Functor.Functor option where
     map f value =
         case value of
-            Some item -> Some (f item)
-            None -> None
+            Some item ->
+                Some (f item)
+
+            None ->
+                None
+
 
 impl Applicative option where
     pure = Some
+
     apply functions value =
         case functions of
-            Some f -> Functor.map f value
-            None -> None
+            Some f ->
+                Functor.map f value
+
+            None ->
+                None
+
 
 impl Monad option where
     bind value f =
         case value of
-            Some item -> f item
-            None -> None
+            Some item ->
+                f item
+
+            None ->
+                None
+
 
 withDefault : Lift (option 'a) ('f 'a) => 'a -> 'f 'a -> 'a
 withDefault fallback value =
     case lowerOuter value of
-        Some item -> item
-        None -> fallback
+        Some item ->
+            item
+
+        None ->
+            fallback
+
 
 impl Eq 'a => Eq (option 'a) where
     eq a b =
-        case (a, b) of
-            (Some x, Some y) -> eq x y
-            (None, None) -> True
-            _ -> False
+        case ( a, b ) of
+            ( Some x, Some y ) ->
+                eq x y
+
+            ( None, None ) ->
+                True
+
+            _ ->
+                False
+
 
 impl Lift (option ('a : Big)) (Option 'a) where
     lift value =
         case value of
-            Some item -> Option.Some item
-            None -> Option.None
+            Some item ->
+                Option.Some item
+
+            None ->
+                Option.None
+
     lower value =
         case value of
-            Option.Some item -> Some item
-            Option.None -> None
+            Option.Some item ->
+                Some item
+
+            Option.None ->
+                None
+
 
 map : Lift (option 'a) ('f 'a) => ('a -> 'b) -> 'f 'a -> option 'b
 map f value = Functor.map f (lowerOuter value)
 
+
 apply : Lift (option 'a) ('f 'a) => option ('a -> 'b) -> 'f 'a -> option 'b
 apply functions value = map2 (\f x -> f x) functions value
 
-map2 : (Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b)) => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> option 'c
-map2 f left right =
-    case (lowerOuter left, lowerOuter right) of
-        (Some a, Some b) -> Some (f a b)
-        _ -> None
 
-andThen : (Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b)) => ('a -> 'g 'b) -> 'f 'a -> option 'b
+map2 : ( Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b) )
+    => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> option 'c
+map2 f left right =
+    case ( lowerOuter left, lowerOuter right ) of
+        ( Some a, Some b ) ->
+            Some (f a b)
+
+        _ ->
+            None
+
+
+andThen : ( Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b) )
+    => ('a -> 'g 'b) -> 'f 'a -> option 'b
 andThen f value =
     case lowerOuter value of
-        Some x -> lower (f x)
-        None -> None
+        Some x ->
+            lower (f x)
+
+        None ->
+            None
+
 
 isSome : Lift (option 'a) ('f 'a) => 'f 'a -> bool
 isSome value =
     case lowerOuter value of
-        Some _ -> True
-        None -> False
+        Some _ ->
+            True
+
+        None ->
+            False
+
 
 unwrap : Lift (option 'a) ('f 'a) => 'f 'a -> 'a
 unwrap value =
     case lowerOuter value of
-        Some x -> x
-        None -> fail
+        Some x ->
+            x
+
+        None ->
+            fail
+
 
 lowerOuter : Lift (option 'a) ('f 'a) => 'f 'a -> option 'a
 lowerOuter = lower

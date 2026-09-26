@@ -1,25 +1,35 @@
-module Lift exposing (Lift)
+module Lift exposing ( Lift )
+
 
 import Builtin
+import Primitive exposing ( Big )
 
-import Primitive exposing (Big)
 
 trait Lift 'small 'big where
     lift : 'small -> 'big
+
     lower : 'big -> 'small
+
 
 impl Lift int Int where
     lift = Builtin.iData
+
     lower = Builtin.unIData
+
 
 impl Lift bytes Bytes where
     lift = Builtin.bData
+
     lower = Builtin.unBData
+
 
 impl Lift (list ('a : Big)) (List 'a) where
     lift = Builtin.listData
+
     lower = Builtin.unListData
 
-impl (Big 'k, Big 'v) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
+
+impl ( Big 'k, Big 'v ) => Lift (list (pair 'k 'v)) (Map 'k 'v) where
     lift = Builtin.mapData
+
     lower = Builtin.unMapData

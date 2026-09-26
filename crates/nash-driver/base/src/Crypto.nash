@@ -1,8 +1,20 @@
-module Crypto exposing (sha2_256, sha3_256, blake2b_224, blake2b_256, keccak_256, ripemd_160, verifyEd25519Signature, verifyEcdsaSecp256k1Signature, verifySchnorrSecp256k1Signature)
+module Crypto exposing
+    ( sha2_256
+    , sha3_256
+    , blake2b_224
+    , blake2b_256
+    , keccak_256
+    , ripemd_160
+    , verifyEd25519Signature
+    , verifyEcdsaSecp256k1Signature
+    , verifySchnorrSecp256k1Signature
+    )
 
-import Lift exposing (Lift)
+
+import Lift exposing ( Lift )
 import Builtin
-import Function exposing ((|>))
+import Function exposing ( (|>) )
+
 
 sha2_256 : Lift bytes 'a => 'a -> bytes
 sha2_256 value =
@@ -10,11 +22,13 @@ sha2_256 value =
         |> lower
         |> Builtin.sha2_256
 
+
 sha3_256 : Lift bytes 'a => 'a -> bytes
 sha3_256 value =
     value
         |> lower
         |> Builtin.sha3_256
+
 
 blake2b_224 : Lift bytes 'a => 'a -> bytes
 blake2b_224 value =
@@ -22,11 +36,13 @@ blake2b_224 value =
         |> lower
         |> Builtin.blake2b_224
 
+
 blake2b_256 : Lift bytes 'a => 'a -> bytes
 blake2b_256 value =
     value
         |> lower
         |> Builtin.blake2b_256
+
 
 keccak_256 : Lift bytes 'a => 'a -> bytes
 keccak_256 value =
@@ -34,17 +50,36 @@ keccak_256 value =
         |> lower
         |> Builtin.keccak_256
 
+
 ripemd_160 : Lift bytes 'a => 'a -> bytes
 ripemd_160 value =
     value
         |> lower
         |> Builtin.ripemd_160
 
-verifyEd25519Signature : (Lift bytes 'k, Lift bytes 'm, Lift bytes 's) => 'k -> 'm -> 's -> bool
-verifyEd25519Signature key message signature = Builtin.verifyEd25519Signature (lower key) (lower message) (lower signature)
 
-verifyEcdsaSecp256k1Signature : (Lift bytes 'k, Lift bytes 'm, Lift bytes 's) => 'k -> 'm -> 's -> bool
-verifyEcdsaSecp256k1Signature key message signature = Builtin.verifyEcdsaSecp256k1Signature (lower key) (lower message) (lower signature)
+verifyEd25519Signature : ( Lift bytes 'k, Lift bytes 'm, Lift bytes 's )
+    => 'k -> 'm -> 's -> bool
+verifyEd25519Signature key message signature =
+    Builtin.verifyEd25519Signature (lower key) (lower message) (lower signature)
 
-verifySchnorrSecp256k1Signature : (Lift bytes 'k, Lift bytes 'm, Lift bytes 's) => 'k -> 'm -> 's -> bool
-verifySchnorrSecp256k1Signature key message signature = Builtin.verifySchnorrSecp256k1Signature (lower key) (lower message) (lower signature)
+
+verifyEcdsaSecp256k1Signature : ( Lift bytes 'k, Lift bytes 'm, Lift bytes 's )
+    => 'k -> 'm -> 's -> bool
+verifyEcdsaSecp256k1Signature key message signature =
+    Builtin.verifyEcdsaSecp256k1Signature
+        (lower key)
+        (lower message)
+        (lower signature)
+
+
+verifySchnorrSecp256k1Signature : ( Lift bytes 'k
+    , Lift bytes 'm
+    , Lift bytes 's
+    )
+    => 'k -> 'm -> 's -> bool
+verifySchnorrSecp256k1Signature key message signature =
+    Builtin.verifySchnorrSecp256k1Signature
+        (lower key)
+        (lower message)
+        (lower signature)

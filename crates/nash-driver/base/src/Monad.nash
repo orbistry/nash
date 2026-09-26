@@ -1,6 +1,8 @@
-module Monad exposing (Monad)
+module Monad exposing ( Monad )
 
-import Applicative exposing (Applicative)
+
+import Applicative exposing ( Applicative )
+
 
 trait Applicative 'm => Monad 'm where
     bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b

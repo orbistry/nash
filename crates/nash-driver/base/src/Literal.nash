@@ -1,43 +1,57 @@
-module Literal exposing (FromInt, FromString, FromBytes, FromBool, FromUnit)
+module Literal exposing ( FromInt, FromString, FromBytes, FromBool, FromUnit )
+
 
 import Primitive exposing (..)
 import Builtin exposing (..)
 
+
 trait FromInt 'a where
     fromInt : int -> 'a
+
 
 trait FromString 'a where
     fromString : string -> 'a
 
+
 trait FromBytes 'a where
     fromBytes : bytes -> 'a
+
 
 impl FromInt int where
     fromInt value = value
 
+
 impl FromString string where
     fromString value = value
+
 
 impl FromBytes bytes where
     fromBytes value = value
 
+
 impl FromInt Int where
     fromInt = Builtin.iData
+
 
 impl FromBytes Bytes where
     fromBytes = Builtin.bData
 
+
 impl FromString bytes where
     fromString = Builtin.encodeUtf8
+
 
 trait FromBool 'a where
     fromBool : bool -> 'a
 
+
 trait FromUnit 'a where
     fromUnit : unit -> 'a
 
+
 impl FromBool bool where
     fromBool value = value
+
 
 impl FromUnit unit where
     fromUnit value = value

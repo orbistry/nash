@@ -2,7 +2,8 @@
 source: crates/nash-fmt/src/tests.rs
 description: "module VeryLongModuleName exposing (firstFunction, secondFunction, thirdFunction, fourthFunction, fifthFunction)\nfunction firstArgument secondArgument thirdArgument = call firstArgument secondArgument thirdArgument \"a fairly long final argument\"\nvalues = [firstLongIdentifier, secondLongIdentifier, thirdLongIdentifier, fourthLongIdentifier]\nfield = { veryLongFirstFieldName = firstLongIdentifier, veryLongSecondFieldName = secondLongIdentifier }\n"
 ---
-module VeryLongModuleName exposing ( firstFunction
+module VeryLongModuleName exposing
+    ( firstFunction
     , secondFunction
     , thirdFunction
     , fourthFunction

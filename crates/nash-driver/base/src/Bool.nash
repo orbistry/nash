@@ -1,45 +1,96 @@
-module Bool exposing (Bool(..), not, and, or, xor)
+module Bool exposing ( Bool(..), not, and, or, xor )
 
-import Literal exposing (FromBool)
+
+import Literal exposing ( FromBool )
 import Primitive
-import Lift exposing (Lift)
-import Data exposing (Validate, Decode)
-import Option exposing (type option(..))
+import Lift exposing ( Lift )
+import Data exposing ( Validate, Decode )
+import Option exposing ( type option(..) )
 import Eq
 
-type Bool = False | True
+
+type Bool
+    = False
+    | True
+
 
 not : Lift bool 'a => 'a -> bool
-not value = if lower value then Primitive.False else Primitive.True
+not value =
+    if lower value then
+        Primitive.False
+    else
+        Primitive.True
 
-and : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
-and a b = if lower a then lower b else Primitive.False
 
-or : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
-or a b = if lower a then Primitive.True else lower b
+and : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
+and a b =
+    if lower a then
+        lower b
+    else
+        Primitive.False
 
-xor : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool
-xor a b = if lower a then not b else lower b
+
+or : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
+or a b =
+    if lower a then
+        Primitive.True
+    else
+        lower b
+
+
+xor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
+xor a b =
+    if lower a then
+        not b
+    else
+        lower b
+
 
 impl Lift bool Bool where
-    lift value = if value then Bool.True else Bool.False
+    lift value =
+        if value then
+            Bool.True
+        else
+            Bool.False
+
     lower value =
         case value of
-            Bool.True -> Primitive.True
-            Bool.False -> Primitive.False
+            Bool.True ->
+                Primitive.True
+
+            Bool.False ->
+                Primitive.False
+
 
 impl FromBool Bool where
-    fromBool value = if value then Bool.True else Bool.False
+    fromBool value =
+        if value then
+            Bool.True
+        else
+            Bool.False
+
 
 impl Validate Bool where
     validate value =
         case Builtin.unConstrData value of
-            pair(0, []) -> Bool.False
-            pair(1, []) -> Bool.True
-            _ -> fail
+            pair(0, []) ->
+                Bool.False
+
+            pair(1, []) ->
+                Bool.True
+
+            _ ->
+                fail
+
 
 impl Decode Bool where
-    decode value = case value of
-        Primitive.Constr pair(0, []) -> Some Bool.False
-        Primitive.Constr pair(1, []) -> Some Bool.True
-        _ -> None
+    decode value =
+        case value of
+            Primitive.Constr pair(0, []) ->
+                Some Bool.False
+
+            Primitive.Constr pair(1, []) ->
+                Some Bool.True
+
+            _ ->
+                None

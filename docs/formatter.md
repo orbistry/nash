@@ -34,9 +34,13 @@ layout-sensitive parser determine where those conventions apply.
 - Short definitions remain on one line, including definitions with annotations.
   A `do` block follows `=` or `<-` on the same line; its statements indent once.
   A comment before the block keeps the block below that comment.
+- Constrained type signatures wrap before `=>`, which leads the continuation
+  line. The function type stays together when it fits on that line.
 - `if`, `case`, `let`, and `do` use multiline bodies. Explicit continuations
   (`then`, `else`, `in`, and collection closers) may align with a `do`
   statement. Adjacent statements remain separate expressions.
+- Multiline exposing lists start on the next line, with the opening parenthesis
+  aligned with the leading commas and closing parenthesis.
 - Collections and applications retain an existing multiline layout; otherwise
   they stay on one line when they fit. Broken collections use leading commas.
 - Pipes begin continuation lines and retain an existing multiline layout.

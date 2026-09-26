@@ -1,0 +1,16 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "module List exposing ( singleton\n    , repeat\n    , range\n    )\n\nimport VeryLongModuleName exposing ( firstLongExportedName, secondLongExportedName, thirdLongExportedName )\n\nsingleton x = [x]\n"
+---
+module List exposing
+    ( singleton
+    , repeat
+    , range
+    )
+
+
+import VeryLongModuleName exposing
+    ( firstLongExportedName, secondLongExportedName, thirdLongExportedName )
+
+
+singleton x = [ x ]

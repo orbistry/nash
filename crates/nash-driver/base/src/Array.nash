@@ -1,10 +1,12 @@
-module Array exposing (fromList, length, at, get)
+module Array exposing ( fromList, length, at, get )
+
 
 import Builtin
-import Function exposing ((|>))
-import Lift exposing (Lift)
+import Function exposing ( (|>) )
+import Lift exposing ( Lift )
 import Literal
-import Option exposing (type option(..))
+import Option exposing ( type option(..) )
+
 
 fromList : Lift (list 'a) ('f 'a) => 'f 'a -> array 'a
 fromList values =
@@ -12,17 +14,24 @@ fromList values =
         |> lower
         |> Builtin.listToArray
 
+
 length : array 'a -> int
 length = Builtin.lengthOfArray
+
 
 at : Lift int 'n => array 'a -> 'n -> 'a
 at values index = Builtin.indexArray values (lower index)
 
+
 get : Lift int 'n => array 'a -> 'n -> option 'a
 get values index = getIndex values (lower index)
 
+
 getIndex : array 'a -> int -> option 'a
 getIndex values index =
-    if Builtin.lessThanInteger index 0 then None
-    else if Builtin.lessThanInteger index (length values) then Some (at values index)
-    else None
+    if Builtin.lessThanInteger index 0 then
+        None
+    else if Builtin.lessThanInteger index (length values) then
+        Some (at values index)
+    else
+        None

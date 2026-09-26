@@ -1,228 +1,423 @@
-module List exposing (singleton, repeat, range, head, tail, isEmpty, length, isLength, reverse, append, concat, map, indexedMap, filter, filterMap, foldl, foldr, any, all, find, member, take, drop, at, map2, sort, sortBy, sum, partition, toArray)
+module List exposing
+    ( singleton
+    , repeat
+    , range
+    , head
+    , tail
+    , isEmpty
+    , length
+    , isLength
+    , reverse
+    , append
+    , concat
+    , map
+    , indexedMap
+    , filter
+    , filterMap
+    , foldl
+    , foldr
+    , any
+    , all
+    , find
+    , member
+    , take
+    , drop
+    , at
+    , map2
+    , sort
+    , sortBy
+    , sum
+    , partition
+    , toArray
+    )
+
 
 import Prelude exposing (..)
-import Lift exposing (Lift)
+import Lift exposing ( Lift )
 import Builtin
 import Functor
-import Option exposing (type option(..))
-import Eq exposing (Eq)
-import Ord exposing (Ord)
+import Option exposing ( type option(..) )
+import Eq exposing ( Eq )
+import Ord exposing ( Ord )
 import Literal
-import Primitive exposing (type bool(..))
-import Ordering exposing (type ordering(..))
+import Primitive exposing ( type bool(..) )
+import Ordering exposing ( type ordering(..) )
+
 
 singleton : 'a -> list 'a
-singleton x = [x]
+singleton x = [ x ]
+
 
 repeat : Lift int 'n => 'n -> 'a -> list 'a
 repeat count x = repeatList (lower count) x
 
-repeatList : int -> 'a -> list 'a
-repeatList n x = if n <= 0 then [] else x :: repeatList (n - 1) x
 
-range : (Lift int 's, Lift int 'e) => 's -> 'e -> list int
+repeatList : int -> 'a -> list 'a
+repeatList n x =
+    if n <= 0 then
+        []
+    else
+        x :: repeatList (n - 1) x
+
+
+range : ( Lift int 's, Lift int 'e ) => 's -> 'e -> list int
 range start end = rangeList (lower start) (lower end)
 
+
 rangeList : int -> int -> list int
-rangeList start end = if start >= end then [] else start :: rangeList (start + 1) end
+rangeList start end =
+    if start >= end then
+        []
+    else
+        start :: rangeList (start + 1) end
 
-head : Lift (list 'a) ('f 'a) => ('f 'a) -> option 'a
-head values = case lowerOuter values of
-    [] -> None
-    x :: _ -> Some x
 
-tail : Lift (list 'a) ('f 'a) => ('f 'a) -> option (list 'a)
-tail values = case lowerOuter values of
-    [] -> None
-    _ :: xs -> Some xs
+head : Lift (list 'a) ('f 'a) => 'f 'a -> option 'a
+head values =
+    case lowerOuter values of
+        [] ->
+            None
 
-isEmpty : Lift (list 'a) ('f 'a) => ('f 'a) -> bool
+        x :: _ ->
+            Some x
+
+
+tail : Lift (list 'a) ('f 'a) => 'f 'a -> option (list 'a)
+tail values =
+    case lowerOuter values of
+        [] ->
+            None
+
+        _ :: xs ->
+            Some xs
+
+
+isEmpty : Lift (list 'a) ('f 'a) => 'f 'a -> bool
 isEmpty values =
     values
         |> lowerOuter
         |> Builtin.nullList
 
-length : Lift (list 'a) ('f 'a) => ('f 'a) -> int
+
+length : Lift (list 'a) ('f 'a) => 'f 'a -> int
 length values =
     values
         |> lowerOuter
         |> foldlList (\_ n -> n + 1) 0
 
-isLength : (Lift (list 'a) ('f 'a), Lift int 'n) => ('f 'a) -> 'n -> bool
+
+isLength : ( Lift (list 'a) ('f 'a), Lift int 'n ) => 'f 'a -> 'n -> bool
 isLength values mustLength =
     let
         count : int
         count = lower mustLength
+
         items = lowerOuter values
     in
-    if count <= 0 then
-        case items of
-            [] -> count == 0
-            _ :: _ -> False
-    else case Builtin.dropList (count - 1) items of
-        [_] -> True
-        _ -> False
+        if count <= 0 then
+            case items of
+                [] ->
+                    count == 0
 
-reverse : Lift (list 'a) ('f 'a) => ('f 'a) -> list 'a
+                _ :: _ ->
+                    False
+        else
+            case Builtin.dropList (count - 1) items of
+                [ _ ] ->
+                    True
+
+                _ ->
+                    False
+
+
+reverse : Lift (list 'a) ('f 'a) => 'f 'a -> list 'a
 reverse values =
     values
         |> lowerOuter
         |> foldlList (\x xs -> x :: xs) []
 
-append : (Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a)) => ('f 'a) -> ('g 'a) -> list 'a
+
+append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) )
+    => 'f 'a -> 'g 'a -> list 'a
 append xs ys = appendList (lowerOuter xs) (lowerOuter ys)
 
-appendList : list 'a -> list 'a -> list 'a
-appendList xs ys = case xs of
-    [] -> ys
-    x :: rest -> x :: appendList rest ys
 
-concat : (Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a)) => 'g ('f 'a) -> list 'a
+appendList : list 'a -> list 'a -> list 'a
+appendList xs ys =
+    case xs of
+        [] ->
+            ys
+
+        x :: rest ->
+            x :: appendList rest ys
+
+
+concat : ( Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a) )
+    => 'g ('f 'a) -> list 'a
 concat values =
     values
         |> lowerOuter
         |> foldrList (\xs acc -> appendList (lowerOuter xs) acc) []
 
-map : Lift (list 'a) ('f 'a) => ('a -> 'b) -> ('f 'a) -> list 'b
+
+map : Lift (list 'a) ('f 'a) => ('a -> 'b) -> 'f 'a -> list 'b
 map f values = Functor.map f (lowerOuter values)
 
-indexedMap : Lift (list 'a) ('f 'a) => (int -> 'a -> 'b) -> ('f 'a) -> list 'b
+
+indexedMap : Lift (list 'a) ('f 'a) => (int -> 'a -> 'b) -> 'f 'a -> list 'b
 indexedMap f values = indexedFrom 0 f (lowerOuter values)
 
+
 indexedFrom : int -> (int -> 'a -> 'b) -> list 'a -> list 'b
-indexedFrom index f xs = case xs of
-    [] -> []
-    x :: rest -> f index x :: indexedFrom (index + 1) f rest
+indexedFrom index f xs =
+    case xs of
+        [] ->
+            []
 
-filter : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> list 'a
-filter p values = foldrList (\x acc -> if lower (p x) then x :: acc else acc) [] (lowerOuter values)
+        x :: rest ->
+            f index x :: indexedFrom (index + 1) f rest
 
-filterMap : (Lift (list 'a) ('f 'a), Lift (option 'b) ('g 'b)) => ('a -> 'g 'b) -> ('f 'a) -> list 'b
+
+filter : ( Lift (list 'a) ('f 'a), Lift bool 'p )
+    => ('a -> 'p) -> 'f 'a -> list 'a
+filter p values =
+    foldrList
+        (
+            \x acc ->
+                if lower (p x) then
+                    x :: acc
+                else
+                    acc
+        )
+        []
+        (lowerOuter values)
+
+
+filterMap : ( Lift (list 'a) ('f 'a), Lift (option 'b) ('g 'b) )
+    => ('a -> 'g 'b) -> 'f 'a -> list 'b
 filterMap f values = filterMapList f (lowerOuter values)
 
-filterMapList : Lift (option 'b) ('g 'b) => ('a -> 'g 'b) -> list 'a -> list 'b
-filterMapList f xs = case xs of
-    [] -> []
-    x :: rest -> case lower (f x) of
-        Some y -> y :: filterMapList f rest
-        None -> filterMapList f rest
 
-foldl : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> ('f 'a) -> 'b
+filterMapList : Lift (option 'b) ('g 'b) => ('a -> 'g 'b) -> list 'a -> list 'b
+filterMapList f xs =
+    case xs of
+        [] ->
+            []
+
+        x :: rest ->
+            case lower (f x) of
+                Some y ->
+                    y :: filterMapList f rest
+
+                None ->
+                    filterMapList f rest
+
+
+foldl : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> 'f 'a -> 'b
 foldl f acc values = foldlList f acc (lowerOuter values)
 
-foldlList : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-foldlList f acc xs = case xs of
-    [] -> acc
-    x :: rest -> foldlList f (f x acc) rest
 
-foldr : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> ('f 'a) -> 'b
+foldlList : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
+foldlList f acc xs =
+    case xs of
+        [] ->
+            acc
+
+        x :: rest ->
+            foldlList f (f x acc) rest
+
+
+foldr : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> 'f 'a -> 'b
 foldr f acc values = foldrList f acc (lowerOuter values)
 
-foldrList : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
-foldrList f acc xs = case xs of
-    [] -> acc
-    x :: rest -> f x (foldrList f acc rest)
 
-any : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> bool
+foldrList : ('a -> 'b -> 'b) -> 'b -> list 'a -> 'b
+foldrList f acc xs =
+    case xs of
+        [] ->
+            acc
+
+        x :: rest ->
+            f x (foldrList f acc rest)
+
+
+any : ( Lift (list 'a) ('f 'a), Lift bool 'p ) => ('a -> 'p) -> 'f 'a -> bool
 any p values = anyList (\x -> lower (p x)) (lowerOuter values)
 
-anyList : ('a -> bool) -> list 'a -> bool
-anyList p xs = case xs of
-    [] -> False
-    x :: rest -> if p x then True else anyList p rest
 
-all : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> bool
+anyList : ('a -> bool) -> list 'a -> bool
+anyList p xs =
+    case xs of
+        [] ->
+            False
+
+        x :: rest ->
+            if p x then
+                True
+            else
+                anyList p rest
+
+
+all : ( Lift (list 'a) ('f 'a), Lift bool 'p ) => ('a -> 'p) -> 'f 'a -> bool
 all p values = allList (\x -> lower (p x)) (lowerOuter values)
 
-allList : ('a -> bool) -> list 'a -> bool
-allList p xs = case xs of
-    [] -> True
-    x :: rest -> if p x then allList p rest else False
 
-find : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> option 'a
+allList : ('a -> bool) -> list 'a -> bool
+allList p xs =
+    case xs of
+        [] ->
+            True
+
+        x :: rest ->
+            if p x then
+                allList p rest
+            else
+                False
+
+
+find : ( Lift (list 'a) ('f 'a), Lift bool 'p )
+    => ('a -> 'p) -> 'f 'a -> option 'a
 find p values = findList (\x -> lower (p x)) (lowerOuter values)
 
-findList : ('a -> bool) -> list 'a -> option 'a
-findList p xs = case xs of
-    [] -> None
-    x :: rest -> if p x then Some x else findList p rest
 
-member : (Eq 'a, Lift (list 'a) ('f 'a)) => 'a -> ('f 'a) -> bool
+findList : ('a -> bool) -> list 'a -> option 'a
+findList p xs =
+    case xs of
+        [] ->
+            None
+
+        x :: rest ->
+            if p x then
+                Some x
+            else
+                findList p rest
+
+
+member : ( Eq 'a, Lift (list 'a) ('f 'a) ) => 'a -> 'f 'a -> bool
 member x values = anyList (\y -> x == y) (lowerOuter values)
 
-take : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> list 'a
+
+take : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> list 'a
 take count values = takeList (lower count) (lowerOuter values)
+
 
 takeList : int -> list 'a -> list 'a
 takeList n xs =
-    if n <= 0 then [] else case xs of
-        [] -> []
-        x :: rest -> x :: takeList (n - 1) rest
+    if n <= 0 then
+        []
+    else
+        case xs of
+            [] ->
+                []
 
-drop : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> list 'a
+            x :: rest ->
+                x :: takeList (n - 1) rest
+
+
+drop : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> list 'a
 drop count values =
     let
         n : int
         n = lower count
     in
-    if n <= 0 then lowerOuter values else Builtin.dropList n (lowerOuter values)
+        if n <= 0 then
+            lowerOuter values
+        else
+            Builtin.dropList n (lowerOuter values)
 
-at : (Lift int 'n, Lift (list 'a) ('f 'a)) => 'n -> ('f 'a) -> option 'a
+
+at : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> option 'a
 at index values =
     let
         n : int
         n = lower index
     in
-    if n < 0 then None else head (Builtin.dropList n (lowerOuter values))
+        if n < 0 then
+            None
+        else
+            head (Builtin.dropList n (lowerOuter values))
 
-map2 : (Lift (list 'a) ('f 'a), Lift (list 'b) ('g 'b)) => ('a -> 'b -> 'c) -> ('f 'a) -> ('g 'b) -> list 'c
+
+map2 : ( Lift (list 'a) ('f 'a), Lift (list 'b) ('g 'b) )
+    => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> list 'c
 map2 f xs ys = map2List f (lowerOuter xs) (lowerOuter ys)
 
-map2List : ('a -> 'b -> 'c) -> list 'a -> list 'b -> list 'c
-map2List f xs ys = case (xs, ys) of
-    (x :: rest, y :: more) -> f x y :: map2List f rest more
-    _ -> []
 
-sort : (Ord 'a, Lift (list 'a) ('f 'a)) => ('f 'a) -> list 'a
+map2List : ('a -> 'b -> 'c) -> list 'a -> list 'b -> list 'c
+map2List f xs ys =
+    case ( xs, ys ) of
+        ( x :: rest, y :: more ) ->
+            f x y :: map2List f rest more
+
+        _ ->
+            []
+
+
+sort : ( Ord 'a, Lift (list 'a) ('f 'a) ) => 'f 'a -> list 'a
 sort values =
     values
         |> lowerOuter
         |> sortList compare
 
-sortBy : (Lift (list 'a) ('f 'a), Lift ordering 'o) => ('a -> 'a -> 'o) -> ('f 'a) -> list 'a
+
+sortBy : ( Lift (list 'a) ('f 'a), Lift ordering 'o )
+    => ('a -> 'a -> 'o) -> 'f 'a -> list 'a
 sortBy cmp values = sortList (\a b -> lower (cmp a b)) (lowerOuter values)
+
 
 sortList : ('a -> 'a -> ordering) -> list 'a -> list 'a
 sortList cmp xs = foldrList (insert cmp) [] xs
 
-insert : ('a -> 'a -> ordering) -> 'a -> list 'a -> list 'a
-insert cmp x xs = case xs of
-    [] -> [x]
-    y :: rest -> case cmp x y of
-        GT -> y :: insert cmp x rest
-        _ -> x :: xs
 
-sum : (Lift int 'a, Lift (list 'a) ('f 'a)) => 'f 'a -> int
+insert : ('a -> 'a -> ordering) -> 'a -> list 'a -> list 'a
+insert cmp x xs =
+    case xs of
+        [] ->
+            [ x ]
+
+        y :: rest ->
+            case cmp x y of
+                GT ->
+                    y :: insert cmp x rest
+
+                _ ->
+                    x :: xs
+
+
+sum : ( Lift int 'a, Lift (list 'a) ('f 'a) ) => 'f 'a -> int
 sum values =
     values
         |> lowerOuter
         |> foldlList (\x acc -> Builtin.addInteger (lower x) acc) 0
 
-partition : (Lift (list 'a) ('f 'a), Lift bool 'p) => ('a -> 'p) -> ('f 'a) -> (list 'a, list 'a)
+
+partition : ( Lift (list 'a) ('f 'a), Lift bool 'p )
+    => ('a -> 'p) -> 'f 'a -> ( list 'a, list 'a )
 partition p values = partitionList (\x -> lower (p x)) (lowerOuter values)
 
-partitionList : ('a -> bool) -> list 'a -> (list 'a, list 'a)
-partitionList p xs = case xs of
-    [] -> ([], [])
-    x :: rest ->
-        let (yes, no) = partitionList p rest in
-        if p x then (x :: yes, no) else (yes, x :: no)
 
-toArray : Lift (list 'a) ('f 'a) => ('f 'a) -> array 'a
+partitionList : ('a -> bool) -> list 'a -> ( list 'a, list 'a )
+partitionList p xs =
+    case xs of
+        [] ->
+            ( [], [] )
+
+        x :: rest ->
+            let
+                ( yes, no ) = partitionList p rest
+            in
+                if p x then
+                    ( x :: yes, no )
+                else
+                    ( yes, x :: no )
+
+
+toArray : Lift (list 'a) ('f 'a) => 'f 'a -> array 'a
 toArray values =
     values
         |> lowerOuter
         |> Builtin.listToArray
+
 
 lowerOuter : Lift (list 'a) ('f 'a) => 'f 'a -> list 'a
 lowerOuter = lower

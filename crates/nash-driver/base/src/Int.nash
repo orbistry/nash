@@ -1,33 +1,67 @@
-module Int exposing (add, sub, mul, negate, div, mod, quot, rem, compare, min, max, abs, pow, pow2, powMod, gcd, lcm, isqrt, isGcd, isLcm, isSqrt, toBytes, fromBytes, toString)
+module Int exposing
+    ( add
+    , sub
+    , mul
+    , negate
+    , div
+    , mod
+    , quot
+    , rem
+    , compare
+    , min
+    , max
+    , abs
+    , pow
+    , pow2
+    , powMod
+    , gcd
+    , lcm
+    , isqrt
+    , isGcd
+    , isLcm
+    , isSqrt
+    , toBytes
+    , fromBytes
+    , toString
+    )
 
-import Primitive exposing (type bool(..))
+
+import Primitive exposing ( type bool(..) )
 import Prelude exposing (..)
-import Lift exposing (Lift)
+import Lift exposing ( Lift )
 import Builtin
 import Show
 import Ord
-import Ordering exposing (type ordering)
+import Ordering exposing ( type ordering )
 
-add : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+add : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 add a b = Builtin.addInteger (lower a) (lower b)
 
-sub : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+sub : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 sub a b = Builtin.subtractInteger (lower a) (lower b)
 
-mul : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+mul : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 mul a b = Builtin.multiplyInteger (lower a) (lower b)
 
-div : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+div : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 div a b = Builtin.divideInteger (lower a) (lower b)
 
-mod : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+mod : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 mod a b = Builtin.modInteger (lower a) (lower b)
 
-quot : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+quot : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 quot a b = Builtin.quotientInteger (lower a) (lower b)
 
-rem : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+rem : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 rem a b = Builtin.remainderInteger (lower a) (lower b)
+
 
 negate : Lift int 'a => 'a -> int
 negate value =
@@ -35,75 +69,119 @@ negate value =
         |> lower
         |> Builtin.subtractInteger 0
 
-compare : (Lift int 'a, Lift int 'b) => 'a -> 'b -> ordering
+
+compare : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> ordering
 compare a b = compareInt (lower a) (lower b)
+
 
 compareInt : int -> int -> ordering
 compareInt = Ord.compare
 
-min : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+min : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 min a b = minInt (lower a) (lower b)
+
 
 minInt : int -> int -> int
 minInt = Ord.min
 
-max : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+max : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 max a b = maxInt (lower a) (lower b)
+
 
 maxInt : int -> int -> int
 maxInt = Ord.max
+
 
 abs : Lift int 'n => 'n -> int
 abs value =
     let
         n : int
         n = lower value
-    in if n < 0 then Builtin.subtractInteger 0 n else n
+    in
+        if n < 0 then
+            Builtin.subtractInteger 0 n
+        else
+            n
 
-pow : (Lift int 'n, Lift int 'e) => 'n -> 'e -> int
+
+pow : ( Lift int 'n, Lift int 'e ) => 'n -> 'e -> int
 pow value exponent =
     let
         e : int
         e = lower exponent
     in
-    if e < 0 then fail
-    else
-        let n : int
-            n = lower value
-        in if n == 2 then powerOfTwo e else power n e
+        if e < 0 then
+            fail
+        else
+            let
+                n : int
+                n = lower value
+            in
+                if n == 2 then
+                    powerOfTwo e
+                else
+                    power n e
+
 
 power : int -> int -> int
 power n e =
-    if e == 0 then 1
+    if e == 0 then
+        1
     else
-        let half = power n (quot e 2) in
-        if rem e 2 == 0 then half * half else n * half * half
+        let
+            half = power n (quot e 2)
+        in
+            if rem e 2 == 0 then
+                half * half
+            else
+                n * half * half
+
 
 pow2 : Lift int 'e => 'e -> int
 pow2 exponent =
-    let e : int
+    let
+        e : int
         e = lower exponent
-    in if e < 0 then fail else powerOfTwo e
+    in
+        if e < 0 then
+            fail
+        else
+            powerOfTwo e
+
 
 smallPowersOfTwo : array int
-smallPowersOfTwo = comptime (Builtin.listToArray [1, 2, 4, 8, 16, 32, 64, 128, 256])
+smallPowersOfTwo =
+    comptime (Builtin.listToArray [ 1, 2, 4, 8, 16, 32, 64, 128, 256 ])
+
 
 powerOfTwo : int -> int
 powerOfTwo e =
-    if e <= 8 then Builtin.indexArray smallPowersOfTwo e
+    if e <= 8 then
+        Builtin.indexArray smallPowersOfTwo e
     else
-        let bands = quot (e - 1) 8
-            bits = rem (e - 1) 8 + 1
-        in power 256 bands * Builtin.indexArray smallPowersOfTwo bits
+        let
+            bands = quot (e - 1) 8
 
-powMod : (Lift int 'n, Lift int 'e, Lift int 'm) => 'n -> 'e -> 'm -> int
+            bits = rem (e - 1) 8 + 1
+        in
+            power 256 bands * Builtin.indexArray smallPowersOfTwo bits
+
+
+powMod : ( Lift int 'n, Lift int 'e, Lift int 'm ) => 'n -> 'e -> 'm -> int
 powMod n e m = Builtin.expModInteger (lower n) (lower e) (lower m)
 
-toBytes : (Lift bool 'b, Lift int 's, Lift int 'n) => 'b -> 's -> 'n -> bytes
-toBytes bigEndian size n = Builtin.integerToByteString (lower bigEndian) (lower size) (lower n)
 
-fromBytes : (Lift bool 'b, Lift bytes 'v) => 'b -> 'v -> int
-fromBytes bigEndian value = Builtin.byteStringToInteger (lower bigEndian) (lower value)
+toBytes : ( Lift bool 'b, Lift int 's, Lift int 'n ) => 'b -> 's -> 'n -> bytes
+toBytes bigEndian size n =
+    Builtin.integerToByteString (lower bigEndian) (lower size) (lower n)
+
+
+fromBytes : ( Lift bool 'b, Lift bytes 'v ) => 'b -> 'v -> int
+fromBytes bigEndian value =
+    Builtin.byteStringToInteger (lower bigEndian) (lower value)
+
 
 toString : Lift int 'n => 'n -> string
 toString value =
@@ -111,78 +189,134 @@ toString value =
         |> lower
         |> showInt
 
+
 showInt : int -> string
 showInt = Show.show
 
-gcd : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+
+gcd : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 gcd left right = gcdInt (abs left) (abs right)
 
-gcdInt : int -> int -> int
-gcdInt a b = if b == 0 then a else gcdInt b (Builtin.modInteger a b)
 
-lcm : (Lift int 'a, Lift int 'b) => 'a -> 'b -> int
+gcdInt : int -> int -> int
+gcdInt a b =
+    if b == 0 then
+        a
+    else
+        gcdInt b (Builtin.modInteger a b)
+
+
+lcm : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 lcm left right =
-    let a : int
+    let
+        a : int
         a = lower left
+
         b : int
         b = lower right
     in
-    if a == 0 || b == 0 then 0
-    else abs (Builtin.quotientInteger a (gcd a b) * b)
+        if a == 0 || b == 0 then
+            0
+        else
+            abs (Builtin.quotientInteger a (gcd a b) * b)
+
 
 isqrt : Lift int 'n => 'n -> int
 isqrt value =
-    let n : int
+    let
+        n : int
         n = lower value
     in
-    if n < 0 then fail
-    else if n < 2 then n
-    else sqrtNewton n (sqrtUpper n 1)
+        if n < 0 then
+            fail
+        else if n < 2 then
+            n
+        else
+            sqrtNewton n (sqrtUpper n 1)
+
 
 sqrtUpper : int -> int -> int
 sqrtUpper remaining bound =
-    if remaining == 0 then bound
-    else sqrtUpper (Builtin.quotientInteger remaining 4) (bound * 2)
+    if remaining == 0 then
+        bound
+    else
+        sqrtUpper (Builtin.quotientInteger remaining 4) (bound * 2)
+
 
 sqrtNewton : int -> int -> int
 sqrtNewton n current =
-    let next = Builtin.quotientInteger (current + Builtin.quotientInteger n current) 2 in
-    if next >= current then current else sqrtNewton n next
+    let
+        next =
+            Builtin.quotientInteger
+                (current + Builtin.quotientInteger n current)
+                2
+    in
+        if next >= current then
+            current
+        else
+            sqrtNewton n next
 
-isGcd : (Lift int 'a, Lift int 'b, Lift int 'g) => 'a -> 'b -> 'g -> bool
+
+isGcd : ( Lift int 'a, Lift int 'b, Lift int 'g ) => 'a -> 'b -> 'g -> bool
 isGcd left right expected =
-    let a = abs left
+    let
+        a = abs left
+
         b = abs right
+
         g : int
         g = lower expected
     in
-    if g < 0 then False
-    else if g == 0 then a == 0 && b == 0
-    else if g == 1 then gcdInt a b == 1
-    else if Builtin.modInteger a g /= 0 then False
-    else if Builtin.modInteger b g /= 0 then False
-    else gcdInt (Builtin.quotientInteger a g) (Builtin.quotientInteger b g) == 1
+        if g < 0 then
+            False
+        else if g == 0 then
+            a == 0 && b == 0
+        else if g == 1 then
+            gcdInt a b == 1
+        else if Builtin.modInteger a g /= 0 then
+            False
+        else if Builtin.modInteger b g /= 0 then
+            False
+        else
+            gcdInt (Builtin.quotientInteger a g) (Builtin.quotientInteger b g) ==
+                1
 
-isLcm : (Lift int 'a, Lift int 'b, Lift int 'm) => 'a -> 'b -> 'm -> bool
+
+isLcm : ( Lift int 'a, Lift int 'b, Lift int 'm ) => 'a -> 'b -> 'm -> bool
 isLcm left right expected =
-    let a = abs left
+    let
+        a = abs left
+
         b = abs right
+
         m : int
         m = lower expected
     in
-    if m < 0 then False
-    else if a == 0 || b == 0 then m == 0
-    else if m == 0 then False
-    else if Builtin.modInteger m a /= 0 then False
-    else if Builtin.modInteger m b /= 0 then False
-    else gcdInt (Builtin.quotientInteger m a) (Builtin.quotientInteger m b) == 1
+        if m < 0 then
+            False
+        else if a == 0 || b == 0 then
+            m == 0
+        else if m == 0 then
+            False
+        else if Builtin.modInteger m a /= 0 then
+            False
+        else if Builtin.modInteger m b /= 0 then
+            False
+        else
+            gcdInt (Builtin.quotientInteger m a) (Builtin.quotientInteger m b) ==
+                1
 
-isSqrt : (Lift int 'n, Lift int 'r) => 'n -> 'r -> bool
+
+isSqrt : ( Lift int 'n, Lift int 'r ) => 'n -> 'r -> bool
 isSqrt value expected =
-    let n : int
+    let
+        n : int
         n = lower value
+
         root : int
         root = lower expected
     in
-    if n < 0 || root < 0 then False
-    else root * root <= n && n < (root + 1) * (root + 1)
+        if n < 0 || root < 0 then
+            False
+        else
+            root * root <= n && n < (root + 1) * (root + 1)

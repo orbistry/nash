@@ -90,21 +90,32 @@ impl Printer<'_> {
         let args = c.args.iter().map(|a| self.typ(a, 2)).collect();
         cat([before, self.args(text(name), args, false)])
     }
-    pub fn context(&mut self, constraints: &[&Located<Constraint<'_>>]) -> Doc {
-        if constraints.is_empty() {
-            return text("");
-        }
+    fn constraints(&mut self, constraints: &[&Located<Constraint<'_>>]) -> Doc {
         let docs: Vec<_> = constraints.iter().map(|c| self.constraint(c)).collect();
-        let doc = if docs.len() == 1 {
+        if docs.len() == 1 {
             docs.into_iter().next().unwrap()
         } else {
             self.collection("(", ")", docs, false)
-        };
-        cat([doc, text(" => ")])
+        }
+    }
+    pub fn context(&mut self, constraints: &[&Located<Constraint<'_>>]) -> Doc {
+        if constraints.is_empty() {
+            text("")
+        } else {
+            cat([self.constraints(constraints), text(" => ")])
+        }
     }
     pub fn annotation(&mut self, annotation: &Annotation<'_>) -> Doc {
-        let context = self.context(annotation.constraints);
-        cat([context, self.typ(annotation.typ, 0)]).nest()
+        let context = if annotation.constraints.is_empty() {
+            text("")
+        } else {
+            cat([
+                self.constraints(annotation.constraints),
+                Doc::Line(" "),
+                text("=> "),
+            ])
+        };
+        cat([context, self.typ(annotation.typ, 0)]).nest().group()
     }
     pub fn params(&mut self, params: &[&TypeParam<'_>]) -> Doc {
         join(

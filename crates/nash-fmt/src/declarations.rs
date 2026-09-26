@@ -7,7 +7,7 @@ use nash_source::*;
 
 impl Printer<'_> {
     pub fn exposing(&mut self, exposing: &Exposing<'_>, broken: bool) -> Doc {
-        match exposing {
+        let doc = match exposing {
             Exposing::Open => text("(..)"),
             Exposing::Explicit(items) => {
                 let docs = items
@@ -40,9 +40,10 @@ impl Printer<'_> {
                         }
                     })
                     .collect();
-                self.collection("(", ")", docs, broken).nest()
+                self.collection("(", ")", docs, broken)
             }
-        }
+        };
+        cat([Doc::Line(" "), doc]).nest().group()
     }
     fn import(&mut self, import: &Import<'_>) -> Doc {
         let before = self.before(import.import.region.start);
@@ -51,7 +52,7 @@ impl Printer<'_> {
             docs.push(text(format!(" as {alias}")));
         }
         if !matches!(import.exposing,Exposing::Explicit(items) if items.is_empty()) {
-            docs.extend([text(" exposing "), self.exposing(import.exposing, false)]);
+            docs.extend([text(" exposing"), self.exposing(import.exposing, false)]);
         }
         cat(docs)
     }
@@ -267,7 +268,7 @@ impl Printer<'_> {
                     "module "
                 }),
                 text(name.value),
-                text(" exposing "),
+                text(" exposing"),
                 exports,
             ]));
         }

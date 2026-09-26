@@ -485,3 +485,36 @@ fn definition_layout() {
     "#
     );
 }
+
+#[test]
+fn constrained_signatures() {
+    assert_format_snapshot!(
+        r#"
+        append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) ) => 'f 'a ->
+                'g 'a -> list 'a
+        append xs ys = appendList (lowerOuter xs) (lowerOuter ys)
+
+        render : Show 'a => 'a -> string
+        render value = show value
+
+        trait Example 'a where
+            append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) ) => 'f 'a -> 'g 'a -> list 'a
+    "#
+    );
+}
+
+#[test]
+fn multiline_exposing() {
+    assert_format_snapshot!(
+        r#"
+        module List exposing ( singleton
+            , repeat
+            , range
+            )
+
+        import VeryLongModuleName exposing ( firstLongExportedName, secondLongExportedName, thirdLongExportedName )
+
+        singleton x = [x]
+    "#
+    );
+}

@@ -1,10 +1,15 @@
-module Function exposing (applyForward, applyBackward, (|>), (<|))
+module Function exposing ( applyForward, applyBackward, (|>), (<|) )
+
 
 infix left 0 (|>) = applyForward
+
+
 infix right 0 (<|) = applyBackward
+
 
 applyForward : 'a -> ('a -> 'b) -> 'b
 applyForward x f = f x
+
 
 applyBackward : ('a -> 'b) -> 'a -> 'b
 applyBackward f x = f x

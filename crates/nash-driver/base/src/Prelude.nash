@@ -1,131 +1,262 @@
 module Prelude exposing (..)
 
+
 import Builtin
 import Function
+import Primitive exposing ( type bool(..) )
+import Bool exposing ( and, or )
+import Eq exposing ( Eq )
+import Ord exposing ( Ord )
+import Ordering exposing ( type ordering(..) )
+import Show exposing ( Show )
+import Num exposing ( Num )
+import Integral exposing ( Integral )
+import Semigroup exposing ( Semigroup )
+import Functor exposing ( Functor )
+import Applicative exposing ( Applicative )
+import Monad exposing ( Monad )
 
-import Primitive exposing (type bool(..))
-import Bool exposing (and, or)
-import Eq exposing (Eq)
-import Ord exposing (Ord)
-import Ordering exposing (type ordering(..))
-import Show exposing (Show)
-import Num exposing (Num)
-import Integral exposing (Integral)
-import Semigroup exposing (Semigroup)
-import Functor exposing (Functor)
-import Applicative exposing (Applicative)
-import Monad exposing (Monad)
 
 infix left 0 (|>) = applyForward
+
+
 infix right 0 (<|) = applyBackward
+
+
 infix right 9 (<<) = composeLeft
+
+
 infix right 9 (>>) = composeRight
+
+
 infix right 2 (||) = or
+
+
 infix right 3 (&&) = and
+
+
 infix non 4 (==) = eq
+
+
 infix non 4 (/=) = neq
+
+
 infix non 4 (<) = lt
+
+
 infix non 4 (>) = gt
+
+
 infix non 4 (<=) = le
+
+
 infix non 4 (>=) = ge
+
+
 infix right 5 (++) = append
+
+
 infix right 5 (::) = prepend
+
+
 infix left 6 (+) = add
+
+
 infix left 6 (-) = sub
+
+
 infix left 7 (*) = mul
+
+
 infix left 7 (/) = div
+
+
 infix left 7 (%) = mod
+
+
 infix left 1 (>>=) = bind
+
+
 infix left 4 (<$>) = map
+
+
 infix left 4 (<*>) = apply
+
 
 identity : 'a -> 'a
 identity x = x
 
+
 always : 'a -> 'b -> 'a
 always x _ = x
 
+
 applyForward : 'a -> ('a -> 'b) -> 'b
 applyForward = Function.applyForward
+
 
 applyBackward : ('a -> 'b) -> 'a -> 'b
 applyBackward = Function.applyBackward
 
 
-
-
 composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 composeLeft g f x = g (f x)
+
 
 composeRight : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
 composeRight f g x = g (f x)
 
+
 prepend : 'a -> list 'a -> list 'a
 prepend = Builtin.mkCons
 
-impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where
-    eq (a, b) (c, d) = if eq a c then eq b d else False
 
-impl (Eq 'a, Eq 'b, Eq 'c) => Eq ('a, 'b, 'c) where
-    eq (a, b, c) (d, e, f) =
-        if eq a d then if eq b e then eq c f else False
-        else False
+impl ( Eq 'a, Eq 'b ) => Eq ( 'a, 'b ) where
+    eq ( a, b ) ( c, d ) =
+        if eq a c then
+            eq b d
+        else
+            False
 
-impl (Eq 'a, Eq 'b, Eq 'c, Eq 'd) => Eq ('a, 'b, 'c, 'd) where
-    eq (a, b, c, d) (e, f, g, h) =
+
+impl ( Eq 'a, Eq 'b, Eq 'c ) => Eq ( 'a, 'b, 'c ) where
+    eq ( a, b, c ) ( d, e, f ) =
+        if eq a d then
+            if eq b e then
+                eq c f
+            else
+                False
+        else
+            False
+
+
+impl ( Eq 'a, Eq 'b, Eq 'c, Eq 'd ) => Eq ( 'a, 'b, 'c, 'd ) where
+    eq ( a, b, c, d ) ( e, f, g, h ) =
         if eq a e then
             if eq b f then
-                if eq c g then eq d h else False
-            else False
-        else False
+                if eq c g then
+                    eq d h
+                else
+                    False
+            else
+                False
+        else
+            False
 
-impl (Ord 'a, Ord 'b) => Ord ('a, 'b) where
-    compare (a, b) (c, d) =
+
+impl ( Ord 'a, Ord 'b ) => Ord ( 'a, 'b ) where
+    compare ( a, b ) ( c, d ) =
         case compare a c of
-            EQ -> compare b d
-            order -> order
+            EQ ->
+                compare b d
 
-impl (Ord 'a, Ord 'b, Ord 'c) => Ord ('a, 'b, 'c) where
-    compare (a, b, c) (d, e, f) =
+            order ->
+                order
+
+
+impl ( Ord 'a, Ord 'b, Ord 'c ) => Ord ( 'a, 'b, 'c ) where
+    compare ( a, b, c ) ( d, e, f ) =
         case compare a d of
             EQ ->
                 case compare b e of
-                    EQ -> compare c f
-                    order -> order
-            order -> order
+                    EQ ->
+                        compare c f
 
-impl (Ord 'a, Ord 'b, Ord 'c, Ord 'd) => Ord ('a, 'b, 'c, 'd) where
-    compare (a, b, c, d) (e, f, g, h) =
+                    order ->
+                        order
+
+            order ->
+                order
+
+
+impl ( Ord 'a, Ord 'b, Ord 'c, Ord 'd ) => Ord ( 'a, 'b, 'c, 'd ) where
+    compare ( a, b, c, d ) ( e, f, g, h ) =
         case compare a e of
             EQ ->
                 case compare b f of
                     EQ ->
                         case compare c g of
-                            EQ -> compare d h
-                            order -> order
-                    order -> order
-            order -> order
+                            EQ ->
+                                compare d h
 
-impl (Show 'a, Show 'b) => Show ('a, 'b) where
-    show (a, b) =
-        Builtin.appendString "("
-            (Builtin.appendString (show a)
-                (Builtin.appendString ", " (Builtin.appendString (show b) ")")))
+                            order ->
+                                order
 
-impl (Show 'a, Show 'b, Show 'c) => Show ('a, 'b, 'c) where
-    show (a, b, c) =
-        Builtin.appendString "("
-            (Builtin.appendString (show a)
-                (Builtin.appendString ", "
-                    (Builtin.appendString (show b)
-                        (Builtin.appendString ", " (Builtin.appendString (show c) ")")))))
+                    order ->
+                        order
 
-impl (Show 'a, Show 'b, Show 'c, Show 'd) => Show ('a, 'b, 'c, 'd) where
-    show (a, b, c, d) =
-        Builtin.appendString "("
-            (Builtin.appendString (show a)
-                (Builtin.appendString ", "
-                    (Builtin.appendString (show b)
-                        (Builtin.appendString ", "
-                            (Builtin.appendString (show c)
-                                (Builtin.appendString ", " (Builtin.appendString (show d) ")")))))))
+            order ->
+                order
+
+
+impl ( Show 'a, Show 'b ) => Show ( 'a, 'b ) where
+    show ( a, b ) =
+        Builtin.appendString
+            "("
+            (
+                Builtin.appendString
+                    (show a)
+                    (
+                        Builtin.appendString
+                            ", "
+                            (Builtin.appendString (show b) ")")
+                    )
+            )
+
+
+impl ( Show 'a, Show 'b, Show 'c ) => Show ( 'a, 'b, 'c ) where
+    show ( a, b, c ) =
+        Builtin.appendString
+            "("
+            (
+                Builtin.appendString
+                    (show a)
+                    (
+                        Builtin.appendString
+                            ", "
+                            (
+                                Builtin.appendString
+                                    (show b)
+                                    (
+                                        Builtin.appendString
+                                            ", "
+                                            (Builtin.appendString (show c) ")")
+                                    )
+                            )
+                    )
+            )
+
+
+impl ( Show 'a, Show 'b, Show 'c, Show 'd ) => Show ( 'a, 'b, 'c, 'd ) where
+    show ( a, b, c, d ) =
+        Builtin.appendString
+            "("
+            (
+                Builtin.appendString
+                    (show a)
+                    (
+                        Builtin.appendString
+                            ", "
+                            (
+                                Builtin.appendString
+                                    (show b)
+                                    (
+                                        Builtin.appendString
+                                            ", "
+                                            (
+                                                Builtin.appendString
+                                                    (show c)
+                                                    (
+                                                        Builtin.appendString
+                                                            ", "
+                                                            (
+                                                                Builtin.appendString
+                                                                    (show d)
+                                                                    ")"
+                                                            )
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            )

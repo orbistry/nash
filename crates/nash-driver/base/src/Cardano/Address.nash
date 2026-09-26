@@ -1,67 +1,111 @@
 module Cardano.Address exposing (..)
 
-import Primitive exposing (Data(..))
-import Monad exposing (Monad)
-import Data exposing (Validate, Decode)
+
+import Primitive exposing ( Data(..) )
+import Monad exposing ( Monad )
+import Data exposing ( Validate, Decode )
 import Eq
 import Literal
-import Option exposing (Option, type option(..))
+import Option exposing ( Option, type option(..) )
 
-type Credential = PubKeyCredential Bytes | ScriptCredential Bytes
 
-type StakingCredential = StakingHash Credential | StakingPtr Int Int Int
+type Credential
+    = PubKeyCredential Bytes
+    | ScriptCredential Bytes
 
-type Address = Address { paymentCredential : Credential, stakingCredential : Option StakingCredential }
+
+type StakingCredential
+    = StakingHash Credential
+    | StakingPtr Int Int Int
+
+
+type Address
+    = Address
+        { paymentCredential : Credential
+        , stakingCredential : Option StakingCredential
+        }
+
 
 impl Validate Credential where
     validate raw =
         case Builtin.unConstrData raw of
-            pair(0, [f0]) -> PubKeyCredential (validate f0)
-            pair(1, [f0]) -> ScriptCredential (validate f0)
-            _ -> fail
+            pair(0, [ f0 ]) ->
+                PubKeyCredential (validate f0)
+
+            pair(1, [ f0 ]) ->
+                ScriptCredential (validate f0)
+
+            _ ->
+                fail
+
 
 impl Validate StakingCredential where
     validate raw =
         case Builtin.unConstrData raw of
-            pair(0, [f0]) -> StakingHash (validate f0)
-            pair(1, [f0, f1, f2]) -> StakingPtr (validate f0) (validate f1) (validate f2)
-            _ -> fail
+            pair(0, [ f0 ]) ->
+                StakingHash (validate f0)
+
+            pair(1, [ f0, f1, f2 ]) ->
+                StakingPtr (validate f0) (validate f1) (validate f2)
+
+            _ ->
+                fail
+
 
 impl Validate Address where
     validate raw =
         case Builtin.unConstrData raw of
-            pair(0, [f0, f1]) -> Address (validate f0) (validate f1)
-            _ -> fail
+            pair(0, [ f0, f1 ]) ->
+                Address (validate f0) (validate f1)
+
+            _ ->
+                fail
+
 
 impl Decode Credential where
     decode raw =
         case raw of
-            Constr pair(0, [f0]) -> do
-                d0 <- decode f0
-                Some (PubKeyCredential d0)
-            Constr pair(1, [f0]) -> do
-                d0 <- decode f0
-                Some (ScriptCredential d0)
-            _ -> None
+            Constr pair(0, [ f0 ]) ->
+                do
+                    d0 <- decode f0
+                    Some (PubKeyCredential d0)
+
+            Constr pair(1, [ f0 ]) ->
+                do
+                    d0 <- decode f0
+                    Some (ScriptCredential d0)
+
+            _ ->
+                None
+
 
 impl Decode StakingCredential where
     decode raw =
         case raw of
-            Constr pair(0, [f0]) -> do
-                d0 <- decode f0
-                Some (StakingHash d0)
-            Constr pair(1, [f0, f1, f2]) -> do
-                d0 <- decode f0
-                d1 <- decode f1
-                d2 <- decode f2
-                Some (StakingPtr d0 d1 d2)
-            _ -> None
+            Constr pair(0, [ f0 ]) ->
+                do
+                    d0 <- decode f0
+                    Some (StakingHash d0)
+
+            Constr pair(1, [ f0, f1, f2 ]) ->
+                do
+                    d0 <- decode f0
+                    d1 <- decode f1
+                    d2 <- decode f2
+                    Some (StakingPtr d0 d1 d2)
+
+            _ ->
+                None
+
 
 impl Decode Address where
     decode raw =
         case raw of
-            Constr pair(0, [f0, f1]) -> do
-                d0 <- decode f0
-                d1 <- decode f1
-                Some (Address d0 d1)
-            _ -> None
+            Constr pair(0, [ f0, f1 ]) ->
+                do
+                    d0 <- decode f0
+                    d1 <- decode f1
+                    Some (Address d0 d1)
+
+            _ ->
+                None

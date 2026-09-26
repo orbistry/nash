@@ -1,4 +1,25 @@
-module Prop exposing (type prng(..), type choiceTree(..), type generator, group, choice, constant, intBetween, int, listOf, listBetween, tuple2, oneOf, bytes, bool, option, bytesBetween, bytesExactly, frequency, intAtLeast)
+module Prop exposing
+    ( type prng(..)
+    , type choiceTree(..)
+    , type generator
+    , group
+    , choice
+    , constant
+    , intBetween
+    , int
+    , listOf
+    , listBetween
+    , tuple2
+    , oneOf
+    , bytes
+    , bool
+    , option
+    , bytesBetween
+    , bytesExactly
+    , frequency
+    , intAtLeast
+    )
+
 
 import Builtin
 import Int
@@ -6,24 +27,28 @@ import Functor
 import Applicative
 import Monad
 import Prelude exposing (..)
-import Primitive exposing (type bool(..))
+import Primitive exposing ( type bool(..) )
 import Literal
-import Num exposing (Num)
-import Lift exposing (Lift)
-import Option exposing (type option(..))
-import Cons exposing (type cons(..))
+import Num exposing ( Num )
+import Lift exposing ( Lift )
+import Option exposing ( type option(..) )
+import Cons exposing ( type cons(..) )
+
 
 type choiceTree
     = Choice int
     | Group (cons choiceTree)
+
 
 type prng
     = Seeded bytes (cons choiceTree)
     | Replayed (cons choiceTree) (cons choiceTree)
     | Rebuilding (list int) (cons choiceTree)
 
-type alias generator 'a
-    = prng -> option ('a, prng)
+
+type alias generator 'a =
+    prng -> option ( 'a, prng )
+
 
 choice : Lift int 'n => 'n -> generator int
 choice bound =
@@ -31,240 +56,411 @@ choice bound =
         |> lower
         |> choiceInt
 
+
 choiceInt : int -> generator int
 choiceInt bound state =
     if bound < 0 || bound > 18446744073709551615 then
-        (fail "Prop.choice bound must be in 0..18446744073709551615")
+        fail "Prop.choice bound must be in 0..18446744073709551615"
     else
         case state of
             Seeded seed recorded ->
                 let
                     seed2 = Builtin.blake2b_256 seed
+
                     value = Builtin.byteStringToInteger True seed2 % (bound + 1)
                 in
-                Some (value, Seeded seed2 (Cons (Choice value) recorded))
+                    Some ( value, Seeded seed2 (Cons (Choice value) recorded) )
+
             Rebuilding remaining recorded ->
                 case remaining of
                     value :: rest ->
-                        if value < 0 || value > bound then None
-                        else Some (value, Rebuilding rest (Cons (Choice value) recorded))
-                    [] -> None
+                        if value < 0 || value > bound then
+                            None
+                        else
+                            Some
+                                ( value
+                                , Rebuilding rest (Cons (Choice value) recorded)
+                                )
+
+                    [] ->
+                        None
+
             Replayed remaining recorded ->
                 case remaining of
                     Cons (Choice value) rest ->
-                        if value < 0 || value > bound then None
-                        else Some (value, Replayed rest (Cons (Choice value) recorded))
-                    _ -> None
+                        if value < 0 || value > bound then
+                            None
+                        else
+                            Some
+                                ( value
+                                , Replayed rest (Cons (Choice value) recorded)
+                                )
+
+                    _ ->
+                        None
+
 
 group : generator 'a -> generator 'a
 group generator state =
     case state of
         Seeded seed recorded ->
             case generator (Seeded seed Nil) of
-                Some (value, Seeded next children) ->
-                    Some (value, Seeded next (Cons (Group children) recorded))
-                _ -> None
+                Some ( value, Seeded next children ) ->
+                    Some ( value, Seeded next (Cons (Group children) recorded) )
+
+                _ ->
+                    None
+
         Rebuilding remaining recorded ->
             case generator (Rebuilding remaining Nil) of
-                Some (value, Rebuilding rest children) ->
-                    Some (value, Rebuilding rest (Cons (Group children) recorded))
-                _ -> None
+                Some ( value, Rebuilding rest children ) ->
+                    Some
+                        ( value
+                        , Rebuilding rest (Cons (Group children) recorded)
+                        )
+
+                _ ->
+                    None
+
         Replayed remaining recorded ->
             case remaining of
                 Cons (Group children) rest ->
                     case generator (Replayed children Nil) of
-                        Some (value, Replayed _ used) ->
-                            Some (value, Replayed rest (Cons (Group used) recorded))
-                        _ -> None
-                _ -> None
+                        Some ( value, Replayed _ used ) ->
+                            Some
+                                ( value
+                                , Replayed rest (Cons (Group used) recorded)
+                                )
+
+                        _ ->
+                            None
+
+                _ ->
+                    None
+
 
 impl Functor.Functor generator where
     map f generator state =
         case generator state of
-            None -> None
-            Some (value, next) -> Some (f value, next)
+            None ->
+                None
+
+            Some ( value, next ) ->
+                Some ( f value, next )
+
 
 impl Applicative.Applicative generator where
     pure = constant
+
     apply functions values state =
         case group functions state of
-            None -> None
-            Some (f, next) ->
+            None ->
+                None
+
+            Some ( f, next ) ->
                 case group values next of
-                    None -> None
-                    Some (value, final) -> Some (f value, final)
+                    None ->
+                        None
+
+                    Some ( value, final ) ->
+                        Some ( f value, final )
+
 
 impl Monad.Monad generator where
     bind generator continuation state =
         case group generator state of
-            None -> None
-            Some (value, next) -> continuation value next
+            None ->
+                None
+
+            Some ( value, next ) ->
+                continuation value next
+
 
 constant : 'a -> generator 'a
-constant a prng = Some (a, prng)
+constant a prng = Some ( a, prng )
 
-intBetween : (Lift int 'a, Lift int 'b) => 'a -> 'b -> generator int
+
+intBetween : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> generator int
 intBetween low high = intBetweenInt (lower low) (lower high)
+
 
 intBetweenInt : int -> int -> generator int
 intBetweenInt lo hi =
-    if hi < lo then (fail "Prop.intBetween has reversed bounds")
-    else if hi == lo then constant lo
+    if hi < lo then
+        fail "Prop.intBetween has reversed bounds"
+    else if hi == lo then
+        constant lo
     else
-        let draw = bounded (hi - lo) in
-        \state ->
-            case draw state of
-                None -> None
-                Some (n, next) -> Some (lo + n, next)
+        let
+            draw = bounded (hi - lo)
+        in
+            \state ->
+                case draw state of
+                    None ->
+                        None
+
+                    Some ( n, next ) ->
+                        Some ( lo + n, next )
+
 
 -- Bounded offsets; large ranges use whole 64-bit chunks and rejection.
 bounded : int -> generator int
 bounded maximum =
-    if maximum <= 18446744073709551615 then choice maximum
-    else do
-        high <- bounded (maximum / 18446744073709551616)
-        low <- choice 18446744073709551615
-        let value = high * 18446744073709551616 + low in
-            if value <= maximum then Applicative.pure value else bounded maximum
+    if maximum <= 18446744073709551615 then
+        choice maximum
+    else
+        do
+            high <- bounded (maximum / 18446744073709551616)
+            low <- choice 18446744073709551615
+            let
+                value = high * 18446744073709551616 + low
+            in
+                if value <= maximum then
+                    Applicative.pure value
+                else
+                    bounded maximum
+
 
 -- Favor small bit widths, then sample within that width.
 natural : generator int
 natural = naturalFrom 1
 
+
 naturalFrom : int -> generator int
 naturalFrom scale = do
     wider <- choice 3
     case wider of
-        3 -> naturalFrom (scale * 256)
-        _ -> do
-            bits <- choice 7
-            bounded (scale * Int.pow2 (bits + 1) - 1)
+        3 ->
+            naturalFrom (scale * 256)
+
+        _ ->
+            do
+                bits <- choice 7
+                bounded (scale * Int.pow2 (bits + 1) - 1)
+
 
 intAtLeast : Lift int 'n => 'n -> generator int
 intAtLeast minimum =
-    let lo = lower minimum in
-    Functor.map (\offset -> lo + offset) natural
+    let
+        lo = lower minimum
+    in
+        Functor.map (\offset -> lo + offset) natural
+
 
 -- Favor small values; the wide branch has no fixed integer ceiling.
 int : generator int
 int state =
     case choice 2 state of
-        None -> None
-        Some (width, next) ->
+        None ->
+            None
+
+        Some ( width, next ) ->
             case width of
-                0 -> choice 255 next
-                1 -> intBetween -32768 32767 next
-                _ -> signed next
+                0 ->
+                    choice 255 next
+
+                1 ->
+                    intBetween (-32768) 32767 next
+
+                _ ->
+                    signed next
+
 
 signed : generator int
 signed = do
     magnitude <- natural
     case magnitude of
-        0 -> Applicative.pure 0
-        _ -> do
-            negative <- bool
-            Applicative.pure (if negative then -magnitude else magnitude)
+        0 ->
+            Applicative.pure 0
+
+        _ ->
+            do
+                negative <- bool
+                Applicative.pure
+                    (
+                        if negative then
+                            -magnitude
+                        else
+                            magnitude
+                    )
+
 
 listOf : generator 'a -> generator (list 'a)
 listOf = listBetween 0 20
 
-listBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator 'a -> generator (list 'a)
-listBetween low high generator = listBetweenInt (lower low) (lower high) generator
+
+listBetween : ( Lift int 'l, Lift int 'h )
+    => 'l -> 'h -> generator 'a -> generator (list 'a)
+listBetween low high generator =
+    listBetweenInt (lower low) (lower high) generator
+
 
 listBetweenInt : int -> int -> generator 'a -> generator (list 'a)
 listBetweenInt lo hi item =
-    if lo < 0 || hi < lo then (fail "Prop.listBetween has invalid bounds")
-    else listFrom 0 lo hi item
+    if lo < 0 || hi < lo then
+        fail "Prop.listBetween has invalid bounds"
+    else
+        listFrom 0 lo hi item
+
 
 listFrom : int -> int -> int -> generator 'a -> generator (list 'a)
 listFrom n lo hi item =
-    if n >= hi then Applicative.pure []
+    if n >= hi then
+        Applicative.pure []
     else
         do
             step <- listIteration (n < lo) item
             case step of
-                None -> Applicative.pure []
+                None ->
+                    Applicative.pure []
+
                 Some value ->
-                    Functor.map (Builtin.mkCons value) (listFrom (n + 1) lo hi item)
+                    Functor.map
+                        (Builtin.mkCons value)
+                        (listFrom (n + 1) lo hi item)
+
 
 listIteration : bool -> generator 'a -> generator (option 'a)
 listIteration required item state = do
-    (continue, next) <- (if required then constant 1 else choice 1) state
+    ( continue, next ) <-
+        (
+            if required then
+                constant 1
+            else
+                choice 1
+        )
+            state
     case continue of
-        0 -> Some (None, next)
-        _ -> (Monad.bind item (\value -> Applicative.pure (Some value))) next
+        0 ->
+            Some ( None, next )
 
-tuple2 : generator 'a -> generator 'b -> generator ('a, 'b)
+        _ ->
+            (Monad.bind item (\value -> Applicative.pure (Some value))) next
+
+
+tuple2 : generator 'a -> generator 'b -> generator ( 'a, 'b )
 tuple2 first second = do
     a <- first
     b <- second
-    Applicative.pure (a, b)
+    Applicative.pure ( a, b )
+
 
 -- Generators contain functions, so use the Term-representation Cons list.
 oneOf : cons (generator 'a) -> generator 'a
 oneOf generators =
     case generators of
-        Nil -> \_ -> None
+        Nil ->
+            \_ -> None
+
         Cons _ _ ->
-            let draw = choice (Cons.length generators - 1) in
-            \state ->
-                case draw state of
-                    None -> None
-                    Some (n, next) -> pick n generators next
+            let
+                draw = choice (Cons.length generators - 1)
+            in
+                \state ->
+                    case draw state of
+                        None ->
+                            None
+
+                        Some ( n, next ) ->
+                            pick n generators next
+
 
 pick : int -> cons (generator 'a) -> generator 'a
 pick index generators =
     case generators of
-        Nil -> \_ -> None
-        Cons first rest -> if index == 0 then group first else pick (index - 1) rest
+        Nil ->
+            \_ -> None
+
+        Cons first rest ->
+            if index == 0 then
+                group first
+            else
+                pick (index - 1) rest
+
 
 bytes : generator bytes
 bytes = bytesBetween 0 32
 
+
 bool : generator bool
 bool = Functor.map (\n -> n == 1) (choice 1)
+
 
 option : generator 'a -> generator (option 'a)
 option item = do
     present <- bool
-    if present then Functor.map Some (group item) else Applicative.pure None
+    if present then
+        Functor.map Some (group item)
+    else
+        Applicative.pure None
 
-bytesBetween : (Lift int 'l, Lift int 'h) => 'l -> 'h -> generator bytes
+
+bytesBetween : ( Lift int 'l, Lift int 'h ) => 'l -> 'h -> generator bytes
 bytesBetween lo hi = Functor.map packBytes (listBetween lo hi (choice 255))
+
 
 bytesExactly : Lift int 'n => 'n -> generator bytes
 bytesExactly count =
-    let n = lower count in
-    bytesBetween n n
+    let
+        n = lower count
+    in
+        bytesBetween n n
 
-frequency : Lift int 'w => cons ('w, generator 'a) -> generator 'a
+
+frequency : Lift int 'w => cons ( 'w, generator 'a ) -> generator 'a
 frequency entries =
-    let total = totalWeight entries in
-    if total == 0 then \_ -> None
-    else
-        let draw = bounded (total - 1) in
-        \state -> do
-            (index, next) <- draw state
-            weighted index entries next
+    let
+        total = totalWeight entries
+    in
+        if total == 0 then
+            \_ -> None
+        else
+            let
+                draw = bounded (total - 1)
+            in
+                \state ->
+                    do
+                        ( index, next ) <- draw state
+                        weighted index entries next
 
-totalWeight : Lift int 'w => cons ('w, generator 'a) -> int
-totalWeight entries = case entries of
-    Nil -> 0
-    Cons (weight, _) rest ->
-        let n = lower weight in
-        if n < 0 then (fail "Prop.frequency requires nonnegative weights")
-        else n + totalWeight rest
 
-weighted : Lift int 'w => int -> cons ('w, generator 'a) -> generator 'a
-weighted index entries = case entries of
-    Nil -> \_ -> None
-    Cons (weight, item) rest ->
-        let n = lower weight in
-        if index < n then group item
-        else weighted (index - n) rest
+totalWeight : Lift int 'w => cons ( 'w, generator 'a ) -> int
+totalWeight entries =
+    case entries of
+        Nil ->
+            0
+
+        Cons ( weight, _ ) rest ->
+            let
+                n = lower weight
+            in
+                if n < 0 then
+                    fail "Prop.frequency requires nonnegative weights"
+                else
+                    n + totalWeight rest
+
+
+weighted : Lift int 'w => int -> cons ( 'w, generator 'a ) -> generator 'a
+weighted index entries =
+    case entries of
+        Nil ->
+            \_ -> None
+
+        Cons ( weight, item ) rest ->
+            let
+                n = lower weight
+            in
+                if index < n then
+                    group item
+                else
+                    weighted (index - n) rest
+
 
 packBytes : list int -> bytes
 packBytes values =
     case values of
-        [] -> #""
-        x :: xs -> Builtin.consByteString x (packBytes xs)
+        [] ->
+            #""
+
+        x :: xs ->
+            Builtin.consByteString x (packBytes xs)

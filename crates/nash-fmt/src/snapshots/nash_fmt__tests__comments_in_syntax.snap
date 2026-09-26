@@ -2,13 +2,15 @@
 source: crates/nash-fmt/src/tests.rs
 description: "module Main exposing (x, -- export\n    y)\nimport Foo exposing (a, -- import\n    b)\nx = f -- argument\n    1\ny = { a = -- field\n    2, b = [ -- empty\n    ] }\n"
 ---
-module Main exposing ( x
+module Main exposing
+    ( x
     , -- export
     y
     )
 
 
-import Foo exposing ( a
+import Foo exposing
+    ( a
     , -- import
     b
     )
