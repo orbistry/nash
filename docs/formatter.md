@@ -5,6 +5,10 @@ are visited recursively; the default is the current directory. The command
 skips `.git`, `.jj`, `target`, `build`, and `node_modules`, and does not follow
 symlinks discovered during directory traversal. Explicit file symlinks resolve
 to their targets. It formats source without loading a project, imports, or Base.
+Filesystem and stream I/O is asynchronous. Files are processed concurrently,
+with parsing, formatting, and diff construction on blocking worker threads.
+Diagnostics appear as files finish; their order is unspecified. Overlapping
+input paths are deduplicated before processing.
 
 `--check` leaves files untouched and exits 1 when formatting differs or a file
 cannot be parsed. A clean check is silent. Changed files have a contextual

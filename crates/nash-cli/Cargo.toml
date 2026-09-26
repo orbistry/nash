@@ -32,7 +32,7 @@ nash-driver = { path = "../nash-driver", version = "0.10.0" }
 nash-language-server = { path = "../nash-language-server", version = "0.4.4" }
 octocrab.workspace = true
 tar.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-std"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-std", "io-util"] }
 tokio-util = { version = "0.7.18", features = ["compat"] }
 tower-lsp-server.workspace = true
 xz2.workspace = true
