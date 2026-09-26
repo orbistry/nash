@@ -1,5 +1,11 @@
 # nash-constrain
 
+## 0.8.2 — 2026-09-26
+
+### Patch changes
+
+- Updated dependencies: nash-can@0.12.0
+
 ## 0.8.1 — 2026-09-25
 
 ### Patch changes

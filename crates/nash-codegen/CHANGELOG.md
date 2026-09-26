@@ -1,5 +1,11 @@
 # nash-codegen
 
+## 0.4.2 — 2026-09-26
+
+### Patch changes
+
+- Updated dependencies: nash-can@0.12.0, nash-ir@0.3.3, nash-plutus@0.3.2, nash-solve@0.9.1, nash-test@0.4.1
+
 ## 0.4.1 — 2026-09-25
 
 ### Patch changes

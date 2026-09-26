@@ -242,9 +242,9 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "bitcoin-consensus-encoding"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6712f9c6fd6785b3b270884e57c441c403dc5d7e19ca45368c97c7a1de3000ec"
+checksum = "9daa31138eb443d5751b207f3f64154e2bb09cd59960562ccc7a7112be38147f"
 dependencies = [
  "bitcoin-internals",
  "hex-conservative 1.3.0",
@@ -253,9 +253,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-internals"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d573f4cf32996a8dce612e4348cece65a241f1882ed594047c9ba348e8869fa5"
+checksum = "e8bea3a9f0cfece4564e37cb49a38cc245ca5184719e50d7d0dda3268722c4e2"
 
 [[package]]
 name = "bitcoin-io"
@@ -1893,7 +1893,7 @@ dependencies = [
 
 [[package]]
 name = "nash-can"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1909,7 +1909,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "clap",
  "color-print",
@@ -1939,7 +1939,7 @@ dependencies = [
 
 [[package]]
 name = "nash-codegen"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1977,7 +1977,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "bumpalo",
  "insta",
@@ -1988,7 +1988,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "async-trait",
  "bumpalo",
@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ir"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "insta",
  "nash-ast",
@@ -2026,7 +2026,7 @@ dependencies = [
 
 [[package]]
 name = "nash-language-server"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "insta",
  "nash-driver",
@@ -2065,7 +2065,7 @@ dependencies = [
 
 [[package]]
 name = "nash-plutus"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "append-only-vec",
  "blst",
@@ -2095,7 +2095,7 @@ version = "0.3.0"
 
 [[package]]
 name = "nash-report"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2116,7 +2116,7 @@ dependencies = [
 
 [[package]]
 name = "nash-solve"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "nash-test"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "cryptoxide",
  "insta",
@@ -4040,18 +4040,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.58"
+version = "0.8.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17e8fafad82b542ff3717217ecdc736231b59e387768c9630123b4ce4d2db44"
+checksum = "6df92bf3d9227be3d53173901ddbffac2babc27ae50f397776ffd6dc33f800cb"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.58"
+version = "0.8.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595f56e044df4f46a0c9a626f65c3d99eb8488f7e8a8baa12dd76326d9710bf2"
+checksum = "ac4f328cf2f05d084e496c3e9c3f33ed0a183656a16e1fcec4d464d8373aec82"
 dependencies = [
  "proc-macro2",
  "quote",

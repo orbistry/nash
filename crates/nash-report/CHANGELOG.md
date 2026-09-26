@@ -1,5 +1,11 @@
 # nash-report
 
+## 0.5.3 — 2026-09-26
+
+### Patch changes
+
+- Updated dependencies: nash-can@0.12.0, nash-constrain@0.8.2
+
 ## 0.5.2 — 2026-09-25
 
 ### Patch changes

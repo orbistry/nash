@@ -1,5 +1,22 @@
 # nash-can
 
+## 0.12.0 — 2026-09-26
+
+### Minor changes
+
+- [d7301b1f](https://github.com/orbistry/nash/commit/d7301b1f5d833f84301bfdc7e58345701f2c2fd9) Consolidate Data conversion and checking in traits. Allow explicit little-type
+  ToData and FromData implementations alongside Big-only identity blankets. Add
+  independent optional Decode instances, including Cardano V3 types, and remove
+  the separate encoder and decoder combinator modules.
+  
+  Encode Flat terms iteratively so large context decoders do not exhaust the host stack. — Thanks @MicroProofs!
+- [bec1d2ac](https://github.com/orbistry/nash/commit/bec1d2accff3476ada1195d93c473f68f5434a08) Add integer gcd/lcm/square-root operations and result-checking predicates,
+  normalized little rational arithmetic, and Big/little Crypto wrappers over
+  Plutus hash and signature builtins. Move the Bytes hash helpers into Crypto. Embed Rational and Crypto with implicit
+  qualified imports, exact reference snapshots and predicate budget comparisons. — Thanks @MicroProofs!
+- [6c489a62](https://github.com/orbistry/nash/commit/6c489a62742bd1fb4a64d5f3e9ab51c075785988) Ship Cardano V3 context, address, governance, value, and interval modules in Base. Use native value builtins, explicit Nash wire validation, and Haskell-generated encoding and interval comparisons. — Thanks @MicroProofs!
+- [4c3c9dbb](https://github.com/orbistry/nash/commit/4c3c9dbb0e0e7cc077e113e9d4e31fa0e3ab9a72) Add Function to the application default imports for qualified access to applyForward and applyBackward. — Thanks @MicroProofs!
+
 ## 0.11.0 — 2026-09-25
 
 ### Minor changes
