@@ -1,0 +1,751 @@
+---
+source: crates/nash-docs/src/tests.rs
+---
+- name: Builtin
+  blocks:
+    - Declaration:
+        name: addInteger
+        kind: Builtin
+        signature: "addInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `AddInteger` builtin."
+    - Declaration:
+        name: subtractInteger
+        kind: Builtin
+        signature: "subtractInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `SubtractInteger` builtin."
+    - Declaration:
+        name: multiplyInteger
+        kind: Builtin
+        signature: "multiplyInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `MultiplyInteger` builtin."
+    - Declaration:
+        name: divideInteger
+        kind: Builtin
+        signature: "divideInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `DivideInteger` builtin."
+    - Declaration:
+        name: quotientInteger
+        kind: Builtin
+        signature: "quotientInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `QuotientInteger` builtin."
+    - Declaration:
+        name: remainderInteger
+        kind: Builtin
+        signature: "remainderInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `RemainderInteger` builtin."
+    - Declaration:
+        name: modInteger
+        kind: Builtin
+        signature: "modInteger : int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `ModInteger` builtin."
+    - Declaration:
+        name: equalsInteger
+        kind: Builtin
+        signature: "equalsInteger : int -> int -> bool"
+        type_kind: ~
+        doc: "Plutus Core `EqualsInteger` builtin."
+    - Declaration:
+        name: lessThanInteger
+        kind: Builtin
+        signature: "lessThanInteger : int -> int -> bool"
+        type_kind: ~
+        doc: "Plutus Core `LessThanInteger` builtin."
+    - Declaration:
+        name: lessThanEqualsInteger
+        kind: Builtin
+        signature: "lessThanEqualsInteger : int -> int -> bool"
+        type_kind: ~
+        doc: "Plutus Core `LessThanEqualsInteger` builtin."
+    - Declaration:
+        name: appendByteString
+        kind: Builtin
+        signature: "appendByteString : bytes -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `AppendByteString` builtin."
+    - Declaration:
+        name: consByteString
+        kind: Builtin
+        signature: "consByteString : int -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `ConsByteString` builtin."
+    - Declaration:
+        name: sliceByteString
+        kind: Builtin
+        signature: "sliceByteString : int -> int -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `SliceByteString` builtin."
+    - Declaration:
+        name: lengthOfByteString
+        kind: Builtin
+        signature: "lengthOfByteString : bytes -> int"
+        type_kind: ~
+        doc: "Plutus Core `LengthOfByteString` builtin."
+    - Declaration:
+        name: indexByteString
+        kind: Builtin
+        signature: "indexByteString : bytes -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `IndexByteString` builtin."
+    - Declaration:
+        name: equalsByteString
+        kind: Builtin
+        signature: "equalsByteString : bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `EqualsByteString` builtin."
+    - Declaration:
+        name: lessThanByteString
+        kind: Builtin
+        signature: "lessThanByteString : bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `LessThanByteString` builtin."
+    - Declaration:
+        name: lessThanEqualsByteString
+        kind: Builtin
+        signature: "lessThanEqualsByteString : bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `LessThanEqualsByteString` builtin."
+    - Declaration:
+        name: sha2_256
+        kind: Builtin
+        signature: "sha2_256 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Sha2_256` builtin."
+    - Declaration:
+        name: sha3_256
+        kind: Builtin
+        signature: "sha3_256 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Sha3_256` builtin."
+    - Declaration:
+        name: blake2b_256
+        kind: Builtin
+        signature: "blake2b_256 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Blake2b_256` builtin."
+    - Declaration:
+        name: blake2b_224
+        kind: Builtin
+        signature: "blake2b_224 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Blake2b_224` builtin."
+    - Declaration:
+        name: keccak_256
+        kind: Builtin
+        signature: "keccak_256 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Keccak_256` builtin."
+    - Declaration:
+        name: ripemd_160
+        kind: Builtin
+        signature: "ripemd_160 : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Ripemd_160` builtin."
+    - Declaration:
+        name: verifyEd25519Signature
+        kind: Builtin
+        signature: "verifyEd25519Signature : bytes -> bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `VerifyEd25519Signature` builtin."
+    - Declaration:
+        name: verifyEcdsaSecp256k1Signature
+        kind: Builtin
+        signature: "verifyEcdsaSecp256k1Signature : bytes -> bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `VerifyEcdsaSecp256k1Signature` builtin."
+    - Declaration:
+        name: verifySchnorrSecp256k1Signature
+        kind: Builtin
+        signature: "verifySchnorrSecp256k1Signature : bytes -> bytes -> bytes -> bool"
+        type_kind: ~
+        doc: "Plutus Core `VerifySchnorrSecp256k1Signature` builtin."
+    - Declaration:
+        name: appendString
+        kind: Builtin
+        signature: "appendString : string -> string -> string"
+        type_kind: ~
+        doc: "Plutus Core `AppendString` builtin."
+    - Declaration:
+        name: equalsString
+        kind: Builtin
+        signature: "equalsString : string -> string -> bool"
+        type_kind: ~
+        doc: "Plutus Core `EqualsString` builtin."
+    - Declaration:
+        name: encodeUtf8
+        kind: Builtin
+        signature: "encodeUtf8 : string -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `EncodeUtf8` builtin."
+    - Declaration:
+        name: decodeUtf8
+        kind: Builtin
+        signature: "decodeUtf8 : bytes -> string"
+        type_kind: ~
+        doc: "Plutus Core `DecodeUtf8` builtin."
+    - Declaration:
+        name: ifThenElse
+        kind: Builtin
+        signature: "ifThenElse : bool -> 'a -> 'a -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `IfThenElse` builtin."
+    - Declaration:
+        name: chooseUnit
+        kind: Builtin
+        signature: "chooseUnit : unit -> 'a -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `ChooseUnit` builtin."
+    - Declaration:
+        name: trace
+        kind: Builtin
+        signature: "trace : string -> 'a -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `Trace` builtin."
+    - Declaration:
+        name: fstPair
+        kind: Builtin
+        signature: "fstPair : pair 'a 'b -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `FstPair` builtin."
+    - Declaration:
+        name: sndPair
+        kind: Builtin
+        signature: "sndPair : pair 'a 'b -> 'b"
+        type_kind: ~
+        doc: "Plutus Core `SndPair` builtin."
+    - Declaration:
+        name: chooseList
+        kind: Builtin
+        signature: "chooseList : list 'a -> 'b -> 'b -> 'b"
+        type_kind: ~
+        doc: "Plutus Core `ChooseList` builtin."
+    - Declaration:
+        name: mkCons
+        kind: Builtin
+        signature: "mkCons : 'a -> list 'a -> list 'a"
+        type_kind: ~
+        doc: "Plutus Core `MkCons` builtin."
+    - Declaration:
+        name: headList
+        kind: Builtin
+        signature: "headList : list 'a -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `HeadList` builtin."
+    - Declaration:
+        name: tailList
+        kind: Builtin
+        signature: "tailList : list 'a -> list 'a"
+        type_kind: ~
+        doc: "Plutus Core `TailList` builtin."
+    - Declaration:
+        name: nullList
+        kind: Builtin
+        signature: "nullList : list 'a -> bool"
+        type_kind: ~
+        doc: "Plutus Core `NullList` builtin."
+    - Declaration:
+        name: dropList
+        kind: Builtin
+        signature: "dropList : int -> list 'a -> list 'a"
+        type_kind: ~
+        doc: "Plutus Core `DropList` builtin."
+    - Declaration:
+        name: chooseData
+        kind: Builtin
+        signature: "chooseData : Data -> 'a -> 'a -> 'a -> 'a -> 'a -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `ChooseData` builtin."
+    - Declaration:
+        name: constrData
+        kind: Builtin
+        signature: "constrData : int -> list Data -> Data"
+        type_kind: ~
+        doc: "Plutus Core `ConstrData` builtin."
+    - Declaration:
+        name: mapData
+        kind: Builtin
+        signature: "mapData : (Big 'a, Big 'b) => list (pair 'a 'b) -> Map 'a 'b"
+        type_kind: ~
+        doc: "Plutus Core `MapData` builtin."
+    - Declaration:
+        name: listData
+        kind: Builtin
+        signature: "listData : Big 'a => list 'a -> List 'a"
+        type_kind: ~
+        doc: "Plutus Core `ListData` builtin."
+    - Declaration:
+        name: iData
+        kind: Builtin
+        signature: "iData : int -> Int"
+        type_kind: ~
+        doc: "Plutus Core `IData` builtin."
+    - Declaration:
+        name: bData
+        kind: Builtin
+        signature: "bData : bytes -> Bytes"
+        type_kind: ~
+        doc: "Plutus Core `BData` builtin."
+    - Declaration:
+        name: unConstrData
+        kind: Builtin
+        signature: "unConstrData : Data -> pair int (list Data)"
+        type_kind: ~
+        doc: "Plutus Core `UnConstrData` builtin."
+    - Declaration:
+        name: unMapData
+        kind: Builtin
+        signature: "unMapData : (Big 'a, Big 'b) => Map 'a 'b -> list (pair 'a 'b)"
+        type_kind: ~
+        doc: "Plutus Core `UnMapData` builtin."
+    - Declaration:
+        name: unListData
+        kind: Builtin
+        signature: "unListData : Big 'a => List 'a -> list 'a"
+        type_kind: ~
+        doc: "Plutus Core `UnListData` builtin."
+    - Declaration:
+        name: unIData
+        kind: Builtin
+        signature: "unIData : Int -> int"
+        type_kind: ~
+        doc: "Plutus Core `UnIData` builtin."
+    - Declaration:
+        name: unBData
+        kind: Builtin
+        signature: "unBData : Bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `UnBData` builtin."
+    - Declaration:
+        name: equalsData
+        kind: Builtin
+        signature: "equalsData : Data -> Data -> bool"
+        type_kind: ~
+        doc: "Plutus Core `EqualsData` builtin."
+    - Declaration:
+        name: serialiseData
+        kind: Builtin
+        signature: "serialiseData : Data -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `SerialiseData` builtin."
+    - Declaration:
+        name: mkPairData
+        kind: Builtin
+        signature: "mkPairData : (Big 'a, Big 'b) => 'a -> 'b -> pair 'a 'b"
+        type_kind: ~
+        doc: "Plutus Core `MkPairData` builtin."
+    - Declaration:
+        name: mkNilData
+        kind: Builtin
+        signature: "mkNilData : unit -> list Data"
+        type_kind: ~
+        doc: "Plutus Core `MkNilData` builtin."
+    - Declaration:
+        name: mkNilPairData
+        kind: Builtin
+        signature: "mkNilPairData : unit -> list (pair Data Data)"
+        type_kind: ~
+        doc: "Plutus Core `MkNilPairData` builtin."
+    - Declaration:
+        name: bls12_381_g1_add
+        kind: Builtin
+        signature: "bls12_381_g1_add : bls_g1 -> bls_g1 -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_Add` builtin."
+    - Declaration:
+        name: bls12_381_g1_neg
+        kind: Builtin
+        signature: "bls12_381_g1_neg : bls_g1 -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_Neg` builtin."
+    - Declaration:
+        name: bls12_381_g1_scalarMul
+        kind: Builtin
+        signature: "bls12_381_g1_scalarMul : int -> bls_g1 -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_ScalarMul` builtin."
+    - Declaration:
+        name: bls12_381_g1_equal
+        kind: Builtin
+        signature: "bls12_381_g1_equal : bls_g1 -> bls_g1 -> bool"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_Equal` builtin."
+    - Declaration:
+        name: bls12_381_g1_compress
+        kind: Builtin
+        signature: "bls12_381_g1_compress : bls_g1 -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_Compress` builtin."
+    - Declaration:
+        name: bls12_381_g1_uncompress
+        kind: Builtin
+        signature: "bls12_381_g1_uncompress : bytes -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_Uncompress` builtin."
+    - Declaration:
+        name: bls12_381_g1_hashToGroup
+        kind: Builtin
+        signature: "bls12_381_g1_hashToGroup : bytes -> bytes -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_HashToGroup` builtin."
+    - Declaration:
+        name: bls12_381_g1_multiScalarMul
+        kind: Builtin
+        signature: "bls12_381_g1_multiScalarMul : list int -> list bls_g1 -> bls_g1"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G1_MultiScalarMul` builtin."
+    - Declaration:
+        name: bls12_381_g2_add
+        kind: Builtin
+        signature: "bls12_381_g2_add : bls_g2 -> bls_g2 -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_Add` builtin."
+    - Declaration:
+        name: bls12_381_g2_neg
+        kind: Builtin
+        signature: "bls12_381_g2_neg : bls_g2 -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_Neg` builtin."
+    - Declaration:
+        name: bls12_381_g2_scalarMul
+        kind: Builtin
+        signature: "bls12_381_g2_scalarMul : int -> bls_g2 -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_ScalarMul` builtin."
+    - Declaration:
+        name: bls12_381_g2_equal
+        kind: Builtin
+        signature: "bls12_381_g2_equal : bls_g2 -> bls_g2 -> bool"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_Equal` builtin."
+    - Declaration:
+        name: bls12_381_g2_compress
+        kind: Builtin
+        signature: "bls12_381_g2_compress : bls_g2 -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_Compress` builtin."
+    - Declaration:
+        name: bls12_381_g2_uncompress
+        kind: Builtin
+        signature: "bls12_381_g2_uncompress : bytes -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_Uncompress` builtin."
+    - Declaration:
+        name: bls12_381_g2_hashToGroup
+        kind: Builtin
+        signature: "bls12_381_g2_hashToGroup : bytes -> bytes -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_HashToGroup` builtin."
+    - Declaration:
+        name: bls12_381_g2_multiScalarMul
+        kind: Builtin
+        signature: "bls12_381_g2_multiScalarMul : list int -> list bls_g2 -> bls_g2"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_G2_MultiScalarMul` builtin."
+    - Declaration:
+        name: bls12_381_millerLoop
+        kind: Builtin
+        signature: "bls12_381_millerLoop : bls_g1 -> bls_g2 -> bls_mlr"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_MillerLoop` builtin."
+    - Declaration:
+        name: bls12_381_mulMlResult
+        kind: Builtin
+        signature: "bls12_381_mulMlResult : bls_mlr -> bls_mlr -> bls_mlr"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_MulMlResult` builtin."
+    - Declaration:
+        name: bls12_381_finalVerify
+        kind: Builtin
+        signature: "bls12_381_finalVerify : bls_mlr -> bls_mlr -> bool"
+        type_kind: ~
+        doc: "Plutus Core `Bls12_381_FinalVerify` builtin."
+    - Declaration:
+        name: integerToByteString
+        kind: Builtin
+        signature: "integerToByteString : bool -> int -> int -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `IntegerToByteString` builtin."
+    - Declaration:
+        name: byteStringToInteger
+        kind: Builtin
+        signature: "byteStringToInteger : bool -> bytes -> int"
+        type_kind: ~
+        doc: "Plutus Core `ByteStringToInteger` builtin."
+    - Declaration:
+        name: andByteString
+        kind: Builtin
+        signature: "andByteString : bool -> bytes -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `AndByteString` builtin."
+    - Declaration:
+        name: orByteString
+        kind: Builtin
+        signature: "orByteString : bool -> bytes -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `OrByteString` builtin."
+    - Declaration:
+        name: xorByteString
+        kind: Builtin
+        signature: "xorByteString : bool -> bytes -> bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `XorByteString` builtin."
+    - Declaration:
+        name: complementByteString
+        kind: Builtin
+        signature: "complementByteString : bytes -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `ComplementByteString` builtin."
+    - Declaration:
+        name: readBit
+        kind: Builtin
+        signature: "readBit : bytes -> int -> bool"
+        type_kind: ~
+        doc: "Plutus Core `ReadBit` builtin."
+    - Declaration:
+        name: writeBits
+        kind: Builtin
+        signature: "writeBits : bytes -> list int -> bool -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `WriteBits` builtin."
+    - Declaration:
+        name: replicateByte
+        kind: Builtin
+        signature: "replicateByte : int -> int -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `ReplicateByte` builtin."
+    - Declaration:
+        name: shiftByteString
+        kind: Builtin
+        signature: "shiftByteString : bytes -> int -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `ShiftByteString` builtin."
+    - Declaration:
+        name: rotateByteString
+        kind: Builtin
+        signature: "rotateByteString : bytes -> int -> bytes"
+        type_kind: ~
+        doc: "Plutus Core `RotateByteString` builtin."
+    - Declaration:
+        name: countSetBits
+        kind: Builtin
+        signature: "countSetBits : bytes -> int"
+        type_kind: ~
+        doc: "Plutus Core `CountSetBits` builtin."
+    - Declaration:
+        name: findFirstSetBit
+        kind: Builtin
+        signature: "findFirstSetBit : bytes -> int"
+        type_kind: ~
+        doc: "Plutus Core `FindFirstSetBit` builtin."
+    - Declaration:
+        name: expModInteger
+        kind: Builtin
+        signature: "expModInteger : int -> int -> int -> int"
+        type_kind: ~
+        doc: "Plutus Core `ExpModInteger` builtin."
+    - Declaration:
+        name: lengthOfArray
+        kind: Builtin
+        signature: "lengthOfArray : array 'a -> int"
+        type_kind: ~
+        doc: "Plutus Core `LengthOfArray` builtin."
+    - Declaration:
+        name: listToArray
+        kind: Builtin
+        signature: "listToArray : list 'a -> array 'a"
+        type_kind: ~
+        doc: "Plutus Core `ListToArray` builtin."
+    - Declaration:
+        name: indexArray
+        kind: Builtin
+        signature: "indexArray : array 'a -> int -> 'a"
+        type_kind: ~
+        doc: "Plutus Core `IndexArray` builtin."
+    - Declaration:
+        name: insertCoin
+        kind: Builtin
+        signature: "insertCoin : bytes -> bytes -> int -> value -> value"
+        type_kind: ~
+        doc: "Plutus Core `InsertCoin` builtin."
+    - Declaration:
+        name: lookupCoin
+        kind: Builtin
+        signature: "lookupCoin : bytes -> bytes -> value -> int"
+        type_kind: ~
+        doc: "Plutus Core `LookupCoin` builtin."
+    - Declaration:
+        name: unionValue
+        kind: Builtin
+        signature: "unionValue : value -> value -> value"
+        type_kind: ~
+        doc: "Plutus Core `UnionValue` builtin."
+    - Declaration:
+        name: valueContains
+        kind: Builtin
+        signature: "valueContains : value -> value -> bool"
+        type_kind: ~
+        doc: "Plutus Core `ValueContains` builtin."
+    - Declaration:
+        name: valueData
+        kind: Builtin
+        signature: "valueData : value -> Data"
+        type_kind: ~
+        doc: "Plutus Core `ValueData` builtin."
+    - Declaration:
+        name: unValueData
+        kind: Builtin
+        signature: "unValueData : Data -> value"
+        type_kind: ~
+        doc: "Plutus Core `UnValueData` builtin."
+    - Declaration:
+        name: scaleValue
+        kind: Builtin
+        signature: "scaleValue : int -> value -> value"
+        type_kind: ~
+        doc: "Plutus Core `ScaleValue` builtin."
+- name: Primitive
+  blocks:
+    - Declaration:
+        name: Data
+        kind: Primitive
+        signature: type Data = Constr (pair int (list Data)) | Map (list (pair Data Data)) | List (list Data) | I int | B bytes
+        type_kind: Type
+        doc: "Data representation; kind `Type`."
+    - Declaration:
+        name: Int
+        kind: Primitive
+        signature: type Int
+        type_kind: Type
+        doc: "Data representation; kind `Type`."
+    - Declaration:
+        name: Bytes
+        kind: Primitive
+        signature: type Bytes
+        type_kind: Type
+        doc: "Data representation; kind `Type`."
+    - Declaration:
+        name: List
+        kind: Primitive
+        signature: "type List 'a"
+        type_kind: Type -> Type
+        doc: "Data representation; kind `Type -> Type`. Parameter 1 requires `Big`."
+    - Declaration:
+        name: Map
+        kind: Primitive
+        signature: "type Map 'a 'b"
+        type_kind: Type -> Type -> Type
+        doc: "Data representation; kind `Type -> Type -> Type`. Parameter 1 requires `Big`. Parameter 2 requires `Big`."
+    - Declaration:
+        name: int
+        kind: Primitive
+        signature: type int
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: bytes
+        kind: Primitive
+        signature: type bytes
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: string
+        kind: Primitive
+        signature: type string
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: bool
+        kind: Primitive
+        signature: type bool = False | True
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: unit
+        kind: Primitive
+        signature: type unit
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: bls_g1
+        kind: Primitive
+        signature: type bls_g1
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: bls_g2
+        kind: Primitive
+        signature: type bls_g2
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: bls_mlr
+        kind: Primitive
+        signature: type bls_mlr
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: value
+        kind: Primitive
+        signature: type value
+        type_kind: Type
+        doc: "Constant representation; kind `Type`."
+    - Declaration:
+        name: list
+        kind: Primitive
+        signature: "type list 'a"
+        type_kind: Type -> Type
+        doc: "Constant representation; kind `Type -> Type`. Parameter 1 requires `Storable`."
+    - Declaration:
+        name: array
+        kind: Primitive
+        signature: "type array 'a"
+        type_kind: Type -> Type
+        doc: "Constant representation; kind `Type -> Type`. Parameter 1 requires `Storable`."
+    - Declaration:
+        name: pair
+        kind: Primitive
+        signature: "type pair 'a 'b"
+        type_kind: Type -> Type -> Type
+        doc: "Constant representation; kind `Type -> Type -> Type`. Parameter 1 requires `Storable`. Parameter 2 requires `Storable`."
+    - Declaration:
+        name: Big
+        kind: Trait
+        signature: "trait Big 'a"
+        type_kind: ~
+        doc: Compiler-checked representation constraint; no runtime test is emitted.
+    - Declaration:
+        name: Const
+        kind: Trait
+        signature: "trait Const 'a"
+        type_kind: ~
+        doc: Compiler-checked representation constraint; no runtime test is emitted.
+    - Declaration:
+        name: Term
+        kind: Trait
+        signature: "trait Term 'a"
+        type_kind: ~
+        doc: Compiler-checked representation constraint; no runtime test is emitted.
+    - Declaration:
+        name: Storable
+        kind: Trait
+        signature: "trait Storable 'a"
+        type_kind: ~
+        doc: Compiler-checked representation constraint; no runtime test is emitted.
+    - Declaration:
+        name: Little
+        kind: Trait
+        signature: "trait Little 'a"
+        type_kind: ~
+        doc: Compiler-checked representation constraint; no runtime test is emitted.
+    - Declaration:
+        name: coerce
+        kind: Value
+        signature: "coerce : 'a -> 'b"
+        type_kind: ~
+        doc: Unchecked coercion. The caller is responsible for the runtime representation.

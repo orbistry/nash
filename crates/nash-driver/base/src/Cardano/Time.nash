@@ -23,16 +23,19 @@ import Bool exposing ( Bool )
 import Lift exposing ( Lift )
 
 
+{-| A finite ledger time or negative/positive infinity. -}
 type Extended
     = NegInf
     | Finite Int
     | PosInf
 
 
+{-| A ledger interval endpoint and its inclusive/exclusive flag. -}
 type IntervalBound
     = IntervalBound { bound : Extended, inclusive : Bool }
 
 
+{-| A Plutus ledger interval with lower and upper bounds. -}
 type Interval
     = Interval { lowerBound : IntervalBound, upperBound : IntervalBound }
 
@@ -120,11 +123,13 @@ endpointLe left right =
             a <= b
 
 
+{-| Test whether an interval contains no times. -}
 isEmpty : Interval -> bool
 isEmpty (Interval lo hi) =
     Bool.not (endpointLe (inclusiveEndpoint 1 lo) (inclusiveEndpoint (-1) hi))
 
 
+{-| Test whether the first interval contains the second. -}
 contains : Interval -> Interval -> bool
 contains outer inner =
     if isEmpty inner then
@@ -140,12 +145,14 @@ contains outer inner =
                 (inclusiveEndpoint (-1) outer.upperBound)
 
 
+{-| Test whether a time lies within an interval, respecting endpoint inclusion. -}
 member : Lift int 'n => 'n -> Interval -> bool
 member point (Interval lo hi) =
     endpointLe (inclusiveEndpoint 1 lo) (At (lower point)) &&
         endpointLe (At (lower point)) (inclusiveEndpoint (-1) hi)
 
 
+{-| Construct an interval from the supplied finite endpoints. -}
 interval : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> Interval
 interval start end =
     Interval
@@ -153,6 +160,7 @@ interval start end =
         (IntervalBound (Finite (lift (lower end))) Bool.True)
 
 
+{-| Construct an interval with a finite lower bound and no upper limit. -}
 from : Lift int 'a => 'a -> Interval
 from start =
     Interval
@@ -160,6 +168,7 @@ from start =
         (IntervalBound PosInf Bool.True)
 
 
+{-| Construct an interval with no lower limit and a finite upper bound. -}
 to : Lift int 'a => 'a -> Interval
 to end =
     Interval
@@ -167,11 +176,13 @@ to end =
         (IntervalBound (Finite (lift (lower end))) Bool.True)
 
 
+{-| The interval containing all times. -}
 always : Interval
 always =
     Interval (IntervalBound NegInf Bool.True) (IntervalBound PosInf Bool.True)
 
 
+{-| An empty interval. -}
 never : Interval
 never =
     Interval (IntervalBound PosInf Bool.True) (IntervalBound NegInf Bool.True)

@@ -4,5 +4,6 @@ module Monad exposing ( Monad )
 import Applicative exposing ( Applicative )
 
 
+{-| Sequence dependent computations with bind. Nash do notation uses this trait. -}
 trait Applicative 'm => Monad 'm where
     bind : 'm 'a -> ('a -> 'm 'b) -> 'm 'b

@@ -8,10 +8,12 @@ import Function exposing ( (|>) )
 import Int
 
 
+{-| Encode a string as UTF-8 bytes. -}
 toBytes : string -> bytes
 toBytes = Builtin.encodeUtf8
 
 
+{-| Decode UTF-8 bytes. Invalid UTF-8 fails. -}
 fromBytes : Lift bytes 'b => 'b -> string
 fromBytes value =
     value
@@ -19,10 +21,12 @@ fromBytes value =
         |> Builtin.decodeUtf8
 
 
+{-| Render an integer in decimal notation. -}
 fromInt : Lift int 'n => 'n -> string
 fromInt = Int.toString
 
 
+{-| Concatenate strings in list order. -}
 concat : list string -> string
 concat values = concatList values
 
@@ -37,6 +41,7 @@ concatList xs =
             Builtin.appendString x (concatList rest)
 
 
+{-| Join strings with a separator placed only between entries. -}
 join : string -> list string -> string
 join separator values =
     case values of

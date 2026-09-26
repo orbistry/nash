@@ -17,6 +17,7 @@ import Lift exposing ( Lift )
 import Data exposing ( FromData, ToData, Validate, Decode )
 
 
+{-| The ledger Data encoding of a multi-asset value: policy IDs map to asset-name/quantity maps. -}
 type alias Value =
     Map Bytes (Map Bytes Int)
 
@@ -44,6 +45,7 @@ impl Validate Value where
                 |> fromData
 
 
+{-| An empty native value. -}
 empty : value
 empty = Builtin.unValueData (toData emptyMap)
 
@@ -52,35 +54,42 @@ emptyMap : Value
 emptyMap = Builtin.mapData []
 
 
+{-| Construct a native value for one policy, asset name, and signed quantity. -}
 singleton : ( Lift bytes 'p, Lift bytes 't, Lift int 'n )
     => 'p -> 't -> 'n -> value
 singleton policy token amount = insert policy token amount empty
 
 
+{-| Replace a coin quantity; zero removes that coin. Native value constraints and overflow failures apply. -}
 insert : ( Lift bytes 'p, Lift bytes 't, Lift int 'n, Lift value 'v )
     => 'p -> 't -> 'n -> 'v -> value
 insert policy token amount value =
     Builtin.insertCoin (lower policy) (lower token) (lower amount) (lower value)
 
 
+{-| Return the lovelace quantity in a native or ledger value. -}
 lovelace : Lift value 'v => 'v -> int
 lovelace value = quantityOf #"" #"" value
 
 
+{-| Look up the quantity for a policy and asset name. -}
 quantityOf : ( Lift bytes 'p, Lift bytes 't, Lift value 'v )
     => 'p -> 't -> 'v -> int
 quantityOf policy token value =
     Builtin.lookupCoin (lower policy) (lower token) (lower value)
 
 
+{-| Add native values using the Plutus value builtin. Quantity overflow fails. -}
 add : ( Lift value 'a, Lift value 'b ) => 'a -> 'b -> value
 add left right = Builtin.unionValue (lower left) (lower right)
 
 
+{-| Test value containment using the Plutus builtin, which rejects negative quantities. -}
 contains : ( Lift value 'a, Lift value 'b ) => 'a -> 'b -> bool
 contains left right = Builtin.valueContains (lower left) (lower right)
 
 
+{-| Multiply every quantity by a signed integer. Native quantity overflow fails. -}
 scale : ( Lift int 'n, Lift value 'v ) => 'n -> 'v -> value
 scale amount value = Builtin.scaleValue (lower amount) (lower value)
 

@@ -1,0 +1,52 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (id, type box(..), type secret, type record, Keep, (%%))\n{-| Example API.\n\n@docs Keep, id\n\nTypes below.\n\n@docs box, record, secret, (%%)\n-}\n\ninfix left 5 (%%) = combine\n\n{-| Keep a value unchanged. -}\ntrait Keep 'a where\n    keep : 'a -> 'a\n\n{-| Identity implementation. -}\nimpl Keep int where\n    keep x = x\n\n{-| Preserve the argument. -}\nid x = x\n\n{-| One little payload. -}\ntype box 'a = Box 'a\n\n{-| A hidden constructor. -}\ntype secret = Secret int\n\n{-| A labeled record. -}\ntype alias record = { value : int }\n\ncombine x y = x\nprivate x = x\n"
+---
+module:
+  name: Example
+  blocks:
+    - Text: Example API.
+    - Declaration:
+        name: Keep
+        kind: Trait
+        signature: "trait Keep 'a where\n    keep : 'a -> 'a"
+        type_kind: ~
+        doc: Keep a value unchanged.
+    - Declaration:
+        name: id
+        kind: Value
+        signature: "id : 'a -> 'a"
+        type_kind: ~
+        doc: Preserve the argument.
+    - Text: Types below.
+    - Declaration:
+        name: box
+        kind: Union
+        signature: "type box 'a\n    = Box 'a"
+        type_kind: Type -> Type
+        doc: One little payload.
+    - Declaration:
+        name: record
+        kind: Alias
+        signature: "type alias record = { value : int }"
+        type_kind: Type
+        doc: A labeled record.
+    - Declaration:
+        name: secret
+        kind: Union
+        signature: type secret
+        type_kind: Type
+        doc: A hidden constructor.
+    - Declaration:
+        name: (%%)
+        kind: Operator
+        signature: "(%%) : 'a -> 'b -> 'a\ninfix left 5 (%%) = combine"
+        type_kind: ~
+        doc: "Infix form of `Example.combine`."
+    - Declaration:
+        name: impl Keep int
+        kind: Implementation
+        signature: impl Keep int
+        type_kind: ~
+        doc: Identity implementation.
+warnings: []

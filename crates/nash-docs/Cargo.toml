@@ -1,0 +1,25 @@
+[package]
+name = "nash-docs"
+version = "0.1.0"
+edition.workspace = true
+description = "Documentation extraction and rendering for Nash"
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+nash-ast = { path = "../nash-ast", version = "0.11.0" }
+nash-can = { path = "../nash-can", version = "0.11.0" }
+nash-source = { path = "../nash-source", version = "0.9.0" }
+nash-report = { path = "../nash-report", version = "0.5.2" }
+serde.workspace = true
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+
+[dev-dependencies]
+bumpalo.workspace = true
+indoc.workspace = true
+insta.workspace = true
+nash-driver = { path = "../nash-driver" }
+nash-parse = { path = "../nash-parse" }
+tokio.workspace = true
+url.workspace = true

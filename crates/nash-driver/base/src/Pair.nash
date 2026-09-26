@@ -4,13 +4,16 @@ module Pair exposing ( fst, snd, make )
 import Builtin
 
 
+{-| Extract the first component of a builtin pair. -}
 fst : pair 'a 'b -> 'a
 fst pair(first, _) = first
 
 
+{-| Extract the second component of a builtin pair. -}
 snd : pair 'a 'b -> 'b
 snd pair(_, second) = second
 
 
+{-| Construct a builtin pair from two Data values. -}
 make : Data -> Data -> pair Data Data
 make = Builtin.mkPairData

@@ -23,15 +23,18 @@ import Show exposing ( Show )
 import Functor
 
 
+{-| A Term list that can contain functions and other non-Storable values. Nil is empty; Cons holds an element and the remaining list. -}
 type cons 'a
     = Nil
     | Cons 'a (cons 'a)
 
 
+{-| Create a Term list with one element. -}
 singleton : 'a -> cons 'a
 singleton value = Cons value Nil
 
 
+{-| Apply a function to each element of a Term list. -}
 map : ('a -> 'b) -> cons 'a -> cons 'b
 map = Functor.map
 
@@ -46,6 +49,7 @@ impl Functor.Functor cons where
                 Cons (f x) (Functor.map f xs)
 
 
+{-| Map elements with zero-based indices. -}
 indexedMap : (int -> 'a -> 'b) -> cons 'a -> cons 'b
 indexedMap f values = indexedFrom 0 f values
 
@@ -60,6 +64,7 @@ indexedFrom index f values =
             Cons (f index x) (indexedFrom (Builtin.addInteger index 1) f xs)
 
 
+{-| Combine corresponding elements, stopping at the shorter input. -}
 map2 : ('a -> 'b -> 'c) -> cons 'a -> cons 'b -> cons 'c
 map2 f left right =
     case ( left, right ) of
@@ -70,6 +75,7 @@ map2 f left right =
             Nil
 
 
+{-| Fold from the right, passing each element before the accumulator. -}
 foldr : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
 foldr f acc values =
     case values of
@@ -80,6 +86,7 @@ foldr f acc values =
             f x (foldr f acc xs)
 
 
+{-| Fold left to right, passing each element before the accumulator. -}
 foldl : ('a -> 'b -> 'b) -> 'b -> cons 'a -> 'b
 foldl f acc values =
     case values of
@@ -90,6 +97,7 @@ foldl f acc values =
             foldl f (f x acc) xs
 
 
+{-| Append the second Term list to the first. -}
 append : cons 'a -> cons 'a -> cons 'a
 append left right =
     case left of
@@ -100,10 +108,12 @@ append left right =
             Cons x (append xs right)
 
 
+{-| Count the elements of a Term list. -}
 length : cons 'a -> int
 length values = foldl (\_ count -> Builtin.addInteger count 1) 0 values
 
 
+{-| Convert a Big or little native list to a Term list, preserving its elements. -}
 fromList : Lift (list 'a) ('f 'a) => 'f 'a -> cons 'a
 fromList values =
     values
@@ -121,6 +131,7 @@ fromLittleList values =
             Cons x (fromLittleList xs)
 
 
+{-| Convert a Term list to a native list. Its elements must be Storable. -}
 toList : cons 'a -> list 'a
 toList values =
     case values of

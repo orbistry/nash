@@ -5,6 +5,7 @@ import Literal exposing ( FromUnit )
 import Lift exposing ( Lift )
 
 
+{-| A Data-represented unit value, encoded as constructor zero without fields. -}
 type Unit
     = Unit
 

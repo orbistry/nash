@@ -6,18 +6,21 @@ import Eq exposing ( Eq )
 import Lift exposing ( Lift )
 
 
+{-| A little comparison result: LT, EQ, or GT. -}
 type ordering
     = LT
     | EQ
     | GT
 
 
+{-| A Data-represented comparison result: LT, EQ, or GT. -}
 type Ordering
     = LT
     | EQ
     | GT
 
 
+{-| Exchange LT and GT, leaving EQ unchanged; return little ordering. -}
 invert : Lift ordering 'a => 'a -> ordering
 invert order =
     case lower order of
@@ -31,6 +34,7 @@ invert order =
             LT
 
 
+{-| Use the second ordering when the first is EQ; otherwise keep the first. -}
 then_ : ( Lift ordering 'a, Lift ordering 'b ) => 'a -> 'b -> ordering
 then_ first second =
     case lower first of

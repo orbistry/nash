@@ -19,11 +19,13 @@ import Applicative exposing ( Applicative )
 import Monad exposing ( Monad )
 
 
+{-| A little optional value: None or Some payload. -}
 type option 'a
     = Some 'a
     | None
 
 
+{-| A Data-represented optional value with a Big payload. -}
 type Option 'a
     = Some 'a
     | None
@@ -61,6 +63,7 @@ impl Monad option where
                 None
 
 
+{-| Return a present payload or the supplied default. -}
 withDefault : Lift (option 'a) ('f 'a) => 'a -> 'f 'a -> 'a
 withDefault fallback value =
     case lowerOuter value of
@@ -102,14 +105,17 @@ impl Lift (option ('a : Big)) (Option 'a) where
                 None
 
 
+{-| Map a present payload, returning a little option. -}
 map : Lift (option 'a) ('f 'a) => ('a -> 'b) -> 'f 'a -> option 'b
 map f value = Functor.map f (lowerOuter value)
 
 
+{-| Apply an optional function to an optional value. -}
 apply : Lift (option 'a) ('f 'a) => option ('a -> 'b) -> 'f 'a -> option 'b
 apply functions value = map2 (\f x -> f x) functions value
 
 
+{-| Combine two present payloads; return None if either input is absent. -}
 map2 : ( Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b) )
     => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> option 'c
 map2 f left right =
@@ -121,6 +127,7 @@ map2 f left right =
             None
 
 
+{-| Pass a present payload to a function returning an option. -}
 andThen : ( Lift (option 'a) ('f 'a), Lift (option 'b) ('g 'b) )
     => ('a -> 'g 'b) -> 'f 'a -> option 'b
 andThen f value =
@@ -132,6 +139,7 @@ andThen f value =
             None
 
 
+{-| Test whether a payload is present. -}
 isSome : Lift (option 'a) ('f 'a) => 'f 'a -> bool
 isSome value =
     case lowerOuter value of
@@ -142,6 +150,7 @@ isSome value =
             False
 
 
+{-| Return the payload or fail for None. -}
 unwrap : Lift (option 'a) ('f 'a) => 'f 'a -> 'a
 unwrap value =
     case lowerOuter value of

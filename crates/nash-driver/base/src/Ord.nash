@@ -7,6 +7,7 @@ import Eq exposing ( Eq )
 import Ordering exposing ( type ordering(..) )
 
 
+{-| Compare values with LT, EQ, or GT and derive relational comparisons. -}
 trait Eq 'a => Ord 'a where
     compare : 'a -> 'a -> ordering
 

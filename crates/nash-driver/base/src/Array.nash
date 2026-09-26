@@ -8,6 +8,7 @@ import Literal
 import Option exposing ( type option(..) )
 
 
+{-| Convert a Big or little list to an array, preserving element representations. -}
 fromList : Lift (list 'a) ('f 'a) => 'f 'a -> array 'a
 fromList values =
     values
@@ -15,14 +16,17 @@ fromList values =
         |> Builtin.listToArray
 
 
+{-| Return the number of array elements. -}
 length : array 'a -> int
 length = Builtin.lengthOfArray
 
 
+{-| Read a zero-based index. An invalid index fails. -}
 at : Lift int 'n => array 'a -> 'n -> 'a
 at values index = Builtin.indexArray values (lower index)
 
 
+{-| Read a zero-based index, returning None for an invalid index. -}
 get : Lift int 'n => array 'a -> 'n -> option 'a
 get values index = getIndex values (lower index)
 

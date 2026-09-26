@@ -4,6 +4,7 @@ module Semigroup exposing ( Semigroup )
 import Builtin
 
 
+{-| Combine values associatively with append. -}
 trait Semigroup 'a where
     append : 'a -> 'a -> 'a
 

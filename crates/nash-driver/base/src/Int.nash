@@ -35,34 +35,42 @@ import Ord
 import Ordering exposing ( type ordering )
 
 
+{-| Add two integers, returning a little int. -}
 add : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 add a b = Builtin.addInteger (lower a) (lower b)
 
 
+{-| Subtract the second integer from the first. -}
 sub : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 sub a b = Builtin.subtractInteger (lower a) (lower b)
 
 
+{-| Multiply two integers. -}
 mul : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 mul a b = Builtin.multiplyInteger (lower a) (lower b)
 
 
+{-| Divide with rounding toward negative infinity. A zero divisor fails. -}
 div : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 div a b = Builtin.divideInteger (lower a) (lower b)
 
 
+{-| Return the remainder corresponding to floor division. A zero divisor fails. -}
 mod : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 mod a b = Builtin.modInteger (lower a) (lower b)
 
 
+{-| Divide with rounding toward zero. A zero divisor fails. -}
 quot : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 quot a b = Builtin.quotientInteger (lower a) (lower b)
 
 
+{-| Return the remainder corresponding to division toward zero. A zero divisor fails. -}
 rem : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 rem a b = Builtin.remainderInteger (lower a) (lower b)
 
 
+{-| Negate an integer, returning a little int. -}
 negate : Lift int 'a => 'a -> int
 negate value =
     value
@@ -70,6 +78,7 @@ negate value =
         |> Builtin.subtractInteger 0
 
 
+{-| Compare two integers, returning LT, EQ, or GT. -}
 compare : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> ordering
 compare a b = compareInt (lower a) (lower b)
 
@@ -78,6 +87,7 @@ compareInt : int -> int -> ordering
 compareInt = Ord.compare
 
 
+{-| Return the smaller integer as a little int. -}
 min : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 min a b = minInt (lower a) (lower b)
 
@@ -86,6 +96,7 @@ minInt : int -> int -> int
 minInt = Ord.min
 
 
+{-| Return the larger integer as a little int. -}
 max : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 max a b = maxInt (lower a) (lower b)
 
@@ -94,6 +105,7 @@ maxInt : int -> int -> int
 maxInt = Ord.max
 
 
+{-| Return the nonnegative magnitude. -}
 abs : Lift int 'n => 'n -> int
 abs value =
     let
@@ -106,6 +118,7 @@ abs value =
             n
 
 
+{-| Raise a base to a nonnegative integer exponent. Negative exponents fail; exponent zero returns one. -}
 pow : ( Lift int 'n, Lift int 'e ) => 'n -> 'e -> int
 pow value exponent =
     let
@@ -139,6 +152,7 @@ power n e =
                 n * half * half
 
 
+{-| Compute an exact power of two. Negative exponents fail; exponent zero returns one. -}
 pow2 : Lift int 'e => 'e -> int
 pow2 exponent =
     let
@@ -169,20 +183,24 @@ powerOfTwo e =
             power 256 bands * Builtin.indexArray smallPowersOfTwo bits
 
 
+{-| Use Plutus modular exponentiation. Invalid moduli and unavailable modular inverses fail. -}
 powMod : ( Lift int 'n, Lift int 'e, Lift int 'm ) => 'n -> 'e -> 'm -> int
 powMod n e m = Builtin.expModInteger (lower n) (lower e) (lower m)
 
 
+{-| Encode a nonnegative integer with an endianness flag and byte size. True selects big-endian; size zero uses the minimum width. Invalid sizes or values that do not fit fail. -}
 toBytes : ( Lift bool 'b, Lift int 's, Lift int 'n ) => 'b -> 's -> 'n -> bytes
 toBytes bigEndian size n =
     Builtin.integerToByteString (lower bigEndian) (lower size) (lower n)
 
 
+{-| Read an unsigned integer from bytes. True selects big-endian; False selects little-endian. -}
 fromBytes : ( Lift bool 'b, Lift bytes 'v ) => 'b -> 'v -> int
 fromBytes bigEndian value =
     Builtin.byteStringToInteger (lower bigEndian) (lower value)
 
 
+{-| Render an integer in decimal notation. -}
 toString : Lift int 'n => 'n -> string
 toString value =
     value
@@ -194,6 +212,7 @@ showInt : int -> string
 showInt = Show.show
 
 
+{-| Compute the nonnegative greatest common divisor. gcd 0 0 is zero. -}
 gcd : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 gcd left right = gcdInt (abs left) (abs right)
 
@@ -206,6 +225,7 @@ gcdInt a b =
         gcdInt b (Builtin.modInteger a b)
 
 
+{-| Compute the nonnegative least common multiple. If either input is zero, the result is zero. -}
 lcm : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> int
 lcm left right =
     let
@@ -221,6 +241,7 @@ lcm left right =
             abs (Builtin.quotientInteger a (gcd a b) * b)
 
 
+{-| Compute the floor square root. Negative inputs fail. -}
 isqrt : Lift int 'n => 'n -> int
 isqrt value =
     let
@@ -257,6 +278,7 @@ sqrtNewton n current =
             sqrtNewton n next
 
 
+{-| Test whether the final argument is the greatest common divisor. Negative candidates return False. -}
 isGcd : ( Lift int 'a, Lift int 'b, Lift int 'g ) => 'a -> 'b -> 'g -> bool
 isGcd left right expected =
     let
@@ -282,6 +304,7 @@ isGcd left right expected =
                 1
 
 
+{-| Test whether the final argument is the least common multiple. Negative candidates return False. -}
 isLcm : ( Lift int 'a, Lift int 'b, Lift int 'm ) => 'a -> 'b -> 'm -> bool
 isLcm left right expected =
     let
@@ -307,6 +330,7 @@ isLcm left right expected =
                 1
 
 
+{-| Test whether the final argument is the floor square root, using adjacent squares. Negative inputs or candidates return False. -}
 isSqrt : ( Lift int 'n, Lift int 'r ) => 'n -> 'r -> bool
 isSqrt value expected =
     let

@@ -1,0 +1,25 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (id)\n{-| Still rendered.\n\n@docs id, missing, id\n\n```nash\n@docs notADirective\n```\n-}\nid x = x\n"
+---
+module:
+  name: Example
+  blocks:
+    - Text: Still rendered.
+    - Declaration:
+        name: id
+        kind: Value
+        signature: "id : 'a -> 'a"
+        type_kind: ~
+        doc: ""
+    - Text: "```nash\n@docs notADirective\n```"
+warnings:
+  - module: Example
+    name: id
+    message: Export has no documentation comment.
+  - module: Example
+    name: missing
+    message: "@docs name is not exported by this module."
+  - module: Example
+    name: id
+    message: Repeated @docs entry.

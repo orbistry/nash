@@ -83,30 +83,37 @@ infix left 4 (<$>) = map
 infix left 4 (<*>) = apply
 
 
+{-| Return the argument unchanged. -}
 identity : 'a -> 'a
 identity x = x
 
 
+{-| Return the first argument, ignoring the second. -}
 always : 'a -> 'b -> 'a
 always x _ = x
 
 
+{-| Apply the second argument as a function to the first; used by the forward pipe. -}
 applyForward : 'a -> ('a -> 'b) -> 'b
 applyForward = Function.applyForward
 
 
+{-| Apply the first argument as a function to the second; used by the backward pipe. -}
 applyBackward : ('a -> 'b) -> 'a -> 'b
 applyBackward = Function.applyBackward
 
 
+{-| Compose functions so the second runs first. -}
 composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 composeLeft g f x = g (f x)
 
 
+{-| Compose functions so the first runs first. -}
 composeRight : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
 composeRight f g x = g (f x)
 
 
+{-| Prepend an element to a native list. -}
 prepend : 'a -> list 'a -> list 'a
 prepend = Builtin.mkCons
 

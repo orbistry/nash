@@ -5,14 +5,17 @@ import Primitive exposing (..)
 import Builtin exposing (..)
 
 
+{-| Interpret an integer literal as the requested type. -}
 trait FromInt 'a where
     fromInt : int -> 'a
 
 
+{-| Interpret a string literal as the requested type. -}
 trait FromString 'a where
     fromString : string -> 'a
 
 
+{-| Interpret a bytes literal as the requested type. -}
 trait FromBytes 'a where
     fromBytes : bytes -> 'a
 
@@ -41,10 +44,12 @@ impl FromString bytes where
     fromString = Builtin.encodeUtf8
 
 
+{-| Interpret a Boolean literal as the requested type. -}
 trait FromBool 'a where
     fromBool : bool -> 'a
 
 
+{-| Interpret a unit literal as the requested type. -}
 trait FromUnit 'a where
     fromUnit : unit -> 'a
 

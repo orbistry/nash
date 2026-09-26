@@ -5,6 +5,7 @@ import Builtin
 import Literal
 
 
+{-| Arithmetic operations on little numeric types. -}
 trait Num 'a where
     add : 'a -> 'a -> 'a
 

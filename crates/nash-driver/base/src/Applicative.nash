@@ -4,6 +4,7 @@ module Applicative exposing ( Applicative )
 import Functor exposing ( Functor )
 
 
+{-| Lift a value with pure and apply a wrapped function to a wrapped value. -}
 trait Functor 'f => Applicative 'f where
     pure : 'a -> 'f 'a
 

@@ -35,21 +35,25 @@ import Option exposing ( type option(..) )
 import Cons exposing ( type cons(..) )
 
 
+{-| A nested record of integer draws. Group nodes delimit strict replay scopes. -}
 type choiceTree
     = Choice int
     | Group (cons choiceTree)
 
 
+{-| Generator state for seeded draws, strict tree replay, or rebuilding nesting from supplied integers. -}
 type prng
     = Seeded bytes (cons choiceTree)
     | Replayed (cons choiceTree) (cons choiceTree)
     | Rebuilding (list int) (cons choiceTree)
 
 
+{-| A state function returning an optional value and next PRNG state. None rejects the draw; ordinary Monad do notation sequences generators. -}
 type alias generator 'a =
     prng -> option ( 'a, prng )
 
 
+{-| Draw an integer from zero through the inclusive bound. Invalid bounds fail; incompatible replay returns None. -}
 choice : Lift int 'n => 'n -> generator int
 choice bound =
     bound
@@ -100,6 +104,7 @@ choiceInt bound state =
                         None
 
 
+{-| Put a generator's draws inside a strict replay boundary so they cannot consume sibling choices. -}
 group : generator 'a -> generator 'a
 group generator state =
     case state of
@@ -176,10 +181,12 @@ impl Monad.Monad generator where
                 continuation value next
 
 
+{-| Return a value without consuming a choice. -}
 constant : 'a -> generator 'a
 constant a prng = Some ( a, prng )
 
 
+{-| Generate an integer between inclusive bounds. Equal bounds consume no choices; reversed bounds fail. -}
 intBetween : ( Lift int 'a, Lift int 'b ) => 'a -> 'b -> generator int
 intBetween low high = intBetweenInt (lower low) (lower high)
 
@@ -239,6 +246,7 @@ naturalFrom scale = do
                 bounded (scale * Int.pow2 (bits + 1) - 1)
 
 
+{-| Generate an integer at least the supplied lower bound, with a bias toward small offsets. -}
 intAtLeast : Lift int 'n => 'n -> generator int
 intAtLeast minimum =
     let
@@ -248,6 +256,7 @@ intAtLeast minimum =
 
 
 -- Favor small values; the wide branch has no fixed integer ceiling.
+{-| Generate a small-biased arbitrary-precision signed integer, subject to VM budgets. -}
 int : generator int
 int state =
     case choice 2 state of
@@ -285,10 +294,12 @@ signed = do
                     )
 
 
+{-| Generate a list of zero to twenty elements. -}
 listOf : generator 'a -> generator (list 'a)
 listOf = listBetween 0 20
 
 
+{-| Generate a list within inclusive length bounds. Invalid bounds fail; elements retain their representations. -}
 listBetween : ( Lift int 'l, Lift int 'h )
     => 'l -> 'h -> generator 'a -> generator (list 'a)
 listBetween low high generator =
@@ -338,6 +349,7 @@ listIteration required item state = do
             (Monad.bind item (\value -> Applicative.pure (Some value))) next
 
 
+{-| Generate both components of a tuple. -}
 tuple2 : generator 'a -> generator 'b -> generator ( 'a, 'b )
 tuple2 first second = do
     a <- first
@@ -346,6 +358,7 @@ tuple2 first second = do
 
 
 -- Generators contain functions, so use the Term-representation Cons list.
+{-| Choose a generator from a Term list. An empty list rejects generation. -}
 oneOf : cons (generator 'a) -> generator 'a
 oneOf generators =
     case generators of
@@ -378,14 +391,17 @@ pick index generators =
                 pick (index - 1) rest
 
 
+{-| Generate a byte string with length from zero through 32. -}
 bytes : generator bytes
 bytes = bytesBetween 0 32
 
 
+{-| Generate a little Boolean from one binary choice. -}
 bool : generator bool
 bool = Functor.map (\n -> n == 1) (choice 1)
 
 
+{-| Generate None or a present value, grouping the presence and payload draws. -}
 option : generator 'a -> generator (option 'a)
 option item = do
     present <- bool
@@ -395,10 +411,12 @@ option item = do
         Applicative.pure None
 
 
+{-| Generate bytes within inclusive length bounds. Negative or reversed bounds fail. -}
 bytesBetween : ( Lift int 'l, Lift int 'h ) => 'l -> 'h -> generator bytes
 bytesBetween lo hi = Functor.map packBytes (listBetween lo hi (choice 255))
 
 
+{-| Generate exactly the supplied number of bytes. Negative lengths fail. -}
 bytesExactly : Lift int 'n => 'n -> generator bytes
 bytesExactly count =
     let
@@ -407,6 +425,7 @@ bytesExactly count =
         bytesBetween n n
 
 
+{-| Choose a generator using relative integer weights. Zero weights are skipped, negative weights fail, and empty or all-zero inputs reject generation. -}
 frequency : Lift int 'w => cons ( 'w, generator 'a ) -> generator 'a
 frequency entries =
     let

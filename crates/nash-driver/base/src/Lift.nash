@@ -5,6 +5,7 @@ import Builtin
 import Primitive exposing ( Big )
 
 
+{-| Convert only the outer representation between little and Big forms. Element representations are preserved. -}
 trait Lift 'small 'big where
     lift : 'small -> 'big
 

@@ -16,6 +16,7 @@ import Builtin
 import Function exposing ( (|>) )
 
 
+{-| Compute a SHA-256 digest, returning bytes. -}
 sha2_256 : Lift bytes 'a => 'a -> bytes
 sha2_256 value =
     value
@@ -23,6 +24,7 @@ sha2_256 value =
         |> Builtin.sha2_256
 
 
+{-| Compute a SHA3-256 digest, returning bytes. This differs from Keccak-256. -}
 sha3_256 : Lift bytes 'a => 'a -> bytes
 sha3_256 value =
     value
@@ -30,6 +32,7 @@ sha3_256 value =
         |> Builtin.sha3_256
 
 
+{-| Compute a 224-bit BLAKE2b digest, returning bytes. -}
 blake2b_224 : Lift bytes 'a => 'a -> bytes
 blake2b_224 value =
     value
@@ -37,6 +40,7 @@ blake2b_224 value =
         |> Builtin.blake2b_224
 
 
+{-| Compute a 256-bit BLAKE2b digest, returning bytes. -}
 blake2b_256 : Lift bytes 'a => 'a -> bytes
 blake2b_256 value =
     value
@@ -44,6 +48,7 @@ blake2b_256 value =
         |> Builtin.blake2b_256
 
 
+{-| Compute a Keccak-256 digest, returning bytes. This differs from SHA3-256. -}
 keccak_256 : Lift bytes 'a => 'a -> bytes
 keccak_256 value =
     value
@@ -51,6 +56,7 @@ keccak_256 value =
         |> Builtin.keccak_256
 
 
+{-| Compute a RIPEMD-160 digest, returning bytes. -}
 ripemd_160 : Lift bytes 'a => 'a -> bytes
 ripemd_160 value =
     value
@@ -58,12 +64,14 @@ ripemd_160 value =
         |> Builtin.ripemd_160
 
 
+{-| Verify an Ed25519 public key, message, and signature. Malformed required lengths fail; a well-formed invalid signature returns False. -}
 verifyEd25519Signature : ( Lift bytes 'k, Lift bytes 'm, Lift bytes 's )
     => 'k -> 'm -> 's -> bool
 verifyEd25519Signature key message signature =
     Builtin.verifyEd25519Signature (lower key) (lower message) (lower signature)
 
 
+{-| Verify a secp256k1 ECDSA key, precomputed digest, and compact signature. This does not hash the message; malformed inputs may fail. -}
 verifyEcdsaSecp256k1Signature : ( Lift bytes 'k, Lift bytes 'm, Lift bytes 's )
     => 'k -> 'm -> 's -> bool
 verifyEcdsaSecp256k1Signature key message signature =
@@ -73,6 +81,7 @@ verifyEcdsaSecp256k1Signature key message signature =
         (lower signature)
 
 
+{-| Verify a secp256k1 Schnorr x-only key, message, and signature. Malformed inputs may fail. -}
 verifySchnorrSecp256k1Signature : ( Lift bytes 'k
     , Lift bytes 'm
     , Lift bytes 's

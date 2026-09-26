@@ -1,0 +1,22 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (first, second)\n{-| Order and prose.\n\n@docs\n    second,\n## Keep this heading\n\n````nash\n```\n@docs first\n````\n\n    @docs alsoCode\n\n@docs  first\n-}\n{-| First value. -}\nfirst x = x\n{-| Second value. -}\nsecond x = x\n"
+---
+module:
+  name: Example
+  blocks:
+    - Text: Order and prose.
+    - Declaration:
+        name: second
+        kind: Value
+        signature: "second : 'a -> 'a"
+        type_kind: ~
+        doc: Second value.
+    - Text: "## Keep this heading\n\n````nash\n```\n@docs first\n````\n\n    @docs alsoCode"
+    - Declaration:
+        name: first
+        kind: Value
+        signature: "first : 'a -> 'a"
+        type_kind: ~
+        doc: First value.
+warnings: []

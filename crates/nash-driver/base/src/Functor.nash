@@ -4,6 +4,7 @@ module Functor exposing ( Functor )
 import Builtin
 
 
+{-| Map a function over the contents of a little container. -}
 trait Functor 'f where
     map : ('a -> 'b) -> 'f 'a -> 'f 'b
 

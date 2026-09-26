@@ -5,6 +5,7 @@ import Literal
 import Semigroup exposing ( Semigroup )
 
 
+{-| Combine values associatively with an identity element. -}
 trait Semigroup 'a => Monoid 'a where
     empty : 'a
 

@@ -5,6 +5,7 @@ import Builtin
 import Num exposing ( Num )
 
 
+{-| Integer division and remainder operations on little integer types. -}
 trait Num 'a => Integral 'a where
     div : 'a -> 'a -> 'a
 

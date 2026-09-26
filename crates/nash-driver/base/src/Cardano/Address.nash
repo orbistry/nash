@@ -9,16 +9,19 @@ import Literal
 import Option exposing ( Option, type option(..) )
 
 
+{-| A ledger payment or staking credential, distinguished as a key hash or script hash. -}
 type Credential
     = PubKeyCredential Bytes
     | ScriptCredential Bytes
 
 
+{-| A staking hash or ledger staking pointer. -}
 type StakingCredential
     = StakingHash Credential
     | StakingPtr Int Int Int
 
 
+{-| A ledger address containing a payment credential and optional staking credential. -}
 type Address
     = Address
         { paymentCredential : Credential

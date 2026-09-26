@@ -7,9 +7,11 @@ infix left 0 (|>) = applyForward
 infix right 0 (<|) = applyBackward
 
 
+{-| Apply the second argument as a function to the first; used by the forward pipe. -}
 applyForward : 'a -> ('a -> 'b) -> 'b
 applyForward x f = f x
 
 
+{-| Apply the first argument as a function to the second; used by the backward pipe. -}
 applyBackward : ('a -> 'b) -> 'a -> 'b
 applyBackward f x = f x

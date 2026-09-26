@@ -1,0 +1,18 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (Keep)\n{-| A method may require the same trait at another type. -}\ntrait Keep 'a where\n    other : Keep 'b => 'b -> 'a\n"
+---
+module:
+  name: Example
+  blocks:
+    - Text: A method may require the same trait at another type.
+    - Declaration:
+        name: Keep
+        kind: Trait
+        signature: "trait Keep 'a where\n    other : Keep 'b => 'b -> 'a"
+        type_kind: ~
+        doc: ""
+warnings:
+  - module: Example
+    name: Keep
+    message: Export has no documentation comment.

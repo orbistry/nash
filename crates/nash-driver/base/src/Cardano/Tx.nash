@@ -12,18 +12,21 @@ import Cardano.Time exposing ( Interval )
 import Cardano.Value exposing ( Value )
 
 
+{-| A governance representative credential, always-abstain representative, or always-no-confidence representative. -}
 type DRep
     = DRep Credential
     | DRepAlwaysAbstain
     | DRepAlwaysNoConfidence
 
 
+{-| The ledger delegation target for staking, voting, or both. -}
 type Delegatee
     = DelegStake Bytes
     | DelegVote DRep
     | DelegStakeVote Bytes DRep
 
 
+{-| A Plutus V3 transaction certificate using the ledger constructor order. -}
 type Certificate
     = RegStaking Credential (Option Int)
     | UnRegStaking Credential (Option Int)
@@ -38,38 +41,46 @@ type Certificate
     | ResignColdCommittee Credential
 
 
+{-| A committee, representative, or stake-pool voter in ledger encoding. -}
 type Voter
     = CommitteeVoter Credential
     | DRepVoter Credential
     | StakePoolVoter Bytes
 
 
+{-| A ledger governance vote: no, yes, or abstain. -}
 type Vote
     = VoteNo
     | VoteYes
     | Abstain
 
 
+{-| A governance proposal identified by transaction ID and proposal index. -}
 type GovernanceActionId
     = GovernanceActionId { txId : Bytes, index : Int }
 
 
+{-| A ledger rational encoded as a constructor containing numerator and denominator. Unlike Rational.rational, it is not normalized. -}
 type Rational
     = Rational { numerator : Int, denominator : Int }
 
 
+{-| Ledger committee membership and quorum data. -}
 type Committee
     = Committee { members : Map Credential Int, quorum : Rational }
 
 
+{-| Ledger constitution data, including its optional script hash. -}
 type Constitution
     = Constitution (Option Bytes)
 
 
+{-| A ledger protocol major/minor version pair. -}
 type ProtocolVersion
     = ProtocolVersion { major : Int, minor : Int }
 
 
+{-| A Plutus V3 governance action in ledger constructor order. -}
 type GovernanceAction
     = ParameterChange (Option GovernanceActionId) Data (Option Bytes)
     | HardForkInitiation (Option GovernanceActionId) ProtocolVersion
@@ -84,6 +95,7 @@ type GovernanceAction
     | InfoAction
 
 
+{-| A ledger governance proposal with its deposit, return credential, and action. -}
 type Proposal
     = Proposal
         { deposit : Int
@@ -92,16 +104,19 @@ type Proposal
         }
 
 
+{-| A transaction output identified by transaction ID and output index. -}
 type OutputReference
     = OutputReference { txId : Bytes, index : Int }
 
 
+{-| An absent datum, datum hash, or inline datum in ledger encoding. -}
 type Datum
     = NoDatum
     | DatumHash Bytes
     | InlineDatum Data
 
 
+{-| A ledger transaction output with address, value, datum, and optional reference script. -}
 type Output
     = Output
         { address : Address
@@ -111,10 +126,12 @@ type Output
         }
 
 
+{-| A transaction input containing its output reference and resolved output. -}
 type Input
     = Input { outputReference : OutputReference, output : Output }
 
 
+{-| The ledger purpose used as a redeemer-map key. -}
 type ScriptPurpose
     = Minting Bytes
     | Spending OutputReference
@@ -124,6 +141,7 @@ type ScriptPurpose
     | Proposing Int Proposal
 
 
+{-| The current script's purpose-specific context; spending includes an optional datum. -}
 type ScriptInfo
     = MintingScript Bytes
     | SpendingScript OutputReference (Option Data)
@@ -133,6 +151,7 @@ type ScriptInfo
     | ProposingScript Int Proposal
 
 
+{-| Plutus V3 transaction information in ledger field order. -}
 type Tx
     = Tx
         { inputs : List Input
@@ -154,6 +173,7 @@ type Tx
         }
 
 
+{-| The Plutus V3 script argument: transaction, redeemer Data, and script information. Validation checks wire shape, not ledger validity. -}
 type ScriptContext
     = ScriptContext { tx : Tx, redeemer : Data, scriptInfo : ScriptInfo }
 

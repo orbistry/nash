@@ -6,6 +6,7 @@ import Primitive exposing (..)
 import Builtin exposing (..)
 
 
+{-| Compare values for equality and inequality. -}
 trait Eq 'a where
     eq : 'a -> 'a -> bool
 

@@ -1,0 +1,18 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (render)\n{-| Render a value with its Show instance. -}\nrender : Show 'a => 'a -> string\nrender value = show value\n"
+---
+module:
+  name: Example
+  blocks:
+    - Text: Render a value with its Show instance.
+    - Declaration:
+        name: render
+        kind: Value
+        signature: "render : Show.Show 'a => 'a -> string"
+        type_kind: ~
+        doc: ""
+warnings:
+  - module: Example
+    name: render
+    message: Export has no documentation comment.

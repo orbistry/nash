@@ -32,7 +32,7 @@ produce UPLC programs; all dependencies inline into each program.
 | `nash-codegen` | Can -> Core -> UPLC | new ([plans/07](plans/07-codegen.md)) |
 | `nash-test` | test runner, generation, shrinking | new ([plans/10](plans/10-testing.md)) |
 | `nash-macro` | macro expansion, comptime | new ([plans/11](plans/11-macros-comptime.md)) |
-| `nash-fmt` / `nash-docs` | formatter, docs | formatter implemented; docs pending ([plans/13](plans/13-fmt-docs.md)) |
+| `nash-fmt` / `nash-docs` | formatter, docs | formatter and docs extraction implemented; rendering pending ([plans/13](plans/13-fmt-docs.md)) |
 | `nash-plutus` | UPLC terms, flat, CEK, cost models | done |
 | `nash-config` | `nash.jsonc` | done, extend |
 | `nash-driver` | build graph, caching | done, extend |

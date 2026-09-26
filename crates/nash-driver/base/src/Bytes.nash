@@ -33,10 +33,12 @@ import Ord
 import Ordering exposing ( type ordering )
 
 
+{-| Concatenate two byte strings, returning little bytes. -}
 append : ( Lift bytes 'a, Lift bytes 'b ) => 'a -> 'b -> bytes
 append a b = Builtin.appendByteString (lower a) (lower b)
 
 
+{-| Compare byte strings lexicographically. -}
 compare : ( Lift bytes 'a, Lift bytes 'b ) => 'a -> 'b -> ordering
 compare a b = compareBytes (lower a) (lower b)
 
@@ -45,6 +47,7 @@ compareBytes : bytes -> bytes -> ordering
 compareBytes = Ord.compare
 
 
+{-| Return the lexicographically smaller byte string. -}
 min : ( Lift bytes 'a, Lift bytes 'b ) => 'a -> 'b -> bytes
 min a b = minBytes (lower a) (lower b)
 
@@ -53,6 +56,7 @@ minBytes : bytes -> bytes -> bytes
 minBytes = Ord.min
 
 
+{-| Return the lexicographically larger byte string. -}
 max : ( Lift bytes 'a, Lift bytes 'b ) => 'a -> 'b -> bytes
 max a b = maxBytes (lower a) (lower b)
 
@@ -61,6 +65,7 @@ maxBytes : bytes -> bytes -> bytes
 maxBytes = Ord.max
 
 
+{-| Count bytes. -}
 length : Lift bytes 'b => 'b -> int
 length value =
     value
@@ -68,19 +73,23 @@ length value =
         |> Builtin.lengthOfByteString
 
 
+{-| Read a byte at a zero-based index. Out-of-range indices fail. -}
 at : ( Lift bytes 'b, Lift int 'n ) => 'b -> 'n -> int
 at value index = Builtin.indexByteString (lower value) (lower index)
 
 
+{-| Take a byte slice using start and count, with the Plutus builtin's clamping behavior. -}
 slice : ( Lift int 's, Lift int 'n, Lift bytes 'b ) => 's -> 'n -> 'b -> bytes
 slice start size value =
     Builtin.sliceByteString (lower start) (lower size) (lower value)
 
 
+{-| Take up to the supplied number of bytes from the front. -}
 take : ( Lift int 'n, Lift bytes 'b ) => 'n -> 'b -> bytes
 take count value = Builtin.sliceByteString 0 (lower count) (lower value)
 
 
+{-| Drop the supplied number of bytes from the front. -}
 drop : ( Lift int 'n, Lift bytes 'b ) => 'n -> 'b -> bytes
 drop count value =
     let
@@ -92,11 +101,13 @@ drop count value =
             bytes
 
 
+{-| Concatenate a list of byte strings. -}
 concat : ( Lift (list 'b) ('f 'b), Lift bytes 'b ) => 'f 'b -> bytes
 concat values =
     List.foldr (\x acc -> Builtin.appendByteString (lower x) acc) #"" values
 
 
+{-| Invert every bit. -}
 complement : Lift bytes 'b => 'b -> bytes
 complement value =
     value
@@ -104,6 +115,7 @@ complement value =
         |> Builtin.complementByteString
 
 
+{-| Count bits set to one. -}
 countSetBits : Lift bytes 'b => 'b -> int
 countSetBits value =
     value
@@ -111,6 +123,7 @@ countSetBits value =
         |> Builtin.countSetBits
 
 
+{-| Find the first set bit using Plutus bit indexing, or return -1 when all bits are zero. -}
 findFirstSetBit : Lift bytes 'b => 'b -> int
 findFirstSetBit value =
     value
@@ -118,38 +131,46 @@ findFirstSetBit value =
         |> Builtin.findFirstSetBit
 
 
+{-| Compute bitwise AND. The first argument selects the builtin padding behavior for unequal lengths. -}
 and : ( Lift bool 'p, Lift bytes 'a, Lift bytes 'b ) => 'p -> 'a -> 'b -> bytes
 and pad left right =
     Builtin.andByteString (lower pad) (lower left) (lower right)
 
 
+{-| Compute bitwise OR. The first argument selects the builtin padding behavior for unequal lengths. -}
 or : ( Lift bool 'p, Lift bytes 'a, Lift bytes 'b ) => 'p -> 'a -> 'b -> bytes
 or pad left right = Builtin.orByteString (lower pad) (lower left) (lower right)
 
 
+{-| Compute bitwise XOR. The first argument selects the builtin padding behavior for unequal lengths. -}
 xor : ( Lift bool 'p, Lift bytes 'a, Lift bytes 'b ) => 'p -> 'a -> 'b -> bytes
 xor pad left right =
     Builtin.xorByteString (lower pad) (lower left) (lower right)
 
 
+{-| Read a bit using Plutus bit indexing. Invalid indices fail. -}
 readBit : ( Lift bytes 'b, Lift int 'n ) => 'b -> 'n -> bool
 readBit value count = Builtin.readBit (lower value) (lower count)
 
 
+{-| Shift bits using the signed displacement accepted by the Plutus builtin. -}
 shift : ( Lift bytes 'b, Lift int 'n ) => 'b -> 'n -> bytes
 shift value count = Builtin.shiftByteString (lower value) (lower count)
 
 
+{-| Rotate bits using the signed displacement accepted by the Plutus builtin. -}
 rotate : ( Lift bytes 'b, Lift int 'n ) => 'b -> 'n -> bytes
 rotate value count = Builtin.rotateByteString (lower value) (lower count)
 
 
+{-| Set the listed bit positions to the supplied Boolean value. Invalid indices fail. -}
 writeBits : ( Lift bytes 'b, Lift (list 'n) ('f 'n), Lift int 'n, Lift bool 'v )
     => 'b -> 'f 'n -> 'v -> bytes
 writeBits value indices bit =
     Builtin.writeBits (lower value) (List.map lower indices) (lower bit)
 
 
+{-| Render lowercase hexadecimal without a prefix. -}
 toHex : Lift bytes 'b => 'b -> string
 toHex value =
     value

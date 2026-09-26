@@ -9,11 +9,13 @@ import Option exposing ( type option(..) )
 import Eq
 
 
+{-| A Data-represented Boolean. False uses constructor 0 and True uses constructor 1, both without fields. -}
 type Bool
     = False
     | True
 
 
+{-| Negate a Big or little Boolean, returning bool. -}
 not : Lift bool 'a => 'a -> bool
 not value =
     if lower value then
@@ -22,6 +24,7 @@ not value =
         Primitive.True
 
 
+{-| Boolean conjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}
 and : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
 and a b =
     if lower a then
@@ -30,6 +33,7 @@ and a b =
         Primitive.False
 
 
+{-| Boolean disjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}
 or : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
 or a b =
     if lower a then
@@ -38,6 +42,7 @@ or a b =
         lower b
 
 
+{-| Return True when the Boolean operands differ. -}
 xor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool
 xor a b =
     if lower a then

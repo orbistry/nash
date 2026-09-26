@@ -28,10 +28,12 @@ import Int
 import Builtin
 
 
+{-| An exact little rational with a hidden constructor, positive denominator, and coprime components. Zero is represented as 0/1. -}
 type rational
     = Rational int int
 
 
+{-| Normalize a numerator and denominator. A zero denominator fails. -}
 new : ( Lift int 'n, Lift int 'd ) => 'n -> 'd -> rational
 new top bottom =
     let
@@ -56,14 +58,17 @@ new top bottom =
                 Rational (Int.quot n divisor * sign) (Int.quot d divisor * sign)
 
 
+{-| Return the normalized numerator. -}
 numerator : rational -> int
 numerator (Rational n _) = n
 
 
+{-| Return the positive normalized denominator. -}
 denominator : rational -> int
 denominator (Rational _ d) = d
 
 
+{-| Add exact rationals and normalize the result. -}
 add : rational -> rational -> rational
 add = addRational
 
@@ -72,6 +77,7 @@ addRational : rational -> rational -> rational
 addRational (Rational a b) (Rational c d) = new (a * d + c * b) (b * d)
 
 
+{-| Subtract the second rational from the first and normalize. -}
 sub : rational -> rational -> rational
 sub = subRational
 
@@ -80,6 +86,7 @@ subRational : rational -> rational -> rational
 subRational (Rational a b) (Rational c d) = new (a * d - c * b) (b * d)
 
 
+{-| Multiply exact rationals and normalize. -}
 mul : rational -> rational -> rational
 mul = mulRational
 
@@ -88,10 +95,12 @@ mulRational : rational -> rational -> rational
 mulRational (Rational a b) (Rational c d) = new (a * c) (b * d)
 
 
+{-| Divide by a nonzero rational and normalize. Division by zero fails. -}
 div : rational -> rational -> rational
 div (Rational a b) (Rational c d) = new (a * d) (b * c)
 
 
+{-| Negate the rational. -}
 negate : rational -> rational
 negate = negateRational
 
@@ -100,10 +109,12 @@ negateRational : rational -> rational
 negateRational (Rational n d) = Rational (Int.negate n) d
 
 
+{-| Return the nonnegative magnitude. -}
 abs : rational -> rational
 abs (Rational n d) = Rational (Int.abs n) d
 
 
+{-| Compare exact rationals without converting to floating point. -}
 compare : rational -> rational -> ordering
 compare = compareRational
 
@@ -112,14 +123,17 @@ compareRational : rational -> rational -> ordering
 compareRational (Rational a b) (Rational c d) = Int.compare (a * d) (c * b)
 
 
+{-| Round toward negative infinity. -}
 floor : rational -> int
 floor (Rational n d) = Int.div n d
 
 
+{-| Round toward positive infinity. -}
 ceiling : rational -> int
 ceiling (Rational n d) = Int.negate (Int.div (Int.negate n) d)
 
 
+{-| Round toward zero. -}
 truncate : rational -> int
 truncate (Rational n d) = Int.quot n d
 

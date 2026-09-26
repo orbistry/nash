@@ -137,59 +137,30 @@ See [formatter behavior](../docs/formatter.md) for command and layout details.
 
 ---
 
-## Chunk 6: `nash-docs` extraction
+## Chunk 6: `nash-docs` extraction — complete
 
-**Files**
+`nash-docs::extract` combines a parsed source module and its solved
+`nash_can::Interface` into owned `ModuleDocs` plus documentation warnings.
+It uses the existing report type printer, retains explicit trait constraints,
+and includes public values, types, aliases, operators, traits and implementations.
+Private declarations and hidden constructors are omitted. Type kinds remain in
+the output. Unnamed implementations do not require separate documentation.
 
-- `crates/nash-docs/Cargo.toml`, `src/lib.rs`, `src/extract.rs`
+Overview prose and `@docs` groups retain their order. Missing comments,
+unknown names and duplicate directives produce warnings without discarding
+output. Undirected declarations follow in source order. Source-backed macro
+declarations are not implemented by the parser/interface yet, so no synthetic
+macro entries are invented.
 
-**Change**
+The actual compiler catalogs supply separate `Builtin` and `Primitive` modules;
+`coerce` belongs to Primitive. Public Base declarations now have source doc
+comments. A library test compiles all 35 bundled modules and checks that
+extraction produces no documentation warnings. Source-described snapshots cover
+all supported declaration kinds, inferred/constrained signatures, ordering,
+visibility, warning recovery and synthetic catalogs. No CLI processes are used.
 
-Port `Elm/Docs.hs`: from a module's surface docs (chunk 1) and its solved
-`Interface`, produce a `Docs` value: overview text, `@docs` ordering, and
-one entry per exported value, union, alias, binop, trait, impl, macro,
-each with its doc comment and rendered type. Undocumented exports and
-`@docs` names that do not exist are warnings, not errors (Elm errors;
-Nash warns so `nash docs` always produces output).
-
-```rust
-pub struct ModuleDocs {
-    pub name: String,
-    pub overview: String,          // Markdown
-    pub blocks: Vec<Block>,        // in @docs order, then leftovers
-}
-
-pub enum Block {
-    Text(String),
-    Value { name: String, typ: String, doc: String },
-    Union { name: String, params: Vec<String>, ctors: Vec<(String, Vec<String>)>, kind: String, doc: String },
-    Alias { name: String, params: Vec<String>, typ: String, doc: String },
-    Binop { symbol: String, function: String, precedence: u16, assoc: String, doc: String },
-    Trait { name: String, params: Vec<String>, supers: Vec<String>, methods: Vec<(String, String)>, doc: String },
-    Impl { head: String, doc: String },
-    Macro { name: String, shape: String, doc: String },
-    Builtin { name: String, typ: String },   // for the synthetic Builtin module, from nash_ast::primitives::PRIMITIVES (types, plans/02 chunk 3) and BUILTINS (functions, plans/12 chunk 3)
-}
-
-pub fn extract(module: &SourceModule<'_>, interface: &Interface<'_>) -> Result<ModuleDocs, Vec<DocsWarning>>
-```
-
-Type rendering reuses `nash-report`'s type pretty printer (Elm's
-`Reporting/Render/Type.hs`, already ported for diagnostics).
-
-**Elm/Aiken reference**
-
-`Elm/Docs.hs` `fromModule`, `parseOverview`, `checkNames`;
-`Elm/Compiler/Type/Extract.hs` `fromType`. Aiken
-`crates/aiken-project/src/docs.rs` `generate_all` (module listing, search
-index).
-
-**Tests**
-
-Snapshot `ModuleDocs` for a module with `@docs`, one of each block kind,
-and a missing name (warning present, docs still produced).
-
-**Done when** `extract` runs over `crates/nash-driver/base/` without warnings.
+Base has no separate project manifest. Chunk 7 provides `nash docs --base`
+using the compiler-bundled sources, alongside normal project documentation.
 
 ---
 

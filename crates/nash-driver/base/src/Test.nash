@@ -6,10 +6,12 @@ import Prop exposing ( type generator, type prng )
 import Option exposing ( type option(..) )
 
 
+{-| Record a coverage label in the test runner protocol. -}
 label : string -> unit
 label s = Builtin.trace (Builtin.appendString "\u{0000}label\u{0000}" s) ()
 
 
+{-| Generate a sample and return its next state, property thunk, and display thunk. Generation finishes before either thunk runs. -}
 prepare : generator 'a ->
         ('a -> unit) ->
             ('a -> list string) ->
@@ -23,6 +25,7 @@ prepare generator property display state =
             Some ( next, \() -> property value, \() -> display value )
 
 
+{-| Sequence two generators, delaying construction of the second until the first succeeds. -}
 both : generator 'a -> (unit -> generator 'b) -> generator ( 'a, 'b )
 both first rest state =
     case Prop.group first state of
@@ -38,10 +41,12 @@ both first rest state =
                     Some ( ( a, b ), final )
 
 
+{-| Run an assertion thunk with its source-location marker for failure reporting. -}
 assertAt : string -> (unit -> unit) -> unit
 assertAt marker rest = (Builtin.trace marker rest) ()
 
 
+{-| Record a displayed assertion value before running the continuation thunk. -}
 assertCapture : string -> string -> (unit -> unit) -> unit
 assertCapture prefix value rest =
     assertAt (Builtin.appendString prefix value) rest

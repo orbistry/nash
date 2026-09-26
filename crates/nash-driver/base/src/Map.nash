@@ -23,6 +23,7 @@ import Pair
 import Functor
 
 
+{-| Remove left entries whose keys occur on the right, then append the right entries. Other ordering and duplicates are preserved. -}
 union : ( Eq 'k, Lift (list (pair 'k 'v)) 'a, Lift (list (pair 'k 'v)) 'b )
     => 'a -> 'b -> list (pair 'k 'v)
 union left right = unionList (lower left) (lower right)
@@ -62,20 +63,24 @@ containsKey key entries =
                 containsKey key rest
 
 
+{-| An empty native map list. -}
 empty : list (pair 'k 'v)
 empty = []
 
 
+{-| Construct one entry from Big key and value components. -}
 singleton : ('k : Big) -> ('v : Big) -> list (pair 'k 'v)
 singleton key value = [ Builtin.mkPairData key value ]
 
 
+{-| Remove all entries with the key, then append the new Big key/value pair. -}
 insert : ( Eq 'k, Lift (list (pair 'k 'v)) 'm )
     => ('k : Big) -> ('v : Big) -> 'm -> list (pair 'k 'v)
 insert key value entries =
     List.append (remove key entries) (singleton key value)
 
 
+{-| Return the value of the first matching key, or None. -}
 get : ( Eq 'k, Lift (list (pair 'k 'v)) 'm ) => 'k -> 'm -> option 'v
 get key entries = getList key (lower entries)
 
@@ -93,6 +98,7 @@ getList key entries =
                 getList key rest
 
 
+{-| Remove all entries with a matching key. -}
 remove : ( Eq 'k, Lift (list (pair 'k 'v)) 'm ) => 'k -> 'm -> list (pair 'k 'v)
 remove key entries =
     List.filter
@@ -106,6 +112,7 @@ remove key entries =
         (toList entries)
 
 
+{-| Return keys in entry order, preserving their representations. -}
 keys : Lift (list (pair 'k 'v)) 'input => 'input -> list 'k
 keys entries =
     entries
@@ -113,6 +120,7 @@ keys entries =
         |> Functor.map Pair.fst
 
 
+{-| Return values in entry order, preserving their representations. -}
 values : Lift (list (pair 'k 'v)) 'input => 'input -> list 'v
 values entries =
     entries
@@ -120,10 +128,12 @@ values entries =
         |> Functor.map Pair.snd
 
 
+{-| Lower the outer map to its native pair list without converting keys or values. -}
 toList : Lift (list (pair 'k 'v)) 'm => 'm -> list (pair 'k 'v)
 toList = lower
 
 
+{-| Fold entries left to right, passing key, value, then accumulator. -}
 foldl : Lift (list (pair 'k 'v)) 'm => ('k -> 'v -> 'b -> 'b) -> 'b -> 'm -> 'b
 foldl f initial entries =
     List.foldl

@@ -44,10 +44,12 @@ import Primitive exposing ( type bool(..) )
 import Ordering exposing ( type ordering(..) )
 
 
+{-| Create a list containing one element. -}
 singleton : 'a -> list 'a
 singleton x = [ x ]
 
 
+{-| Repeat a value count times. A nonpositive count returns an empty list. -}
 repeat : Lift int 'n => 'n -> 'a -> list 'a
 repeat count x = repeatList (lower count) x
 
@@ -60,6 +62,7 @@ repeatList n x =
         x :: repeatList (n - 1) x
 
 
+{-| Generate integers from the inclusive start to the exclusive end. Reversed or equal bounds return an empty list. -}
 range : ( Lift int 's, Lift int 'e ) => 's -> 'e -> list int
 range start end = rangeList (lower start) (lower end)
 
@@ -72,6 +75,7 @@ rangeList start end =
         start :: rangeList (start + 1) end
 
 
+{-| Return the first element, or None for an empty list. -}
 head : Lift (list 'a) ('f 'a) => 'f 'a -> option 'a
 head values =
     case lowerOuter values of
@@ -82,6 +86,7 @@ head values =
             Some x
 
 
+{-| Return the remaining elements, or None for an empty list. -}
 tail : Lift (list 'a) ('f 'a) => 'f 'a -> option (list 'a)
 tail values =
     case lowerOuter values of
@@ -92,6 +97,7 @@ tail values =
             Some xs
 
 
+{-| Test whether the list has no elements. -}
 isEmpty : Lift (list 'a) ('f 'a) => 'f 'a -> bool
 isEmpty values =
     values
@@ -99,6 +105,7 @@ isEmpty values =
         |> Builtin.nullList
 
 
+{-| Count the elements. -}
 length : Lift (list 'a) ('f 'a) => 'f 'a -> int
 length values =
     values
@@ -106,6 +113,7 @@ length values =
         |> foldlList (\_ n -> n + 1) 0
 
 
+{-| Test for exactly the supplied count without first computing the list's length. Negative counts return False. -}
 isLength : ( Lift (list 'a) ('f 'a), Lift int 'n ) => 'f 'a -> 'n -> bool
 isLength values mustLength =
     let
@@ -130,6 +138,7 @@ isLength values mustLength =
                     False
 
 
+{-| Reverse element order without converting the elements. -}
 reverse : Lift (list 'a) ('f 'a) => 'f 'a -> list 'a
 reverse values =
     values
@@ -137,6 +146,7 @@ reverse values =
         |> foldlList (\x xs -> x :: xs) []
 
 
+{-| Append the second list to the first, preserving element representations. -}
 append : ( Lift (list 'a) ('f 'a), Lift (list 'a) ('g 'a) )
     => 'f 'a -> 'g 'a -> list 'a
 append xs ys = appendList (lowerOuter xs) (lowerOuter ys)
@@ -152,6 +162,7 @@ appendList xs ys =
             x :: appendList rest ys
 
 
+{-| Flatten one level of lists, preserving element order. -}
 concat : ( Lift (list ('f 'a)) ('g ('f 'a)), Lift (list 'a) ('f 'a) )
     => 'g ('f 'a) -> list 'a
 concat values =
@@ -160,10 +171,12 @@ concat values =
         |> foldrList (\xs acc -> appendList (lowerOuter xs) acc) []
 
 
+{-| Apply a function to each element. -}
 map : Lift (list 'a) ('f 'a) => ('a -> 'b) -> 'f 'a -> list 'b
 map f values = Functor.map f (lowerOuter values)
 
 
+{-| Map elements with their zero-based indices. -}
 indexedMap : Lift (list 'a) ('f 'a) => (int -> 'a -> 'b) -> 'f 'a -> list 'b
 indexedMap f values = indexedFrom 0 f (lowerOuter values)
 
@@ -178,6 +191,7 @@ indexedFrom index f xs =
             f index x :: indexedFrom (index + 1) f rest
 
 
+{-| Keep elements whose predicate is true. -}
 filter : ( Lift (list 'a) ('f 'a), Lift bool 'p )
     => ('a -> 'p) -> 'f 'a -> list 'a
 filter p values =
@@ -193,6 +207,7 @@ filter p values =
         (lowerOuter values)
 
 
+{-| Map each element and keep the payloads of Some results. -}
 filterMap : ( Lift (list 'a) ('f 'a), Lift (option 'b) ('g 'b) )
     => ('a -> 'g 'b) -> 'f 'a -> list 'b
 filterMap f values = filterMapList f (lowerOuter values)
@@ -213,6 +228,7 @@ filterMapList f xs =
                     filterMapList f rest
 
 
+{-| Fold left to right, passing each element before the accumulator. -}
 foldl : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> 'f 'a -> 'b
 foldl f acc values = foldlList f acc (lowerOuter values)
 
@@ -227,6 +243,7 @@ foldlList f acc xs =
             foldlList f (f x acc) rest
 
 
+{-| Fold from the right, passing each element before the accumulator. -}
 foldr : Lift (list 'a) ('f 'a) => ('a -> 'b -> 'b) -> 'b -> 'f 'a -> 'b
 foldr f acc values = foldrList f acc (lowerOuter values)
 
@@ -241,6 +258,7 @@ foldrList f acc xs =
             f x (foldrList f acc rest)
 
 
+{-| Return True at the first matching element. An empty list returns False. -}
 any : ( Lift (list 'a) ('f 'a), Lift bool 'p ) => ('a -> 'p) -> 'f 'a -> bool
 any p values = anyList (\x -> lower (p x)) (lowerOuter values)
 
@@ -258,6 +276,7 @@ anyList p xs =
                 anyList p rest
 
 
+{-| Return False at the first nonmatching element. An empty list returns True. -}
 all : ( Lift (list 'a) ('f 'a), Lift bool 'p ) => ('a -> 'p) -> 'f 'a -> bool
 all p values = allList (\x -> lower (p x)) (lowerOuter values)
 
@@ -275,6 +294,7 @@ allList p xs =
                 False
 
 
+{-| Return the first matching element, or None. -}
 find : ( Lift (list 'a) ('f 'a), Lift bool 'p )
     => ('a -> 'p) -> 'f 'a -> option 'a
 find p values = findList (\x -> lower (p x)) (lowerOuter values)
@@ -293,10 +313,12 @@ findList p xs =
                 findList p rest
 
 
+{-| Test whether an equal element occurs in the list. -}
 member : ( Eq 'a, Lift (list 'a) ('f 'a) ) => 'a -> 'f 'a -> bool
 member x values = anyList (\y -> x == y) (lowerOuter values)
 
 
+{-| Keep at most count elements from the front. Nonpositive counts return an empty list. -}
 take : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> list 'a
 take count values = takeList (lower count) (lowerOuter values)
 
@@ -314,6 +336,7 @@ takeList n xs =
                 x :: takeList (n - 1) rest
 
 
+{-| Skip count elements. Nonpositive counts leave the list unchanged; counts past the end return an empty list. -}
 drop : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> list 'a
 drop count values =
     let
@@ -326,6 +349,7 @@ drop count values =
             Builtin.dropList n (lowerOuter values)
 
 
+{-| Return the element at a zero-based index, or None for an invalid index. -}
 at : ( Lift int 'n, Lift (list 'a) ('f 'a) ) => 'n -> 'f 'a -> option 'a
 at index values =
     let
@@ -338,6 +362,7 @@ at index values =
             head (Builtin.dropList n (lowerOuter values))
 
 
+{-| Combine corresponding elements, stopping at the shorter list. -}
 map2 : ( Lift (list 'a) ('f 'a), Lift (list 'b) ('g 'b) )
     => ('a -> 'b -> 'c) -> 'f 'a -> 'g 'b -> list 'c
 map2 f xs ys = map2List f (lowerOuter xs) (lowerOuter ys)
@@ -353,6 +378,7 @@ map2List f xs ys =
             []
 
 
+{-| Sort in ascending order using Ord. Equal elements retain their original order. -}
 sort : ( Ord 'a, Lift (list 'a) ('f 'a) ) => 'f 'a -> list 'a
 sort values =
     values
@@ -360,6 +386,7 @@ sort values =
         |> sortList compare
 
 
+{-| Sort using a comparator that returns ordering or Ordering. Equal elements retain their original order. -}
 sortBy : ( Lift (list 'a) ('f 'a), Lift ordering 'o )
     => ('a -> 'a -> 'o) -> 'f 'a -> list 'a
 sortBy cmp values = sortList (\a b -> lower (cmp a b)) (lowerOuter values)
@@ -384,6 +411,7 @@ insert cmp x xs =
                     x :: xs
 
 
+{-| Add integer elements, lowering each to int. An empty list sums to zero. -}
 sum : ( Lift int 'a, Lift (list 'a) ('f 'a) ) => 'f 'a -> int
 sum values =
     values
@@ -391,6 +419,7 @@ sum values =
         |> foldlList (\x acc -> Builtin.addInteger (lower x) acc) 0
 
 
+{-| Return matching elements first and nonmatching elements second, preserving order within both lists. -}
 partition : ( Lift (list 'a) ('f 'a), Lift bool 'p )
     => ('a -> 'p) -> 'f 'a -> ( list 'a, list 'a )
 partition p values = partitionList (\x -> lower (p x)) (lowerOuter values)
@@ -412,6 +441,7 @@ partitionList p xs =
                     ( yes, x :: no )
 
 
+{-| Convert the outer list to an array without converting its elements. -}
 toArray : Lift (list 'a) ('f 'a) => 'f 'a -> array 'a
 toArray values =
     values
