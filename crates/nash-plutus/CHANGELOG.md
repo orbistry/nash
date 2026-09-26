@@ -1,5 +1,16 @@
 # nash-plutus
 
+## 0.3.2 — 2026-09-26
+
+### Patch changes
+
+- [d7301b1f](https://github.com/orbistry/nash/commit/d7301b1f5d833f84301bfdc7e58345701f2c2fd9) Consolidate Data conversion and checking in traits. Allow explicit little-type
+  ToData and FromData implementations alongside Big-only identity blankets. Add
+  independent optional Decode instances, including Cardano V3 types, and remove
+  the separate encoder and decoder combinator modules.
+  
+  Encode Flat terms iteratively so large context decoders do not exhaust the host stack. — Thanks @MicroProofs!
+
 ## 0.3.1 — 2026-09-22
 
 ### Patch changes

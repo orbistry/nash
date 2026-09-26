@@ -1,5 +1,31 @@
 # nash-driver
 
+## 0.11.0 — 2026-09-26
+
+### Minor changes
+
+- [d7301b1f](https://github.com/orbistry/nash/commit/d7301b1f5d833f84301bfdc7e58345701f2c2fd9) Consolidate Data conversion and checking in traits. Allow explicit little-type
+  ToData and FromData implementations alongside Big-only identity blankets. Add
+  independent optional Decode instances, including Cardano V3 types, and remove
+  the separate encoder and decoder combinator modules.
+  
+  Encode Flat terms iteratively so large context decoders do not exhaust the host stack. — Thanks @MicroProofs!
+- [4f8f3a68](https://github.com/orbistry/nash/commit/4f8f3a685a4888df37e3b0f8e283aba390756c31) Choose small-biased bit widths before generating Prop.intAtLeast offsets and wide Prop.int magnitudes. Preserve arbitrary precision while replacing the zero-or-huge distribution with useful small nonzero values. Use exact expModInteger powers within each eight-bit band, with CEK budget snapshots comparing CPU and memory. Expose Int.pow2 and use its exact modular fast path in Int.pow for base two. — Thanks @MicroProofs!
+- [594d180d](https://github.com/orbistry/nash/commit/594d180dd1fc5cbdf5803713296fc80d18575aa2) Complete Prop generators with booleans, options, bounded and exact bytes, weighted alternatives, and arbitrary-precision integer generation. Normalize Big/little bounds and weights, preserve strict replay groups, and express tuple2 through generator do. Add source snapshots for range properties and reduced counterexamples. — Thanks @MicroProofs!
+- [bec1d2ac](https://github.com/orbistry/nash/commit/bec1d2accff3476ada1195d93c473f68f5434a08) Add integer gcd/lcm/square-root operations and result-checking predicates,
+  normalized little rational arithmetic, and Big/little Crypto wrappers over
+  Plutus hash and signature builtins. Move the Bytes hash helpers into Crypto. Embed Rational and Crypto with implicit
+  qualified imports, exact reference snapshots and predicate budget comparisons. — Thanks @MicroProofs!
+- [6c489a62](https://github.com/orbistry/nash/commit/6c489a62742bd1fb4a64d5f3e9ab51c075785988) Ship Cardano V3 context, address, governance, value, and interval modules in Base. Use native value builtins, explicit Nash wire validation, and Haskell-generated encoding and interval comparisons. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [09ca8317](https://github.com/orbistry/nash/commit/09ca8317595c7afd41a9f55394da9c5ba95e5280) Use pipe operators for list Data conversions and share their implementations through Function. — Thanks @MicroProofs!
+- [80fbf743](https://github.com/orbistry/nash/commit/80fbf7435cec0556f21ca503218e5bf208adabf0) Use a compile-time constant array for small powers of two in Int.pow2 and the base-two Int.pow path. Budget snapshots compare runtime arrays, constant arrays and modular exponentiation; constant lookup uses less CPU and memory without runtime table construction. — Thanks @MicroProofs!
+- [80fbf743](https://github.com/orbistry/nash/commit/80fbf7435cec0556f21ca503218e5bf208adabf0) Remove predicate-filtered generators and their bounded retry loop, fixtures, and documentation. Build valid values directly through generator composition. — Thanks @MicroProofs!
+- [100e54a5](https://github.com/orbistry/nash/commit/100e54a54c302182d405a473cd794a40240a9d68) Use pipe operators for one-argument call chains across the base library. — Thanks @MicroProofs!
+- Updated dependencies: nash-can@0.12.0, nash-codegen@0.4.2, nash-constrain@0.8.2, nash-plutus@0.3.2, nash-report@0.5.3, nash-solve@0.9.1, nash-test@0.4.1
+
 ## 0.10.0 — 2026-09-25
 
 ### Minor changes
