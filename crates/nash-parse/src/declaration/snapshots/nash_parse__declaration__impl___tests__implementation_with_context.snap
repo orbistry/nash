@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
+assertion_line: 107
 description: "impl Eq 'a => Eq (list 'a) where\n    eq xs ys = eqList xs ys\n"
 ---
 Impl(
@@ -15,6 +16,7 @@ Impl(
             },
         },
         value: Impl {
+            docs: None,
             context: [
                 Located {
                     region: Region {

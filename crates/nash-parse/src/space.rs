@@ -12,7 +12,7 @@
 
 use crate::error::Space;
 use crate::{Col, Parser, Row};
-use nash_source::{Comment, Snippet};
+use nash_source::{Comment, CommentKind, Snippet, SourceComment};
 
 /// Result of eating spaces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,7 +164,13 @@ impl<'a> Parser<'a> {
                         off_row: start_row,
                         off_col: start_col,
                     });
-                    let comment = self.alloc(Comment(snippet));
+                    let comment = self.alloc(Comment {
+                        region: nash_region::Region::new(
+                            nash_region::Position::new(start_row, start_col - 3),
+                            self.get_position(),
+                        ),
+                        snippet,
+                    });
 
                     Ok(comment)
                 }
@@ -246,26 +252,33 @@ impl<'a> Parser<'a> {
 
     /// Eat a line comment (from -- to end of line).
     fn eat_line_comment(&mut self) {
-        // Skip the --
-        self.advance();
-        self.advance();
-
-        loop {
-            match self.peek() {
-                Some(0x0A) => {
-                    // Newline ends the comment
-                    self.advance();
-                    return;
-                }
-                Some(_) => {
-                    self.advance();
-                }
-                None => {
-                    // EOF ends the comment
-                    return;
-                }
-            }
+        let start = self.get_position();
+        self.advance_by(2);
+        let text_start = self.pos;
+        while !matches!(self.peek(), None | Some(b'\n'))
+            && !(self.peek() == Some(b'\r') && self.peek_at(1) == Some(b'\n'))
+        {
+            self.advance();
         }
+        self.push_comment(start, CommentKind::Line, text_start, self.pos);
+        // The surrounding whitespace loop consumes the line ending.
+    }
+
+    fn push_comment(
+        &mut self,
+        start: nash_region::Position,
+        kind: CommentKind,
+        text_start: usize,
+        text_end: usize,
+    ) {
+        let text = std::str::from_utf8(&self.src[text_start..text_end])
+            .expect("source is valid UTF-8 and comment delimiters are ASCII");
+        let comment = self.alloc(SourceComment {
+            region: nash_region::Region::new(start, self.get_position()),
+            kind,
+            text,
+        });
+        self.comments.push(comment);
     }
 
     /// Eat a multi-line comment ({- ... -}).
@@ -277,7 +290,12 @@ impl<'a> Parser<'a> {
         self.advance();
         self.advance();
 
-        self.eat_multi_comment_help(1, opening)
+        let text_start = self.pos;
+        let status = self.eat_multi_comment_help(1, opening);
+        if matches!(status, SpaceStatus::Good) {
+            self.push_comment(opening, CommentKind::Block, text_start, self.pos - 2);
+        }
+        status
     }
 
     /// Helper for eating multi-line comments with nesting.
@@ -436,9 +454,9 @@ mod tests {
         assert!(result.is_ok());
         let comment = result.unwrap();
         // Content is " hello " (between {-| and -})
-        assert_eq!(comment.0.data, b" hello ");
-        assert_eq!(comment.0.off_row, 1);
-        assert_eq!(comment.0.off_col, 4); // Column after {-|
+        assert_eq!(comment.snippet.data, b" hello ");
+        assert_eq!(comment.snippet.off_row, 1);
+        assert_eq!(comment.snippet.off_col, 4); // Column after {-|
     }
 
     #[test]
@@ -450,7 +468,7 @@ mod tests {
         let result = parser.doc_comment(|_, _| "expected", |_, _, _| "space error");
         assert!(result.is_ok());
         let comment = result.unwrap();
-        assert_eq!(comment.0.data, b" line one\nline two ");
+        assert_eq!(comment.snippet.data, b" line one\nline two ");
     }
 
     #[test]

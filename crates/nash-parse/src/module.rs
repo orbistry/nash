@@ -212,15 +212,23 @@ impl<'a> Parser<'a> {
         let start_pos = self.get_position();
 
         // Try to parse module header (optional)
-        let (kind, name, exports) =
+        let (kind, name, exports, overview) =
             if self.starts_keyword(b"module") || self.starts_keyword(b"validator") {
                 let (kind, name, exports) = self.module_header()?;
                 self.chomp(error::Module::Space)?;
                 self.check_fresh_line(error::Module::FreshLine)?;
-                (kind, Some(name), exports)
+                let overview = if self.remaining().starts_with(b"{-|") {
+                    let doc = self.doc_comment(error::Module::FreshLine, error::Module::Space)?;
+                    self.chomp(error::Module::Space)?;
+                    self.check_fresh_line(error::Module::FreshLine)?;
+                    Some(doc)
+                } else {
+                    None
+                };
+                (kind, Some(name), exports, overview)
             } else {
                 let default_exports = self.alloc(Located::at(Region::one(), Exposing::Open));
-                (ModuleKind::Normal, None, default_exports)
+                (ModuleKind::Normal, None, default_exports, None)
             };
 
         // Parse imports
@@ -248,14 +256,36 @@ impl<'a> Parser<'a> {
         // Categorize declarations into values, unions, aliases
         let (values, unions, aliases, traits, impls) = self.categorize_decls(decls);
 
-        // Build docs (simplified: no module-level docs for now)
-        let docs = self.alloc(Docs::NoDocs(Region::new(start_pos, self.get_position())));
+        let docs = self.alloc(match overview {
+            Some(overview) => {
+                let mut comments = Vec::new();
+                for (name, doc) in values
+                    .iter()
+                    .map(|v| (v.value.name, v.value.docs))
+                    .chain(unions.iter().map(|v| (v.value.name, v.value.docs)))
+                    .chain(aliases.iter().map(|v| (v.value.name, v.value.docs)))
+                    .chain(traits.iter().map(|v| (v.value.name, v.value.docs)))
+                {
+                    if let Some(doc) = doc {
+                        comments.push(self.alloc((name.value, doc)));
+                    }
+                }
+                comments.sort_by_key(|(_, doc)| (doc.region.start.line, doc.region.start.column));
+                Docs::YesDocs {
+                    overview,
+                    comments: self.alloc_slice_copy(&comments),
+                }
+            }
+            None => Docs::NoDocs(Region::new(start_pos, self.get_position())),
+        });
+        let comments = self.alloc_slice_copy(&self.comments);
 
         Ok(Module {
             kind,
             name,
             exports,
             docs,
+            comments,
             imports,
             values,
             unions,
@@ -295,9 +325,9 @@ impl<'a> Parser<'a> {
 
         for decl in decls {
             match decl {
-                Decl::Value(_doc, value) => values.push(value),
-                Decl::Union(_doc, union) => unions.push(union),
-                Decl::Alias(_doc, alias) => aliases.push(alias),
+                Decl::Value(value) => values.push(value),
+                Decl::Union(union) => unions.push(union),
+                Decl::Alias(alias) => aliases.push(alias),
                 Decl::Trait(trait_) => traits.push(trait_),
                 Decl::Impl(impl_) => impls.push(impl_),
             }
@@ -614,5 +644,92 @@ mod tests {
     #[test]
     fn module_preserves_annotation_name_error() {
         assert_module_error_snapshot!("f : int\ng = 1");
+    }
+    #[test]
+    fn comments_are_collected() {
+        assert_module_snapshot!(
+            r#"
+            -- leading
+            {- outer {- nested -} block -}
+            x = {- before value -} 1 -- trailing
+            -- eof
+        "#
+        );
+    }
+
+    #[test]
+    fn comments_preserve_unicode_and_crlf() {
+        assert_module_snapshot!("-- café\r\nx = 1 -- 終");
+    }
+
+    #[test]
+    fn doc_comment_attaches_to_value() {
+        assert_module_snapshot!("{-| value docs -}\nx = 1");
+    }
+
+    #[test]
+    fn module_doc_comment() {
+        assert_module_snapshot!(
+            r#"
+            module Main exposing (..)
+            -- before overview
+            {-| Overview with {- nested -} content. -}
+            import A -- import note
+
+            {-| Value docs. -}
+            @inline
+            x : int
+            x = 1
+        "#
+        );
+    }
+
+    #[test]
+    fn declaration_docs_survive_categorization() {
+        assert_module_snapshot!(
+            r#"
+            module Documented exposing (..)
+            {-| Overview. -}
+
+            {-| A union. -}
+            type Box = Box int
+
+            {-| An alias. -}
+            type alias Count = int
+
+            {-| A trait. -}
+            trait Measure 'a where
+                measure : 'a -> int
+
+            {-| An implementation. -}
+            impl Measure int where
+                measure x = x
+        "#
+        );
+    }
+
+    #[test]
+    fn backtracking_does_not_duplicate_comments() {
+        assert_module_snapshot!(
+            r#"
+            section = (1 + {- section -})
+            action = do
+                f {- speculative pattern -} x
+                pure ()
+        "#
+        );
+    }
+
+    #[test]
+    fn comments_in_tests_and_strings() {
+        assert_module_snapshot!(
+            r#"
+            text = "-- not a comment {- neither -}"
+            tests
+                -- test note
+                test "works" = do
+                    assert {- assertion note -} True
+        "#
+        );
     }
 }

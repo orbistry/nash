@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/type_alias.rs
+assertion_line: 122
 description: "type alias Model = { count : Int }"
 ---
 Alias(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Alias(
             },
         },
         value: Alias {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

@@ -25,6 +25,7 @@ pub type Col = usize;
 /// Saved parser state for backtracking.
 #[derive(Clone, Copy)]
 struct ParserState {
+    comments_len: usize,
     pos: usize,
     indent: usize,
     row: Row,
@@ -39,6 +40,7 @@ struct ParserState {
 /// The source text should already be allocated in the arena (via `bump.alloc_str`),
 /// so all string slices in the resulting AST share the `'a` lifetime.
 pub struct Parser<'a> {
+    comments: Vec<&'a nash_source::SourceComment<'a>>,
     /// Arena allocator for AST nodes
     bump: &'a Bump,
     /// Source bytes (UTF-8, already in arena)
@@ -67,6 +69,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn new(bump: &'a Bump, src: &'a str) -> Self {
         Parser {
+            comments: Vec::new(),
             bump,
             src: src.as_bytes(),
             pos: 0,
@@ -211,6 +214,7 @@ impl<'a> Parser<'a> {
     #[inline]
     fn save_state(&self) -> ParserState {
         ParserState {
+            comments_len: self.comments.len(),
             pos: self.pos,
             indent: self.indent,
             row: self.row,
@@ -221,6 +225,7 @@ impl<'a> Parser<'a> {
     /// Restore parser state for backtracking.
     #[inline]
     fn restore_state(&mut self, state: ParserState) {
+        self.comments.truncate(state.comments_len);
         self.pos = state.pos;
         self.indent = state.indent;
         self.row = state.row;

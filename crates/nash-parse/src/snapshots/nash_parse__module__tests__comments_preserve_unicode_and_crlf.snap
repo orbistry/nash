@@ -1,34 +1,20 @@
 ---
 source: crates/nash-parse/src/module.rs
-assertion_line: 463
-description: "Code:\n\nmodule Main exposing (..)\n\nmain = 42\n"
+assertion_line: 655
+description: "Code:\n\n-- café\r\nx = 1 -- 終"
 ---
 Module {
     kind: Normal,
-    name: Some(
-        Located {
-            region: Region {
-                start: Position {
-                    line: 1,
-                    column: 8,
-                },
-                end: Position {
-                    line: 1,
-                    column: 12,
-                },
-            },
-            value: "Main",
-        },
-    ),
+    name: None,
     exports: Located {
         region: Region {
             start: Position {
                 line: 1,
-                column: 22,
+                column: 1,
             },
             end: Position {
                 line: 1,
-                column: 26,
+                column: 1,
             },
         },
         value: Open,
@@ -36,27 +22,56 @@ Module {
     docs: NoDocs(
         Region {
             start: Position {
-                line: 1,
+                line: 2,
                 column: 1,
             },
             end: Position {
-                line: 4,
-                column: 1,
+                line: 2,
+                column: 13,
             },
         },
     ),
-    comments: [],
+    comments: [
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 9,
+                },
+            },
+            kind: Line,
+            text: " café",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 7,
+                },
+                end: Position {
+                    line: 2,
+                    column: 13,
+                },
+            },
+            kind: Line,
+            text: " 終",
+        },
+    ],
     imports: [],
     values: [
         Located {
             region: Region {
                 start: Position {
-                    line: 3,
+                    line: 2,
                     column: 1,
                 },
                 end: Position {
-                    line: 4,
-                    column: 1,
+                    line: 2,
+                    column: 13,
                 },
             },
             value: Value {
@@ -64,30 +79,30 @@ Module {
                 name: Located {
                     region: Region {
                         start: Position {
-                            line: 3,
+                            line: 2,
                             column: 1,
                         },
                         end: Position {
-                            line: 3,
-                            column: 5,
+                            line: 2,
+                            column: 2,
                         },
                     },
-                    value: "main",
+                    value: "x",
                 },
                 arguments: [],
                 body: Located {
                     region: Region {
                         start: Position {
-                            line: 3,
-                            column: 8,
+                            line: 2,
+                            column: 5,
                         },
                         end: Position {
-                            line: 3,
-                            column: 10,
+                            line: 2,
+                            column: 6,
                         },
                     },
                     value: Int(
-                        42,
+                        1,
                     ),
                 },
                 annotation: None,

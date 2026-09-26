@@ -6,6 +6,8 @@ pub struct Module<'a> {
     pub name: Option<&'a Located<&'a str>>,
     pub exports: &'a Located<Exposing<'a>>,
     pub docs: &'a Docs<'a>,
+    /// Ordinary comments in source order, including nested block text.
+    pub comments: &'a [&'a SourceComment<'a>],
     pub imports: &'a [&'a Import<'a>],
     pub values: &'a [&'a Located<Value<'a>>],
     pub unions: &'a [&'a Located<Union<'a>>],
@@ -31,6 +33,7 @@ pub struct Import<'a> {
 
 #[derive(Debug)]
 pub struct Value<'a> {
+    pub docs: Option<&'a Comment<'a>>,
     pub name: &'a Located<&'a str>,
     pub arguments: &'a [&'a Located<Pattern<'a>>],
     pub body: &'a Located<Expr<'a>>,
@@ -46,6 +49,7 @@ pub struct Attribute<'a> {
 
 #[derive(Debug)]
 pub struct Trait<'a> {
+    pub docs: Option<&'a Comment<'a>>,
     pub name: &'a Located<&'a str>,
     pub params: &'a [&'a TypeParam<'a>],
     pub supers: &'a [&'a Located<Constraint<'a>>],
@@ -62,6 +66,7 @@ pub struct TraitMethod<'a> {
 
 #[derive(Debug)]
 pub struct Impl<'a> {
+    pub docs: Option<&'a Comment<'a>>,
     pub context: &'a [&'a Located<Constraint<'a>>],
     pub head: &'a Located<Constraint<'a>>,
     pub methods: &'a [&'a Located<Def<'a>>],
@@ -136,6 +141,7 @@ pub struct Constraint<'a> {
 //   | Nothing
 #[derive(Debug)]
 pub struct Union<'a> {
+    pub docs: Option<&'a Comment<'a>>,
     pub name: &'a Located<&'a str>,
     // type vars
     pub arguments: &'a [&'a TypeParam<'a>],
@@ -157,6 +163,7 @@ pub enum CtorArgs<'a> {
 
 #[derive(Debug)]
 pub struct Alias<'a> {
+    pub docs: Option<&'a Comment<'a>>,
     pub name: &'a Located<&'a str>,
     // type vars
     pub arguments: &'a [&'a TypeParam<'a>],
@@ -443,8 +450,27 @@ pub enum Docs<'a> {
     },
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CommentKind {
+    Line,
+    Block,
+}
+
 #[derive(Debug)]
-pub struct Comment<'a>(pub &'a Snippet<'a>);
+pub struct SourceComment<'a> {
+    /// Includes delimiters, excludes the line ending for line comments.
+    pub region: Region,
+    pub kind: CommentKind,
+    /// Exact text between delimiters, without a line comment's CRLF or LF.
+    pub text: &'a str,
+}
+
+#[derive(Debug)]
+pub struct Comment<'a> {
+    /// Includes the opening and closing doc-comment delimiters.
+    pub region: Region,
+    pub snippet: &'a Snippet<'a>,
+}
 
 #[derive(Debug)]
 pub struct Snippet<'a> {

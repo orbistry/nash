@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 489
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Wrap 'a\n    = Wrap 'a\n\nf w = w\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [
         Located {
@@ -58,6 +60,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -122,6 +125,7 @@ Module {
                 },
             },
             value: Union {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

@@ -1,0 +1,161 @@
+---
+source: crates/nash-parse/src/module.rs
+assertion_line: 645
+description: "Code:\n\n-- leading\n{- outer {- nested -} block -}\nx = {- before value -} 1 -- trailing\n-- eof\n"
+---
+Module {
+    kind: Normal,
+    name: None,
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 1,
+            },
+        },
+        value: Open,
+    },
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 3,
+                column: 1,
+            },
+            end: Position {
+                line: 5,
+                column: 1,
+            },
+        },
+    ),
+    comments: [
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 11,
+                },
+            },
+            kind: Line,
+            text: " leading",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 2,
+                    column: 31,
+                },
+            },
+            kind: Block,
+            text: " outer {- nested -} block ",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 5,
+                },
+                end: Position {
+                    line: 3,
+                    column: 23,
+                },
+            },
+            kind: Block,
+            text: " before value ",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 26,
+                },
+                end: Position {
+                    line: 3,
+                    column: 37,
+                },
+            },
+            kind: Line,
+            text: " trailing",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 4,
+                    column: 1,
+                },
+                end: Position {
+                    line: 4,
+                    column: 7,
+                },
+            },
+            kind: Line,
+            text: " eof",
+        },
+    ],
+    imports: [],
+    values: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 1,
+                },
+                end: Position {
+                    line: 5,
+                    column: 1,
+                },
+            },
+            value: Value {
+                docs: None,
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 2,
+                        },
+                    },
+                    value: "x",
+                },
+                arguments: [],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 3,
+                            column: 24,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 25,
+                        },
+                    },
+                    value: Int(
+                        1,
+                    ),
+                },
+                annotation: None,
+                attributes: [],
+            },
+        },
+    ],
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [],
+    tests: None,
+    binops: [],
+}

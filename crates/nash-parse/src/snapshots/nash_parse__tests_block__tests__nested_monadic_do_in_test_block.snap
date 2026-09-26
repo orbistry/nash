@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
+assertion_line: 356
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"nested do\" = do\n        r <- do\n            x <- action\n            pure x\n        assert r\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [],
     unions: [],

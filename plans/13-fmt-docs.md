@@ -14,14 +14,10 @@ Crates touched: `nash-source`, `nash-parse`, new `nash-fmt`, new
 
 References:
 
-- Comments today: the parser drops line and block comments in
-  `eat_spaces` (`crates/nash-parse/src/space.rs:167`,
-  `eat_line_comment` :212, `eat_multi_comment` :236). Doc comments are
-  captured by `doc_comment` (:107) as `Comment(&Snippet { data, off_row, off_col })`
-  (`crates/nash-source/src/lib.rs:257`), attached to `Decl::Value(Option<&Comment>, ..)`
-  (`crates/nash-parse/src/declaration/mod.rs:19`), then discarded by
-  `categorize_decls` (`crates/nash-parse/src/module.rs:258`). Module
-  docs are always `Docs::NoDocs` (`module.rs:241`).
+- Comments: `nash-parse/src/space.rs` retains ordinary comments in a
+  source-ordered `Module.comments` side table. Doc comments retain their
+  region and source snippet, attach to declarations, and populate `Docs::YesDocs`
+  when an explicit module header is followed by an overview.
 - Elm: `Parse/Module.hs` `chompModuleDocCommentSpace`, `Elm/Docs.hs`
   (`Module`, `Union`, `Alias`, `Value`, `Binop`, `fromModule`, the
   `@docs` overview parser), `Elm/Compiler/Type/Extract.hs` (types for
@@ -33,100 +29,36 @@ References:
 
 ---
 
-## Chunk 1: comments in the surface AST
+## Chunk 1: comments in the surface AST — complete
 
-**Files**
+Implemented in `nash-source`, `nash-parse`, and the canonicalizer's synthetic
+value initializer.
 
-- `crates/nash-source/src/lib.rs`
-- `crates/nash-parse/src/space.rs`, `lib.rs`, `module.rs`, `declaration/mod.rs`
+- `Module.comments` retains ordinary line and block comments in source order.
+  Each `SourceComment` stores its kind, region, and exact inner text.
+- Line-comment regions include `--` and exclude LF/CRLF; block-comment regions
+  include both delimiters. Nested blocks remain part of the outer comment text.
+- `Comment` stores the doc-comment region and its existing source `Snippet`.
+  Values, unions, aliases, traits, and implementations retain attached docs.
+- A doc comment after an explicit module header is the module overview.
+  `Docs::YesDocs` indexes named declaration docs in source order. Headerless
+  declaration docs stay on their declaration; implementation docs stay on the
+  implementation because implementations have no unique declaration name.
+- Parser save/restore includes the ordinary-comment count. Restoring a failed
+  alternative truncates the collection, so lookahead does not duplicate comments.
+- Internal `Decl` variants refer to the documented surface nodes directly;
+  docs are no longer temporarily stored on wrappers and discarded during
+  categorization.
 
-**Change**
+Snapshot coverage includes leading/inline/trailing comments, nested blocks,
+Unicode, CRLF and EOF, doc attachments (including attributes), module overviews,
+comments in tests, comment markers in strings, and section/do backtracking.
+Existing declaration/module snapshots now include the preserved metadata.
+Validation: 462 parser tests pass; full workspace tests, strict all-targets/
+all-features Clippy, and formatting checks pass.
 
-Keep every comment with its region in a side table on `Module`, and keep
-doc comments on declarations and on the module.
-
-**Code**
-
-```rust
-// crates/nash-source/src/lib.rs
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CommentKind {
-    Line,       // -- ...
-    Block,      // {- ... -}
-}
-
-#[derive(Debug)]
-pub struct SourceComment<'a> {
-    pub region: Region,
-    pub kind: CommentKind,
-    /// Text between the delimiters, untrimmed.
-    pub text: &'a str,
-}
-
-pub struct Module<'a> {
-    // ...
-    /// All non-doc comments in source order.
-    pub comments: &'a [&'a SourceComment<'a>],
-    pub docs: &'a Docs<'a>,                  // now filled: module overview + per-decl docs
-}
-
-pub struct Value<'a> { /* ... */ pub docs: Option<&'a Comment<'a>> }
-pub struct Union<'a> { /* ... */ pub docs: Option<&'a Comment<'a>> }
-pub struct Alias<'a> { /* ... */ pub docs: Option<&'a Comment<'a>> }
-```
-
-`Parser` gains `comments: Vec<&'a SourceComment<'a>>`. `eat_line_comment`
-and `eat_multi_comment` record start position before advancing and push
-after:
-
-```rust
-fn eat_line_comment(&mut self) {
-    let start = self.get_position();
-    let text_start = self.pos + 2;
-    self.advance(); self.advance();
-    let mut text_end = self.pos;
-    loop {
-        match self.peek() {
-            Some(0x0A) => { self.advance(); break; }
-            Some(_) => { self.advance(); text_end = self.pos; }
-            None => break,
-        }
-    }
-    self.push_comment(start, CommentKind::Line, text_start, text_end);
-}
-
-fn push_comment(&mut self, start: Position, kind: CommentKind, text_start: usize, text_end: usize) {
-    let text = std::str::from_utf8(&self.src[text_start..text_end]).expect("source is UTF-8");
-    let comment = self.alloc(SourceComment { region: Region::new(start, self.get_position()), kind, text });
-    self.comments.push(comment);
-}
-```
-
-`module()` moves `self.comments` into `Module.comments` at the end and
-parses a module doc comment after the header (Elm's
-`chompModuleDocCommentSpace`). `categorize_decls` stores the `Decl`'s
-doc on the value/union/alias instead of dropping it.
-
-Backtracking: `save_state`/`restore_state` (`module.rs:208`) must
-truncate `comments` to the saved length so a failed alternative does not
-leave duplicates.
-
-**Elm/Aiken reference**
-
-`Parse/Space.hs` `eatLineComment`, `eatMultiComment` (structure);
-`Parse/Module.hs` `chompModuleDocCommentSpace`. Aiken keeps comments the
-same way: `crates/aiken-lang/src/parser/token.rs` `Token::Comment` plus
-`extra.comments` spans in `crates/aiken-lang/src/parser/extra.rs`.
-
-**Tests** (`crates/nash-parse/src/space.rs`, `module.rs`)
-
-- `comments_are_collected`: `-- a\n{- b -}\nx = 1` yields two `SourceComment`s with regions and texts `" a"`, `" b "`.
-- `doc_comment_attaches_to_value`: `{-| doc -}\nx = 1` → `values[0].docs.is_some()`.
-- `module_doc_comment`: `module M exposing (..)\n{-| overview -}\nx = 1` → `Docs::YesDocs`.
-- `backtracking_does_not_duplicate_comments`.
-
-**Done when** existing parser snapshots are unchanged except for the new
-fields.
+Chunk 1 does not format source or attach ordinary comments to individual nodes;
+those tasks belong to later chunks.
 
 ---
 

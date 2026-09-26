@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
+assertion_line: 266
 description: "trait Functor 'f where\n    map : ('a -> 'b) -> 'f 'a -> 'f 'b\n"
 ---
 Trait(
@@ -15,6 +16,7 @@ Trait(
             },
         },
         value: Trait {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

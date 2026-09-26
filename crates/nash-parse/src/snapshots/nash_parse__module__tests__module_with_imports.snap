@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 451
 description: "Code:\n\nmodule Main exposing (..)\n\nimport List\nimport Maybe exposing (Maybe(..))\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [
         Import {
             import: Located {

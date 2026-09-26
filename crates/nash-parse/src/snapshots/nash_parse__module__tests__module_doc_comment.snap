@@ -1,0 +1,313 @@
+---
+source: crates/nash-parse/src/module.rs
+assertion_line: 665
+description: "Code:\n\nmodule Main exposing (..)\n-- before overview\n{-| Overview with {- nested -} content. -}\nimport A -- import note\n\n{-| Value docs. -}\n@inline\nx : int\nx = 1\n"
+---
+Module {
+    kind: Normal,
+    name: Some(
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 8,
+                },
+                end: Position {
+                    line: 1,
+                    column: 12,
+                },
+            },
+            value: "Main",
+        },
+    ),
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 22,
+            },
+            end: Position {
+                line: 1,
+                column: 26,
+            },
+        },
+        value: Open,
+    },
+    docs: YesDocs {
+        overview: Comment {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 1,
+                },
+                end: Position {
+                    line: 3,
+                    column: 43,
+                },
+            },
+            snippet: Snippet {
+                data: [
+                    32,
+                    79,
+                    118,
+                    101,
+                    114,
+                    118,
+                    105,
+                    101,
+                    119,
+                    32,
+                    119,
+                    105,
+                    116,
+                    104,
+                    32,
+                    123,
+                    45,
+                    32,
+                    110,
+                    101,
+                    115,
+                    116,
+                    101,
+                    100,
+                    32,
+                    45,
+                    125,
+                    32,
+                    99,
+                    111,
+                    110,
+                    116,
+                    101,
+                    110,
+                    116,
+                    46,
+                    32,
+                ],
+                off_row: 3,
+                off_col: 4,
+            },
+        },
+        comments: [
+            (
+                "x",
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 6,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 19,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            86,
+                            97,
+                            108,
+                            117,
+                            101,
+                            32,
+                            100,
+                            111,
+                            99,
+                            115,
+                            46,
+                            32,
+                        ],
+                        off_row: 6,
+                        off_col: 4,
+                    },
+                },
+            ),
+        ],
+    },
+    comments: [
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 2,
+                    column: 19,
+                },
+            },
+            kind: Line,
+            text: " before overview",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 4,
+                    column: 10,
+                },
+                end: Position {
+                    line: 4,
+                    column: 24,
+                },
+            },
+            kind: Line,
+            text: " import note",
+        },
+    ],
+    imports: [
+        Import {
+            import: Located {
+                region: Region {
+                    start: Position {
+                        line: 4,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 9,
+                    },
+                },
+                value: "A",
+            },
+            alias: None,
+            exposing: Explicit(
+                [],
+            ),
+        },
+    ],
+    values: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 8,
+                    column: 1,
+                },
+                end: Position {
+                    line: 10,
+                    column: 1,
+                },
+            },
+            value: Value {
+                docs: Some(
+                    Comment {
+                        region: Region {
+                            start: Position {
+                                line: 6,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 6,
+                                column: 19,
+                            },
+                        },
+                        snippet: Snippet {
+                            data: [
+                                32,
+                                86,
+                                97,
+                                108,
+                                117,
+                                101,
+                                32,
+                                100,
+                                111,
+                                99,
+                                115,
+                                46,
+                                32,
+                            ],
+                            off_row: 6,
+                            off_col: 4,
+                        },
+                    },
+                ),
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 9,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 9,
+                            column: 2,
+                        },
+                    },
+                    value: "x",
+                },
+                arguments: [],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 9,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 9,
+                            column: 6,
+                        },
+                    },
+                    value: Int(
+                        1,
+                    ),
+                },
+                annotation: Some(
+                    Annotation {
+                        constraints: [],
+                        typ: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 8,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 8,
+                                    column: 8,
+                                },
+                            },
+                            value: Type {
+                                region: Region {
+                                    start: Position {
+                                        line: 8,
+                                        column: 5,
+                                    },
+                                    end: Position {
+                                        line: 8,
+                                        column: 8,
+                                    },
+                                },
+                                name: "int",
+                                args: [],
+                            },
+                        },
+                    },
+                ),
+                attributes: [
+                    Attribute {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 7,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 7,
+                                    column: 8,
+                                },
+                            },
+                            value: "inline",
+                        },
+                        args: [],
+                    },
+                ],
+            },
+        },
+    ],
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [],
+    tests: None,
+    binops: [],
+}

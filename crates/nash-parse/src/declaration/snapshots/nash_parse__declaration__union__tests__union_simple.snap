@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
+assertion_line: 263
 description: type Bool = True | False
 ---
 Union(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Union(
             },
         },
         value: Union {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

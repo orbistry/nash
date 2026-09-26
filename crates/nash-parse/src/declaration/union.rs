@@ -22,6 +22,7 @@ impl<'a> Parser<'a> {
         &mut self,
         start: Position,
         attributes: &'a [&'a Attribute<'a>],
+        docs: Option<&'a nash_source::Comment<'a>>,
     ) -> Result<(&'a Located<Union<'a>>, Position), CustomType<'a>> {
         let (name, args) = self.chomp_custom_name_to_equals()?;
 
@@ -33,6 +34,7 @@ impl<'a> Parser<'a> {
 
         let ctors = self.alloc_slice_copy(&variants);
         let union = Union {
+            docs,
             name,
             arguments: args,
             ctors,

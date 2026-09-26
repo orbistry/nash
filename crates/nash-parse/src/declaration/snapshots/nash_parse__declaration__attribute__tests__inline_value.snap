@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
+assertion_line: 109
 description: "@inline\nf x = x"
 ---
 Value(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Value(
             },
         },
         value: Value {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/value.rs
+assertion_line: 200
 description: "max : Ord 'a => 'a -> 'a -> 'a\nmax a b = a\n"
 ---
 Value(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Value(
             },
         },
         value: Value {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 474
 description: "Code:\n\nmodule Main exposing (..)\n\ntype Maybe 'a\n    = Just 'a\n    | Nothing\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [],
     unions: [
@@ -59,6 +61,7 @@ Module {
                 },
             },
             value: Union {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

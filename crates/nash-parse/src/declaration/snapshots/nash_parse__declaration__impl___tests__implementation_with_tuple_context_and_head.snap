@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
+assertion_line: 128
 description: "impl (Eq 'a, Eq 'b) => Eq ('a, 'b) where\n    eq (a, b) (c, d) = a == c && b == d\n"
 ---
 Impl(
@@ -15,6 +16,7 @@ Impl(
             },
         },
         value: Impl {
+            docs: None,
             context: [
                 Located {
                     region: Region {

@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
+assertion_line: 113
 description: "@cost(cpu 10, \"n\")\ntype alias a = int"
 ---
 Alias(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Alias(
             },
         },
         value: Alias {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

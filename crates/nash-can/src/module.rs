@@ -1564,6 +1564,7 @@ pub(crate) fn canonicalize_typed_value<'a>(
     let value = bump.alloc(Located::at(
         definition.region,
         SourceValue {
+            docs: None,
             name,
             arguments: args,
             body,

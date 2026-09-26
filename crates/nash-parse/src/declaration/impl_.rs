@@ -9,6 +9,7 @@ use crate::error::{self, Def as DefErr, Impl as ImplErr};
 impl<'a> Parser<'a> {
     pub(super) fn impl_decl(
         &mut self,
+        docs: Option<&'a nash_source::Comment<'a>>,
         attributes: &'a [&'a Attribute<'a>],
         start: Position,
     ) -> Result<(Decl<'a>, Position), error::Decl<'a>> {
@@ -31,6 +32,7 @@ impl<'a> Parser<'a> {
                 parser.chomp(ImplErr::Space)?;
                 let (methods, end) = parser.impl_body(where_end)?;
                 let impl_ = Impl {
+                    docs,
                     context: scheme.constraints,
                     head,
                     methods,

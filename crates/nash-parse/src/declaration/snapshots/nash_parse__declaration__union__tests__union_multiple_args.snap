@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/union.rs
+assertion_line: 273
 description: "type Outcome 'e 'a = Ok 'a | Err 'e"
 ---
 Union(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Union(
             },
         },
         value: Union {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

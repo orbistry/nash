@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 553
 description: "Code:\n\nmodule Main exposing (..)\n\ntrait Marker 'a where\n\nx = 1\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [
         Located {
@@ -58,6 +60,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -107,6 +110,7 @@ Module {
                 },
             },
             value: Trait {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

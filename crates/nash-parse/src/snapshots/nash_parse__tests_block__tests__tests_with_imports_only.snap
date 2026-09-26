@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
+assertion_line: 344
 description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    import Prop exposing (int)\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [],
     unions: [],

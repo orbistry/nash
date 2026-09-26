@@ -1,34 +1,20 @@
 ---
-source: crates/nash-parse/src/tests_block.rs
-assertion_line: 331
-description: "Code:\n\nmodule Main exposing (..)\n\ntests\n    test \"truth\" = do\n        assert True\n"
+source: crates/nash-parse/src/module.rs
+assertion_line: 709
+description: "Code:\n\ntext = \"-- not a comment {- neither -}\"\ntests\n    -- test note\n    test \"works\" = do\n        assert {- assertion note -} True\n"
 ---
 Module {
     kind: Normal,
-    name: Some(
-        Located {
-            region: Region {
-                start: Position {
-                    line: 1,
-                    column: 8,
-                },
-                end: Position {
-                    line: 1,
-                    column: 12,
-                },
-            },
-            value: "Main",
-        },
-    ),
+    name: None,
     exports: Located {
         region: Region {
             start: Position {
                 line: 1,
-                column: 22,
+                column: 1,
             },
             end: Position {
                 line: 1,
-                column: 26,
+                column: 1,
             },
         },
         value: Open,
@@ -45,9 +31,85 @@ Module {
             },
         },
     ),
-    comments: [],
+    comments: [
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 5,
+                },
+                end: Position {
+                    line: 3,
+                    column: 17,
+                },
+            },
+            kind: Line,
+            text: " test note",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 16,
+                },
+                end: Position {
+                    line: 5,
+                    column: 36,
+                },
+            },
+            kind: Block,
+            text: " assertion note ",
+        },
+    ],
     imports: [],
-    values: [],
+    values: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 2,
+                    column: 1,
+                },
+            },
+            value: Value {
+                docs: None,
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                    },
+                    value: "text",
+                },
+                arguments: [],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 40,
+                        },
+                    },
+                    value: Str(
+                        "-- not a comment {- neither -}",
+                    ),
+                },
+                annotation: None,
+                attributes: [],
+            },
+        },
+    ],
     unions: [],
     aliases: [],
     traits: [],
@@ -64,7 +126,7 @@ Module {
                         },
                         end: Position {
                             line: 5,
-                            column: 20,
+                            column: 41,
                         },
                     },
                     value: Test {
@@ -79,7 +141,7 @@ Module {
                                     column: 17,
                                 },
                             },
-                            value: "truth",
+                            value: "works",
                         },
                         expect: Pass,
                         budget: None,
@@ -94,7 +156,7 @@ Module {
                                         },
                                         end: Position {
                                             line: 5,
-                                            column: 20,
+                                            column: 41,
                                         },
                                     },
                                     value: Assert(
@@ -102,11 +164,11 @@ Module {
                                             region: Region {
                                                 start: Position {
                                                     line: 5,
-                                                    column: 16,
+                                                    column: 37,
                                                 },
                                                 end: Position {
                                                     line: 5,
-                                                    column: 20,
+                                                    column: 41,
                                                 },
                                             },
                                             value: Var {

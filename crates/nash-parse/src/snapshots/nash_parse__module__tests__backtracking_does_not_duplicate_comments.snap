@@ -1,0 +1,288 @@
+---
+source: crates/nash-parse/src/module.rs
+assertion_line: 699
+description: "Code:\n\nsection = (1 + {- section -})\naction = do\n    f {- speculative pattern -} x\n    pure ()\n"
+---
+Module {
+    kind: Normal,
+    name: None,
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 1,
+            },
+        },
+        value: Open,
+    },
+    docs: NoDocs(
+        Region {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 5,
+                column: 1,
+            },
+        },
+    ),
+    comments: [
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 16,
+                },
+                end: Position {
+                    line: 1,
+                    column: 29,
+                },
+            },
+            kind: Block,
+            text: " section ",
+        },
+        SourceComment {
+            region: Region {
+                start: Position {
+                    line: 3,
+                    column: 7,
+                },
+                end: Position {
+                    line: 3,
+                    column: 32,
+                },
+            },
+            kind: Block,
+            text: " speculative pattern ",
+        },
+    ],
+    imports: [],
+    values: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 2,
+                    column: 1,
+                },
+            },
+            value: Value {
+                docs: None,
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                    },
+                    value: "section",
+                },
+                arguments: [],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 30,
+                        },
+                    },
+                    value: LeftSection {
+                        left: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 1,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 13,
+                                },
+                            },
+                            value: Int(
+                                1,
+                            ),
+                        },
+                        operator: "+",
+                    },
+                },
+                annotation: None,
+                attributes: [],
+            },
+        },
+        Located {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 5,
+                    column: 1,
+                },
+            },
+            value: Value {
+                docs: None,
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 7,
+                        },
+                    },
+                    value: "action",
+                },
+                arguments: [],
+                body: Located {
+                    region: Region {
+                        start: Position {
+                            line: 2,
+                            column: 10,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 12,
+                        },
+                    },
+                    value: Do {
+                        stmts: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 3,
+                                        column: 5,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 34,
+                                    },
+                                },
+                                value: Expr(
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 3,
+                                                column: 5,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 34,
+                                            },
+                                        },
+                                        value: Call {
+                                            function: Located {
+                                                region: Region {
+                                                    start: Position {
+                                                        line: 3,
+                                                        column: 5,
+                                                    },
+                                                    end: Position {
+                                                        line: 3,
+                                                        column: 6,
+                                                    },
+                                                },
+                                                value: Var {
+                                                    kind: LowVar,
+                                                    name: "f",
+                                                },
+                                            },
+                                            arguments: [
+                                                Located {
+                                                    region: Region {
+                                                        start: Position {
+                                                            line: 3,
+                                                            column: 33,
+                                                        },
+                                                        end: Position {
+                                                            line: 3,
+                                                            column: 34,
+                                                        },
+                                                    },
+                                                    value: Var {
+                                                        kind: LowVar,
+                                                        name: "x",
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                ),
+                            },
+                        ],
+                        last: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 4,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 12,
+                                },
+                            },
+                            value: Call {
+                                function: Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 4,
+                                            column: 5,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 9,
+                                        },
+                                    },
+                                    value: Var {
+                                        kind: LowVar,
+                                        name: "pure",
+                                    },
+                                },
+                                arguments: [
+                                    Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 4,
+                                                column: 10,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 12,
+                                            },
+                                        },
+                                        value: Unit,
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                },
+                annotation: None,
+                attributes: [],
+            },
+        },
+    ],
+    unions: [],
+    aliases: [],
+    traits: [],
+    impls: [],
+    tests: None,
+    binops: [],
+}

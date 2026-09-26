@@ -1,0 +1,695 @@
+---
+source: crates/nash-parse/src/module.rs
+description: "Code:\n\nmodule Documented exposing (..)\n{-| Overview. -}\n\n{-| A union. -}\ntype Box = Box int\n\n{-| An alias. -}\ntype alias Count = int\n\n{-| A trait. -}\ntrait Measure 'a where\n    measure : 'a -> int\n\n{-| An implementation. -}\nimpl Measure int where\n    measure x = x\n"
+---
+Module {
+    kind: Normal,
+    name: Some(
+        Located {
+            region: Region {
+                start: Position {
+                    line: 1,
+                    column: 8,
+                },
+                end: Position {
+                    line: 1,
+                    column: 18,
+                },
+            },
+            value: "Documented",
+        },
+    ),
+    exports: Located {
+        region: Region {
+            start: Position {
+                line: 1,
+                column: 28,
+            },
+            end: Position {
+                line: 1,
+                column: 32,
+            },
+        },
+        value: Open,
+    },
+    docs: YesDocs {
+        overview: Comment {
+            region: Region {
+                start: Position {
+                    line: 2,
+                    column: 1,
+                },
+                end: Position {
+                    line: 2,
+                    column: 17,
+                },
+            },
+            snippet: Snippet {
+                data: [
+                    32,
+                    79,
+                    118,
+                    101,
+                    114,
+                    118,
+                    105,
+                    101,
+                    119,
+                    46,
+                    32,
+                ],
+                off_row: 2,
+                off_col: 4,
+            },
+        },
+        comments: [
+            (
+                "Box",
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 4,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 16,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            65,
+                            32,
+                            117,
+                            110,
+                            105,
+                            111,
+                            110,
+                            46,
+                            32,
+                        ],
+                        off_row: 4,
+                        off_col: 4,
+                    },
+                },
+            ),
+            (
+                "Count",
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 7,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 17,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            65,
+                            110,
+                            32,
+                            97,
+                            108,
+                            105,
+                            97,
+                            115,
+                            46,
+                            32,
+                        ],
+                        off_row: 7,
+                        off_col: 4,
+                    },
+                },
+            ),
+            (
+                "Measure",
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 10,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 10,
+                            column: 16,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            65,
+                            32,
+                            116,
+                            114,
+                            97,
+                            105,
+                            116,
+                            46,
+                            32,
+                        ],
+                        off_row: 10,
+                        off_col: 4,
+                    },
+                },
+            ),
+        ],
+    },
+    comments: [],
+    imports: [],
+    values: [],
+    unions: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 5,
+                    column: 1,
+                },
+                end: Position {
+                    line: 7,
+                    column: 1,
+                },
+            },
+            value: Union {
+                docs: Some(
+                    Comment {
+                        region: Region {
+                            start: Position {
+                                line: 4,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 16,
+                            },
+                        },
+                        snippet: Snippet {
+                            data: [
+                                32,
+                                65,
+                                32,
+                                117,
+                                110,
+                                105,
+                                111,
+                                110,
+                                46,
+                                32,
+                            ],
+                            off_row: 4,
+                            off_col: 4,
+                        },
+                    },
+                ),
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 5,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 9,
+                        },
+                    },
+                    value: "Box",
+                },
+                arguments: [],
+                ctors: [
+                    Ctor {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 5,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 15,
+                                },
+                            },
+                            value: "Box",
+                        },
+                        arguments: Positional(
+                            [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 5,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 19,
+                                        },
+                                    },
+                                    value: Type {
+                                        region: Region {
+                                            start: Position {
+                                                line: 5,
+                                                column: 16,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 19,
+                                            },
+                                        },
+                                        name: "int",
+                                        args: [],
+                                    },
+                                },
+                            ],
+                        ),
+                    },
+                ],
+                attributes: [],
+            },
+        },
+    ],
+    aliases: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 8,
+                    column: 1,
+                },
+                end: Position {
+                    line: 10,
+                    column: 1,
+                },
+            },
+            value: Alias {
+                docs: Some(
+                    Comment {
+                        region: Region {
+                            start: Position {
+                                line: 7,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 17,
+                            },
+                        },
+                        snippet: Snippet {
+                            data: [
+                                32,
+                                65,
+                                110,
+                                32,
+                                97,
+                                108,
+                                105,
+                                97,
+                                115,
+                                46,
+                                32,
+                            ],
+                            off_row: 7,
+                            off_col: 4,
+                        },
+                    },
+                ),
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 17,
+                        },
+                    },
+                    value: "Count",
+                },
+                arguments: [],
+                typ: Located {
+                    region: Region {
+                        start: Position {
+                            line: 8,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 8,
+                            column: 23,
+                        },
+                    },
+                    value: Type {
+                        region: Region {
+                            start: Position {
+                                line: 8,
+                                column: 20,
+                            },
+                            end: Position {
+                                line: 8,
+                                column: 23,
+                            },
+                        },
+                        name: "int",
+                        args: [],
+                    },
+                },
+                attributes: [],
+            },
+        },
+    ],
+    traits: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 11,
+                    column: 1,
+                },
+                end: Position {
+                    line: 12,
+                    column: 24,
+                },
+            },
+            value: Trait {
+                docs: Some(
+                    Comment {
+                        region: Region {
+                            start: Position {
+                                line: 10,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 10,
+                                column: 16,
+                            },
+                        },
+                        snippet: Snippet {
+                            data: [
+                                32,
+                                65,
+                                32,
+                                116,
+                                114,
+                                97,
+                                105,
+                                116,
+                                46,
+                                32,
+                            ],
+                            off_row: 10,
+                            off_col: 4,
+                        },
+                    },
+                ),
+                name: Located {
+                    region: Region {
+                        start: Position {
+                            line: 11,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 11,
+                            column: 14,
+                        },
+                    },
+                    value: "Measure",
+                },
+                params: [
+                    TypeParam {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 11,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 11,
+                                    column: 17,
+                                },
+                            },
+                            value: "a",
+                        },
+                        repr: None,
+                    },
+                ],
+                supers: [],
+                methods: [
+                    TraitMethod {
+                        name: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 12,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 12,
+                                    column: 12,
+                                },
+                            },
+                            value: "measure",
+                        },
+                        annotation: Annotation {
+                            constraints: [],
+                            typ: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 12,
+                                        column: 15,
+                                    },
+                                    end: Position {
+                                        line: 12,
+                                        column: 24,
+                                    },
+                                },
+                                value: Lambda {
+                                    from: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 12,
+                                                column: 15,
+                                            },
+                                            end: Position {
+                                                line: 12,
+                                                column: 17,
+                                            },
+                                        },
+                                        value: Var(
+                                            "a",
+                                        ),
+                                    },
+                                    to: Located {
+                                        region: Region {
+                                            start: Position {
+                                                line: 12,
+                                                column: 21,
+                                            },
+                                            end: Position {
+                                                line: 12,
+                                                column: 24,
+                                            },
+                                        },
+                                        value: Type {
+                                            region: Region {
+                                                start: Position {
+                                                    line: 12,
+                                                    column: 21,
+                                                },
+                                                end: Position {
+                                                    line: 12,
+                                                    column: 24,
+                                                },
+                                            },
+                                            name: "int",
+                                            args: [],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        default: None,
+                    },
+                ],
+                attributes: [],
+            },
+        },
+    ],
+    impls: [
+        Located {
+            region: Region {
+                start: Position {
+                    line: 15,
+                    column: 1,
+                },
+                end: Position {
+                    line: 16,
+                    column: 18,
+                },
+            },
+            value: Impl {
+                docs: Some(
+                    Comment {
+                        region: Region {
+                            start: Position {
+                                line: 14,
+                                column: 1,
+                            },
+                            end: Position {
+                                line: 14,
+                                column: 26,
+                            },
+                        },
+                        snippet: Snippet {
+                            data: [
+                                32,
+                                65,
+                                110,
+                                32,
+                                105,
+                                109,
+                                112,
+                                108,
+                                101,
+                                109,
+                                101,
+                                110,
+                                116,
+                                97,
+                                116,
+                                105,
+                                111,
+                                110,
+                                46,
+                                32,
+                            ],
+                            off_row: 14,
+                            off_col: 4,
+                        },
+                    },
+                ),
+                context: [],
+                head: Located {
+                    region: Region {
+                        start: Position {
+                            line: 15,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 15,
+                            column: 17,
+                        },
+                    },
+                    value: Constraint {
+                        class: Located {
+                            region: Region {
+                                start: Position {
+                                    line: 15,
+                                    column: 6,
+                                },
+                                end: Position {
+                                    line: 15,
+                                    column: 13,
+                                },
+                            },
+                            value: "Measure",
+                        },
+                        module: None,
+                        args: [
+                            Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 15,
+                                        column: 14,
+                                    },
+                                    end: Position {
+                                        line: 15,
+                                        column: 17,
+                                    },
+                                },
+                                value: Type {
+                                    region: Region {
+                                        start: Position {
+                                            line: 15,
+                                            column: 14,
+                                        },
+                                        end: Position {
+                                            line: 15,
+                                            column: 17,
+                                        },
+                                    },
+                                    name: "int",
+                                    args: [],
+                                },
+                            },
+                        ],
+                    },
+                },
+                methods: [
+                    Located {
+                        region: Region {
+                            start: Position {
+                                line: 16,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 17,
+                                column: 1,
+                            },
+                        },
+                        value: Define {
+                            name: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 16,
+                                        column: 5,
+                                    },
+                                    end: Position {
+                                        line: 16,
+                                        column: 12,
+                                    },
+                                },
+                                value: "measure",
+                            },
+                            args: [
+                                Located {
+                                    region: Region {
+                                        start: Position {
+                                            line: 16,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 16,
+                                            column: 14,
+                                        },
+                                    },
+                                    value: Var(
+                                        "x",
+                                    ),
+                                },
+                            ],
+                            body: Located {
+                                region: Region {
+                                    start: Position {
+                                        line: 16,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 16,
+                                        column: 18,
+                                    },
+                                },
+                                value: Var {
+                                    kind: LowVar,
+                                    name: "x",
+                                },
+                            },
+                            annotation: None,
+                        },
+                    },
+                ],
+                attributes: [],
+            },
+        },
+    ],
+    tests: None,
+    binops: [],
+}

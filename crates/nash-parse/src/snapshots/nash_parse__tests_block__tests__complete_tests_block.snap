@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/tests_block.rs
+assertion_line: 291
 description: "Code:\n\nmodule Main exposing (main)\n\nmain = 1\n\ntests\n    import Prop exposing (int, listOf)\n\n    test \"lt is strict\" = do\n        assert (not (lt 1 1))\n\n    test \"fails\" fail = do\n        assert (1 / 0 == 0)\n\n    test \"budget\" within (cpu 1000, mem 50) = do\n        assert True\n\n    prop \"antisym\" fail once within (mem 5) =\n        let\n            a via int\n            b via int\n        in\n        do\n            label \"x\"\n            assert (compare a b == invert (compare b a))\n\n    prop \"sorted\" =\n        let xs via listOf int in\n        do\n            let\n                ys = sort xs\n            n <- length ys\n            assert (n == length xs)\n"
 ---
 Module {
@@ -62,6 +63,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [
         Located {
@@ -76,6 +78,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

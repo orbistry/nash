@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 592
 description: "Code:\n\nvalidator module Vesting exposing (main)\n\nimport Cardano.Tx exposing (Tx, Output)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype step 'a = Done 'a | Next int 'a\n\ntype alias acc = { total : int, seen : list Int }\n\nmain datum = assert True\n"
 ---
 Module {
@@ -73,6 +74,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [
         Import {
             import: Located {
@@ -140,6 +142,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -218,6 +221,7 @@ Module {
                 },
             },
             value: Union {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -350,6 +354,7 @@ Module {
                 },
             },
             value: Union {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -494,6 +499,7 @@ Module {
                 },
             },
             value: Alias {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

@@ -1,41 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/type_alias.rs
+assertion_line: 127
 description: "{-| The application model -}\ntype alias Model = { count : Int }\n"
 ---
 Alias(
-    Some(
-        Comment(
-            Snippet {
-                data: [
-                    32,
-                    84,
-                    104,
-                    101,
-                    32,
-                    97,
-                    112,
-                    112,
-                    108,
-                    105,
-                    99,
-                    97,
-                    116,
-                    105,
-                    111,
-                    110,
-                    32,
-                    109,
-                    111,
-                    100,
-                    101,
-                    108,
-                    32,
-                ],
-                off_row: 1,
-                off_col: 4,
-            },
-        ),
-    ),
     Located {
         region: Region {
             start: Position {
@@ -48,6 +16,49 @@ Alias(
             },
         },
         value: Alias {
+            docs: Some(
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 29,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            84,
+                            104,
+                            101,
+                            32,
+                            97,
+                            112,
+                            112,
+                            108,
+                            105,
+                            99,
+                            97,
+                            116,
+                            105,
+                            111,
+                            110,
+                            32,
+                            109,
+                            111,
+                            100,
+                            101,
+                            108,
+                            32,
+                        ],
+                        off_row: 1,
+                        off_col: 4,
+                    },
+                },
+            ),
             name: Located {
                 region: Region {
                     start: Position {

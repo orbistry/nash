@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/impl_.rs
+assertion_line: 117
 description: "impl Lift int Int where\n    lift = liftInt\n    lower = lowerInt\n"
 ---
 Impl(
@@ -15,6 +16,7 @@ Impl(
             },
         },
         value: Impl {
+            docs: None,
             context: [],
             head: Located {
                 region: Region {

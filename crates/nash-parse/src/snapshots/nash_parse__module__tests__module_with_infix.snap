@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 540
 description: "Code:\n\nmodule Main exposing (..)\n\ninfix left 6 (|>) = apR\n\napR f x = f x\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [
         Located {
@@ -58,6 +60,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

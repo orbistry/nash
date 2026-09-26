@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
+assertion_line: 343
 description: "trait Show 'a where\n    show : Eq 'a => 'a -> string\n"
 ---
 Trait(
@@ -15,6 +16,7 @@ Trait(
             },
         },
         value: Trait {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

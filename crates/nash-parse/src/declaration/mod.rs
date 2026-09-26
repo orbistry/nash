@@ -20,9 +20,9 @@ use crate::error::{self, Decl as DeclErr};
 /// A parsed declaration with optional doc comment.
 #[derive(Debug)]
 pub enum Decl<'a> {
-    Value(Option<&'a Comment<'a>>, &'a Located<Value<'a>>),
-    Union(Option<&'a Comment<'a>>, &'a Located<Union<'a>>),
-    Alias(Option<&'a Comment<'a>>, &'a Located<Alias<'a>>),
+    Value(&'a Located<Value<'a>>),
+    Union(&'a Located<Union<'a>>),
+    Alias(&'a Located<Alias<'a>>),
     Trait(&'a Located<Trait<'a>>),
     Impl(&'a Located<Impl<'a>>),
 }
@@ -53,8 +53,8 @@ impl<'a> Parser<'a> {
             vec![
                 // type alias or type (union)
                 Box::new(|p: &mut Parser<'a>| p.type_decl(maybe_docs, attributes, start)),
-                Box::new(|p: &mut Parser<'a>| p.trait_decl(attributes, start)),
-                Box::new(|p: &mut Parser<'a>| p.impl_decl(attributes, start)),
+                Box::new(|p: &mut Parser<'a>| p.trait_decl(maybe_docs, attributes, start)),
+                Box::new(|p: &mut Parser<'a>| p.impl_decl(maybe_docs, attributes, start)),
                 // value definition
                 Box::new(|p| p.value_decl(maybe_docs, attributes, start)),
             ],
@@ -121,8 +121,9 @@ impl<'a> Parser<'a> {
                                 |bump, e, row, col| error::DeclType::Alias(bump.alloc(e), row, col),
                                 |p| p.keyword_alias(error::DeclType::Name),
                                 |p| {
-                                    let (alias, end) = p.type_alias_body(start, attributes)?;
-                                    Ok((Decl::Alias(maybe_docs, alias), end))
+                                    let (alias, end) =
+                                        p.type_alias_body(start, attributes, maybe_docs)?;
+                                    Ok((Decl::Alias(alias), end))
                                 },
                             )
                         }),
@@ -131,8 +132,9 @@ impl<'a> Parser<'a> {
                             p.specialize(
                                 |bump, e, row, col| error::DeclType::Union(bump.alloc(e), row, col),
                                 |p| {
-                                    let (union, end) = p.union_body(start, attributes)?;
-                                    Ok((Decl::Union(maybe_docs, union), end))
+                                    let (union, end) =
+                                        p.union_body(start, attributes, maybe_docs)?;
+                                    Ok((Decl::Union(union), end))
                                 },
                             )
                         }),

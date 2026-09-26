@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 503
 description: "Code:\n\nmodule Main exposing (..)\n\ntype alias Point = { x : Int, y : Int }\n"
 ---
 Module {
@@ -44,6 +45,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [],
     values: [],
     unions: [],
@@ -60,6 +62,7 @@ Module {
                 },
             },
             value: Alias {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

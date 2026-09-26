@@ -1,46 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/value.rs
+assertion_line: 220
 description: "{-| A simple greeting function -}\ngreet name = name\n"
 ---
 Value(
-    Some(
-        Comment(
-            Snippet {
-                data: [
-                    32,
-                    65,
-                    32,
-                    115,
-                    105,
-                    109,
-                    112,
-                    108,
-                    101,
-                    32,
-                    103,
-                    114,
-                    101,
-                    101,
-                    116,
-                    105,
-                    110,
-                    103,
-                    32,
-                    102,
-                    117,
-                    110,
-                    99,
-                    116,
-                    105,
-                    111,
-                    110,
-                    32,
-                ],
-                off_row: 1,
-                off_col: 4,
-            },
-        ),
-    ),
     Located {
         region: Region {
             start: Position {
@@ -53,6 +16,54 @@ Value(
             },
         },
         value: Value {
+            docs: Some(
+                Comment {
+                    region: Region {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 34,
+                        },
+                    },
+                    snippet: Snippet {
+                        data: [
+                            32,
+                            65,
+                            32,
+                            115,
+                            105,
+                            109,
+                            112,
+                            108,
+                            101,
+                            32,
+                            103,
+                            114,
+                            101,
+                            101,
+                            116,
+                            105,
+                            110,
+                            103,
+                            32,
+                            102,
+                            117,
+                            110,
+                            99,
+                            116,
+                            105,
+                            111,
+                            110,
+                            32,
+                        ],
+                        off_row: 1,
+                        off_col: 4,
+                    },
+                },
+            ),
             name: Located {
                 region: Region {
                     start: Position {

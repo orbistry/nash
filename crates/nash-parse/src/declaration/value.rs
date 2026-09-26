@@ -124,6 +124,7 @@ impl<'a> Parser<'a> {
 
                         let args_slice = args_for_body.into_bump_slice();
                         let value = Value {
+                            docs: maybe_docs,
                             name,
                             arguments: args_slice,
                             body,
@@ -131,10 +132,7 @@ impl<'a> Parser<'a> {
                             attributes,
                         };
                         let located_value = p.add_end(start, value);
-                        Ok(ValueDeclState::Done(
-                            Decl::Value(maybe_docs, located_value),
-                            end,
-                        ))
+                        Ok(ValueDeclState::Done(Decl::Value(located_value), end))
                     }),
                 ],
             )?;

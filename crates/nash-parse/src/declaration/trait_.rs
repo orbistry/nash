@@ -15,6 +15,7 @@ type TraitHead<'a> = (
 impl<'a> Parser<'a> {
     pub(super) fn trait_decl(
         &mut self,
+        docs: Option<&'a nash_source::Comment<'a>>,
         attributes: &'a [&'a Attribute<'a>],
         start: Position,
     ) -> Result<(Decl<'a>, Position), error::Decl<'a>> {
@@ -29,6 +30,7 @@ impl<'a> Parser<'a> {
                 parser.chomp(TraitErr::Space)?;
                 let (methods, end) = parser.trait_body(where_end)?;
                 let trait_ = Trait {
+                    docs,
                     name,
                     params,
                     supers,

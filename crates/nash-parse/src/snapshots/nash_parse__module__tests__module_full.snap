@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/module.rs
+assertion_line: 514
 description: "Code:\n\nmodule Main exposing (main, Model, Msg(..))\n\nimport Html exposing (div)\nimport Platform.Cmd as Cmd\n\ntype alias Model = { count : Int }\n\ntype Msg\n    = Increment\n    | Decrement\n\nmain = 0\n"
 ---
 Module {
@@ -105,6 +106,7 @@ Module {
             },
         },
     ),
+    comments: [],
     imports: [
         Import {
             import: Located {
@@ -176,6 +178,7 @@ Module {
                 },
             },
             value: Value {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -223,6 +226,7 @@ Module {
                 },
             },
             value: Union {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {
@@ -292,6 +296,7 @@ Module {
                 },
             },
             value: Alias {
+                docs: None,
                 name: Located {
                     region: Region {
                         start: Position {

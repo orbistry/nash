@@ -1,9 +1,9 @@
 ---
 source: crates/nash-parse/src/declaration/attribute.rs
+assertion_line: 105
 description: "@derive(Eq, Show)\ntype T = A | B"
 ---
 Union(
-    None,
     Located {
         region: Region {
             start: Position {
@@ -16,6 +16,7 @@ Union(
             },
         },
         value: Union {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

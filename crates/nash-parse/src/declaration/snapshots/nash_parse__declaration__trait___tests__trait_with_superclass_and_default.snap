@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
+assertion_line: 253
 description: "trait Eq 'a => Ord 'a where\n    compare : 'a -> 'a -> ordering\n\n    lt : 'a -> 'a -> bool\n    lt a b = compare a b == LT\n"
 ---
 Trait(
@@ -15,6 +16,7 @@ Trait(
             },
         },
         value: Trait {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

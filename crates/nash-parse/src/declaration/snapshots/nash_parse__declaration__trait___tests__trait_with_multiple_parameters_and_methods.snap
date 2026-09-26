@@ -1,5 +1,6 @@
 ---
 source: crates/nash-parse/src/declaration/trait_.rs
+assertion_line: 286
 description: "trait Lift 'small 'big where\n    lift : 'small -> 'big\n    lower : 'big -> 'small\n"
 ---
 Trait(
@@ -15,6 +16,7 @@ Trait(
             },
         },
         value: Trait {
+            docs: None,
             name: Located {
                 region: Region {
                     start: Position {

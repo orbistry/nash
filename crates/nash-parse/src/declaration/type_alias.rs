@@ -19,6 +19,7 @@ impl<'a> Parser<'a> {
         &mut self,
         start: Position,
         attributes: &'a [&'a Attribute<'a>],
+        docs: Option<&'a nash_source::Comment<'a>>,
     ) -> Result<(&'a Located<Alias<'a>>, Position), TypeAlias<'a>> {
         self.chomp_and_check_indent(TypeAlias::Space, TypeAlias::IndentEquals)?;
         let (name, args) = self.chomp_alias_name_to_equals()?;
@@ -29,6 +30,7 @@ impl<'a> Parser<'a> {
         )?;
 
         let alias = Alias {
+            docs,
             name,
             arguments: args,
             typ,
