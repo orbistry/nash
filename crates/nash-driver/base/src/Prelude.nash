@@ -51,6 +51,9 @@ applyForward = Function.applyForward
 applyBackward : ('a -> 'b) -> 'a -> 'b
 applyBackward = Function.applyBackward
 
+
+
+
 composeLeft : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 composeLeft g f x = g (f x)
 
