@@ -1,5 +1,6 @@
 pub mod build;
 pub mod check;
+pub mod docs;
 pub mod format;
 pub mod lsp;
 pub mod test;
@@ -18,6 +19,8 @@ pub enum Cmd {
     /// Format Nash source files
     #[clap(visible_alias = "fmt")]
     Format(format::Args),
+    /// Generate public API documentation
+    Docs(docs::Args),
     /// Start the Nash language server over stdio
     Lsp(lsp::Args),
 }
@@ -25,6 +28,7 @@ pub enum Cmd {
 impl Cmd {
     pub async fn exec(self, color: bool) -> miette::Result<()> {
         match self {
+            Cmd::Docs(args) => args.exec(color).await,
             Cmd::Check(args) => args.exec(color).await,
             Cmd::Build(args) => args.exec(color).await,
             Cmd::Test(args) => args.exec(color).await,

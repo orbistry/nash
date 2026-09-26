@@ -115,39 +115,26 @@ fn compiler_owned_modules() {
 
 #[tokio::test]
 async fn base_documentation() {
-    let origins = bundled_base::modules();
-    let db = Arc::new(Mutex::new(Database::new(InMemorySource::new())));
-    let graph = build_graph_production(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
-        .await
-        .unwrap();
-    let (result, warnings) = build_with(db, &graph, &origins, |solved| {
-        solved
-            .modules
-            .iter()
-            .flat_map(|module| {
-                let source = nash_parse::Parser::new(solved.store, module.source)
-                    .module()
-                    .unwrap();
-                extract(
-                    &source,
-                    &nash_can::from_module(solved.store, module.module, &module.annotations),
-                )
-                .warnings
-            })
-            .collect::<Vec<_>>()
-    })
-    .await;
-    assert!(result.is_success(), "{:?}", result.ordered_reports());
+    let docs = project::build(project::Input::Base).await.unwrap();
     assert!(
-        warnings.as_ref().unwrap().is_empty(),
-        "{}",
-        warnings
-            .unwrap()
-            .iter()
-            .map(|w| format!("{}.{}: {}", w.module, w.name, w.message))
-            .collect::<Vec<_>>()
-            .join("\n")
+        docs.compiler.is_success(),
+        "{:?}",
+        docs.compiler.ordered_reports()
     );
+    assert!(docs.warnings.is_empty(), "{:?}", docs.warnings);
+    assert_eq!(docs.modules.len(), bundled_base::modules().len() + 2);
+    let files = render(&docs.modules, Format::Html);
+    let index = &files["index.html"];
+    for module in &docs.modules {
+        let path = format!("{}.html", module.name.replace('.', "/"));
+        assert!(index.contains(&format!("href=\"{path}\"")));
+        assert!(files.contains_key(&path));
+    }
+    let search: serde_json::Value = serde_json::from_str(&files["search.json"]).unwrap();
+    for entry in search.as_array().unwrap() {
+        let (path, anchor) = entry["url"].as_str().unwrap().split_once('#').unwrap();
+        assert!(files[path].contains(&format!("id=\"{anchor}\"")));
+    }
 }
 
 #[tokio::test]
@@ -188,4 +175,200 @@ async fn overview_markdown_boundaries() {
         second x = x
     "#
     );
+}
+
+macro_rules! assert_render_snapshot {
+    ($format:expr, $source:expr) => {{
+        let source = indoc::indoc!($source);
+        let docs = documented(source).await;
+        let files = render(&[docs.module], $format);
+        insta::with_settings!({description => source, omit_expression => true}, {
+            let output = files.into_iter()
+                .filter(|(path, _)| !path.ends_with(".css") && !path.ends_with(".js"))
+                .map(|(path, content)| format!("--- {path}\n{content}"))
+                .collect::<Vec<_>>().join("\n");
+            insta::assert_snapshot!(output);
+        });
+    }};
+}
+
+#[tokio::test]
+async fn markdown_output() {
+    assert_render_snapshot!(
+        Format::Markdown,
+        r#"
+        module Example exposing (type box(..), identity, (%%))
+        {-| # A small API
+
+        @docs box, identity, (%%)
+        -}
+
+        infix left 5 (%%) = combine
+
+        {-| A little container. -}
+        type box 'a = Box 'a
+
+        {-| Preserve a value.
+
+        ```nash
+        identity 42
+        ```
+        -}
+        identity x = x
+
+        combine x y = x
+    "#
+    );
+}
+
+#[tokio::test]
+async fn html_output() {
+    assert_render_snapshot!(
+        Format::Html,
+        r#"
+        module Example exposing (identity)
+        {-| **Public API** with [a link][guide].
+
+        @docs identity
+
+        [guide]: https://example.com
+        -}
+
+        {-| Preserve a value.
+
+        ```nash
+        identity "hello"
+        ```
+
+        <script>alert("raw HTML")</script>
+
+        [Unsafe link](javascript:alert%281%29)
+        -}
+        identity x = x
+    "#
+    );
+}
+
+#[test]
+fn highlight_fragments() {
+    let source = indoc::indoc!(
+        r##"
+        -- A comment
+        {- Nested {- comment -} λ -}
+        run : int -> int
+        run value = if value < 0 then -value else value
+        bytes = #"00ab"
+        text = "<script>\"quoted\" & λ"
+        multiline = """a
+        b"""
+        unfinished = "λ
+    "##
+    );
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(highlight::highlight(source));
+    });
+}
+
+async fn project_fixture(config: &str, sources: &[(&str, &str)]) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    tokio::fs::write(dir.path().join("nash.jsonc"), config)
+        .await
+        .unwrap();
+    for (name, source) in sources {
+        let file = dir
+            .path()
+            .join(format!("src/{}.nash", name.replace('.', "/")));
+        tokio::fs::create_dir_all(file.parent().unwrap())
+            .await
+            .unwrap();
+        tokio::fs::write(file, source).await.unwrap();
+    }
+    dir
+}
+
+#[tokio::test]
+async fn project_exports() {
+    let source = "module Public.Api exposing (answer)\n{-| The answer. -}\nanswer = 42\n";
+    let sources = [
+        ("Public.Api", source),
+        ("Private", "module Private exposing (secret)\nsecret = 0\n"),
+    ];
+    let dir = project_fixture(r#"{"type":"package","name":"example/api","version":"1.0.0","summary":"API","license":"MIT","exposedModules":["Public.Api"]}"#, &sources).await;
+    let docs = project::build(project::Input::Project(dir.path()))
+        .await
+        .unwrap();
+    assert!(
+        docs.compiler.is_success(),
+        "{:?}",
+        docs.compiler.ordered_reports()
+    );
+    assert_eq!(
+        docs.modules
+            .iter()
+            .map(|m| m.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Public.Api"]
+    );
+    let files = render(&docs.modules, Format::Html);
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(files["Public/Api.html"]);
+    });
+    tokio::fs::write(dir.path().join("nash.jsonc"), r#"{"type":"application"}"#)
+        .await
+        .unwrap();
+    let docs = project::build(project::Input::Project(dir.path()))
+        .await
+        .unwrap();
+    assert!(
+        docs.compiler.is_success(),
+        "{:?}",
+        docs.compiler.ordered_reports()
+    );
+    assert_eq!(
+        docs.modules
+            .iter()
+            .map(|m| m.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Private", "Public.Api"]
+    );
+}
+
+#[tokio::test]
+async fn invalid_project_has_no_documentation() {
+    let dir = project_fixture(
+        r#"{"type":"application"}"#,
+        &[("Main", "module Main exposing (answer)\nanswer = unknown\n")],
+    )
+    .await;
+    let docs = project::build(project::Input::Project(dir.path()))
+        .await
+        .unwrap();
+    assert!(!docs.compiler.is_success());
+    assert!(docs.modules.is_empty());
+}
+
+#[tokio::test]
+async fn duplicate_workspace_modules_are_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    tokio::fs::write(
+        dir.path().join("nash.jsonc"),
+        r#"{"type":"workspace","members":["one","two"]}"#,
+    )
+    .await
+    .unwrap();
+    for member in ["one", "two"] {
+        let path = dir.path().join(member);
+        tokio::fs::create_dir_all(path.join("src")).await.unwrap();
+        tokio::fs::write(path.join("nash.jsonc"), r#"{"type":"application"}"#)
+            .await
+            .unwrap();
+        tokio::fs::write(
+            path.join("src/Main.nash"),
+            "module Main exposing (answer)\nanswer = 42\n",
+        )
+        .await
+        .unwrap();
+    }
+    let result = project::build(project::Input::Project(dir.path())).await;
+    assert!(matches!(result, Err(project::Error::DuplicateModule(name)) if name == "Main"));
 }

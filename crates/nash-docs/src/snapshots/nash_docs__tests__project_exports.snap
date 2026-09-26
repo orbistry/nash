@@ -1,0 +1,27 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Public.Api exposing (answer)\n{-| The answer. -}\nanswer = 42\n"
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Public.Api · Nash</title>
+<link rel="stylesheet" href="../style.css">
+<script defer src="../search.js"></script>
+</head>
+<body>
+<aside>
+<a class="brand" href="../index.html">Nash <span>documentation</span></a>
+<label for="search">Search APIs</label>
+<input id="search" type="search" placeholder="Name, module, or type" autocomplete="off">
+<p id="search-status" role="status"></p>
+<nav id="search-results" aria-label="Search results" hidden></nav>
+<nav aria-label="Modules"><a href="../Public/Api.html">Public.Api</a></nav>
+</aside>
+<main><h1>Public.Api</h1><p>The answer.</p>
+<section id="entry-616e73776572"><header><span class="kind">value</span><h2><a href="#entry-616e73776572">answer</a></h2></header><pre><code class="language-nash">answer <span class="operator">:</span> <span class="type">Literal</span><span class="operator">.</span><span class="type">FromInt</span> &#39;a <span class="operator">=&gt;</span> &#39;a</code></pre></section>
+</main>
+</body>
+</html>

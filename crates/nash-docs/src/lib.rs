@@ -1,4 +1,8 @@
 //! Owned documentation extracted from source comments and solved interfaces.
+mod highlight;
+pub mod project;
+mod render;
+pub use render::{Format, render};
 mod extract;
 mod types;
 pub use extract::{extract, primitives};

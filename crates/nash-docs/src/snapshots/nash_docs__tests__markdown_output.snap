@@ -1,0 +1,52 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (type box(..), identity, (%%))\n{-| # A small API\n\n@docs box, identity, (%%)\n-}\n\ninfix left 5 (%%) = combine\n\n{-| A little container. -}\ntype box 'a = Box 'a\n\n{-| Preserve a value.\n\n```nash\nidentity 42\n```\n-}\nidentity x = x\n\ncombine x y = x\n"
+---
+--- Example.md
+# Example
+
+# A small API
+
+<a id="entry-626f78"></a>
+
+## box
+
+```nash
+type box 'a
+    = Box 'a
+```
+
+Kind: `Type -> Type`
+
+A little container.
+
+<a id="entry-6964656e74697479"></a>
+
+## identity
+
+```nash
+identity : 'a -> 'a
+```
+
+Preserve a value.
+
+```nash
+identity 42
+```
+
+<a id="entry-28252529"></a>
+
+## (%%)
+
+```nash
+(%%) : 'a -> 'b -> 'a
+infix left 5 (%%) = combine
+```
+
+Infix form of `Example.combine`.
+
+
+--- index.md
+# Nash documentation
+
+- [Example](Example.md)

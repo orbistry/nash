@@ -1,0 +1,68 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "module Example exposing (identity)\n{-| **Public API** with [a link][guide].\n\n@docs identity\n\n[guide]: https://example.com\n-}\n\n{-| Preserve a value.\n\n```nash\nidentity \"hello\"\n```\n\n<script>alert(\"raw HTML\")</script>\n\n[Unsafe link](javascript:alert%281%29)\n-}\nidentity x = x\n"
+---
+--- Example.html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example · Nash</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="search.js"></script>
+</head>
+<body>
+<aside>
+<a class="brand" href="index.html">Nash <span>documentation</span></a>
+<label for="search">Search APIs</label>
+<input id="search" type="search" placeholder="Name, module, or type" autocomplete="off">
+<p id="search-status" role="status"></p>
+<nav id="search-results" aria-label="Search results" hidden></nav>
+<nav aria-label="Modules"><a href="Example.html">Example</a></nav>
+</aside>
+<main><h1>Example</h1><p><strong>Public API</strong> with <a href="https://example.com">a link</a>.</p>
+<section id="entry-6964656e74697479"><header><span class="kind">value</span><h2><a href="#entry-6964656e74697479">identity</a></h2></header><pre><code class="language-nash">identity <span class="operator">:</span> &#39;a <span class="operator">-&gt;</span> &#39;a</code></pre><p>Preserve a value.</p>
+<pre><code class="language-nash">identity <span class="string">&quot;hello&quot;</span>
+</code></pre>
+&lt;script&gt;alert("raw HTML")&lt;/script&gt;
+<p><a href="">Unsafe link</a></p>
+</section>
+</main>
+</body>
+</html>
+
+--- index.html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nash documentation · Nash</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="search.js"></script>
+</head>
+<body>
+<aside>
+<a class="brand" href="index.html">Nash <span>documentation</span></a>
+<label for="search">Search APIs</label>
+<input id="search" type="search" placeholder="Name, module, or type" autocomplete="off">
+<p id="search-status" role="status"></p>
+<nav id="search-results" aria-label="Search results" hidden></nav>
+<nav aria-label="Modules"><a href="Example.html">Example</a></nav>
+</aside>
+<main><h1>Nash documentation</h1><p>Public modules and their APIs.</p><ul class="module-list"><li><a href="Example.html">Example</a></li></ul></main>
+</body>
+</html>
+
+--- search.json
+[
+  {
+    "module": "Example",
+    "name": "identity",
+    "kind": "value",
+    "signature": "identity : 'a -> 'a",
+    "summary": "Preserve a value.",
+    "url": "Example.html#entry-6964656e74697479"
+  }
+]

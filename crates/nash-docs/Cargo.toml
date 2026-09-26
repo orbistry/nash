@@ -8,6 +8,13 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+bumpalo.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+nash-driver = { path = "../nash-driver", version = "0.10.0" }
+nash-config = { path = "../nash-config", version = "0.5.0" }
+nash-parse = { path = "../nash-parse", version = "0.8.0" }
 nash-ast = { path = "../nash-ast", version = "0.11.0" }
 nash-can = { path = "../nash-can", version = "0.11.0" }
 nash-source = { path = "../nash-source", version = "0.9.0" }
@@ -16,10 +23,7 @@ serde.workspace = true
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 [dev-dependencies]
-bumpalo.workspace = true
+tempfile = "3"
 indoc.workspace = true
 insta.workspace = true
-nash-driver = { path = "../nash-driver" }
-nash-parse = { path = "../nash-parse" }
-tokio.workspace = true
 url.workspace = true

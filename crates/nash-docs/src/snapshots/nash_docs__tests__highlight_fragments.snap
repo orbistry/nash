@@ -1,0 +1,13 @@
+---
+source: crates/nash-docs/src/tests.rs
+description: "-- A comment\n{- Nested {- comment -} λ -}\nrun : int -> int\nrun value = if value < 0 then -value else value\nbytes = #\"00ab\"\ntext = \"<script>\\\"quoted\\\" & λ\"\nmultiline = \"\"\"a\nb\"\"\"\nunfinished = \"λ\n"
+---
+<span class="comment">-- A comment</span>
+<span class="comment">{- Nested {- comment -} λ -}</span>
+run <span class="operator">:</span> int <span class="operator">-&gt;</span> int
+run value <span class="operator">=</span> <span class="keyword">if</span> value <span class="operator">&lt;</span> <span class="number">0</span> <span class="keyword">then</span> <span class="operator">-</span>value <span class="keyword">else</span> value
+bytes <span class="operator">=</span> <span class="string">#&quot;00ab&quot;</span>
+text <span class="operator">=</span> <span class="string">&quot;&lt;script&gt;\&quot;quoted\&quot; &amp; λ&quot;</span>
+multiline <span class="operator">=</span> <span class="string">&quot;&quot;&quot;a
+b&quot;&quot;&quot;</span>
+unfinished <span class="operator">=</span> <span class="string">&quot;λ</span>

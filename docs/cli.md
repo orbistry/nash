@@ -12,7 +12,7 @@ The `nash` binary is `crates/nash-cli`. The check, build, and test commands load
 | `nash build [PATH]` | exists | Exclude test blocks, check the frontend, then compile every validator module for its configured target. |
 | `nash test [PATH]` | exists | Check, compile and run project `test` and `prop` declarations. |
 | `nash format [PATH...]` | exists | Format files in place, or `--check` to show contextual formatting diffs. |
-| `nash docs [PATH]` | planned | Generate HTML documentation for exposed modules into `docs/`. |
+| `nash docs [PATH]` | exists | Generate HTML or Markdown documentation; `--base` documents bundled Base. |
 | `nash lsp` | exists | Language server over stdio. |
 | `nash init NAME` | planned | Create a project skeleton: `nash.jsonc`, `src/`, one validator module with a `tests` block. |
 
@@ -168,3 +168,9 @@ Rust side (`crates/nash-config/src/config.rs`): `PlutusVersion` and
   schema is promised before 1.0 is undecided.
 - **Watch mode** (`--watch`) is not planned for v1; the LSP covers the
   interactive case.
+
+## Documentation
+
+`nash docs [PATH]` accepts `--format html|markdown` (default HTML) and
+`--out DIR` (default `docs`). `--base` replaces the project input with bundled
+Base. See [API documentation](documentation.md).

@@ -164,41 +164,31 @@ using the compiler-bundled sources, alongside normal project documentation.
 
 ---
 
-## Chunk 7: rendering and `nash docs` command
+## Chunk 7: rendering and `nash docs` command — complete
 
-**Files**
+`nash-docs` renders HTML and Markdown from extracted documentation. HTML includes
+module pages, an index, local CSS, and a searchable JSON index. Nested module
+paths resolve navigation and assets correctly. Nash signatures and fenced examples
+use Nash literal parsers and keyword/operator catalogs for highlighting. Markdown
+reference links resolve across overview `@docs` sections; raw HTML is escaped.
 
-- `crates/nash-docs/src/html.rs`, `src/markdown.rs`, `src/assets/` (one CSS file, one JS file for search, embedded with `include_str!`)
-- `crates/nash-cli/src/cmd/docs.rs`
+`nash docs [PATH] [--format html|markdown] [--out DIR]` uses the driver's solved
+frontend. Packages include only exposed modules; applications include their own
+modules. Dependencies are checked but omitted from the site. Compilation failures
+stop output; documentation warnings use the existing Nash report renderer.
+`--base` documents all compiler-bundled modules plus Builtin and Primitive without
+a project manifest. Duplicate module names are reported before output can overwrite
+another package's pages. Tokio handles output writes; rendering runs off the executor.
 
-**Change**
+Unit snapshots contain Nash source and rendered Markdown/HTML, including syntax
+highlighting and nested paths. Library tests cover package/application selection,
+failed compilation, duplicate workspace modules, and every Base page/search link.
+No CLI subprocess tests were added.
 
-`nash docs [--format html|markdown] [--out docs/]` renders every exposed
-module of the package (application projects render all modules) to
-`out/<Module/Name>.html` plus an index and a JSON search index, or to
-one Markdown file per module. Markdown in doc comments is rendered with
-`pulldown-cmark`; code blocks tagged `nash` are syntax-highlighted by a
-small token classifier over `nash-parse`'s lexer functions (keywords,
-operators, strings, numbers) — no external highlighter.
-
-```rust
-#[derive(clap::Args)]
-pub struct Args {
-    #[arg(long, default_value = "html")]
-    pub format: Format,
-    #[arg(long, default_value = "docs")]
-    pub out: PathBuf,
-}
-```
-
-**Tests**
-
-- Markdown snapshot for one module.
-- HTML: snapshot with the CSS stripped; a smoke test that the index links
-  to every module.
-
-**Done when** `nash docs` on `crates/nash-driver/base/` produces a browsable site and CI
-publishes it for the repo.
+`.github/workflows/docs.yml` builds a downloadable preview for pull requests and
+publishes the Base site on main through GitHub Pages. Repository Pages must use
+GitHub Actions as its source. This work prepares the workflow; it does not perform
+a remote deployment. See [API documentation](../docs/documentation.md).
 
 ---
 
