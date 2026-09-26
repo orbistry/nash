@@ -33,6 +33,11 @@ impl<'a> Printer<'a> {
     pub fn multiline(&self, r: Region) -> bool {
         r.start.line != r.end.line
     }
+    pub fn has_comment_before(&self, position: Position) -> bool {
+        self.comments
+            .get(self.cursor)
+            .is_some_and(|comment| comment.region.start < position)
+    }
     pub fn before(&mut self, p: Position) -> Doc {
         let mut docs = Vec::new();
         while let Some(c) = self.comments.get(self.cursor) {

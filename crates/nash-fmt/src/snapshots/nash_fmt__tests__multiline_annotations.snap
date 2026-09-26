@@ -5,8 +5,7 @@ description: "x : ( int\n    , int\n    )\nx = (1,2)\ntrait Example 'a where\n  
 x : ( int
     , int
     )
-x =
-    ( 1, 2 )
+x = ( 1, 2 )
 
 
 trait Example 'a where

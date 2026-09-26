@@ -14,10 +14,9 @@ g = comptime (1 + 2)
 h = Array.fromList!( [ 1, 2 ] )
 
 
-i =
-    do
-        x <- read
-        let
-            y = x + 1
-        write y
-        pure y
+i = do
+    x <- read
+    let
+        y = x + 1
+    write y
+    pure y

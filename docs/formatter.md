@@ -23,12 +23,21 @@ comments can exceed the target; formatting never changes their contents.
 Strings, byte literals, and numeric literals retain their source spelling.
 Output uses LF layout and one final newline for a nonempty module.
 
+The layout follows elm-format's collection and pipeline conventions and
+Fourmolu's compact definitions and hanging `do` blocks. Nash syntax and its
+layout-sensitive parser determine where those conventions apply.
+
+- Short definitions remain on one line, including definitions with annotations.
+  A `do` block follows `=` or `<-` on the same line; its statements indent once.
+  A comment before the block keeps the block below that comment.
 - `if`, `case`, `let`, and `do` use multiline bodies. Explicit continuations
   (`then`, `else`, `in`, and collection closers) may align with a `do`
   statement. Adjacent statements remain separate expressions.
 - Collections and applications retain an existing multiline layout; otherwise
   they stay on one line when they fit. Broken collections use leading commas.
-- Pipes begin continuation lines; other infix operators end their lines.
+- Pipes begin continuation lines and retain an existing multiline layout.
+  Other infix expressions stay on one line when they fit; when they wrap,
+  their operators end the preceding lines. Parentheses retain precedence.
 - Top-level declarations have two blank lines between them. Local declarations
   and trait/implementation methods have one.
 - Imports, exposing entries, declarations, and fields retain source order.

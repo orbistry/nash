@@ -456,3 +456,32 @@ fn multiline_annotations() {
     "#
     );
 }
+
+#[test]
+fn definition_layout() {
+    assert_format_snapshot!(
+        r#"
+        run : int -> int
+        run n = n
+
+        identity value =
+            value
+
+        main = do
+            result <- do
+                first
+                second
+            let
+                nested = do
+                    first
+                    second
+            result
+
+        commented =
+            -- Keep this comment above the block.
+            do
+                first
+                second
+    "#
+    );
+}

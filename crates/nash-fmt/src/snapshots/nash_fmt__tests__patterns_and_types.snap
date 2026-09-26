@@ -22,5 +22,4 @@ g value =
 
 
 qualified : ( Eq 'a, Other.Show 'a ) => 'a -> string
-qualified x =
-    Other.show x
+qualified x = Other.show x

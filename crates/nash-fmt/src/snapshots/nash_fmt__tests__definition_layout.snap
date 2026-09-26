@@ -1,0 +1,27 @@
+---
+source: crates/nash-fmt/src/tests.rs
+description: "run : int -> int\nrun n = n\n\nidentity value =\n    value\n\nmain = do\n    result <- do\n        first\n        second\n    let\n        nested = do\n            first\n            second\n    result\n\ncommented =\n    -- Keep this comment above the block.\n    do\n        first\n        second\n"
+---
+run : int -> int
+run n = n
+
+
+identity value = value
+
+
+main = do
+    result <- do
+        first
+        second
+    let
+        nested = do
+            first
+            second
+    result
+
+
+commented =
+    -- Keep this comment above the block.
+    do
+        first
+        second

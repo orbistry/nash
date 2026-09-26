@@ -27,5 +27,4 @@ impl Test int where
 
 
 run : int -> int
-run n =
-    n
+run n = n

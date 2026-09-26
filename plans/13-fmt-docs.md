@@ -92,7 +92,7 @@ The shared `assert_format_snapshot!` helper stores Nash input in the snapshot
 metadata and formatted Nash in the body. Every test reparses the output,
 compares the source trees with coordinates removed, and checks idempotence.
 All 35 shipped Base modules undergo the same structural and idempotence checks.
-The formatter crate currently has 31 unit tests, including report snapshots.
+The formatter crate currently has 32 unit tests, including report snapshots.
 
 ---
 

@@ -161,7 +161,10 @@ impl Printer<'_> {
             }
             Expr::BinOps { operands, last } => {
                 let mut docs = Vec::new();
-                let broken = self.multiline(located.region);
+                let broken = self.multiline(located.region)
+                    && operands
+                        .iter()
+                        .any(|operand| matches!(operand.op.value, "|>" | "<|"));
                 for operand in *operands {
                     docs.push(self.expr(operand.expr, 2));
                     let line = if broken { Doc::Hard } else { Doc::Line(" ") };
@@ -321,20 +324,18 @@ impl Printer<'_> {
         );
         let args = args.iter().map(|p| self.pattern(p, 3)).collect();
         let head = self.args(text(name.value), args, false);
-        let body_doc = self.expr(body, 0);
-        let line = if body.region.start.line > name.region.start.line {
-            Doc::Hard
+        let definition = self.rhs(cat([head, text(" =")]), body);
+        cat([before, annotation, definition])
+    }
+    fn rhs(&mut self, head: Doc, body: &Located<Expr<'_>>) -> Doc {
+        let hanging =
+            matches!(body.value, Expr::Do { .. }) && !self.has_comment_before(body.region.start);
+        let body = self.expr(body, 0);
+        if hanging {
+            cat([head, text(" "), body])
         } else {
-            Doc::Line(" ")
-        };
-        cat([
-            before,
-            annotation,
-            head,
-            text(" ="),
-            cat([line, body_doc]).nest(),
-        ])
-        .group()
+            cat([head, cat([Doc::Line(" "), body]).nest()]).group()
+        }
     }
     pub fn def(&mut self, located: &Located<Def<'_>>) -> Doc {
         match &located.value {
@@ -346,8 +347,7 @@ impl Printer<'_> {
             } => self.definition(name, args, body, *annotation),
             Def::Destruct { pattern, body } => {
                 let pattern = self.pattern(pattern, 0).nest();
-                let body = self.expr(body, 0);
-                cat([pattern, text(" ="), cat([Doc::Line(" "), body]).nest()]).group()
+                self.rhs(cat([pattern, text(" =")]), body)
             }
         }
     }
@@ -365,8 +365,7 @@ impl Printer<'_> {
                 }
                 Stmt::Bind { pattern, expr } => {
                     let pattern = self.pattern(pattern, 0).nest();
-                    let expr = self.expr(expr, 0);
-                    cat([pattern, text(" <-"), cat([Doc::Line(" "), expr]).nest()]).group()
+                    self.rhs(cat([pattern, text(" <-")]), expr)
                 }
                 Stmt::Expr(expr) => self.expr(expr, 0),
             };

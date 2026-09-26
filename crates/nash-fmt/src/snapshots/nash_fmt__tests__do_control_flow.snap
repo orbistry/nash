@@ -2,33 +2,29 @@
 source: crates/nash-fmt/src/tests.rs
 description: "a = do\n    x <- read\n    let y = x + 1 in pure y\nb = do\n    if condition then first else second\nc = do\n    trace \"message\" result\nd = do\n    [ firstLongIdentifier, secondLongIdentifier, thirdLongIdentifier, fourthLongIdentifier ]\n"
 ---
-a =
-    do
-        x <- read
-        let
-            y = x + 1
-        in
-            pure y
+a = do
+    x <- read
+    let
+        y = x + 1
+    in
+        pure y
 
 
-b =
-    do
-        if condition then
-            first
-        else
-            second
+b = do
+    if condition then
+        first
+    else
+        second
 
 
-c =
-    do
-        trace "message"
-            result
+c = do
+    trace "message"
+        result
 
 
-d =
-    do
-        [ firstLongIdentifier
-        , secondLongIdentifier
-        , thirdLongIdentifier
-        , fourthLongIdentifier
-        ]
+d = do
+    [ firstLongIdentifier
+    , secondLongIdentifier
+    , thirdLongIdentifier
+    , fourthLongIdentifier
+    ]
