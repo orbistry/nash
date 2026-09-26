@@ -2,8 +2,8 @@
 
 These measurements compare CEK execution budgets using the captured mainnet
 Plutus V3 parameters for epoch 656 (protocol 11.0). They are not wall-clock
-benchmarks. The parameter vector and Core inputs live beside the snapshot test in
-`crates/nash-codegen/src/lower/tests/`.
+benchmarks. The completed experiment and its fixtures were removed; the findings
+remain here to explain the extraction policy.
 
 Parameter source: [Koios epoch 656 protocol parameters](https://api.koios.rest/api/v1/epoch_params?epoch_no=eq.656&select=epoch_no,protocol_major,protocol_minor,cost_models).
 
@@ -59,6 +59,6 @@ win both measures. Explicit source builtin calls remain available.
 - After dropping, headList saves 68 memory versus case but costs about 20% more
   CPU. The single-head exception therefore remains relevant.
 
-These fixtures cover successful, in-bounds extraction from integer lists. They
-do not establish equivalent failure behavior on empty or malformed inputs, or
+The experiment covered successful, in-bounds extraction from integer lists. It
+did not establish equivalent failure behavior on empty or malformed inputs, or
 measure every element representation and enclosing program.

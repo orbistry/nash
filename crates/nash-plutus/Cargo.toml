@@ -7,10 +7,6 @@ homepage.workspace = true
 repository.workspace = true
 license.workspace = true
 
-[[bench]]
-harness = false
-name = "use_cases"
-
 [dependencies]
 append-only-vec = "0.1.8"
 blst = "0.3.13"
@@ -28,9 +24,5 @@ secp256k1 = "0.30.0"
 thiserror.workspace = true
 
 [dev-dependencies]
-criterion = { version = "0.7.0", features = ["html_reports"] }
-divan = "0.1.21"
 insta.workspace = true
-itertools = "0.13.0"
-ouroboros = "0.18.4"
 pretty_assertions.workspace = true

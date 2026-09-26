@@ -5,8 +5,9 @@
 The four optimizations named in [docs/overview.md](../docs/overview.md)
 as Core -> Core passes in `crates/nash-ir`, plus the two things they need:
 a hygiene pass that makes every `Name` unique so substitution is
-capture-free, and a measurement harness that turns "does not regress" into
-a failing test.
+capture-free, and temporary cost measurements to compare candidate implementations.
+Remove measurement code and fixtures after each experiment; keep findings in docs
+and functional snapshot coverage in the test suite.
 
 Passes:
 
@@ -188,87 +189,19 @@ pub fn size(core: &Core<'_>) -> usize {
 
 ---
 
-## Chunk 2 — Measurement harness
+## Chunk 2 — Temporary performance experiments
 
-**Files**
+Measure CPU, memory and serialized size for representative programs while choosing
+optimizations. Use the existing evaluator and codegen helpers in temporary code.
+Compare vesting paths, list traversal, static recursion, Data matching, validation
+and decoding. Prefer memory when costs are close, then CPU.
 
-- `crates/nash-codegen/src/harness.rs` (`Measure`, `assert_budget!`)
-- `crates/nash-codegen/tests/budgets/*.toml` (new, committed baselines)
-- `crates/nash-codegen/tests/budgets.rs` (new)
+Record the inputs, cost model and findings in the implementation notes. Remove
+experiment code and fixtures when the comparison is complete. Do not add benchmark
+targets, committed budget baselines or CI performance gates. Keep functional
+snapshots that show the selected lowering and its results.
 
-**Change**
-
-Every program used as a benchmark is measured three ways and compared to
-a committed baseline. A regression fails the test; an improvement fails
-too until the baseline is updated (so improvements are reviewed and
-recorded).
-
-**Code**
-
-```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Measure {
-    pub flat_bytes: usize,
-    pub cpu: i64,
-    pub mem: i64,
-}
-
-pub fn measure<'a>(arena: &'a Arena, program: &'a Program<'a, DeBruijn>, args: &[&'a Term<'a, DeBruijn>]) -> Measure {
-    let flat_bytes = nash_plutus::flat::encode(program).expect("encodable").len();
-    let applied = args.iter().fold(program, |p, a| p.apply(arena, a));
-    let EvalResult { info, .. } = applied.eval(arena);
-    Measure { flat_bytes, cpu: info.consumed_budget.cpu, mem: info.consumed_budget.mem }
-}
-
-/// Compares against `tests/budgets/<name>.toml`. `NASH_UPDATE_BUDGETS=1`
-/// rewrites the file instead of failing.
-#[macro_export]
-macro_rules! assert_budget {
-    ($name:literal, $measure:expr) => {
-        $crate::harness::check_budget($name, $measure, file!())
-    };
-}
-
-pub fn check_budget(name: &str, actual: Measure, caller: &str) {
-    let path = budgets_dir(caller).join(format!("{name}.toml"));
-    if std::env::var_os("NASH_UPDATE_BUDGETS").is_some() {
-        std::fs::write(&path, toml::to_string(&actual).unwrap()).unwrap();
-        return;
-    }
-    let baseline: Measure = toml::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("no baseline {name}; run with NASH_UPDATE_BUDGETS=1"))).unwrap();
-    assert!(
-        actual.flat_bytes <= baseline.flat_bytes && actual.cpu <= baseline.cpu && actual.mem <= baseline.mem,
-        "{name} regressed: {actual:?} > baseline {baseline:?}"
-    );
-    assert!(
-        actual == baseline,
-        "{name} improved: {actual:?} < baseline {baseline:?}; rerun with NASH_UPDATE_BUDGETS=1 to record it"
-    );
-}
-```
-
-`toml` and `serde` join `nash-codegen`'s dev-dependencies.
-
-Benchmarks (`tests/budgets.rs`), each a fixture in `tests/fixtures/`:
-
-| name | program |
-|---|---|
-| `vesting_claim` | plan 07 chunk 12, `Claim` path |
-| `vesting_cancel` | same, `Cancel` path |
-| `list_length_100` | `length` over a 100-element list |
-| `sum_static` | `replicate` / `sumTo` from plan 07 chunk 8 |
-| `data_match` | the four-clause `Data` match from plan 07 chunk 6 |
-| `validate_datum` | `validate` on a nested record |
-| `decoder_datum` | `Decode` trait example from docs/data.md |
-
-**Aiken reference**: none; Aiken measures in `aiken-project` benchmarks
-and acceptance tests, not in unit tests.
-
-**Tests**: the seven benchmarks, recorded once with the identity optimizer
-as the baseline.
-
-**Done when**: `cargo test -p nash-codegen --test budgets` passes with
-committed baselines; `NASH_UPDATE_BUDGETS=1` rewrites them.
+**Done when**: findings are recorded and temporary experiment code is removed.
 
 ---
 
@@ -365,10 +298,10 @@ used twice inline, and a recursive decoder does not.
 - `keep_large_lambda`: a `validate#Datum`-sized lambda used twice is
   not inlined.
 - budgets: `vesting_*`, `data_match`, `decoder_datum` must improve;
-  update baselines.
+  record the temporary comparison.
 
-**Done when**: snapshots accepted; budgets updated and all `<=` the
-chunk 2 baselines (the "improved" assertion documents each change).
+**Done when**: snapshots accepted; temporary measurements confirm the intended
+improvement and experiment code is removed.
 
 ---
 
@@ -454,7 +387,8 @@ constant in second position is moved first.
 - budgets: `list_length_100`, `data_match`, `validate_datum` must improve
   (fewer `force`s).
 
-**Done when**: snapshots accepted; budgets updated.
+**Done when**: snapshots accepted; measurement findings recorded and experiment
+code removed.
 
 ---
 
@@ -518,7 +452,8 @@ hoisted as lambdas over all their pattern variables.
 - `keep_self_param`: the chunk 8 `sumTo` program keeps its self parameter.
 - budgets: `decoder_datum`, `vesting_*` must improve.
 
-**Done when**: snapshots accepted; budgets updated.
+**Done when**: snapshots accepted; measurement findings recorded and experiment
+code removed.
 
 ---
 
@@ -631,7 +566,8 @@ lazy branches without `delay`/`force`. The earlier proposed eager
 - budgets: `sum_static`, `data_match`, `validate_datum`, `decoder_datum`
   must improve.
 
-**Done when**: snapshots accepted; budgets updated.
+**Done when**: snapshots accepted; measurement findings recorded and experiment
+code removed.
 
 ---
 
@@ -641,8 +577,6 @@ lazy branches without `delay`/`force`. The earlier proposed eager
 
 - `crates/nash-ir/src/optimize.rs`
 - `crates/nash-codegen/src/program.rs` (`assemble` wiring)
-- `.github/workflows/*.yml` (the budget test runs in CI; it already does
-  as part of `cargo test`)
 
 **Change**
 
@@ -718,12 +652,11 @@ change; the test asserts that separately by running both).
 - `results_unchanged`: every plan 07 evaluation snapshot has the same
   `result` and `logs` with and without the optimizer (a loop over the
   fixtures).
-- `tests/budgets.rs`: all seven benchmarks against the final baselines;
-  the `Vesting` numbers from plan 07 chunk 12 are the reference point for
-  the summary table in the PR.
+- Temporary measurements compare representative programs before and after the
+  optimizer; retain a summary of the findings, then delete experiment code.
 
-**Done when**: idempotence and results tests pass; budgets committed;
-CI runs `cargo test` including the budget gate.
+**Done when**: idempotence and result snapshots pass in CI; temporary measurement
+code is removed.
 
 ---
 
@@ -738,6 +671,5 @@ CI runs `cargo test` including the budget gate.
 3. **Fusion of source decoding functions** (docs/data.md) is not in this
    plan. It would be a fifth pass after chunk 6, recognizing the
    monomorphized stdlib names.
-4. **Budget baselines on cost-model changes.** A nash-plutus cost-model
-   update shifts every `cpu`/`mem` number; the update procedure is
-   `NASH_UPDATE_BUDGETS=1 cargo test` in the same PR.
+4. **Cost-model changes.** Historical measurements apply to their recorded model.
+   Run a temporary comparison when a new performance decision needs current data.

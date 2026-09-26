@@ -533,11 +533,11 @@ removed. Rational and Crypto are implicit qualified modules.
 
 Validation: Python math/Fraction exact-reference fixtures, existing Plutus
 signature conformance vectors, 241 Nash tests including small-range predicate
-equivalence checks, and full-validator budget snapshots. Formatting, strict
+equivalence checks, and temporary full-validator cost measurements. Formatting, strict
 all-target/all-feature Clippy and the full workspace suite passed: 3,456 tests,
 3 ignored. The separate signature conformance run passed all 83 cases.
 
-Budget results in `testing_base__integer_predicate_costs.snap`: large isSqrt
+The completed cost experiment (removed after measurement) showed that large isSqrt
 used 6,236,984 CPU / 27,424 memory versus 67,141,424 / 277,820 for computing and
 comparing. isGcd/isLcm save work on early rejection but can cost more for valid
 candidates; no general claim of cheaper verification is made.

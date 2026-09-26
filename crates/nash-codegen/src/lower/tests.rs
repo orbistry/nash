@@ -255,5 +255,3 @@ fn data_shapes_evaluate_once_and_only_unpack_the_selected_branch() {
         assert_eq!(result.info.logs, ["scrutinee", "branch"]);
     }
 }
-
-mod list_costs;
