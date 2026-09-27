@@ -1,5 +1,27 @@
 # nash-can
 
+## 0.13.0 — 2026-09-27
+
+### Minor changes
+
+- [77149037](https://github.com/orbistry/nash/commit/771490379c589e43d1a97a6da4dba96df4588d76) Move boolean helpers and &&/|| into Logic, below Eq and Ord. Preserve fully
+  applied short-circuit behavior and default application scope. Qualified callers
+  must use Logic.and/or/not/xor instead of Bool; explicit operator imports use
+  Logic instead of Prelude. Simplify equality and boolean ordering with the helpers. — Thanks @MicroProofs!
+- [4a3ec22f](https://github.com/orbistry/nash/commit/4a3ec22ffe5e4576b7d778863455964608a32bc2) Add Primitive.map as a native pair-list alias with storable key/value types.
+  Map builtins and library results preserve the alias. Library Eq implementations
+  use structural Data equality for Big-element lists and Big/Big maps, and retain
+  selected element equality for Little elements and mixed maps. No optimizer
+  special case is needed. Generic callers with unknown element representations
+  must request container Eq directly. Map equality preserves order and duplicates.
+  
+  Keep reflexive Lift inference nominal when checking alias identity, so explicit
+  alias conversions can infer hidden type parameters without a false competitor. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.12.0, nash-source@0.10.0
+
 ## 0.12.0 — 2026-09-26
 
 ### Minor changes

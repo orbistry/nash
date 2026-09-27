@@ -1,5 +1,17 @@
 # nash-codegen
 
+## 0.4.3 — 2026-09-27
+
+### Patch changes
+
+- [77149037](https://github.com/orbistry/nash/commit/771490379c589e43d1a97a6da4dba96df4588d76) Move boolean helpers and &&/|| into Logic, below Eq and Ord. Preserve fully
+  applied short-circuit behavior and default application scope. Qualified callers
+  must use Logic.and/or/not/xor instead of Bool; explicit operator imports use
+  Logic instead of Prelude. Simplify equality and boolean ordering with the helpers. — Thanks @MicroProofs!
+- [44e22412](https://github.com/orbistry/nash/commit/44e22412bfb8d60baeb600dbccfc41a71c134e0c) Remove completed performance experiments, benchmark fixtures and unused benchmark dependencies while retaining functional coverage. — Thanks @MicroProofs!
+- [26011dab](https://github.com/orbistry/nash/commit/26011dabdc7619084a2d0b0bdc0abf9d807416c6) Lower unused native-unit bindings to a single-branch UPLC case, preserving strict sequencing without a lambda/application pair. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.12.0, nash-can@0.13.0, nash-ir@0.3.4, nash-plutus@0.3.3, nash-solve@0.9.2, nash-test@0.4.2
+
 ## 0.4.2 — 2026-09-26
 
 ### Patch changes

@@ -1,5 +1,11 @@
 # nash-nitpick
 
+## 0.3.3 — 2026-09-27
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.12.0
+
 ## 0.3.2 — 2026-09-25
 
 ### Patch changes

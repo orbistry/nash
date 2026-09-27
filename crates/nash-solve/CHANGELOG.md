@@ -1,5 +1,20 @@
 # nash-solve
 
+## 0.9.2 — 2026-09-27
+
+### Patch changes
+
+- [4a3ec22f](https://github.com/orbistry/nash/commit/4a3ec22ffe5e4576b7d778863455964608a32bc2) Add Primitive.map as a native pair-list alias with storable key/value types.
+  Map builtins and library results preserve the alias. Library Eq implementations
+  use structural Data equality for Big-element lists and Big/Big maps, and retain
+  selected element equality for Little elements and mixed maps. No optimizer
+  special case is needed. Generic callers with unknown element representations
+  must request container Eq directly. Map equality preserves order and duplicates.
+  
+  Keep reflexive Lift inference nominal when checking alias identity, so explicit
+  alias conversions can infer hidden type parameters without a false competitor. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.12.0, nash-can@0.13.0, nash-constrain@0.8.3
+
 ## 0.9.1 — 2026-09-26
 
 ### Patch changes

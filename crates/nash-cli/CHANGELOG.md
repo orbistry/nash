@@ -1,5 +1,21 @@
 # nash-cli
 
+## 0.7.0 — 2026-09-27
+
+### Minor changes
+
+- [fd56cc68](https://github.com/orbistry/nash/commit/fd56cc68eced010fb5e16d4c8811865249fca40d) Add an AST-based Nash source formatter with 80-column layout, comment preservation,
+  and source snapshot tests. Expose `nash format` (`fmt`), in-place and stdin
+  formatting, and contextual `--check` diffs through the existing report style.
+  Correct whitespace handling after message keywords and before constructor docs.
+  Allow aligned explicit continuations inside `do` without merging statements. — Thanks @MicroProofs!
+- [d87929ed](https://github.com/orbistry/nash/commit/d87929edf1ab8ef1fa84570b86be0f6f9514033a) Render searchable HTML and Markdown API documentation with `nash docs`, including compiler-bundled Base documentation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [0cfd85a3](https://github.com/orbistry/nash/commit/0cfd85a33e3b976845224d603afc1b1ef18aa143) Process format inputs concurrently with asynchronous filesystem and stream I/O, and keep formatting work off Tokio executor threads. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.4.3, nash-docs@0.2.0, nash-driver@0.12.0, nash-fmt@0.2.0, nash-language-server@0.4.6, nash-report@0.6.0, nash-test@0.4.2
+
 ## 0.6.3 — 2026-09-26
 
 ### Patch changes

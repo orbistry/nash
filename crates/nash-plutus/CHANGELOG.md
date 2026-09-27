@@ -1,5 +1,12 @@
 # nash-plutus
 
+## 0.3.3 — 2026-09-27
+
+### Patch changes
+
+- [44e22412](https://github.com/orbistry/nash/commit/44e22412bfb8d60baeb600dbccfc41a71c134e0c) Remove completed performance experiments, benchmark fixtures and unused benchmark dependencies while retaining functional coverage. — Thanks @MicroProofs!
+- [70a160a9](https://github.com/orbistry/nash/commit/70a160a916b2803b6d12d5376e44ead684632986) Decode deeply nested Flat terms with an explicit stack, avoiding host stack overflow for large generated programs. — Thanks @MicroProofs!
+
 ## 0.3.2 — 2026-09-26
 
 ### Patch changes

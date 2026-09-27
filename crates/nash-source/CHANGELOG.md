@@ -1,5 +1,11 @@
 # nash-source
 
+## 0.10.0 — 2026-09-27
+
+### Minor changes
+
+- [551b5d96](https://github.com/orbistry/nash/commit/551b5d968c1066b00b7e9bc334bc4fd064468b8f) Preserve source comments and documentation in the surface AST for formatting and documentation extraction. Retain comment regions and text through parser backtracking, and attach module and declaration documentation. — Thanks @MicroProofs!
+
 ## 0.9.0 — 2026-09-25
 
 ### Minor changes

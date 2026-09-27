@@ -1,5 +1,20 @@
 # nash-parse
 
+## 0.9.0 — 2026-09-27
+
+### Minor changes
+
+- [551b5d96](https://github.com/orbistry/nash/commit/551b5d968c1066b00b7e9bc334bc4fd064468b8f) Preserve source comments and documentation in the surface AST for formatting and documentation extraction. Retain comment regions and text through parser backtracking, and attach module and declaration documentation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [fd56cc68](https://github.com/orbistry/nash/commit/fd56cc68eced010fb5e16d4c8811865249fca40d) Add an AST-based Nash source formatter with 80-column layout, comment preservation,
+  and source snapshot tests. Expose `nash format` (`fmt`), in-place and stdin
+  formatting, and contextual `--check` diffs through the existing report style.
+  Correct whitespace handling after message keywords and before constructor docs.
+  Allow aligned explicit continuations inside `do` without merging statements. — Thanks @MicroProofs!
+- Updated dependencies: nash-source@0.10.0
+
 ## 0.8.0 — 2026-09-25
 
 ### Minor changes
