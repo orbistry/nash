@@ -1,0 +1,117 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#25 : Data = mapData (trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])) in
+let effect#27 : int = trace "between" in 0 in
+case@Data data#25 of
+  DataMap payload#26 -> trace "selected" in 9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_25
+    [(lam effect_27
+      [(lam generated_28
+        (force
+          [[[[[[(force (builtin chooseData)) generated_28] (delay (error))]
+            (delay
+              (force
+                [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        data_25])
+      (force
+        [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+    [(builtin mapData)
+      (force
+        [[(force (builtin trace)) (con string "operand")]
+          (delay
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])]])
+--- optimized Core
+let anf#4 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#1 : Data = mapData anf#4 in
+let effect#2 : int = trace "between" in 0 in
+case@Data data#1 of
+  DataMap payload#3 -> trace "selected" in 9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_10
+    [(lam builtin_11
+      [(lam anf_5
+        [(lam data_6
+          [(lam effect_7
+            [(lam generated_9
+              (force
+                [[[[[[builtin_11 generated_9] (delay (error))]
+                  (delay (force [[builtin_10 (con string "selected")] (delay (con integer 9))]))]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay (error))]))
+              data_6])
+            (force [[builtin_10 (con string "between")] (delay (con integer 0))])])
+          [(builtin mapData) anf_5]])
+        (force
+          [[builtin_10 (con string "operand")]
+            (delay
+              (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#28 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#25 : Data = mapData anf#28 in
+let effect#27 : int = trace "between" in 0 in
+case@Data data#25 of
+  DataMap payload#26 -> trace "selected" in 9
+--- isolated folded Core
+let anf#28 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#25 : Data = mapData anf#28 in
+let effect#27 : int = trace "between" in 0 in
+let payload#26 : list (pair Data Data) = anf#28 in
+trace "selected" in 9
+--- isolated cleaned Core
+let anf#28 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#25 : Data = mapData anf#28 in
+let effect#27 : int = trace "between" in 0 in
+trace "selected" in 9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_28
+    [(lam data_25
+      [(lam effect_27
+        [(lam generated_29
+          (force
+            [[[[[[(force (builtin chooseData)) generated_29] (delay (error))]
+              (delay
+                (force
+                  [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          data_25])
+        (force
+          [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+      [(builtin mapData) anf_28]])
+    (force
+      [[(force (builtin trace)) (con string "operand")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_28
+    [(lam data_25
+      [(lam effect_27
+        (force
+          [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))
+        (force
+          [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+      [(builtin mapData) anf_28]])
+    (force
+      [[(force (builtin trace)) (con string "operand")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- result
+(con integer 9)
+--- logs
+["operand", "between", "selected"]

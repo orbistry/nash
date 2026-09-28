@@ -1,0 +1,95 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data mapData (\x#58 : int -> x#58) of
+  _ -> trace "unreachable" in 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_59
+    (force
+      [[[[[[(force (builtin chooseData)) generated_59]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+    [(builtin mapData) (lam x_58 x_58)]])
+--- optimized Core
+let anf#2 : Data = mapData (\x#1 : int -> x#1) in
+case@Data anf#2 of
+  _ -> trace "unreachable" in 0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_4
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]))
+            anf_4])
+          [(builtin mapData) (lam x_3 x_3)]])
+        [builtin_5 (con string "unreachable")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#69 : Data = mapData (\x#58 : int -> x#58) in
+case@Data anf#69 of
+  _ -> trace "unreachable" in 0
+--- isolated folded Core
+let data_operand#70 : int -> int = \x#58 : int -> x#58 in
+let anf#69 : Data = mapData data_operand#70 in
+trace "unreachable" in 0
+--- isolated cleaned Core
+let anf#69 : Data = mapData (\x#58 : int -> x#58) in
+trace "unreachable" in 0
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_69
+    [(lam generated_70
+      (force
+        [[[[[[(force (builtin chooseData)) generated_70]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+      anf_69])
+    [(builtin mapData) (lam x_58 x_58)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_69
+    (force
+      [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))
+    [(builtin mapData) (lam x_58 x_58)]])
+--- result
+error: NotAConstant(Lambda { parameter: DeBruijn(0), body: Var(DeBruijn(1)), env: Empty })
+--- logs
+[]

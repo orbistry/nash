@@ -34,40 +34,40 @@ case@Data anf#1 of
     (force (builtin chooseData))])
 --- isolated pass
 --- isolated ANF input
-let anf#3 : Data = constrData 0 (con (list data) []) in
-case@Data anf#3 of
+let anf#5 : Data = constrData 0 (con (list data) []) in
+case@Data anf#5 of
   _ -> 42
 --- isolated folded Core
-let anf#3 : Data = constrData 0 (con (list data) []) in
-case@Data anf#3 of
+let anf#5 : Data = constrData 0 (con (list data) []) in
+case@Data anf#5 of
   _ -> 42
 --- isolated cleaned Core
-let anf#3 : Data = constrData 0 (con (list data) []) in
-case@Data anf#3 of
+let anf#5 : Data = constrData 0 (con (list data) []) in
+case@Data anf#5 of
   _ -> 42
 --- isolated UPLC before
 (program 1.1.0
-  [(lam anf_3
-    [(lam generated_4
+  [(lam anf_5
+    [(lam generated_6
       (force
-        [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 42))]
+        [[[[[[(force (builtin chooseData)) generated_6] (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]))
-      anf_3])
+      anf_5])
     [[(builtin constrData) (con integer 0)] (con (list data) [])]])
 --- isolated UPLC after
 (program 1.1.0
-  [(lam anf_3
-    [(lam generated_4
+  [(lam anf_5
+    [(lam generated_6
       (force
-        [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 42))]
+        [[[[[[(force (builtin chooseData)) generated_6] (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]))
-      anf_3])
+      anf_5])
     [[(builtin constrData) (con integer 0)] (con (list data) [])]])
 --- result
 (con integer 42)

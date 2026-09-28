@@ -1850,10 +1850,17 @@ mod data {
     }
 
     mod wrappers {
-        //! IData/BData shape selection; constructor checks remain strict.
+        //! Scalar wrapper folding and isolated ListData/MapData trial; constructor checks remain strict.
         use super::*;
         const BYTES: Ty<'static> = Ty::Const(&ConstTy::Bytes);
-        fn kinds<'a>(b: &Builder<'a>) -> [(F, Test<'a>, &'static str, &'a Core<'a>); 2] {
+        fn kinds<'a>(b: &Builder<'a>) -> [(F, Test<'a>, &'static str, &'a Core<'a>); 4] {
+            let data = Constant::data(b.arena, PlutusData::integer_from(b.arena, 42));
+            let data_ty = &nash_plutus::typ::Type::Data;
+            let pair_ty = nash_plutus::typ::Type::pair(b.arena, data_ty, data_ty);
+            let other = Constant::data(b.arena, PlutusData::integer_from(b.arena, 7));
+            let pair = Constant::proto_pair(b.arena, data_ty, data_ty, data, other);
+            let reverse = Constant::proto_pair(b.arena, data_ty, data_ty, other, data);
+            let duplicate = Constant::proto_pair(b.arena, data_ty, data_ty, data, data);
             [
                 (F::IData, Test::DataI, "integer", b.int(42)),
                 (
@@ -1862,13 +1869,35 @@ mod data {
                     "bytes",
                     b.lit(Constant::byte_string(b.arena, b"nash")),
                 ),
+                (
+                    F::ListData,
+                    Test::DataList,
+                    "list",
+                    b.lit(Constant::proto_list(
+                        b.arena,
+                        data_ty,
+                        b.arena.alloc_slice_copy(&[data]),
+                    )),
+                ),
+                (
+                    F::MapData,
+                    Test::DataMap,
+                    "map",
+                    b.lit(Constant::proto_list(
+                        b.arena,
+                        pair_ty,
+                        b.arena.alloc_slice_copy(&[pair, reverse, duplicate]),
+                    )),
+                ),
             ]
         }
         fn check(name: &str, b: &Builder<'_>, original: &Core<'_>, fails: bool) {
             let before = anf::normalize(b, original);
-            let folded = known_case::reduce_data_wrappers(b, before);
-            let after =
-                known_case::simplify_data_wrappers(b, nash_ir::small_inline::simplify(b, folded));
+            let folded = known_case::reduce_collection_wrappers(b, before);
+            let after = known_case::simplify_collection_wrappers(
+                b,
+                nash_ir::small_inline::simplify(b, folded),
+            );
             let left = crate::harness::eval_core_raw(b.arena, before);
             let middle = crate::harness::eval_core_raw(b.arena, folded);
             let right = crate::harness::eval_core_raw(b.arena, after);
@@ -1901,7 +1930,7 @@ mod data {
             }
             assert!(std::ptr::eq(
                 after,
-                known_case::simplify_data_wrappers(b, after)
+                known_case::simplify_collection_wrappers(b, after)
             ));
         }
         #[test]
@@ -1999,18 +2028,18 @@ mod data {
         fn missing_shape_uses_default_or_errors() {
             let a = Arena::new();
             let b = Builder::new(&a);
-            for (func, _, name, value) in kinds(&b) {
-                let p = bind(&b, "wrong", Ty::Const(&ConstTy::List(DATA)));
+            for (func, test, name, value) in kinds(&b) {
+                let (wrong, ty) = if test == Test::DataList {
+                    (Test::DataI, INT)
+                } else {
+                    (Test::DataList, Ty::Const(&ConstTy::List(DATA)))
+                };
+                let p = bind(&b, "wrong", ty);
                 for default in [false, true] {
                     let c = b.case(
                         CaseKind::Data,
                         b.builtin(func, &[trace(&b, "operand", value)], DATA),
-                        &[arm(
-                            &b,
-                            Test::DataList,
-                            &[p],
-                            trace(&b, "wrong", b.error(INT)),
-                        )],
+                        &[arm(&b, wrong, &[p], trace(&b, "wrong", b.error(INT)))],
                         default.then(|| trace(&b, "fallback", b.int(9))),
                         INT,
                     );
@@ -2110,6 +2139,129 @@ mod data {
             }
         }
         #[test]
+        fn collection_metadata_empty_lists_and_runtime_cons() {
+            use nash_plutus::typ::Type;
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let data = Constant::data(&a, PlutusData::integer_from(&a, 42));
+            let int = Constant::integer_from(&a, 7);
+            let pair_ty = Type::pair(&a, &Type::Data, &Type::Data);
+            let wrong_pair_ty = Type::pair(&a, &Type::Data, &Type::Integer);
+            let pair = Constant::proto_pair(&a, &Type::Data, &Type::Data, data, data);
+            let wrong_pair = Constant::proto_pair(&a, &Type::Data, &Type::Integer, data, int);
+            for (func, test, name, good_ty, item) in [
+                (F::ListData, Test::DataList, "list", &Type::Data, data),
+                (F::MapData, Test::DataMap, "map", pair_ty, pair),
+            ] {
+                let empty = b.lit(Constant::proto_list(&a, good_ty, &[]));
+                let native = b.builtin(F::MkCons, &[b.lit(item), empty], empty.ty);
+                let (other_ty, other_item) = if func == F::MapData {
+                    (&Type::Data, data)
+                } else {
+                    (pair_ty, pair)
+                };
+                for (label, value, fails) in [
+                    (
+                        "other_empty",
+                        b.lit(Constant::proto_list(&a, other_ty, &[])),
+                        true,
+                    ),
+                    (
+                        "other_items",
+                        b.lit(Constant::proto_list(
+                            &a,
+                            other_ty,
+                            a.alloc_slice_copy(&[other_item]),
+                        )),
+                        true,
+                    ),
+                    ("empty", empty, false),
+                    ("cons", native, false),
+                    (
+                        "wrong_empty",
+                        b.lit(Constant::proto_list(&a, &Type::Integer, &[])),
+                        true,
+                    ),
+                    (
+                        "wrong_items",
+                        b.lit(Constant::proto_list(
+                            &a,
+                            &Type::Integer,
+                            a.alloc_slice_copy(&[int]),
+                        )),
+                        true,
+                    ),
+                    (
+                        "wrong_pair_empty",
+                        b.lit(Constant::proto_list(&a, wrong_pair_ty, &[])),
+                        true,
+                    ),
+                    (
+                        "wrong_pair_items",
+                        b.lit(Constant::proto_list(
+                            &a,
+                            wrong_pair_ty,
+                            a.alloc_slice_copy(&[wrong_pair]),
+                        )),
+                        true,
+                    ),
+                ] {
+                    for used in [false, true] {
+                        let p = bind(&b, "payload", empty.ty);
+                        let body = if used { b.var(p.name, p.ty) } else { empty };
+                        check(
+                            &format!("{name}_{label}_used_{used}"),
+                            &b,
+                            b.case(
+                                CaseKind::Data,
+                                b.builtin(func, &[value], DATA),
+                                &[arm(&b, test, &[p], body)],
+                                None,
+                                body.ty,
+                            ),
+                            fails,
+                        );
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn collection_nested_wrappers_return_capturing_functions() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b).into_iter().skip(2) {
+                let p = bind(&b, "outer", value.ty);
+                let q = bind(&b, "inner", value.ty);
+                let x = bind(&b, "x", INT);
+                let fun = b.lam(
+                    &[x],
+                    b.constr(0, &[b.var(q.name, q.ty), b.var(x.name, x.ty)], Ty::Erased),
+                );
+                let inner = b.case(
+                    CaseKind::Data,
+                    b.builtin(func, &[b.var(p.name, p.ty)], DATA),
+                    &[arm(&b, test, &[q], fun)],
+                    None,
+                    fun.ty,
+                );
+                let outer = b.case(
+                    CaseKind::Data,
+                    b.builtin(func, &[value], DATA),
+                    &[arm(&b, test, &[p], inner)],
+                    None,
+                    inner.ty,
+                );
+                check(
+                    &format!("{name}_nested_returned_function"),
+                    &b,
+                    b.app(outer, &[b.int(7)], Ty::Erased),
+                    false,
+                );
+            }
+        }
+
+        #[test]
         fn repeated_matches_share_long_literal_bytes() {
             let a = Arena::new();
             let b = Builder::new(&a);
@@ -2185,7 +2337,19 @@ mod data {
                 for (arms, label) in [
                     (vec![valid, valid], "duplicate"),
                     (
-                        vec![valid, arm(&b, Test::DataList, &[], b.int(0))],
+                        vec![
+                            valid,
+                            arm(
+                                &b,
+                                if test == Test::DataList {
+                                    Test::DataI
+                                } else {
+                                    Test::DataList
+                                },
+                                &[],
+                                b.int(0),
+                            ),
+                        ],
                         "unselected_arity",
                     ),
                     (vec![arm(&b, test, &[p, p], b.int(0))], "selected_arity"),
@@ -2199,7 +2363,7 @@ mod data {
                         b.builtin(func, &[value], DATA),
                         b.case(CaseKind::Data, b.var(d.name, DATA), &arms, None, INT),
                     );
-                    let after = known_case::reduce_data_wrappers(&b, before);
+                    let after = known_case::reduce_collection_wrappers(&b, before);
                     let left = crate::lower::lower(&a, before).unwrap_err();
                     let right = crate::lower::lower(&a, after).unwrap_err();
                     insta::assert_snapshot!(
@@ -2215,7 +2379,7 @@ mod data {
             }
         }
         #[test]
-        fn unrelated_producers_and_unknown_data_parameter_are_not_wrapper_facts() {
+        fn producer_defaults_and_unknown_data_parameter() {
             let a = Arena::new();
             let b = Builder::new(&a);
             let list = b.lit(Constant::proto_list(&a, &nash_plutus::typ::Type::Data, &[]));

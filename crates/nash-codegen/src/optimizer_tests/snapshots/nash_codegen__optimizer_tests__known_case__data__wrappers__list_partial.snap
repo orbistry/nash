@@ -1,0 +1,62 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data listData of
+  DataList payload#9 -> payload#9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_10
+    (force
+      [[[[[[(force (builtin chooseData)) generated_10] (delay (error))] (delay (error))]
+        (delay [(lam payload_9 payload_9) [(builtin unListData) generated_10]])]
+        (delay (error))]
+        (delay (error))]))
+    (builtin listData)])
+--- optimized Core
+case@Data listData of
+  DataList payload#1 -> payload#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam generated_3
+      (force
+        [[[[[[builtin_4 generated_3] (delay (error))] (delay (error))]
+          (delay [(lam payload_2 payload_2) [(builtin unListData) generated_3]])]
+          (delay (error))]
+          (delay (error))]))
+      (builtin listData)])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+case@Data listData of
+  DataList payload#9 -> payload#9
+--- isolated folded Core
+case@Data listData of
+  DataList payload#9 -> payload#9
+--- isolated cleaned Core
+case@Data listData of
+  DataList payload#9 -> payload#9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_10
+    (force
+      [[[[[[(force (builtin chooseData)) generated_10] (delay (error))] (delay (error))]
+        (delay [(lam payload_9 payload_9) [(builtin unListData) generated_10]])]
+        (delay (error))]
+        (delay (error))]))
+    (builtin listData)])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam generated_10
+    (force
+      [[[[[[(force (builtin chooseData)) generated_10] (delay (error))] (delay (error))]
+        (delay [(lam payload_9 payload_9) [(builtin unListData) generated_10]])]
+        (delay (error))]
+        (delay (error))]))
+    (builtin listData)])
+--- result
+error: NotAConstant(Builtin(Runtime { args: [], fun: ListData, forces: 0 }))
+--- logs
+[]

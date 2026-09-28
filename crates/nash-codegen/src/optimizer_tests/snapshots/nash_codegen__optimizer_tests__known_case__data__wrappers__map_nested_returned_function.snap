@@ -1,0 +1,132 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(case@Data mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) of
+  DataMap outer#8 -> case@Data mapData outer#8 of
+    DataMap inner#9 -> \x#10 : int -> constr 0 inner#9 x#10) 7
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam generated_11
+    (force
+      [[[[[[(force (builtin chooseData)) generated_11] (delay (error))]
+        (delay
+          [(lam outer_8
+            [(lam generated_12
+              (force
+                [[[[[[(force (builtin chooseData)) generated_12] (delay (error))]
+                  (delay
+                    [(lam inner_9 (lam x_10 (constr 0 inner_9 x_10)))
+                      [(builtin unMapData) generated_12]])]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay (error))]))
+              [(builtin mapData) outer_8]])
+            [(builtin unMapData) generated_11]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin mapData)
+      (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]]
+    (con integer 7)])
+--- optimized Core
+let anf#4 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#6 : int -> 'erased = case@Data anf#4 of
+  DataMap outer#1 -> let anf#5 : Data = mapData outer#1 in
+  case@Data anf#5 of
+    DataMap inner#2 -> \x#3 : int -> constr 0 inner#2 x#3 in
+anf#6 7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_15
+    [(lam anf_7
+      [(lam anf_12 [anf_12 (con integer 7)])
+        [(lam generated_13
+          (force
+            [[[[[[builtin_15 generated_13] (delay (error))]
+              (delay
+                [(lam outer_8
+                  [(lam anf_9
+                    [(lam generated_14
+                      (force
+                        [[[[[[builtin_15 generated_14] (delay (error))]
+                          (delay
+                            [(lam inner_10 (lam x_11 (constr 0 inner_10 x_11)))
+                              [(builtin unMapData) generated_14]])]
+                          (delay (error))]
+                          (delay (error))]
+                          (delay (error))]))
+                      anf_9])
+                    [(builtin mapData) outer_8]])
+                  [(builtin unMapData) generated_13]])]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          anf_7]])
+      [(builtin mapData)
+        (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#11 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#13 : int -> 'erased = case@Data anf#11 of
+  DataMap outer#8 -> let anf#12 : Data = mapData outer#8 in
+  case@Data anf#12 of
+    DataMap inner#9 -> \x#10 : int -> constr 0 inner#9 x#10 in
+anf#13 7
+--- isolated folded Core
+let data_operand#14 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#11 : Data = mapData data_operand#14 in
+let anf#13 : int -> 'erased = let outer#8 : list (pair Data Data) = data_operand#14 in
+let anf#12 : Data = mapData outer#8 in
+let inner#9 : list (pair Data Data) = outer#8 in
+\x#10 : int -> constr 0 inner#9 x#10 in
+anf#13 7
+--- isolated cleaned Core
+let data_operand#14 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#11 : Data = mapData data_operand#14 in
+let anf#12 : Data = mapData data_operand#14 in
+constr 0 data_operand#14 7
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_11
+    [(lam anf_13 [anf_13 (con integer 7)])
+      [(lam generated_14
+        (force
+          [[[[[[(force (builtin chooseData)) generated_14] (delay (error))]
+            (delay
+              [(lam outer_8
+                [(lam anf_12
+                  [(lam generated_15
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_15] (delay (error))]
+                        (delay
+                          [(lam inner_9 (lam x_10 (constr 0 inner_9 x_10)))
+                            [(builtin unMapData) generated_15]])]
+                        (delay (error))]
+                        (delay (error))]
+                        (delay (error))]))
+                    anf_12])
+                  [(builtin mapData) outer_8]])
+                [(builtin unMapData) generated_14]])]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        anf_11]])
+    [(builtin mapData)
+      (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam data_operand_14
+    [(lam anf_11
+      [(lam anf_12 (constr 0 data_operand_14 (con integer 7)))
+        [(builtin mapData) data_operand_14]])
+      [(builtin mapData) data_operand_14]])
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+--- result
+(constr 0
+  (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+  (con integer 7))
+--- logs
+[]

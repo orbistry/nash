@@ -1,0 +1,75 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data listData (mkCons (con data (I 42)) (con (list data) [])) of
+  DataList payload#22 -> payload#22
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_23
+    (force
+      [[[[[[(force (builtin chooseData)) generated_23] (delay (error))] (delay (error))]
+        (delay [(lam payload_22 payload_22) [(builtin unListData) generated_23]])]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin listData)
+      [[(force (builtin mkCons)) (con data (I 42))] (con (list data) [])]]])
+--- optimized Core
+let anf#2 : list Data = mkCons (con data (I 42)) (con (list data) []) in
+let anf#3 : Data = listData anf#2 in
+case@Data anf#3 of
+  DataList payload#1 -> payload#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam builtin_9
+      [(lam anf_4
+        [(lam anf_5
+          [(lam generated_7
+            (force
+              [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))]
+                (delay [(lam payload_6 payload_6) [(builtin unListData) generated_7]])]
+                (delay (error))]
+                (delay (error))]))
+            anf_5])
+          [(builtin listData) anf_4]])
+        [[builtin_9 (con data (I 42))] (con (list data) [])]])
+      (force (builtin mkCons))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#23 : list Data = mkCons (con data (I 42)) (con (list data) []) in
+let anf#24 : Data = listData anf#23 in
+case@Data anf#24 of
+  DataList payload#22 -> payload#22
+--- isolated folded Core
+let anf#23 : list Data = mkCons (con data (I 42)) (con (list data) []) in
+let anf#24 : Data = listData anf#23 in
+let payload#22 : list Data = anf#23 in
+payload#22
+--- isolated cleaned Core
+let anf#23 : list Data = mkCons (con data (I 42)) (con (list data) []) in
+let anf#24 : Data = listData anf#23 in
+anf#23
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_23
+    [(lam anf_24
+      [(lam generated_25
+        (force
+          [[[[[[(force (builtin chooseData)) generated_25] (delay (error))] (delay (error))]
+            (delay [(lam payload_22 payload_22) [(builtin unListData) generated_25]])]
+            (delay (error))]
+            (delay (error))]))
+        anf_24])
+      [(builtin listData) anf_23]])
+    [[(force (builtin mkCons)) (con data (I 42))] (con (list data) [])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_23 [(lam anf_24 anf_23) [(builtin listData) anf_23]])
+    [[(force (builtin mkCons)) (con data (I 42))] (con (list data) [])]])
+--- result
+(con (list data) [(I 42)])
+--- logs
+[]

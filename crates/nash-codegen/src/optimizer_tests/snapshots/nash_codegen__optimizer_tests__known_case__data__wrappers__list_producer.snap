@@ -38,13 +38,12 @@ let anf#1 : Data = listData (con (list data) []) in
 case@Data anf#1 of
   _ -> 42
 --- isolated folded Core
-let anf#1 : Data = listData (con (list data) []) in
-case@Data anf#1 of
-  _ -> 42
+let data_operand#2 : list Data = (con (list data) []) in
+let anf#1 : Data = listData data_operand#2 in
+42
 --- isolated cleaned Core
 let anf#1 : Data = listData (con (list data) []) in
-case@Data anf#1 of
-  _ -> 42
+42
 --- isolated UPLC before
 (program 1.1.0
   [(lam anf_1
@@ -59,16 +58,7 @@ case@Data anf#1 of
     [(builtin listData) (con (list data) [])]])
 --- isolated UPLC after
 (program 1.1.0
-  [(lam anf_1
-    [(lam generated_2
-      (force
-        [[[[[[(force (builtin chooseData)) generated_2] (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]))
-      anf_1])
-    [(builtin listData) (con (list data) [])]])
+  [(lam anf_1 (con integer 42)) [(builtin listData) (con (list data) [])]])
 --- result
 (con integer 42)
 --- logs

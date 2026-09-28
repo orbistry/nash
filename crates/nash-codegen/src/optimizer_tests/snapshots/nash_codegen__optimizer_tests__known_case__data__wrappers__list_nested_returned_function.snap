@@ -1,0 +1,121 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(case@Data listData (con (list data) [(I 42)]) of
+  DataList outer#1 -> case@Data listData outer#1 of
+    DataList inner#2 -> \x#3 : int -> constr 0 inner#2 x#3) 7
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam generated_4
+    (force
+      [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+        (delay
+          [(lam outer_1
+            [(lam generated_5
+              (force
+                [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+                  (delay
+                    [(lam inner_2 (lam x_3 (constr 0 inner_2 x_3)))
+                      [(builtin unListData) generated_5]])]
+                  (delay (error))]
+                  (delay (error))]))
+              [(builtin listData) outer_1]])
+            [(builtin unListData) generated_4]])]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin listData) (con (list data) [(I 42)])]]
+    (con integer 7)])
+--- optimized Core
+let anf#7 : Data = listData (con (list data) [(I 42)]) in
+let anf#9 : int -> 'erased = case@Data anf#7 of
+  DataList outer#4 -> let anf#8 : Data = listData outer#4 in
+  case@Data anf#8 of
+    DataList inner#5 -> \x#6 : int -> constr 0 inner#5 x#6 in
+anf#9 7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_15
+    [(lam anf_1
+      [(lam anf_12 [anf_12 (con integer 7)])
+        [(lam generated_13
+          (force
+            [[[[[[builtin_15 generated_13] (delay (error))] (delay (error))]
+              (delay
+                [(lam outer_2
+                  [(lam anf_3
+                    [(lam generated_14
+                      (force
+                        [[[[[[builtin_15 generated_14] (delay (error))] (delay (error))]
+                          (delay
+                            [(lam inner_10 (lam x_11 (constr 0 inner_10 x_11)))
+                              [(builtin unListData) generated_14]])]
+                          (delay (error))]
+                          (delay (error))]))
+                      anf_3])
+                    [(builtin listData) outer_2]])
+                  [(builtin unListData) generated_13]])]
+              (delay (error))]
+              (delay (error))]))
+          anf_1]])
+      [(builtin listData) (con (list data) [(I 42)])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : Data = listData (con (list data) [(I 42)]) in
+let anf#6 : int -> 'erased = case@Data anf#4 of
+  DataList outer#1 -> let anf#5 : Data = listData outer#1 in
+  case@Data anf#5 of
+    DataList inner#2 -> \x#3 : int -> constr 0 inner#2 x#3 in
+anf#6 7
+--- isolated folded Core
+let data_operand#7 : list Data = (con (list data) [(I 42)]) in
+let anf#4 : Data = listData data_operand#7 in
+let anf#6 : int -> 'erased = let outer#1 : list Data = data_operand#7 in
+let anf#5 : Data = listData outer#1 in
+let inner#2 : list Data = outer#1 in
+\x#3 : int -> constr 0 inner#2 x#3 in
+anf#6 7
+--- isolated cleaned Core
+let data_operand#7 : list Data = (con (list data) [(I 42)]) in
+let anf#4 : Data = listData data_operand#7 in
+let anf#5 : Data = listData data_operand#7 in
+constr 0 data_operand#7 7
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4
+    [(lam anf_6 [anf_6 (con integer 7)])
+      [(lam generated_7
+        (force
+          [[[[[[(force (builtin chooseData)) generated_7] (delay (error))] (delay (error))]
+            (delay
+              [(lam outer_1
+                [(lam anf_5
+                  [(lam generated_8
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+                        (delay
+                          [(lam inner_2 (lam x_3 (constr 0 inner_2 x_3)))
+                            [(builtin unListData) generated_8]])]
+                        (delay (error))]
+                        (delay (error))]))
+                    anf_5])
+                  [(builtin listData) outer_1]])
+                [(builtin unListData) generated_7]])]
+            (delay (error))]
+            (delay (error))]))
+        anf_4]])
+    [(builtin listData) (con (list data) [(I 42)])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam data_operand_7
+    [(lam anf_4
+      [(lam anf_5 (constr 0 data_operand_7 (con integer 7)))
+        [(builtin listData) data_operand_7]])
+      [(builtin listData) data_operand_7]])
+    (con (list data) [(I 42)])])
+--- result
+(constr 0 (con (list data) [(I 42)]) (con integer 7))
+--- logs
+[]

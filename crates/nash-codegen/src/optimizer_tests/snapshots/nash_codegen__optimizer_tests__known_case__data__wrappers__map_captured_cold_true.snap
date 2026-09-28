@@ -1,0 +1,102 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#13 : Data = mapData (trace "before" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])) in
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+  False -> force (delay (case@Data data#13 of
+    DataMap payload#14 -> payload#14))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_13
+    (case
+      (con bool True)
+      (force
+        (delay
+          [(lam generated_15
+            (force
+              [[[[[[(force (builtin chooseData)) generated_15] (delay (error))]
+                (delay [(lam payload_14 payload_14) [(builtin unMapData) generated_15]])]
+                (delay (error))]
+                (delay (error))]
+                (delay (error))]))
+            data_13]))
+      (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])))
+    [(builtin mapData)
+      (force
+        [[(force (builtin trace)) (con string "before")]
+          (delay
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])]])
+--- optimized Core
+let anf#3 : list (pair Data Data) = trace "before" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#1 : Data = mapData anf#3 in
+(con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam anf_2
+      [(lam data_4
+        (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))
+        [(builtin mapData) anf_2]])
+      (force
+        [[builtin_5 (con string "before")]
+          (delay
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#16 : list (pair Data Data) = trace "before" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#13 : Data = mapData anf#16 in
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+  False -> force (delay (case@Data data#13 of
+    DataMap payload#14 -> payload#14))
+--- isolated folded Core
+let anf#16 : list (pair Data Data) = trace "before" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#13 : Data = mapData anf#16 in
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+  False -> force (delay (let payload#14 : list (pair Data Data) = anf#16 in
+  payload#14))
+--- isolated cleaned Core
+let anf#16 : list (pair Data Data) = trace "before" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let data#13 : Data = mapData anf#16 in
+(con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_16
+    [(lam data_13
+      (case
+        (con bool True)
+        (force
+          (delay
+            [(lam generated_17
+              (force
+                [[[[[[(force (builtin chooseData)) generated_17] (delay (error))]
+                  (delay [(lam payload_14 payload_14) [(builtin unMapData) generated_17]])]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay (error))]))
+              data_13]))
+        (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])))
+      [(builtin mapData) anf_16]])
+    (force
+      [[(force (builtin trace)) (con string "before")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_16
+    [(lam data_13
+      (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))
+      [(builtin mapData) anf_16]])
+    (force
+      [[(force (builtin trace)) (con string "before")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- result
+(con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- logs
+["before"]

@@ -34,40 +34,31 @@ case@Data anf#1 of
     (force (builtin chooseData))])
 --- isolated pass
 --- isolated ANF input
-let anf#2 : Data = mapData (con (list (pair data data)) []) in
-case@Data anf#2 of
+let anf#3 : Data = mapData (con (list (pair data data)) []) in
+case@Data anf#3 of
   _ -> 42
 --- isolated folded Core
-let anf#2 : Data = mapData (con (list (pair data data)) []) in
-case@Data anf#2 of
-  _ -> 42
+let data_operand#4 : list (pair Data Data) = (con (list (pair data data)) []) in
+let anf#3 : Data = mapData data_operand#4 in
+42
 --- isolated cleaned Core
-let anf#2 : Data = mapData (con (list (pair data data)) []) in
-case@Data anf#2 of
-  _ -> 42
+let anf#3 : Data = mapData (con (list (pair data data)) []) in
+42
 --- isolated UPLC before
 (program 1.1.0
-  [(lam anf_2
-    [(lam generated_3
+  [(lam anf_3
+    [(lam generated_4
       (force
-        [[[[[[(force (builtin chooseData)) generated_3] (delay (con integer 42))]
+        [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]
           (delay (con integer 42))]))
-      anf_2])
+      anf_3])
     [(builtin mapData) (con (list (pair data data)) [])]])
 --- isolated UPLC after
 (program 1.1.0
-  [(lam anf_2
-    [(lam generated_3
-      (force
-        [[[[[[(force (builtin chooseData)) generated_3] (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]))
-      anf_2])
+  [(lam anf_3 (con integer 42))
     [(builtin mapData) (con (list (pair data data)) [])]])
 --- result
 (con integer 42)

@@ -1,0 +1,95 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data listData true of
+  _ -> trace "unreachable" in 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_1
+    (force
+      [[[[[[(force (builtin chooseData)) generated_1]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+    [(builtin listData) (con bool True)]])
+--- optimized Core
+let anf#1 : Data = listData true in
+case@Data anf#1 of
+  _ -> trace "unreachable" in 0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam builtin_5
+      [(lam partial_6
+        [(lam anf_2
+          [(lam generated_4
+            (force
+              [[[[[[builtin_5 generated_4] (delay (force [partial_6 (delay (con integer 0))]))]
+                (delay (force [partial_6 (delay (con integer 0))]))]
+                (delay (force [partial_6 (delay (con integer 0))]))]
+                (delay (force [partial_6 (delay (con integer 0))]))]
+                (delay (force [partial_6 (delay (con integer 0))]))]))
+            anf_2])
+          [(builtin listData) (con bool True)]])
+        [builtin_3 (con string "unreachable")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#44 : Data = listData true in
+case@Data anf#44 of
+  _ -> trace "unreachable" in 0
+--- isolated folded Core
+let data_operand#45 : bool = true in
+let anf#44 : Data = listData data_operand#45 in
+trace "unreachable" in 0
+--- isolated cleaned Core
+let anf#44 : Data = listData true in
+trace "unreachable" in 0
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_44
+    [(lam generated_45
+      (force
+        [[[[[[(force (builtin chooseData)) generated_45]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+      anf_44])
+    [(builtin listData) (con bool True)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_44
+    (force
+      [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))
+    [(builtin listData) (con bool True)]])
+--- result
+error: Runtime(ExpectedList(Boolean(true)))
+--- logs
+[]

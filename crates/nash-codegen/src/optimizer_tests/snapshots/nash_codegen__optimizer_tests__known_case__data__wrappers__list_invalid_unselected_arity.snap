@@ -1,0 +1,17 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "format!(\"--- before\\n{}\\n--- after\\n{}\\n--- errors\\n{left:?}\\n{right:?}\",\npretty(before), pretty(after))"
+---
+--- before
+let data#6 : Data = listData (con (list data) [(I 42)]) in
+case@Data data#6 of
+  DataList payload#5 -> 42
+  DataI -> 0
+--- after
+let data#6 : Data = listData (con (list data) [(I 42)]) in
+case@Data data#6 of
+  DataList payload#5 -> 42
+  DataI -> 0
+--- errors
+InvalidCase("invalid Data branch")
+InvalidCase("invalid Data branch")

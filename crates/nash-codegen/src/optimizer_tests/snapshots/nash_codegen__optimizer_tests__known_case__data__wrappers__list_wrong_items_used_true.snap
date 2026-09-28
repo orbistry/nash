@@ -1,0 +1,67 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data listData (con (list integer) [7]) of
+  DataList payload#34 -> payload#34
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_35
+    (force
+      [[[[[[(force (builtin chooseData)) generated_35] (delay (error))] (delay (error))]
+        (delay [(lam payload_34 payload_34) [(builtin unListData) generated_35]])]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin listData) (con (list integer) [7])]])
+--- optimized Core
+let anf#2 : Data = listData (con (list integer) [7]) in
+case@Data anf#2 of
+  DataList payload#1 -> payload#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam anf_3
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))]
+            (delay [(lam payload_4 payload_4) [(builtin unListData) generated_5]])]
+            (delay (error))]
+            (delay (error))]))
+        anf_3])
+      [(builtin listData) (con (list integer) [7])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#35 : Data = listData (con (list integer) [7]) in
+case@Data anf#35 of
+  DataList payload#34 -> payload#34
+--- isolated folded Core
+let data_operand#36 : list int = (con (list integer) [7]) in
+let anf#35 : Data = listData data_operand#36 in
+let payload#34 : list Data = data_operand#36 in
+payload#34
+--- isolated cleaned Core
+let data_operand#36 : list int = (con (list integer) [7]) in
+let anf#35 : Data = listData data_operand#36 in
+data_operand#36
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_35
+    [(lam generated_36
+      (force
+        [[[[[[(force (builtin chooseData)) generated_36] (delay (error))] (delay (error))]
+          (delay [(lam payload_34 payload_34) [(builtin unListData) generated_36]])]
+          (delay (error))]
+          (delay (error))]))
+      anf_35])
+    [(builtin listData) (con (list integer) [7])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam data_operand_36
+    [(lam anf_35 data_operand_36) [(builtin listData) data_operand_36]])
+    (con (list integer) [7])])
+--- result
+error: Runtime(TypeMismatch(Data, ProtoList(Integer, [Integer(7)])))
+--- logs
+[]

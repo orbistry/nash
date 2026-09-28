@@ -1,0 +1,68 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data mapData (con (list data) [(I 42)]) of
+  DataMap payload#55 -> (con (list (pair data data)) [])
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_56
+    (force
+      [[[[[[(force (builtin chooseData)) generated_56] (delay (error))]
+        (delay (con (list (pair data data)) []))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin mapData) (con (list data) [(I 42)])]])
+--- optimized Core
+let anf#2 : Data = mapData (con (list data) [(I 42)]) in
+case@Data anf#2 of
+  DataMap payload#1 -> (con (list (pair data data)) [])
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam anf_3
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (error))]
+            (delay (con (list (pair data data)) []))]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        anf_3])
+      [(builtin mapData) (con (list data) [(I 42)])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#56 : Data = mapData (con (list data) [(I 42)]) in
+case@Data anf#56 of
+  DataMap payload#55 -> (con (list (pair data data)) [])
+--- isolated folded Core
+let data_operand#57 : list Data = (con (list data) [(I 42)]) in
+let anf#56 : Data = mapData data_operand#57 in
+let payload#55 : list (pair Data Data) = data_operand#57 in
+(con (list (pair data data)) [])
+--- isolated cleaned Core
+let anf#56 : Data = mapData (con (list data) [(I 42)]) in
+(con (list (pair data data)) [])
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_56
+    [(lam generated_57
+      (force
+        [[[[[[(force (builtin chooseData)) generated_57] (delay (error))]
+          (delay (con (list (pair data data)) []))]
+          (delay (error))]
+          (delay (error))]
+          (delay (error))]))
+      anf_56])
+    [(builtin mapData) (con (list data) [(I 42)])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_56 (con (list (pair data data)) []))
+    [(builtin mapData) (con (list data) [(I 42)])]])
+--- result
+error: Runtime(TypeMismatch(List(Pair(Data, Data)), ProtoList(Data, [Data(Integer(42))])))
+--- logs
+[]

@@ -1,0 +1,82 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(\input#26 : list (pair Data Data) -> case@Data mapData input#26 of
+  DataMap payload#27 -> payload#27
+  _ -> trace "cold" in error) (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam input_26
+    [(lam generated_28
+      (force
+        [[[[[[(force (builtin chooseData)) generated_28]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay [(lam payload_27 payload_27) [(builtin unMapData) generated_28]])]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+      [(builtin mapData) input_26]])
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+--- optimized Core
+let anf#3 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+case@Data anf#3 of
+  DataMap payload#2 -> payload#2
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_1
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (error))]))]
+                (delay [(lam payload_4 payload_4) [(builtin unMapData) generated_6]])]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]))
+            anf_1])
+          [(builtin mapData)
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
+        [builtin_5 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+(\input#26 : list (pair Data Data) -> let anf#28 : Data = mapData input#26 in
+case@Data anf#28 of
+  DataMap payload#27 -> payload#27
+  _ -> trace "cold" in error) (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- isolated folded Core
+(\input#26 : list (pair Data Data) -> let anf#28 : Data = mapData input#26 in
+let payload#27 : list (pair Data Data) = input#26 in
+payload#27) (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- isolated cleaned Core
+let input#26 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#28 : Data = mapData input#26 in
+input#26
+--- isolated UPLC before
+(program 1.1.0
+  [(lam input_26
+    [(lam anf_28
+      [(lam generated_29
+        (force
+          [[[[[[(force (builtin chooseData)) generated_29]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay [(lam payload_27 payload_27) [(builtin unMapData) generated_29]])]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+        anf_28])
+      [(builtin mapData) input_26]])
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam input_26 [(lam anf_28 input_26) [(builtin mapData) input_26]])
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+--- result
+(con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+--- logs
+[]

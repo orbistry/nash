@@ -1,0 +1,86 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data mapData (trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])) of
+  DataList wrong#16 -> trace "wrong" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_17
+    (force
+      [[[[[[(force (builtin chooseData)) generated_17] (delay (error))] (delay (error))]
+        (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin mapData)
+      (force
+        [[(force (builtin trace)) (con string "operand")]
+          (delay
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])]])
+--- optimized Core
+let anf#2 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#3 : Data = mapData anf#2 in
+case@Data anf#3 of
+  DataList wrong#1 -> trace "wrong" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam builtin_9
+      [(lam anf_4
+        [(lam anf_5
+          [(lam generated_7
+            (force
+              [[[[[[builtin_9 generated_7] (delay (error))] (delay (error))]
+                (delay (force [[builtin_8 (con string "wrong")] (delay (error))]))]
+                (delay (error))]
+                (delay (error))]))
+            anf_5])
+          [(builtin mapData) anf_4]])
+        (force
+          [[builtin_8 (con string "operand")]
+            (delay
+              (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#17 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#18 : Data = mapData anf#17 in
+case@Data anf#18 of
+  DataList wrong#16 -> trace "wrong" in error
+--- isolated folded Core
+let anf#17 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#18 : Data = mapData anf#17 in
+error
+--- isolated cleaned Core
+let anf#17 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#18 : Data = mapData anf#17 in
+error
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_17
+    [(lam anf_18
+      [(lam generated_19
+        (force
+          [[[[[[(force (builtin chooseData)) generated_19] (delay (error))] (delay (error))]
+            (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+            (delay (error))]
+            (delay (error))]))
+        anf_18])
+      [(builtin mapData) anf_17]])
+    (force
+      [[(force (builtin trace)) (con string "operand")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_17 [(lam anf_18 (error)) [(builtin mapData) anf_17]])
+    (force
+      [[(force (builtin trace)) (con string "operand")]
+        (delay
+          (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["operand"]

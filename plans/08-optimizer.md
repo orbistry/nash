@@ -1490,9 +1490,44 @@ during discovery, so the freshly built binaries were run directly. Both formatte
 checks, workspace and isolated-runner strict Clippy, and the explicit performance
 baseline check pass.
 
-Collection and constructor producers need a separate trial; `DataConstr` binds
-one native `(tag, fields)` pair and is not a single-operand wrapper. This is case
-folding, not permission to remove the producer through cancellation (Chunk 8).
+**ListData/MapData producer case folding (28 September 2026), trial awaiting keep.**
+`reduce_collection_wrappers` extends the scalar-wrapper algorithm to exactly
+saturated `ListData` and `MapData` bindings. `DataList` receives the original
+native Data list; `DataMap` receives the original native list of Data pairs.
+The producer remains strict, including when no branch uses the payload, so wrong
+operand types and incorrect empty-list element metadata still fail. Successful
+MapData construction preserves entry order and duplicate keys. Alias handling,
+non-variable operand sharing, full branch-table validation and defaults use the
+same code as the accepted scalar rule. The private collection switch isolates the
+trial; it is not a user-facing optimization flag. `simplify_collection_wrappers`
+repeats it with accepted cleanup without another ANF pass. The accepted pipeline
+and permanent baseline remain unchanged.
+
+The separate experiment compares accepted optimization against accepted plus
+this trial with identical sharing and V3 budgets. All 215 cases match results and
+logs. The 192 targeted cases cover lists/maps of lengths 0, 1, 4 and 16, one/two/four
+matches, used/ignored payloads, escaping/nonescaping original Data and literal/runtime
+parameter operands. Every targeted case improves CPU, memory and size; savings
+range from 478,375–2,145,232 CPU, 2,432–10,656 memory and 18–85 bytes. All 23 existing
+source workloads are unchanged, and their accepted baseline check passes. These
+are synthetic coverage cases, not a representative real-validator distribution.
+Temporary experiment source is removed after recording the results.
+
+Validation: nextest passes all 582 tests across the codegen/IR binaries on retry
+(7.06 seconds); the first invocation stalled at discovery. There are 78 new
+snapshots covering both wrappers in the existing module. Four existing snapshots
+update isolated evidence and generated binder IDs; accepted comparison output is
+otherwise unchanged. Cases cover literal/runtime operands, empty/nonempty and
+runtime-built collections, wrong list/pair metadata even on empty or unused
+payloads, duplicate map keys and order, aliases, repeated matches, strict effects,
+returned/capturing functions, defaults, saturation and malformed unselected arms.
+Scope, ANF, type-view, equivalence/log and idempotence checks follow snapshots.
+Formatting, strict workspace Clippy, temporary-runner Clippy and the separate
+accepted performance check pass. Full-workspace tests were not rerun for this trial.
+
+`ConstrData` remains a separate next trial: `DataConstr` binds one native
+`(tag, fields)` pair and is not a single-operand wrapper. This is case folding,
+not permission to remove the producer through cancellation (Chunk 8).
 
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:
