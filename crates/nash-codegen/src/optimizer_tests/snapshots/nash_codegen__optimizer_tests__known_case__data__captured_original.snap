@@ -20,18 +20,9 @@ force (delay (case@Data data#1 of
           data_1])))
     (con data (I 42))])
 --- optimized Core
-case@Data (con data (I 42)) of
-  DataI payload#4 -> payload#4
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam generated_2
-      (force
-        [[[[[[builtin_3 generated_2] (delay (error))] (delay (error))] (delay (error))]
-          (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
-          (delay (error))]))
-      (con data (I 42))])
-    (force (builtin chooseData))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 let data#1 : Data = (con data (I 42)) in

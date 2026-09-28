@@ -32,28 +32,11 @@ case@Data (con data (I 42)) of
             [[(force (builtin trace)) (con string "integer")] (delay (con integer 1))]))]))
     (con data (I 42))])
 --- optimized Core
-case@Data (con data (I 42)) of
-  DataI unused#6 -> trace "integer" in 0
-  DataB unused#7 -> trace "integer" in 1
-  DataList unused#8 -> trace "integer" in 2
-  DataMap unused#9 -> trace "integer" in 4
-  DataConstr unused#10 -> trace "integer" in 6
-  _ -> error
+trace "integer" in 0
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam builtin_8
-      [(lam partial_9
-        [(lam generated_6
-          (force
-            [[[[[[builtin_8 generated_6] (delay (force [partial_9 (delay (con integer 6))]))]
-              (delay (force [partial_9 (delay (con integer 4))]))]
-              (delay (force [partial_9 (delay (con integer 2))]))]
-              (delay (force [partial_9 (delay (con integer 0))]))]
-              (delay (force [partial_9 (delay (con integer 1))]))]))
-          (con data (I 42))])
-        [builtin_7 (con string "integer")]])
-      (force (builtin chooseData))])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "integer")] (delay (con integer 0))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

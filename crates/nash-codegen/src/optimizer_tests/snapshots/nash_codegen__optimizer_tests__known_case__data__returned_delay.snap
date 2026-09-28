@@ -20,24 +20,11 @@ force (case@Data (con data (I 42)) of
           (delay (error))]))
       (con data (I 42))]))
 --- optimized Core
-let anf#3 : @delay int = case@Data (con data (I 42)) of
-  DataI payload#2 -> delay (trace "forced" in payload#2) in
-force anf#3
+trace "forced" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam builtin_7
-      [(lam anf_4 (force anf_4))
-        [(lam generated_5
-          (force
-            [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))] (delay (error))]
-              (delay
-                [(lam payload_1
-                  (delay (force [[builtin_6 (con string "forced")] (delay payload_1)])))
-                  [(builtin unIData) generated_5]])]
-              (delay (error))]))
-          (con data (I 42))]])
-      (force (builtin chooseData))])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "forced")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

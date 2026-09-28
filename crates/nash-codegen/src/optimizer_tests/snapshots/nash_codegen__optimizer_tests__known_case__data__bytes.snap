@@ -18,25 +18,9 @@ case@Data (con data (B #6e617368)) of
         (delay [(lam payload_2 payload_2) [(builtin unBData) generated_3]])]))
     (con data (B #6e617368))])
 --- optimized Core
-case@Data (con data (B #6e617368)) of
-  DataB payload#1 -> payload#1
-  _ -> trace "cold" in error
+(con bytestring #6e617368)
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam builtin_5
-      [(lam partial_6
-        [(lam generated_4
-          (force
-            [[[[[[builtin_5 generated_4] (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay [(lam payload_2 payload_2) [(builtin unBData) generated_4]])]))
-          (con data (B #6e617368))])
-        [builtin_3 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+(program 1.1.0 (con bytestring #6e617368))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (B #6e617368)) of

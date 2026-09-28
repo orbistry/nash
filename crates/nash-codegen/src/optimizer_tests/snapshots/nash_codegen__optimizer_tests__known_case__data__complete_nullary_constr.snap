@@ -37,28 +37,11 @@ case@Data (con data (Constr 59 [])) of
               (delay (con integer 1))]))]))
     (con data (Constr 59 []))])
 --- optimized Core
-case@Data (con data (Constr 59 [])) of
-  DataI unused#1 -> trace "nullary_constr" in 0
-  DataB unused#2 -> trace "nullary_constr" in 1
-  DataList unused#3 -> trace "nullary_constr" in 2
-  DataMap unused#4 -> trace "nullary_constr" in 4
-  DataConstr unused#5 -> trace "nullary_constr" in 6
-  _ -> error
+trace "nullary_constr" in 6
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_12
-    [(lam builtin_13
-      [(lam partial_14
-        [(lam generated_11
-          (force
-            [[[[[[builtin_13 generated_11] (delay (force [partial_14 (delay (con integer 6))]))]
-              (delay (force [partial_14 (delay (con integer 4))]))]
-              (delay (force [partial_14 (delay (con integer 2))]))]
-              (delay (force [partial_14 (delay (con integer 0))]))]
-              (delay (force [partial_14 (delay (con integer 1))]))]))
-          (con data (Constr 59 []))])
-        [builtin_12 (con string "nullary_constr")]])
-      (force (builtin chooseData))])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "nullary_constr")] (delay (con integer 6))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

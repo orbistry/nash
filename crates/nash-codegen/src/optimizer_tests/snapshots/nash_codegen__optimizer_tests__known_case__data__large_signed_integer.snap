@@ -15,18 +15,9 @@ case@Data (con data (I -340282366920938463463374607431768211457)) of
         (delay (error))]))
     (con data (I -340282366920938463463374607431768211457))])
 --- optimized Core
-case@Data (con data (I -340282366920938463463374607431768211457)) of
-  DataI integer#2 -> integer#2
+-340282366920938463463374607431768211457
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam generated_2
-      (force
-        [[[[[[builtin_3 generated_2] (delay (error))] (delay (error))] (delay (error))]
-          (delay [(lam integer_1 integer_1) [(builtin unIData) generated_2]])]
-          (delay (error))]))
-      (con data (I -340282366920938463463374607431768211457))])
-    (force (builtin chooseData))])
+(program 1.1.0 (con integer -340282366920938463463374607431768211457))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (I -340282366920938463463374607431768211457)) of

@@ -18,22 +18,9 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     (con data (I 40))]
     (con integer 2)])
 --- optimized Core
-let anf#5 : int -> int = case@Data (con data (I 40)) of
-  DataI payload#3 -> \x#4 : int -> addInteger payload#3 x#4 in
-anf#5 2
+addInteger 40 2
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_8
-    [(lam anf_6 [anf_6 (con integer 2)])
-      [(lam generated_7
-        (force
-          [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
-            (delay
-              [(lam payload_1 (lam x_2 [[(builtin addInteger) payload_1] x_2]))
-                [(builtin unIData) generated_7]])]
-            (delay (error))]))
-        (con data (I 40))]])
-    (force (builtin chooseData))])
+(program 1.1.0 [[(builtin addInteger) (con integer 40)] (con integer 2)])
 --- isolated pass
 --- isolated ANF input
 let anf#3 : int -> int = case@Data (con data (I 40)) of

@@ -27,23 +27,11 @@ case@Data (con data (List [I 42])) of
             [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]))
     (con data (List [I 42]))])
 --- optimized Core
-case@Data (con data (List [I 42])) of
-  _ -> trace "fallback" in 9
+trace "fallback" in 9
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_1
-    [(lam builtin_3
-      [(lam partial_4
-        [(lam generated_2
-          (force
-            [[[[[[builtin_3 generated_2] (delay (force [partial_4 (delay (con integer 9))]))]
-              (delay (force [partial_4 (delay (con integer 9))]))]
-              (delay (force [partial_4 (delay (con integer 9))]))]
-              (delay (force [partial_4 (delay (con integer 9))]))]
-              (delay (force [partial_4 (delay (con integer 9))]))]))
-          (con data (List [I 42]))])
-        [builtin_1 (con string "fallback")]])
-      (force (builtin chooseData))])
+    (force [[builtin_1 (con string "fallback")] (delay (con integer 9))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

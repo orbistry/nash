@@ -18,25 +18,9 @@ case@Data (con data (I 42)) of
         (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
     (con data (I 42))])
 --- optimized Core
-case@Data (con data (I 42)) of
-  DataI payload#2 -> payload#2
-  _ -> trace "cold" in error
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam builtin_4
-      [(lam partial_5
-        [(lam generated_3
-          (force
-            [[[[[[builtin_4 generated_3] (delay (force [partial_5 (delay (error))]))]
-              (delay (force [partial_5 (delay (error))]))]
-              (delay (force [partial_5 (delay (error))]))]
-              (delay [(lam payload_1 payload_1) [(builtin unIData) generated_3]])]
-              (delay (force [partial_5 (delay (error))]))]))
-          (con data (I 42))])
-        [builtin_2 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (I 42)) of

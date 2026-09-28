@@ -31,32 +31,9 @@ constr 0 data#1 (case@Data alias#2 of
       data_1])
     (con data (I 42))])
 --- optimized Core
-let data#5 : Data = (con data (I 42)) in
-let anf#9 : int = case@Data data#5 of
-  DataI payload#7 -> payload#7 in
-let anf#10 : int = case@Data data#5 of
-  DataI payload#8 -> payload#8 in
-constr 0 data#5 anf#9 anf#10
+constr 0 (con data (I 42)) 42 42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_8
-    [(lam data_1
-      [(lam anf_3
-        [(lam anf_6 (constr 0 data_1 anf_3 anf_6))
-          [(lam generated_7
-            (force
-              [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
-                (delay [(lam payload_4 payload_4) [(builtin unIData) generated_7]])]
-                (delay (error))]))
-            data_1]])
-        [(lam generated_9
-          (force
-            [[[[[[builtin_8 generated_9] (delay (error))] (delay (error))] (delay (error))]
-              (delay [(lam payload_2 payload_2) [(builtin unIData) generated_9]])]
-              (delay (error))]))
-          data_1]])
-      (con data (I 42))])
-    (force (builtin chooseData))])
+(program 1.1.0 (constr 0 (con data (I 42)) (con integer 42) (con integer 42)))
 --- isolated pass
 --- isolated ANF input
 let data#1 : Data = (con data (I 42)) in

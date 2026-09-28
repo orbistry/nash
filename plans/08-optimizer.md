@@ -18,8 +18,8 @@ unused-binding removal, recursive-member reachability and pre-ANF nonrecursive
 unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 8
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
-native-list folding in Chunk 7 are accepted. Literal Data-shape folding is an
-implemented trial awaiting acceptance;
+native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
+accepted. Next is folding builtin-produced Data shapes;
 other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
@@ -44,7 +44,8 @@ Complete calls with later effectful arguments now test successful pre-ANF reduct
 rather than retaining the obsolete post-ANF no-change expectation. Independent
 properties follow snapshots; snapshots alone specify exact visible structure.
 Production pass behavior, the accepted pipeline and performance baseline are unchanged.
-The unaccepted Data rule remains isolated; historical measurement records remain.
+At this cleanup checkpoint, Data folding was still isolated pending acceptance;
+historical measurement records remain.
 Cleanup validation: 498 codegen and 69 IR tests pass, along with strict workspace
 Clippy and formatting. All 188 snapshot moves retain their fixtures; O0 sections
 are unchanged. All 23 performance baseline rows still match. Nextest stalled
@@ -1385,7 +1386,7 @@ Nextest again stalled at discovery; freshly built test binaries passed directly.
 Strict all-target/all-feature Clippy and formatting pass. All 23 performance
 rows and sources are unchanged; baseline settings now include list folding.
 
-**Known literal Data folding (implemented trial, awaiting acceptance).**
+**Known literal Data folding (accepted 28 September 2026).**
 `reduce_data` selects `DataI`, `DataB`, `DataList`, `DataMap` or `DataConstr`
 for direct `Constant::Data` subjects and let-bound literals/aliases. It validates
 all branches first (unique Data tests and exactly one payload binder). Missing
@@ -1415,8 +1416,10 @@ distribution. No size heuristic or constant propagation exception is added.
 The 23 existing workloads remain unchanged. Source `I 42` currently emits an
 `IData` call, which this literal-only trial intentionally does not recognize.
 Builtin-produced Data shapes require a separate strictness/check-preserving trial;
-wrap/unwrap cancellation remains Chunk 8. The accepted pipeline and baseline are
-unchanged. Temporary performance code is removed after recording the results.
+wrap/unwrap cancellation remains Chunk 8. The keep decision adds `simplify_data`
+to the shared accepted snapshot and performance pipelines, replacing the list-only
+cleanup entry point. Normal build assembly remains O0. Temporary performance
+code is removed after recording the results.
 
 Validation: 497 codegen library tests pass, including 59 new Data snapshots;
 existing snapshots are unchanged. Tests cover all payload shapes and metadata,
@@ -1427,6 +1430,22 @@ output precedes independent scope, ANF, type-view, equivalence and idempotence
 checks. Formatting and strict all-target/all-feature Clippy pass. Nextest stalled
 at discovery; the freshly built binary passed directly. Full-workspace test
 completion is not claimed for this isolated trial.
+
+Adoption validation: 498 codegen and 69 IR tests pass, with 50 updated snapshots
+and unchanged unoptimized Core/UPLC sections. Formatting, strict workspace Clippy
+and the separate performance check pass. All 23 performance rows and source inputs
+are unchanged; baseline settings now include Data folding. Nextest stalled during
+discovery, so the freshly built binaries were run directly.
+
+Next Chunk 7 trial: recognize exactly saturated `IData`/`BData` bindings as known
+shapes. Preserve the original builtin evaluation and operand checks while selecting
+the matching arm and binding its payload to the original operand. Handle both
+literal operands (`iData 42`) and variable operands (`iData x`); an existing Data
+constant (`Constant::Data(I 42)`) is already handled by the accepted literal rule.
+Measure before
+considering collection and constructor producers; `DataConstr` binds one native
+`(tag, fields)` pair, so it cannot be treated as a single-operand wrapper. This is
+case folding, not permission to remove the producer through cancellation.
 
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:

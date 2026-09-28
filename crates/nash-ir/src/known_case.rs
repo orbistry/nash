@@ -384,7 +384,7 @@ fn list_arms<'a>(
     Some((nil, cons))
 }
 
-/// Trial literal Data folding on hygienic ANF. Constructor builtins are not facts.
+/// Literal Data folding on hygienic ANF. Constructor builtins are not facts.
 /// Share unwrapped payloads at their original literal binding, as for list fields.
 pub fn reduce_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let facts = data_bindings(core);
@@ -441,7 +441,7 @@ pub fn reduce_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     })
 }
 
-/// Isolated Data trial with accepted cleanup; one normalization upstream.
+/// Fold known Data, lists and constructors with cleanup; normalize once upstream.
 pub fn simplify_data<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
         let next = simplify_list(b, reduce_data(b, core));

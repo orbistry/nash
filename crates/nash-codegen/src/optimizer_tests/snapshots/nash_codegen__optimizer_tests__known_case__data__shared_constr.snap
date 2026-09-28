@@ -35,38 +35,13 @@ constr 0 data#50 (case@Data alias#51 of
       data_50])
     (con data (Constr 122 [I 42]))])
 --- optimized Core
-let data#1 : Data = (con data (Constr 122 [I 42])) in
-let anf#5 : pair int (list Data) = case@Data data#1 of
-  DataConstr payload#3 -> payload#3 in
-let anf#6 : pair int (list Data) = case@Data data#1 of
-  DataConstr payload#4 -> payload#4 in
-constr 0 data#1 anf#5 anf#6
+let data_payload#7 : pair int (list Data) = (con (pair integer (list data)) (122, [(I 42)])) in
+constr 0 (con data (Constr 122 [I 42])) data_payload#7 data_payload#7
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_12
-    [(lam data_2
-      [(lam anf_8
-        [(lam anf_10 (constr 0 data_2 anf_8 anf_10))
-          [(lam generated_11
-            (force
-              [[[[[[builtin_12 generated_11]
-                (delay [(lam payload_9 payload_9) [(builtin unConstrData) generated_11]])]
-                (delay (error))]
-                (delay (error))]
-                (delay (error))]
-                (delay (error))]))
-            data_2]])
-        [(lam generated_13
-          (force
-            [[[[[[builtin_12 generated_13]
-              (delay [(lam payload_7 payload_7) [(builtin unConstrData) generated_13]])]
-              (delay (error))]
-              (delay (error))]
-              (delay (error))]
-              (delay (error))]))
-          data_2]])
-      (con data (Constr 122 [I 42]))])
-    (force (builtin chooseData))])
+  [(lam data_payload_1
+    (constr 0 (con data (Constr 122 [I 42])) data_payload_1 data_payload_1))
+    (con (pair integer (list data)) (122, [(I 42)]))])
 --- isolated pass
 --- isolated ANF input
 let data#50 : Data = (con data (Constr 122 [I 42])) in

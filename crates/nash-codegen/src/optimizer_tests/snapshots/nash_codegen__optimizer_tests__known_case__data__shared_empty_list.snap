@@ -31,34 +31,13 @@ constr 0 data#15 (case@Data alias#16 of
       data_15])
     (con data (List []))])
 --- optimized Core
-let data#1 : Data = (con data (List [])) in
-let anf#5 : list Data = case@Data data#1 of
-  DataList payload#3 -> payload#3 in
-let anf#6 : list Data = case@Data data#1 of
-  DataList payload#4 -> payload#4 in
-constr 0 data#1 anf#5 anf#6
+let data_payload#7 : list Data = (con (list data) []) in
+constr 0 (con data (List [])) data_payload#7 data_payload#7
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_12
-    [(lam data_2
-      [(lam anf_8
-        [(lam anf_10 (constr 0 data_2 anf_8 anf_10))
-          [(lam generated_11
-            (force
-              [[[[[[builtin_12 generated_11] (delay (error))] (delay (error))]
-                (delay [(lam payload_9 payload_9) [(builtin unListData) generated_11]])]
-                (delay (error))]
-                (delay (error))]))
-            data_2]])
-        [(lam generated_13
-          (force
-            [[[[[[builtin_12 generated_13] (delay (error))] (delay (error))]
-              (delay [(lam payload_7 payload_7) [(builtin unListData) generated_13]])]
-              (delay (error))]
-              (delay (error))]))
-          data_2]])
-      (con data (List []))])
-    (force (builtin chooseData))])
+  [(lam data_payload_1
+    (constr 0 (con data (List [])) data_payload_1 data_payload_1))
+    (con (list data) [])])
 --- isolated pass
 --- isolated ANF input
 let data#15 : Data = (con data (List [])) in

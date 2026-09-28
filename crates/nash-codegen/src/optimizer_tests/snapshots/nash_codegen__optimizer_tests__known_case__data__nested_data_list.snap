@@ -31,34 +31,9 @@ case@Data (con data (List [I 42])) of
         (delay (error))]))
     (con data (List [I 42]))])
 --- optimized Core
-case@Data (con data (List [I 42])) of
-  DataList xs#5 -> case@List xs#5 of
-    Cons head#6 tail#7 -> case@Data head#6 of
-      DataI number#8 -> number#8
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_7
-    [(lam generated_5
-      (force
-        [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))]
-          (delay
-            [(lam xs_1
-              (case
-                xs_1
-                (lam head_2
-                  (lam tail_3
-                    [(lam generated_6
-                      (force
-                        [[[[[[builtin_7 generated_6] (delay (error))] (delay (error))] (delay (error))]
-                          (delay [(lam number_4 number_4) [(builtin unIData) generated_6]])]
-                          (delay (error))]))
-                      head_2]))
-                (error)))
-              [(builtin unListData) generated_5]])]
-          (delay (error))]
-          (delay (error))]))
-      (con data (List [I 42]))])
-    (force (builtin chooseData))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (List [I 42])) of

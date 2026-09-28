@@ -14,17 +14,9 @@ case@Data (con data (Constr 122 [I 42])) of
         (delay (error))]))
     (con data (Constr 122 [I 42]))])
 --- optimized Core
-case@Data (con data (Constr 122 [I 42])) of
+error
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam generated_1
-      (force
-        [[[[[[builtin_2 generated_1] (delay (error))] (delay (error))] (delay (error))]
-          (delay (error))]
-          (delay (error))]))
-      (con data (Constr 122 [I 42]))])
-    (force (builtin chooseData))])
+(program 1.1.0 (error))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (Constr 122 [I 42])) of

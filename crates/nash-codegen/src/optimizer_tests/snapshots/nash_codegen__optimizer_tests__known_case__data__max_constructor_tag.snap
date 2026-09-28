@@ -17,21 +17,9 @@ case@Data (con data (Constr 18446744073709551615 [])) of
         (delay (error))]))
     (con data (Constr 18446744073709551615 []))])
 --- optimized Core
-case@Data (con data (Constr 18446744073709551615 [])) of
-  DataConstr constr#1 -> constr#1
+(con (pair integer (list data)) (18446744073709551615, []))
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_4
-    [(lam generated_3
-      (force
-        [[[[[[builtin_4 generated_3]
-          (delay [(lam constr_2 constr_2) [(builtin unConstrData) generated_3]])]
-          (delay (error))]
-          (delay (error))]
-          (delay (error))]
-          (delay (error))]))
-      (con data (Constr 18446744073709551615 []))])
-    (force (builtin chooseData))])
+(program 1.1.0 (con (pair integer (list data)) (18446744073709551615, [])))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (Constr 18446744073709551615 [])) of

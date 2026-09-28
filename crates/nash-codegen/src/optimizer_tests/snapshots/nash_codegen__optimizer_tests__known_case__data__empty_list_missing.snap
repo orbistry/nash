@@ -14,17 +14,9 @@ case@Data (con data (List [])) of
         (delay (error))]))
     (con data (List []))])
 --- optimized Core
-case@Data (con data (List [])) of
+error
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam generated_1
-      (force
-        [[[[[[builtin_2 generated_1] (delay (error))] (delay (error))] (delay (error))]
-          (delay (error))]
-          (delay (error))]))
-      (con data (List []))])
-    (force (builtin chooseData))])
+(program 1.1.0 (error))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (List [])) of

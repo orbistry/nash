@@ -30,7 +30,7 @@ validator bytes exclude those arguments. Ordinary expression fixtures include
 their inputs in the measured program.
 
 The `before` pipeline is O0 (recursion rewrite and lowering). The `after` pipeline
-is the accepted static lifting, pre-ANF unused-parameter removal and direct native-constructor folding, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, force/delay, known-Boolean, bound-constructor and known-list cleanup,
+is the accepted static lifting, pre-ANF unused-parameter removal and direct native-constructor folding, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, force/delay, known-Boolean, bound-constructor, known-list and literal-Data cleanup,
 then recursion rewrite, binder freshening and lowering with both Chunk 5 sharing steps. No second normalization
 or ANF-dependent cleanup runs after recursion rewriting. Rule 3 was accepted on 27 September 2026. These figures record current behavior, including overhead
 from ANF; they are not a claim that the incomplete optimizer beats O0 everywhere.

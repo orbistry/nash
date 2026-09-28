@@ -18,26 +18,9 @@ case@Data (con data (Constr 59 [])) of
         (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
     (con data (Constr 59 []))])
 --- optimized Core
-case@Data (con data (Constr 59 [])) of
-  DataConstr payload#1 -> payload#1
-  _ -> trace "cold" in error
+(con (pair integer (list data)) (59, []))
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam builtin_5
-      [(lam partial_6
-        [(lam generated_4
-          (force
-            [[[[[[builtin_5 generated_4]
-              (delay [(lam payload_2 payload_2) [(builtin unConstrData) generated_4]])]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]
-              (delay (force [partial_6 (delay (error))]))]))
-          (con data (Constr 59 []))])
-        [builtin_3 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+(program 1.1.0 (con (pair integer (list data)) (59, [])))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (Constr 59 [])) of

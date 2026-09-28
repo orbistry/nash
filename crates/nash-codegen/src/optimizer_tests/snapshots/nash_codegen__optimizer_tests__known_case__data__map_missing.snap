@@ -14,17 +14,9 @@ case@Data (con data (Map [(I 42, I 42), (I 42, I 9)])) of
         (delay (error))]))
     (con data (Map [(I 42, I 42), (I 42, I 9)]))])
 --- optimized Core
-case@Data (con data (Map [(I 42, I 42), (I 42, I 9)])) of
+error
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam generated_1
-      (force
-        [[[[[[builtin_2 generated_1] (delay (error))] (delay (error))] (delay (error))]
-          (delay (error))]
-          (delay (error))]))
-      (con data (Map [(I 42, I 42), (I 42, I 9)]))])
-    (force (builtin chooseData))])
+(program 1.1.0 (error))
 --- isolated pass
 --- isolated ANF input
 case@Data (con data (Map [(I 42, I 42), (I 42, I 9)])) of
