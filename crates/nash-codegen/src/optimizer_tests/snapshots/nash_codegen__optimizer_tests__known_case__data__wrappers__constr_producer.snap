@@ -1,0 +1,75 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData 0 (con (list data) []) of
+  _ -> 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_1
+    (force
+      [[[[[[(force (builtin chooseData)) generated_1] (delay (con integer 42))]
+        (delay (con integer 42))]
+        (delay (con integer 42))]
+        (delay (con integer 42))]
+        (delay (con integer 42))]))
+    [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+--- optimized Core
+let anf#1 : Data = constrData 0 (con (list data) []) in
+case@Data anf#1 of
+  _ -> 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam anf_2
+      [(lam generated_3
+        (force
+          [[[[[[builtin_4 generated_3] (delay (con integer 42))] (delay (con integer 42))]
+            (delay (con integer 42))]
+            (delay (con integer 42))]
+            (delay (con integer 42))]))
+        anf_2])
+      [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : Data = constrData 0 (con (list data) []) in
+case@Data anf#3 of
+  _ -> 42
+--- isolated folded Core
+let anf#3 : Data = constrData 0 (con (list data) []) in
+case@Data anf#3 of
+  _ -> 42
+--- isolated cleaned Core
+let anf#3 : Data = constrData 0 (con (list data) []) in
+case@Data anf#3 of
+  _ -> 42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3
+    [(lam generated_4
+      (force
+        [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]))
+      anf_3])
+    [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_3
+    [(lam generated_4
+      (force
+        [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]
+          (delay (con integer 42))]))
+      anf_3])
+    [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+--- result
+(con integer 42)
+--- logs
+[]

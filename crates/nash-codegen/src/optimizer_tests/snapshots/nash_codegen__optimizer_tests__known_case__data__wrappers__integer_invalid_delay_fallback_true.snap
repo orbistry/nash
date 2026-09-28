@@ -1,0 +1,95 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData (delay (\x#1 : int -> x#1)) of
+  _ -> trace "unreachable" in 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+    [(builtin iData) (delay (lam x_1 x_1))]])
+--- optimized Core
+let anf#3 : Data = iData (delay (\x#2 : int -> x#2)) in
+case@Data anf#3 of
+  _ -> trace "unreachable" in 0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_4
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]))
+            anf_4])
+          [(builtin iData) (delay (lam x_1 x_1))]])
+        [builtin_5 (con string "unreachable")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#18 : Data = iData (delay (\x#1 : int -> x#1)) in
+case@Data anf#18 of
+  _ -> trace "unreachable" in 0
+--- isolated folded Core
+let data_operand#19 : @delay (int -> int) = delay (\x#1 : int -> x#1) in
+let anf#18 : Data = iData data_operand#19 in
+trace "unreachable" in 0
+--- isolated cleaned Core
+let anf#18 : Data = iData (delay (\x#1 : int -> x#1)) in
+trace "unreachable" in 0
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_18
+    [(lam generated_19
+      (force
+        [[[[[[(force (builtin chooseData)) generated_19]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]))
+      anf_18])
+    [(builtin iData) (delay (lam x_1 x_1))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_18
+    (force
+      [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))
+    [(builtin iData) (delay (lam x_1 x_1))]])
+--- result
+error: NotAConstant(Delay(Lambda { parameter: DeBruijn(0), body: Var(DeBruijn(1)) }, Empty))
+--- logs
+[]

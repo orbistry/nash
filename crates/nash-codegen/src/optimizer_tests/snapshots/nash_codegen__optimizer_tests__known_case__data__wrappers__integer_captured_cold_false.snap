@@ -1,0 +1,96 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#1 : Data = iData (trace "before" in 42) in
+case@Bool false of
+  True -> 42
+  False -> force (delay (case@Data data#1 of
+    DataI payload#2 -> payload#2))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_1
+    (case
+      (con bool False)
+      (force
+        (delay
+          [(lam generated_3
+            (force
+              [[[[[[(force (builtin chooseData)) generated_3] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_2 payload_2) [(builtin unIData) generated_3]])]
+                (delay (error))]))
+            data_1]))
+      (con integer 42)))
+    [(builtin iData)
+      (force
+        [[(force (builtin trace)) (con string "before")] (delay (con integer 42))])]])
+--- optimized Core
+let anf#5 : int = trace "before" in 42 in
+let data#3 : Data = iData anf#5 in
+case@Data data#3 of
+  DataI payload#4 -> payload#4
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam builtin_9
+      [(lam anf_1
+        [(lam data_2
+          [(lam generated_7
+            (force
+              [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
+                (delay [(lam payload_6 payload_6) [(builtin unIData) generated_7]])]
+                (delay (error))]))
+            data_2])
+          [(builtin iData) anf_1]])
+        (force [[builtin_9 (con string "before")] (delay (con integer 42))])])
+      (force (builtin trace))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : int = trace "before" in 42 in
+let data#1 : Data = iData anf#3 in
+case@Bool false of
+  True -> 42
+  False -> force (delay (case@Data data#1 of
+    DataI payload#2 -> payload#2))
+--- isolated folded Core
+let anf#3 : int = trace "before" in 42 in
+let data#1 : Data = iData anf#3 in
+case@Bool false of
+  True -> 42
+  False -> force (delay (let payload#2 : int = anf#3 in
+  payload#2))
+--- isolated cleaned Core
+let anf#3 : int = trace "before" in 42 in
+let data#1 : Data = iData anf#3 in
+anf#3
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3
+    [(lam data_1
+      (case
+        (con bool False)
+        (force
+          (delay
+            [(lam generated_4
+              (force
+                [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+                  (delay (error))]
+                  (delay [(lam payload_2 payload_2) [(builtin unIData) generated_4]])]
+                  (delay (error))]))
+              data_1]))
+        (con integer 42)))
+      [(builtin iData) anf_3]])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_3 [(lam data_1 anf_3) [(builtin iData) anf_3]])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 42))])])
+--- result
+(con integer 42)
+--- logs
+["before"]

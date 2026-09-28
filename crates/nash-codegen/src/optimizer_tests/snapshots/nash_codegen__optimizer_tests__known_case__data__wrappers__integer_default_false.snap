@@ -1,0 +1,77 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData (trace "operand" in 42) of
+  DataList wrong#1 -> trace "wrong" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+        (delay (error))]
+        (delay (error))]))
+    [(builtin iData)
+      (force
+        [[(force (builtin trace)) (con string "operand")] (delay (con integer 42))])]])
+--- optimized Core
+let anf#3 : int = trace "operand" in 42 in
+let anf#4 : Data = iData anf#3 in
+case@Data anf#4 of
+  DataList wrong#2 -> trace "wrong" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam builtin_9
+      [(lam anf_1
+        [(lam anf_5
+          [(lam generated_7
+            (force
+              [[[[[[builtin_9 generated_7] (delay (error))] (delay (error))]
+                (delay (force [[builtin_8 (con string "wrong")] (delay (error))]))]
+                (delay (error))]
+                (delay (error))]))
+            anf_5])
+          [(builtin iData) anf_1]])
+        (force [[builtin_8 (con string "operand")] (delay (con integer 42))])])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#2 : int = trace "operand" in 42 in
+let anf#3 : Data = iData anf#2 in
+case@Data anf#3 of
+  DataList wrong#1 -> trace "wrong" in error
+--- isolated folded Core
+let anf#2 : int = trace "operand" in 42 in
+let anf#3 : Data = iData anf#2 in
+error
+--- isolated cleaned Core
+let anf#2 : int = trace "operand" in 42 in
+let anf#3 : Data = iData anf#2 in
+error
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_2
+    [(lam anf_3
+      [(lam generated_4
+        (force
+          [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+            (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+            (delay (error))]
+            (delay (error))]))
+        anf_3])
+      [(builtin iData) anf_2]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con integer 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_2 [(lam anf_3 (error)) [(builtin iData) anf_2]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con integer 42))])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["operand"]

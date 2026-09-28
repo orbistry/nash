@@ -1,0 +1,80 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(\input#12 : bytes -> case@Data bData input#12 of
+  DataB payload#13 -> payload#13
+  _ -> trace "cold" in error) (con bytestring #6e617368)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam input_12
+    [(lam generated_14
+      (force
+        [[[[[[(force (builtin chooseData)) generated_14]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay [(lam payload_13 payload_13) [(builtin unBData) generated_14]])]))
+      [(builtin bData) input_12]])
+    (con bytestring #6e617368)])
+--- optimized Core
+let anf#3 : Data = bData (con bytestring #6e617368) in
+case@Data anf#3 of
+  DataB payload#2 -> payload#2
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_1
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay [(lam payload_4 payload_4) [(builtin unBData) generated_6]])]))
+            anf_1])
+          [(builtin bData) (con bytestring #6e617368)]])
+        [builtin_5 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+(\input#12 : bytes -> let anf#14 : Data = bData input#12 in
+case@Data anf#14 of
+  DataB payload#13 -> payload#13
+  _ -> trace "cold" in error) (con bytestring #6e617368)
+--- isolated folded Core
+(\input#12 : bytes -> let anf#14 : Data = bData input#12 in
+let payload#13 : bytes = input#12 in
+payload#13) (con bytestring #6e617368)
+--- isolated cleaned Core
+let anf#14 : Data = bData (con bytestring #6e617368) in
+(con bytestring #6e617368)
+--- isolated UPLC before
+(program 1.1.0
+  [(lam input_12
+    [(lam anf_14
+      [(lam generated_15
+        (force
+          [[[[[[(force (builtin chooseData)) generated_15]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay [(lam payload_13 payload_13) [(builtin unBData) generated_15]])]))
+        anf_14])
+      [(builtin bData) input_12]])
+    (con bytestring #6e617368)])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_14 (con bytestring #6e617368))
+    [(builtin bData) (con bytestring #6e617368)]])
+--- result
+(con bytestring #6e617368)
+--- logs
+[]

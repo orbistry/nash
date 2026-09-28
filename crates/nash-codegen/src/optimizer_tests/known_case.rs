@@ -1848,4 +1848,420 @@ mod data {
         );
         check("result_type_view", &b, c, false);
     }
+
+    mod wrappers {
+        //! IData/BData shape selection trial; constructor checks remain strict.
+        use super::*;
+        const BYTES: Ty<'static> = Ty::Const(&ConstTy::Bytes);
+        fn kinds<'a>(b: &Builder<'a>) -> [(F, Test<'a>, &'static str, &'a Core<'a>); 2] {
+            [
+                (F::IData, Test::DataI, "integer", b.int(42)),
+                (
+                    F::BData,
+                    Test::DataB,
+                    "bytes",
+                    b.lit(Constant::byte_string(b.arena, b"nash")),
+                ),
+            ]
+        }
+        fn check(name: &str, b: &Builder<'_>, original: &Core<'_>, fails: bool) {
+            let before = anf::normalize(b, original);
+            let folded = known_case::reduce_data_wrappers(b, before);
+            let after =
+                known_case::simplify_data_wrappers(b, nash_ir::small_inline::simplify(b, folded));
+            let left = crate::harness::eval_core_raw(b.arena, before);
+            let middle = crate::harness::eval_core_raw(b.arena, folded);
+            let right = crate::harness::eval_core_raw(b.arena, after);
+            assert_eq!(right.result.starts_with("error:"), fails);
+            insta::assert_snapshot!(
+                name,
+                crate::harness::pass_snapshot(
+                    b.arena,
+                    original,
+                    format!(
+                        "--- isolated ANF input\n{}\n--- isolated folded Core\n{}\n--- isolated cleaned Core\n{}\n--- isolated UPLC before\n{}\n--- isolated UPLC after\n{}\n--- result\n{}\n--- logs\n{:?}",
+                        pretty(before),
+                        pretty(folded),
+                        pretty(after),
+                        left.uplc,
+                        right.uplc,
+                        right.result,
+                        right.logs
+                    )
+                )
+            );
+            for core in [before, folded, after] {
+                hygiene::validate(core, &[]).unwrap();
+                assert_eq!(original.ty, core.ty);
+            }
+            anf::validate(after).unwrap();
+            for actual in [middle, right] {
+                assert_eq!(left.observable, actual.observable);
+                assert_eq!(left.logs, actual.logs);
+            }
+            assert!(std::ptr::eq(
+                after,
+                known_case::simplify_data_wrappers(b, after)
+            ));
+        }
+        #[test]
+        fn literal_and_variable_operands_select_payload() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                for parameter in [false, true] {
+                    let x = bind(&b, "input", value.ty);
+                    let p = bind(&b, "payload", value.ty);
+                    let operand = if parameter {
+                        b.var(x.name, x.ty)
+                    } else {
+                        value
+                    };
+                    let c = b.case(
+                        CaseKind::Data,
+                        b.builtin(func, &[operand], DATA),
+                        &[arm(&b, test, &[p], b.var(p.name, p.ty))],
+                        Some(trace(&b, "cold", b.error(p.ty))),
+                        p.ty,
+                    );
+                    let root = if parameter {
+                        b.app(b.lam(&[x], c), &[value], c.ty)
+                    } else {
+                        c
+                    };
+                    check(&format!("{name}_parameter_{parameter}"), &b, root, false);
+                }
+            }
+        }
+        #[test]
+        fn strict_operands_and_intervening_effects_run_once() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                for fail in [false, true] {
+                    let d = bind(&b, "data", DATA);
+                    let p = bind(&b, "payload", value.ty);
+                    let effect = bind(&b, "effect", INT);
+                    let c = b.case(
+                        CaseKind::Data,
+                        b.var(d.name, DATA),
+                        &[arm(&b, test, &[p], trace(&b, "selected", b.int(9)))],
+                        None,
+                        INT,
+                    );
+                    let operand =
+                        trace(&b, "operand", if fail { b.error(value.ty) } else { value });
+                    let root = b.let_(
+                        d,
+                        b.builtin(func, &[operand], DATA),
+                        b.let_(effect, trace(&b, "between", b.int(0)), c),
+                    );
+                    check(&format!("{name}_strict_failure_{fail}"), &b, root, fail);
+                }
+            }
+        }
+        #[test]
+        fn wrong_runtime_operands_fail_even_when_payload_is_unused() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, _) in kinds(&b) {
+                let x = bind(&b, "x", INT);
+                for (bad, kind) in [
+                    (b.lit(Constant::bool(&a, true)), "bool"),
+                    (b.lam(&[x], b.var(x.name, INT)), "function"),
+                    (b.delay(b.lam(&[x], b.var(x.name, INT))), "delay"),
+                ] {
+                    for fallback in [false, true] {
+                        let p = bind(&b, "unused", bad.ty);
+                        let arms = if fallback {
+                            vec![]
+                        } else {
+                            vec![arm(&b, test, &[p], b.int(9))]
+                        };
+                        let c = b.case(
+                            CaseKind::Data,
+                            b.builtin(func, &[bad], DATA),
+                            &arms,
+                            Some(trace(&b, "unreachable", b.int(0))),
+                            INT,
+                        );
+                        check(
+                            &format!("{name}_invalid_{kind}_fallback_{fallback}"),
+                            &b,
+                            c,
+                            true,
+                        );
+                    }
+                }
+            }
+        }
+        #[test]
+        fn missing_shape_uses_default_or_errors() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, _, name, value) in kinds(&b) {
+                let p = bind(&b, "wrong", Ty::Const(&ConstTy::List(DATA)));
+                for default in [false, true] {
+                    let c = b.case(
+                        CaseKind::Data,
+                        b.builtin(func, &[trace(&b, "operand", value)], DATA),
+                        &[arm(
+                            &b,
+                            Test::DataList,
+                            &[p],
+                            trace(&b, "wrong", b.error(INT)),
+                        )],
+                        default.then(|| trace(&b, "fallback", b.int(9))),
+                        INT,
+                    );
+                    check(&format!("{name}_default_{default}"), &b, c, !default);
+                }
+            }
+        }
+        #[test]
+        fn aliases_repeated_matches_and_original_escape() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                let d = bind(&b, "data", DATA);
+                let alias = bind(&b, "alias", DATA);
+                let fields: Vec<_> = (0..2)
+                    .map(|_| {
+                        let p = bind(&b, "payload", value.ty);
+                        b.case(
+                            CaseKind::Data,
+                            b.var(alias.name, DATA),
+                            &[arm(&b, test, &[p], b.var(p.name, p.ty))],
+                            None,
+                            p.ty,
+                        )
+                    })
+                    .collect();
+                let root = b.let_(
+                    d,
+                    b.builtin(func, &[trace(&b, "once", value)], DATA),
+                    b.let_(
+                        alias,
+                        b.var(d.name, DATA),
+                        b.constr(0, &[b.var(d.name, DATA), fields[0], fields[1]], Ty::Erased),
+                    ),
+                );
+                check(&format!("{name}_shared_escape"), &b, root, false);
+            }
+        }
+        #[test]
+        fn suspended_matches_do_not_delay_original_constructor() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                let d = bind(&b, "data", DATA);
+                let p = bind(&b, "payload", value.ty);
+                let c = b.case(
+                    CaseKind::Data,
+                    b.var(d.name, DATA),
+                    &[arm(&b, test, &[p], b.var(p.name, p.ty))],
+                    None,
+                    p.ty,
+                );
+                for cold in [false, true] {
+                    let branch = b.if_(
+                        b.lit(Constant::bool(&a, cold)),
+                        value,
+                        b.force(b.delay(c), p.ty),
+                    );
+                    check(
+                        &format!("{name}_captured_cold_{cold}"),
+                        &b,
+                        b.let_(
+                            d,
+                            b.builtin(func, &[trace(&b, "before", value)], DATA),
+                            branch,
+                        ),
+                        false,
+                    );
+                }
+            }
+        }
+        #[test]
+        fn partial_overapplied_and_traced_producers_are_not_facts() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                let p = bind(&b, "payload", value.ty);
+                let full = b.builtin(func, &[value], DATA);
+                for (subject, label, fails) in [
+                    (b.builtin(func, &[], DATA), "partial", true),
+                    (b.app(full, &[b.int(0)], DATA), "overapplied", true),
+                    (trace(&b, "producer", full), "traced", false),
+                ] {
+                    check(
+                        &format!("{name}_{label}"),
+                        &b,
+                        b.case(
+                            CaseKind::Data,
+                            subject,
+                            &[arm(&b, test, &[p], b.var(p.name, p.ty))],
+                            None,
+                            p.ty,
+                        ),
+                        fails,
+                    );
+                }
+            }
+        }
+        #[test]
+        fn repeated_matches_share_long_literal_bytes() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let bytes = b.lit(Constant::byte_string(&a, a.alloc_slice_copy(&[7; 128])));
+            let d = bind(&b, "data", DATA);
+            let fields: Vec<_> = (0..3)
+                .map(|_| {
+                    let p = bind(&b, "payload", BYTES);
+                    b.case(
+                        CaseKind::Data,
+                        b.var(d.name, DATA),
+                        &[arm(&b, Test::DataB, &[p], b.var(p.name, BYTES))],
+                        None,
+                        BYTES,
+                    )
+                })
+                .collect();
+            check(
+                "shared_long_bytes",
+                &b,
+                b.let_(
+                    d,
+                    b.builtin(F::BData, &[bytes], DATA),
+                    b.constr(0, &fields, Ty::Erased),
+                ),
+                false,
+            );
+        }
+        #[test]
+        fn nested_wrapper_and_returned_function_preserve_type_views() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let p = bind(&b, "payload", INT);
+            let q = bind(&b, "inner", INT);
+            let x = bind(&b, "x", INT);
+            let fun = b.lam(
+                &[x],
+                b.builtin(
+                    F::AddInteger,
+                    &[b.var(q.name, INT), b.var(x.name, INT)],
+                    INT,
+                ),
+            );
+            let inner = b.case(
+                CaseKind::Data,
+                b.builtin(F::IData, &[b.var(p.name, INT)], DATA),
+                &[arm(&b, Test::DataI, &[q], fun)],
+                None,
+                fun.ty,
+            );
+            let outer = b.case(
+                CaseKind::Data,
+                b.builtin(F::IData, &[b.int(40)], DATA),
+                &[arm(&b, Test::DataI, &[p], inner)],
+                None,
+                inner.ty,
+            );
+            check(
+                "nested_returned_function",
+                &b,
+                b.with_type(b.app(outer, &[b.int(2)], INT), Ty::Erased),
+                false,
+            );
+        }
+        #[test]
+        fn malformed_unselected_arms_remain_lowering_errors() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (func, test, name, value) in kinds(&b) {
+                let p = bind(&b, "payload", value.ty);
+                let d = bind(&b, "data", DATA);
+                let valid = arm(&b, test, &[p], b.int(42));
+                for (arms, label) in [
+                    (vec![valid, valid], "duplicate"),
+                    (
+                        vec![valid, arm(&b, Test::DataList, &[], b.int(0))],
+                        "unselected_arity",
+                    ),
+                    (vec![arm(&b, test, &[p, p], b.int(0))], "selected_arity"),
+                    (
+                        vec![valid, arm(&b, Test::True, &[], b.int(0))],
+                        "wrong_test",
+                    ),
+                ] {
+                    let before = b.let_(
+                        d,
+                        b.builtin(func, &[value], DATA),
+                        b.case(CaseKind::Data, b.var(d.name, DATA), &arms, None, INT),
+                    );
+                    let after = known_case::reduce_data_wrappers(&b, before);
+                    let left = crate::lower::lower(&a, before).unwrap_err();
+                    let right = crate::lower::lower(&a, after).unwrap_err();
+                    insta::assert_snapshot!(
+                        format!("{name}_invalid_{label}"),
+                        format!(
+                            "--- before\n{}\n--- after\n{}\n--- errors\n{left:?}\n{right:?}",
+                            pretty(before),
+                            pretty(after)
+                        )
+                    );
+                    assert!(std::ptr::eq(before, after));
+                }
+            }
+        }
+        #[test]
+        fn unrelated_producers_and_unknown_data_parameter_are_not_wrapper_facts() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let list = b.lit(Constant::proto_list(&a, &nash_plutus::typ::Type::Data, &[]));
+            let map = b.lit(Constant::proto_list(
+                &a,
+                nash_plutus::typ::Type::pair(
+                    &a,
+                    &nash_plutus::typ::Type::Data,
+                    &nash_plutus::typ::Type::Data,
+                ),
+                &[],
+            ));
+            for (name, subject) in [
+                ("list_producer", b.builtin(F::ListData, &[list], DATA)),
+                ("map_producer", b.builtin(F::MapData, &[map], DATA)),
+                (
+                    "constr_producer",
+                    b.builtin(F::ConstrData, &[b.int(0), list], DATA),
+                ),
+            ] {
+                check(
+                    name,
+                    &b,
+                    b.case(CaseKind::Data, subject, &[], Some(b.int(42)), INT),
+                    false,
+                );
+            }
+            let d = bind(&b, "unknown", DATA);
+            let p = bind(&b, "payload", INT);
+            let c = b.case(
+                CaseKind::Data,
+                b.var(d.name, DATA),
+                &[arm(&b, Test::DataI, &[p], b.var(p.name, INT))],
+                None,
+                INT,
+            );
+            check(
+                "unknown_data_parameter",
+                &b,
+                b.app(
+                    b.lam(&[d], c),
+                    &[literal(&b, PlutusData::integer_from(&a, 42))],
+                    INT,
+                ),
+                false,
+            );
+        }
+    }
 }

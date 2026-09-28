@@ -1,0 +1,99 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#5 : Data = bData (trace "before" in (con bytestring #6e617368)) in
+case@Bool false of
+  True -> (con bytestring #6e617368)
+  False -> force (delay (case@Data data#5 of
+    DataB payload#6 -> payload#6))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_5
+    (case
+      (con bool False)
+      (force
+        (delay
+          [(lam generated_7
+            (force
+              [[[[[[(force (builtin chooseData)) generated_7] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_6 payload_6) [(builtin unBData) generated_7]])]))
+            data_5]))
+      (con bytestring #6e617368)))
+    [(builtin bData)
+      (force
+        [[(force (builtin trace)) (con string "before")]
+          (delay (con bytestring #6e617368))])]])
+--- optimized Core
+let anf#3 : bytes = trace "before" in (con bytestring #6e617368) in
+let data#1 : Data = bData anf#3 in
+case@Data data#1 of
+  DataB payload#2 -> payload#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam builtin_9
+      [(lam anf_4
+        [(lam data_5
+          [(lam generated_7
+            (force
+              [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_6 payload_6) [(builtin unBData) generated_7]])]))
+            data_5])
+          [(builtin bData) anf_4]])
+        (force [[builtin_9 (con string "before")] (delay (con bytestring #6e617368))])])
+      (force (builtin trace))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#7 : bytes = trace "before" in (con bytestring #6e617368) in
+let data#5 : Data = bData anf#7 in
+case@Bool false of
+  True -> (con bytestring #6e617368)
+  False -> force (delay (case@Data data#5 of
+    DataB payload#6 -> payload#6))
+--- isolated folded Core
+let anf#7 : bytes = trace "before" in (con bytestring #6e617368) in
+let data#5 : Data = bData anf#7 in
+case@Bool false of
+  True -> (con bytestring #6e617368)
+  False -> force (delay (let payload#6 : bytes = anf#7 in
+  payload#6))
+--- isolated cleaned Core
+let anf#7 : bytes = trace "before" in (con bytestring #6e617368) in
+let data#5 : Data = bData anf#7 in
+anf#7
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_7
+    [(lam data_5
+      (case
+        (con bool False)
+        (force
+          (delay
+            [(lam generated_8
+              (force
+                [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay [(lam payload_6 payload_6) [(builtin unBData) generated_8]])]))
+              data_5]))
+        (con bytestring #6e617368)))
+      [(builtin bData) anf_7]])
+    (force
+      [[(force (builtin trace)) (con string "before")]
+        (delay (con bytestring #6e617368))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_7 [(lam data_5 anf_7) [(builtin bData) anf_7]])
+    (force
+      [[(force (builtin trace)) (con string "before")]
+        (delay (con bytestring #6e617368))])])
+--- result
+(con bytestring #6e617368)
+--- logs
+["before"]

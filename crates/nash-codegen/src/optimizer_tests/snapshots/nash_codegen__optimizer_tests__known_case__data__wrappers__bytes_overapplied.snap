@@ -1,0 +1,81 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data bData (con bytestring #6e617368) 0 of
+  DataB payload#5 -> payload#5
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_6
+    (force
+      [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay [(lam payload_5 payload_5) [(builtin unBData) generated_6]])]))
+    [[(builtin bData) (con bytestring #6e617368)] (con integer 0)]])
+--- optimized Core
+let anf#2 : Data = bData (con bytestring #6e617368) in
+let anf#3 : Data = anf#2 0 in
+case@Data anf#3 of
+  DataB payload#1 -> payload#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam anf_4
+      [(lam anf_5
+        [(lam generated_7
+          (force
+            [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay [(lam payload_6 payload_6) [(builtin unBData) generated_7]])]))
+          anf_5])
+        [anf_4 (con integer 0)]])
+      [(builtin bData) (con bytestring #6e617368)]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#6 : Data = bData (con bytestring #6e617368) in
+let anf#7 : Data = anf#6 0 in
+case@Data anf#7 of
+  DataB payload#5 -> payload#5
+--- isolated folded Core
+let anf#6 : Data = bData (con bytestring #6e617368) in
+let anf#7 : Data = anf#6 0 in
+case@Data anf#7 of
+  DataB payload#5 -> payload#5
+--- isolated cleaned Core
+let anf#6 : Data = bData (con bytestring #6e617368) in
+let anf#7 : Data = anf#6 0 in
+case@Data anf#7 of
+  DataB payload#5 -> payload#5
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_6
+    [(lam anf_7
+      [(lam generated_8
+        (force
+          [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_5 payload_5) [(builtin unBData) generated_8]])]))
+        anf_7])
+      [anf_6 (con integer 0)]])
+    [(builtin bData) (con bytestring #6e617368)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_6
+    [(lam anf_7
+      [(lam generated_8
+        (force
+          [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_5 payload_5) [(builtin unBData) generated_8]])]))
+        anf_7])
+      [anf_6 (con integer 0)]])
+    [(builtin bData) (con bytestring #6e617368)]])
+--- result
+error: NonFunctionApplication(Con(Integer(0)), Con(Data(ByteString([110, 97, 115, 104]))))
+--- logs
+[]

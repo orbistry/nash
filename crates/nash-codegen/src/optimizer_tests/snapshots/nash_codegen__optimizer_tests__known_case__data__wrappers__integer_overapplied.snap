@@ -1,0 +1,81 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData 42 0 of
+  DataI payload#1 -> payload#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
+        (delay (error))]))
+    [[(builtin iData) (con integer 42)] (con integer 0)]])
+--- optimized Core
+let anf#3 : Data = iData 42 in
+let anf#4 : Data = anf#3 0 in
+case@Data anf#4 of
+  DataI payload#2 -> payload#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam anf_1
+      [(lam anf_5
+        [(lam generated_7
+          (force
+            [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
+              (delay [(lam payload_6 payload_6) [(builtin unIData) generated_7]])]
+              (delay (error))]))
+          anf_5])
+        [anf_1 (con integer 0)]])
+      [(builtin iData) (con integer 42)]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#2 : Data = iData 42 in
+let anf#3 : Data = anf#2 0 in
+case@Data anf#3 of
+  DataI payload#1 -> payload#1
+--- isolated folded Core
+let anf#2 : Data = iData 42 in
+let anf#3 : Data = anf#2 0 in
+case@Data anf#3 of
+  DataI payload#1 -> payload#1
+--- isolated cleaned Core
+let anf#2 : Data = iData 42 in
+let anf#3 : Data = anf#2 0 in
+case@Data anf#3 of
+  DataI payload#1 -> payload#1
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_2
+    [(lam anf_3
+      [(lam generated_4
+        (force
+          [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_1 payload_1) [(builtin unIData) generated_4]])]
+            (delay (error))]))
+        anf_3])
+      [anf_2 (con integer 0)]])
+    [(builtin iData) (con integer 42)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_2
+    [(lam anf_3
+      [(lam generated_4
+        (force
+          [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_1 payload_1) [(builtin unIData) generated_4]])]
+            (delay (error))]))
+        anf_3])
+      [anf_2 (con integer 0)]])
+    [(builtin iData) (con integer 42)]])
+--- result
+error: NonFunctionApplication(Con(Integer(0)), Con(Data(Integer(42))))
+--- logs
+[]

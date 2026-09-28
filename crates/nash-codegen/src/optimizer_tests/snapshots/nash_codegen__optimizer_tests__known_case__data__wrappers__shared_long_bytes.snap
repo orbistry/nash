@@ -1,0 +1,140 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#1 : Data = bData (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in
+constr 0 (case@Data data#1 of
+  DataB payload#2 -> payload#2) (case@Data data#1 of
+  DataB payload#3 -> payload#3) (case@Data data#1 of
+  DataB payload#4 -> payload#4)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_1
+    (constr 0
+      [(lam generated_5
+        (force
+          [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_2 payload_2) [(builtin unBData) generated_5]])]))
+        data_1]
+      [(lam generated_6
+        (force
+          [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_3 payload_3) [(builtin unBData) generated_6]])]))
+        data_1]
+      [(lam generated_7
+        (force
+          [[[[[[(force (builtin chooseData)) generated_7] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_4 payload_4) [(builtin unBData) generated_7]])]))
+        data_1]))
+    [(builtin bData)
+      (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)]])
+--- optimized Core
+let data#5 : Data = bData (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in
+let anf#9 : bytes = case@Data data#5 of
+  DataB payload#6 -> payload#6 in
+let anf#10 : bytes = case@Data data#5 of
+  DataB payload#7 -> payload#7 in
+let anf#11 : bytes = case@Data data#5 of
+  DataB payload#8 -> payload#8 in
+constr 0 anf#9 anf#10 anf#11
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_16
+    [(lam data_1
+      [(lam anf_3
+        [(lam anf_12
+          [(lam anf_14 (constr 0 anf_3 anf_12 anf_14))
+            [(lam generated_15
+              (force
+                [[[[[[builtin_16 generated_15] (delay (error))] (delay (error))] (delay (error))]
+                  (delay (error))]
+                  (delay [(lam payload_13 payload_13) [(builtin unBData) generated_15]])]))
+              data_1]])
+          [(lam generated_17
+            (force
+              [[[[[[builtin_16 generated_17] (delay (error))] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_4 payload_4) [(builtin unBData) generated_17]])]))
+            data_1]])
+        [(lam generated_18
+          (force
+            [[[[[[builtin_16 generated_18] (delay (error))] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay [(lam payload_2 payload_2) [(builtin unBData) generated_18]])]))
+          data_1]])
+      [(builtin bData)
+        (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let data#1 : Data = bData (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in
+let anf#5 : bytes = case@Data data#1 of
+  DataB payload#2 -> payload#2 in
+let anf#6 : bytes = case@Data data#1 of
+  DataB payload#3 -> payload#3 in
+let anf#7 : bytes = case@Data data#1 of
+  DataB payload#4 -> payload#4 in
+constr 0 anf#5 anf#6 anf#7
+--- isolated folded Core
+let data_operand#8 : bytes = (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in
+let data#1 : Data = bData data_operand#8 in
+let anf#5 : bytes = let payload#2 : bytes = data_operand#8 in
+payload#2 in
+let anf#6 : bytes = let payload#3 : bytes = data_operand#8 in
+payload#3 in
+let anf#7 : bytes = let payload#4 : bytes = data_operand#8 in
+payload#4 in
+constr 0 anf#5 anf#6 anf#7
+--- isolated cleaned Core
+let data_operand#8 : bytes = (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in
+let data#1 : Data = bData data_operand#8 in
+constr 0 data_operand#8 data_operand#8 data_operand#8
+--- isolated UPLC before
+(program 1.1.0
+  [(lam data_1
+    [(lam anf_5
+      [(lam anf_6
+        [(lam anf_7 (constr 0 anf_5 anf_6 anf_7))
+          [(lam generated_8
+            (force
+              [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_4 payload_4) [(builtin unBData) generated_8]])]))
+            data_1]])
+        [(lam generated_9
+          (force
+            [[[[[[(force (builtin chooseData)) generated_9] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay (error))]
+              (delay [(lam payload_3 payload_3) [(builtin unBData) generated_9]])]))
+          data_1]])
+      [(lam generated_10
+        (force
+          [[[[[[(force (builtin chooseData)) generated_10] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_2 payload_2) [(builtin unBData) generated_10]])]))
+        data_1]])
+    [(builtin bData)
+      (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam data_operand_8
+    [(lam data_1 (constr 0 data_operand_8 data_operand_8 data_operand_8))
+      [(builtin bData) data_operand_8]])
+    (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)])
+--- result
+(constr 0
+  (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)
+  (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)
+  (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707))
+--- logs
+[]

@@ -483,20 +483,8 @@ fn data_subject<'a>(
     else {
         return None;
     };
-    let mut seen = [false; 5];
-    for branch in branches {
-        let index = match branch.test {
-            Test::DataConstr => 0,
-            Test::DataMap => 1,
-            Test::DataList => 2,
-            Test::DataI => 3,
-            Test::DataB => 4,
-            _ => return None,
-        };
-        if seen[index] || branch.binders.len() != 1 {
-            return None;
-        }
-        seen[index] = true;
+    if !valid_data_branches(branches) {
+        return None;
     }
     match scrutinee.kind {
         CoreKind::Lit(Constant::Data(data)) => Some((None, data)),
@@ -550,4 +538,151 @@ fn data_payload<'a>(
             list(fields),
         ),
     }
+}
+
+fn valid_data_branches(branches: &[Branch<'_>]) -> bool {
+    let mut seen = [false; 5];
+    for branch in branches {
+        let index = match branch.test {
+            Test::DataConstr => 0,
+            Test::DataMap => 1,
+            Test::DataList => 2,
+            Test::DataI => 3,
+            Test::DataB => 4,
+            _ => return false,
+        };
+        if seen[index] || branch.binders.len() != 1 {
+            return false;
+        }
+        seen[index] = true;
+    }
+    true
+}
+
+/// Trial IData/BData case folding on hygienic ANF with the same name supply.
+/// Keep the saturated producer strict: its runtime operand check can still fail.
+pub fn reduce_data_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
+    let facts = wrapper_bindings(core);
+    let mut matched = HashSet::new();
+    core.walk(&mut |node| {
+        if let Some((root, _, _)) = wrapper_subject(node, &facts) {
+            matched.insert(root);
+        }
+    });
+    if matched.is_empty() {
+        return core;
+    }
+    // Refer to one operand value. Copying an ANF lambda or delay duplicates binders.
+    let named = core.map(b, &mut |node| {
+        let CoreKind::Let {
+            binder,
+            value,
+            body,
+        } = node.kind
+        else {
+            return None;
+        };
+        if !matched.contains(&binder.name.unique) {
+            return None;
+        }
+        let (_, operand) = data_wrapper(value)?;
+        if matches!(operand.kind, CoreKind::Var(_)) {
+            return None;
+        }
+        let CoreKind::Builtin { func, .. } = value.kind else {
+            return None;
+        };
+        let field = Binder {
+            name: b.fresh("data_operand"),
+            ty: operand.ty,
+        };
+        let producer = b.builtin(func, &[b.var(field.name, field.ty)], value.ty);
+        Some(b.with_type(
+            b.let_(field, operand, b.let_(binder, producer, body)),
+            node.ty,
+        ))
+    });
+    let facts = wrapper_bindings(named);
+    named.map(b, &mut |node| {
+        let (_, test, operand) = wrapper_subject(node, &facts)?;
+        let CoreKind::Case {
+            branches, default, ..
+        } = node.kind
+        else {
+            return None;
+        };
+        let body = match branches.iter().find(|branch| branch.test == test) {
+            Some(branch) => b.let_(branch.binders[0], operand, branch.body),
+            None => default.unwrap_or_else(|| b.error(node.ty)),
+        };
+        Some(b.with_type(body, node.ty))
+    })
+}
+
+/// Isolated producer trial plus accepted cleanup, without another ANF pass.
+pub fn simplify_data_wrappers<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
+    loop {
+        let next = simplify_data(b, reduce_data_wrappers(b, core));
+        if std::ptr::eq(core, next) {
+            return next;
+        }
+        core = next;
+    }
+}
+
+type WrapperBindings<'a> = HashMap<u32, (u32, &'a Core<'a>)>;
+fn data_wrapper<'a>(value: &'a Core<'a>) -> Option<(Test<'a>, &'a Core<'a>)> {
+    match value.kind {
+        CoreKind::Builtin {
+            func: DefaultFunction::IData,
+            args: [operand],
+        } => Some((Test::DataI, operand)),
+        CoreKind::Builtin {
+            func: DefaultFunction::BData,
+            args: [operand],
+        } => Some((Test::DataB, operand)),
+        _ => None,
+    }
+}
+fn wrapper_bindings<'a>(core: &'a Core<'a>) -> WrapperBindings<'a> {
+    let mut facts = HashMap::new();
+    core.walk(&mut |node| {
+        let CoreKind::Let { binder, value, .. } = node.kind else {
+            return;
+        };
+        let fact = if data_wrapper(value).is_some() {
+            Some((binder.name.unique, value))
+        } else if let CoreKind::Var(name) = value.kind {
+            facts.get(&name.unique).copied()
+        } else {
+            None
+        };
+        if let Some(fact) = fact {
+            facts.insert(binder.name.unique, fact);
+        }
+    });
+    facts
+}
+fn wrapper_subject<'a>(
+    node: &'a Core<'a>,
+    facts: &WrapperBindings<'a>,
+) -> Option<(u32, Test<'a>, &'a Core<'a>)> {
+    let CoreKind::Case {
+        kind: CaseKind::Data,
+        scrutinee,
+        branches,
+        ..
+    } = node.kind
+    else {
+        return None;
+    };
+    if !valid_data_branches(branches) {
+        return None;
+    }
+    let CoreKind::Var(name) = scrutinee.kind else {
+        return None;
+    };
+    let &(root, value) = facts.get(&name.unique)?;
+    let (test, operand) = data_wrapper(value)?;
+    Some((root, test, operand))
 }

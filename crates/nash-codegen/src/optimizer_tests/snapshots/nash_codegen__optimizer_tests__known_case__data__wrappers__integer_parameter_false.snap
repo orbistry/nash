@@ -1,0 +1,76 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData 42 of
+  DataI payload#2 -> payload#2
+  _ -> trace "cold" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_3
+    (force
+      [[[[[[(force (builtin chooseData)) generated_3]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay [(lam payload_2 payload_2) [(builtin unIData) generated_3]])]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+    [(builtin iData) (con integer 42)]])
+--- optimized Core
+let anf#2 : Data = iData 42 in
+case@Data anf#2 of
+  DataI payload#1 -> payload#1
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_3
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay [(lam payload_4 payload_4) [(builtin unIData) generated_6]])]
+                (delay (force [partial_8 (delay (error))]))]))
+            anf_3])
+          [(builtin iData) (con integer 42)]])
+        [builtin_5 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : Data = iData 42 in
+case@Data anf#3 of
+  DataI payload#2 -> payload#2
+  _ -> trace "cold" in error
+--- isolated folded Core
+let data_operand#4 : int = 42 in
+let anf#3 : Data = iData data_operand#4 in
+let payload#2 : int = data_operand#4 in
+payload#2
+--- isolated cleaned Core
+let anf#3 : Data = iData 42 in
+42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3
+    [(lam generated_4
+      (force
+        [[[[[[(force (builtin chooseData)) generated_4]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay [(lam payload_2 payload_2) [(builtin unIData) generated_4]])]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+      anf_3])
+    [(builtin iData) (con integer 42)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_3 (con integer 42)) [(builtin iData) (con integer 42)]])
+--- result
+(con integer 42)
+--- logs
+[]

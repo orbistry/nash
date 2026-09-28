@@ -1,0 +1,91 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data bData true of
+  DataB unused#21 -> 9
+  _ -> trace "unreachable" in 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_22
+    (force
+      [[[[[[(force (builtin chooseData)) generated_22]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+        (delay (con integer 9))]))
+    [(builtin bData) (con bool True)]])
+--- optimized Core
+let anf#2 : Data = bData true in
+case@Data anf#2 of
+  DataB unused#1 -> 9
+  _ -> trace "unreachable" in 0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_3
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (force [partial_8 (delay (con integer 0))]))]
+                (delay (con integer 9))]))
+            anf_3])
+          [(builtin bData) (con bool True)]])
+        [builtin_5 (con string "unreachable")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#22 : Data = bData true in
+case@Data anf#22 of
+  DataB unused#21 -> 9
+  _ -> trace "unreachable" in 0
+--- isolated folded Core
+let data_operand#23 : bool = true in
+let anf#22 : Data = bData data_operand#23 in
+let unused#21 : bool = data_operand#23 in
+9
+--- isolated cleaned Core
+let anf#22 : Data = bData true in
+9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_22
+    [(lam generated_23
+      (force
+        [[[[[[(force (builtin chooseData)) generated_23]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 0))]))]
+          (delay (con integer 9))]))
+      anf_22])
+    [(builtin bData) (con bool True)]])
+--- isolated UPLC after
+(program 1.1.0 [(lam anf_22 (con integer 9)) [(builtin bData) (con bool True)]])
+--- result
+error: Runtime(TypeMismatch(ByteString, Boolean(true)))
+--- logs
+[]

@@ -1437,15 +1437,51 @@ and the separate performance check pass. All 23 performance rows and source inpu
 are unchanged; baseline settings now include Data folding. Nextest stalled during
 discovery, so the freshly built binaries were run directly.
 
-Next Chunk 7 trial: recognize exactly saturated `IData`/`BData` bindings as known
-shapes. Preserve the original builtin evaluation and operand checks while selecting
-the matching arm and binding its payload to the original operand. Handle both
-literal operands (`iData 42`) and variable operands (`iData x`); an existing Data
-constant (`Constant::Data(I 42)`) is already handled by the accepted literal rule.
-Measure before
-considering collection and constructor producers; `DataConstr` binds one native
-`(tag, fields)` pair, so it cannot be treated as a single-operand wrapper. This is
-case folding, not permission to remove the producer through cancellation.
+**IData/BData producer case folding (28 September 2026), trial awaiting keep.**
+`reduce_data_wrappers` recognizes exactly saturated `IData`/`BData` let bindings
+and aliases in hygienic ANF. Both literal operands (`iData 42`) and variable
+operands (`iData x`) qualify. It selects the known Data arm and binds its payload
+to the original operand; missing shapes use the default or error. All branch
+shapes and binder counts must be valid, including unselected arms.
+
+The original builtin remains strict in its original position, even when its
+result becomes unused: invalid runtime operands must still fail. Non-variable
+operands are named once before the producer, preventing duplicated lambda/delay
+binders. Traces, failures, intervening effects and suspended matches retain their
+evaluation order. Partial, overapplied, traced and unrelated producers and
+unknown Data parameters do not establish wrapper facts. `simplify_data_wrappers`
+repeats the trial with accepted cleanup without another ANF pass. The accepted
+pipeline and performance baseline remain unchanged pending a keep decision.
+
+The separate experiment compares accepted optimization against accepted plus the
+trial with identical lowering/sharing. All 191 cases have matching results and
+logs: 168 targeted integer/byte literal and runtime-parameter combinations plus
+23 existing source workloads. CPU and memory improve in 172 cases and remain
+unchanged in 19; neither regresses. Savings range from 115,119–2,124,476 CPU and
+64–10,656 memory. Size improves in 160 cases by 16–85 bytes, is unchanged in 19,
+and grows in 12 by 12–182 bytes. All size increases involve used short byte
+literal payloads duplicated by accepted constant propagation; they occur both
+with and without the original Data escaping. Runtime-parameter cases have no
+size regressions. These are synthetic measurements, not a real-validator sample.
+
+Four existing source workloads improve: `dataMatch` saves 579,119 CPU, 2,964
+memory and 30 bytes; `dataMiss` saves 510,375 CPU, 2,632 memory and 29 bytes;
+`validationPass` saves 579,119 CPU, 2,964 memory and 27 bytes; `validationFail`
+saves 115,119 CPU, 64 memory and 27 bytes. The other 19 are unchanged. The
+23-case accepted baseline check passes. Temporary measurement source is removed
+after recording results; performance experiments remain outside normal tests.
+
+Validation: 509 codegen and 69 IR library tests pass, including 50 new snapshots
+in the existing `known_case::data::wrappers` module. Existing snapshots are
+unchanged. Snapshot output precedes independent scope, type-view, ANF, semantic
+and log equivalence, and idempotence checks. Malformed tables retain their lowering
+errors. Formatting, diff checks and strict workspace Clippy pass. Nextest stalled
+at discovery; Cargo test passed after restarting a stalled compiler invocation.
+The full workspace test suite was not rerun for this isolated trial.
+
+Collection and constructor producers need a separate trial; `DataConstr` binds
+one native `(tag, fields)` pair and is not a single-operand wrapper. This is case
+folding, not permission to remove the producer through cancellation (Chunk 8).
 
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:

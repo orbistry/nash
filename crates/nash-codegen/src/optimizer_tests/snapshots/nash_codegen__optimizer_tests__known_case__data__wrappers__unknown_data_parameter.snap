@@ -1,0 +1,48 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(\unknown#4 : Data -> case@Data unknown#4 of
+  DataI payload#5 -> payload#5) (con data (I 42))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam unknown_4
+    [(lam generated_6
+      (force
+        [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay [(lam payload_5 payload_5) [(builtin unIData) generated_6]])]
+          (delay (error))]))
+      unknown_4])
+    (con data (I 42))])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated pass
+--- isolated ANF input
+(\unknown#4 : Data -> case@Data unknown#4 of
+  DataI payload#5 -> payload#5) (con data (I 42))
+--- isolated folded Core
+(\unknown#4 : Data -> case@Data unknown#4 of
+  DataI payload#5 -> payload#5) (con data (I 42))
+--- isolated cleaned Core
+42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam unknown_4
+    [(lam generated_6
+      (force
+        [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay [(lam payload_5 payload_5) [(builtin unIData) generated_6]])]
+          (delay (error))]))
+      unknown_4])
+    (con data (I 42))])
+--- isolated UPLC after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

@@ -1,0 +1,116 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(case@Data iData 40 of
+  DataI payload#1 -> case@Data iData payload#1 of
+    DataI inner#2 -> \x#3 : int -> addInteger inner#2 x#3) 2
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam generated_4
+    (force
+      [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay
+          [(lam payload_1
+            [(lam generated_5
+              (force
+                [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+                  (delay (error))]
+                  (delay
+                    [(lam inner_2 (lam x_3 [[(builtin addInteger) inner_2] x_3]))
+                      [(builtin unIData) generated_5]])]
+                  (delay (error))]))
+              [(builtin iData) payload_1]])
+            [(builtin unIData) generated_4]])]
+        (delay (error))]))
+    [(builtin iData) (con integer 40)]]
+    (con integer 2)])
+--- optimized Core
+let anf#7 : Data = iData 40 in
+let anf#9 : int -> int = case@Data anf#7 of
+  DataI payload#4 -> let anf#8 : Data = iData payload#4 in
+  case@Data anf#8 of
+    DataI inner#5 -> \x#6 : int -> addInteger inner#5 x#6 in
+anf#9 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_15
+    [(lam anf_1
+      [(lam anf_12 [anf_12 (con integer 2)])
+        [(lam generated_13
+          (force
+            [[[[[[builtin_15 generated_13] (delay (error))] (delay (error))] (delay (error))]
+              (delay
+                [(lam payload_2
+                  [(lam anf_3
+                    [(lam generated_14
+                      (force
+                        [[[[[[builtin_15 generated_14] (delay (error))] (delay (error))] (delay (error))]
+                          (delay
+                            [(lam inner_10 (lam x_11 [[(builtin addInteger) inner_10] x_11]))
+                              [(builtin unIData) generated_14]])]
+                          (delay (error))]))
+                      anf_3])
+                    [(builtin iData) payload_2]])
+                  [(builtin unIData) generated_13]])]
+              (delay (error))]))
+          anf_1]])
+      [(builtin iData) (con integer 40)]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : Data = iData 40 in
+let anf#6 : int -> int = case@Data anf#4 of
+  DataI payload#1 -> let anf#5 : Data = iData payload#1 in
+  case@Data anf#5 of
+    DataI inner#2 -> \x#3 : int -> addInteger inner#2 x#3 in
+anf#6 2
+--- isolated folded Core
+let data_operand#7 : int = 40 in
+let anf#4 : Data = iData data_operand#7 in
+let anf#6 : int -> int = let payload#1 : int = data_operand#7 in
+let anf#5 : Data = iData payload#1 in
+let inner#2 : int = payload#1 in
+\x#3 : int -> addInteger inner#2 x#3 in
+anf#6 2
+--- isolated cleaned Core
+let anf#4 : Data = iData 40 in
+let anf#5 : Data = iData 40 in
+addInteger 40 2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4
+    [(lam anf_6 [anf_6 (con integer 2)])
+      [(lam generated_7
+        (force
+          [[[[[[(force (builtin chooseData)) generated_7] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay
+              [(lam payload_1
+                [(lam anf_5
+                  [(lam generated_8
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+                        (delay (error))]
+                        (delay
+                          [(lam inner_2 (lam x_3 [[(builtin addInteger) inner_2] x_3]))
+                            [(builtin unIData) generated_8]])]
+                        (delay (error))]))
+                    anf_5])
+                  [(builtin iData) payload_1]])
+                [(builtin unIData) generated_7]])]
+            (delay (error))]))
+        anf_4]])
+    [(builtin iData) (con integer 40)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_4
+    [(lam anf_5 [[(builtin addInteger) (con integer 40)] (con integer 2)])
+      [(builtin iData) (con integer 40)]])
+    [(builtin iData) (con integer 40)]])
+--- result
+(con integer 42)
+--- logs
+[]

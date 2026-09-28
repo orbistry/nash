@@ -1,0 +1,120 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#1 : Data = iData (trace "once" in 42) in
+let alias#2 : Data = data#1 in
+constr 0 data#1 (case@Data alias#2 of
+  DataI payload#3 -> payload#3) (case@Data alias#2 of
+  DataI payload#4 -> payload#4)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_1
+    [(lam alias_2
+      (constr 0
+        data_1
+        [(lam generated_5
+          (force
+            [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay [(lam payload_3 payload_3) [(builtin unIData) generated_5]])]
+              (delay (error))]))
+          alias_2]
+        [(lam generated_6
+          (force
+            [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay [(lam payload_4 payload_4) [(builtin unIData) generated_6]])]
+              (delay (error))]))
+          alias_2]))
+      data_1])
+    [(builtin iData)
+      (force [[(force (builtin trace)) (con string "once")] (delay (con integer 42))])]])
+--- optimized Core
+let anf#9 : int = trace "once" in 42 in
+let data#5 : Data = iData anf#9 in
+let anf#10 : int = case@Data data#5 of
+  DataI payload#7 -> payload#7 in
+let anf#11 : int = case@Data data#5 of
+  DataI payload#8 -> payload#8 in
+constr 0 data#5 anf#10 anf#11
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_14
+    [(lam builtin_16
+      [(lam anf_1
+        [(lam data_2
+          [(lam anf_4
+            [(lam anf_12 (constr 0 data_2 anf_4 anf_12))
+              [(lam generated_13
+                (force
+                  [[[[[[builtin_14 generated_13] (delay (error))] (delay (error))] (delay (error))]
+                    (delay [(lam payload_6 payload_6) [(builtin unIData) generated_13]])]
+                    (delay (error))]))
+                data_2]])
+            [(lam generated_15
+              (force
+                [[[[[[builtin_14 generated_15] (delay (error))] (delay (error))] (delay (error))]
+                  (delay [(lam payload_3 payload_3) [(builtin unIData) generated_15]])]
+                  (delay (error))]))
+              data_2]])
+          [(builtin iData) anf_1]])
+        (force [[builtin_16 (con string "once")] (delay (con integer 42))])])
+      (force (builtin trace))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#5 : int = trace "once" in 42 in
+let data#1 : Data = iData anf#5 in
+let alias#2 : Data = data#1 in
+let anf#6 : int = case@Data alias#2 of
+  DataI payload#3 -> payload#3 in
+let anf#7 : int = case@Data alias#2 of
+  DataI payload#4 -> payload#4 in
+constr 0 data#1 anf#6 anf#7
+--- isolated folded Core
+let anf#5 : int = trace "once" in 42 in
+let data#1 : Data = iData anf#5 in
+let alias#2 : Data = data#1 in
+let anf#6 : int = let payload#3 : int = anf#5 in
+payload#3 in
+let anf#7 : int = let payload#4 : int = anf#5 in
+payload#4 in
+constr 0 data#1 anf#6 anf#7
+--- isolated cleaned Core
+let anf#5 : int = trace "once" in 42 in
+let data#1 : Data = iData anf#5 in
+constr 0 data#1 anf#5 anf#5
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_5
+    [(lam data_1
+      [(lam alias_2
+        [(lam anf_6
+          [(lam anf_7 (constr 0 data_1 anf_6 anf_7))
+            [(lam generated_8
+              (force
+                [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+                  (delay (error))]
+                  (delay [(lam payload_4 payload_4) [(builtin unIData) generated_8]])]
+                  (delay (error))]))
+              alias_2]])
+          [(lam generated_9
+            (force
+              [[[[[[(force (builtin chooseData)) generated_9] (delay (error))] (delay (error))]
+                (delay (error))]
+                (delay [(lam payload_3 payload_3) [(builtin unIData) generated_9]])]
+                (delay (error))]))
+            alias_2]])
+        data_1])
+      [(builtin iData) anf_5]])
+    (force [[(force (builtin trace)) (con string "once")] (delay (con integer 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_5 [(lam data_1 (constr 0 data_1 anf_5 anf_5)) [(builtin iData) anf_5]])
+    (force [[(force (builtin trace)) (con string "once")] (delay (con integer 42))])])
+--- result
+(constr 0 (con data (I 42)) (con integer 42) (con integer 42))
+--- logs
+["once"]

@@ -1,0 +1,61 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData of
+  DataI payload#1 -> payload#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
+        (delay (error))]))
+    (builtin iData)])
+--- optimized Core
+case@Data iData of
+  DataI payload#2 -> payload#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam generated_2
+      (force
+        [[[[[[builtin_3 generated_2] (delay (error))] (delay (error))] (delay (error))]
+          (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
+          (delay (error))]))
+      (builtin iData)])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+case@Data iData of
+  DataI payload#1 -> payload#1
+--- isolated folded Core
+case@Data iData of
+  DataI payload#1 -> payload#1
+--- isolated cleaned Core
+case@Data iData of
+  DataI payload#1 -> payload#1
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
+        (delay (error))]))
+    (builtin iData)])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay [(lam payload_1 payload_1) [(builtin unIData) generated_2]])]
+        (delay (error))]))
+    (builtin iData)])
+--- result
+error: NotAConstant(Builtin(Runtime { args: [], fun: IData, forces: 0 }))
+--- logs
+[]

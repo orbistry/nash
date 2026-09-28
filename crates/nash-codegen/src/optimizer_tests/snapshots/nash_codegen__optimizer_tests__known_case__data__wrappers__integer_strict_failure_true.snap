@@ -1,0 +1,101 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#5 : Data = iData (trace "operand" in error) in
+let effect#7 : int = trace "between" in 0 in
+case@Data data#5 of
+  DataI payload#6 -> trace "selected" in 9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_5
+    [(lam effect_7
+      [(lam generated_8
+        (force
+          [[[[[[(force (builtin chooseData)) generated_8] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay
+              (force
+                [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))]
+            (delay (error))]))
+        data_5])
+      (force
+        [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+    [(builtin iData)
+      (force [[(force (builtin trace)) (con string "operand")] (delay (error))])]])
+--- optimized Core
+let anf#4 : int = trace "operand" in error in
+let data#1 : Data = iData anf#4 in
+let effect#2 : int = trace "between" in 0 in
+case@Data data#1 of
+  DataI payload#3 -> trace "selected" in 9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_10
+    [(lam builtin_11
+      [(lam anf_5
+        [(lam data_6
+          [(lam effect_7
+            [(lam generated_9
+              (force
+                [[[[[[builtin_11 generated_9] (delay (error))] (delay (error))] (delay (error))]
+                  (delay (force [[builtin_10 (con string "selected")] (delay (con integer 9))]))]
+                  (delay (error))]))
+              data_6])
+            (force [[builtin_10 (con string "between")] (delay (con integer 0))])])
+          [(builtin iData) anf_5]])
+        (force [[builtin_10 (con string "operand")] (delay (error))])])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#8 : int = trace "operand" in error in
+let data#5 : Data = iData anf#8 in
+let effect#7 : int = trace "between" in 0 in
+case@Data data#5 of
+  DataI payload#6 -> trace "selected" in 9
+--- isolated folded Core
+let anf#8 : int = trace "operand" in error in
+let data#5 : Data = iData anf#8 in
+let effect#7 : int = trace "between" in 0 in
+let payload#6 : int = anf#8 in
+trace "selected" in 9
+--- isolated cleaned Core
+let anf#8 : int = trace "operand" in error in
+let data#5 : Data = iData anf#8 in
+let effect#7 : int = trace "between" in 0 in
+trace "selected" in 9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_8
+    [(lam data_5
+      [(lam effect_7
+        [(lam generated_9
+          (force
+            [[[[[[(force (builtin chooseData)) generated_9] (delay (error))] (delay (error))]
+              (delay (error))]
+              (delay
+                (force
+                  [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))]
+              (delay (error))]))
+          data_5])
+        (force
+          [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+      [(builtin iData) anf_8]])
+    (force [[(force (builtin trace)) (con string "operand")] (delay (error))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_8
+    [(lam data_5
+      [(lam effect_7
+        (force
+          [[(force (builtin trace)) (con string "selected")] (delay (con integer 9))]))
+        (force
+          [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+      [(builtin iData) anf_8]])
+    (force [[(force (builtin trace)) (con string "operand")] (delay (error))])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["operand"]
