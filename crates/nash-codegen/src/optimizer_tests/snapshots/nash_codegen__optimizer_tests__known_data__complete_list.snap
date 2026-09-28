@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_data.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data (con data (List [I 42])) of
+  DataI unused#16 -> trace "list" in 0
+  DataB unused#17 -> trace "list" in 1
+  DataList unused#18 -> trace "list" in 2
+  DataMap unused#19 -> trace "list" in 4
+  DataConstr unused#20 -> trace "list" in 6
+  _ -> error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_21
+    (force
+      [[[[[[(force (builtin chooseData)) generated_21]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 6))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 4))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 2))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 0))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 1))]))]))
+    (con data (List [I 42]))])
+--- optimized Core
+case@Data (con data (List [I 42])) of
+  DataI unused#1 -> trace "list" in 0
+  DataB unused#2 -> trace "list" in 1
+  DataList unused#3 -> trace "list" in 2
+  DataMap unused#4 -> trace "list" in 4
+  DataConstr unused#5 -> trace "list" in 6
+  _ -> error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_12
+    [(lam builtin_13
+      [(lam partial_14
+        [(lam generated_11
+          (force
+            [[[[[[builtin_13 generated_11] (delay (force [partial_14 (delay (con integer 6))]))]
+              (delay (force [partial_14 (delay (con integer 4))]))]
+              (delay (force [partial_14 (delay (con integer 2))]))]
+              (delay (force [partial_14 (delay (con integer 0))]))]
+              (delay (force [partial_14 (delay (con integer 1))]))]))
+          (con data (List [I 42]))])
+        [builtin_12 (con string "list")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+case@Data (con data (List [I 42])) of
+  DataI unused#16 -> trace "list" in 0
+  DataB unused#17 -> trace "list" in 1
+  DataList unused#18 -> trace "list" in 2
+  DataMap unused#19 -> trace "list" in 4
+  DataConstr unused#20 -> trace "list" in 6
+  _ -> error
+--- isolated folded Core
+let unused#18 : list Data = (con (list data) [(I 42)]) in
+trace "list" in 2
+--- isolated cleaned Core
+trace "list" in 2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_21
+    (force
+      [[[[[[(force (builtin chooseData)) generated_21]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 6))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 4))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 2))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 0))]))]
+        (delay
+          (force [[(force (builtin trace)) (con string "list")] (delay (con integer 1))]))]))
+    (con data (List [I 42]))])
+--- isolated UPLC after
+(program 1.1.0
+  (force [[(force (builtin trace)) (con string "list")] (delay (con integer 2))]))
+--- result
+(con integer 2)
+--- logs
+["list"]

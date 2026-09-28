@@ -383,3 +383,171 @@ fn list_arms<'a>(
     }
     Some((nil, cons))
 }
+
+/// Trial literal Data folding on hygienic ANF. Constructor builtins are not facts.
+/// Share unwrapped payloads at their original literal binding, as for list fields.
+pub fn reduce_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
+    let facts = data_bindings(core);
+    let mut matched = HashSet::new();
+    core.walk(&mut |node| {
+        if let Some((Some(root), _)) = data_subject(node, &facts) {
+            matched.insert(root);
+        }
+    });
+    let mut payloads = HashMap::new();
+    let named = core.map(b, &mut |node| {
+        let CoreKind::Let {
+            binder,
+            value,
+            body,
+        } = node.kind
+        else {
+            return None;
+        };
+        if !matched.contains(&binder.name.unique) {
+            return None;
+        }
+        let CoreKind::Lit(Constant::Data(data)) = value.kind else {
+            return None;
+        };
+        let payload = b.lit(data_payload(b, data));
+        let field = Binder {
+            name: b.fresh("data_payload"),
+            ty: payload.ty,
+        };
+        payloads.insert(binder.name.unique, b.var(field.name, field.ty));
+        Some(b.with_type(b.let_(field, payload, b.let_(binder, value, body)), node.ty))
+    });
+    let facts = data_bindings(named);
+    named.map(b, &mut |node| {
+        let (root, data) = data_subject(node, &facts)?;
+        let CoreKind::Case {
+            branches, default, ..
+        } = node.kind
+        else {
+            return None;
+        };
+        let test = data_test(data);
+        let body = match branches.iter().find(|branch| branch.test == test) {
+            Some(branch) => {
+                let payload = root
+                    .and_then(|id| payloads.get(&id).copied())
+                    .unwrap_or_else(|| b.lit(data_payload(b, data)));
+                b.let_(branch.binders[0], payload, branch.body)
+            }
+            None => default.unwrap_or_else(|| b.error(node.ty)),
+        };
+        Some(b.with_type(body, node.ty))
+    })
+}
+
+/// Isolated Data trial with accepted cleanup; one normalization upstream.
+pub fn simplify_data<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
+    loop {
+        let next = simplify_list(b, reduce_data(b, core));
+        if std::ptr::eq(core, next) {
+            return next;
+        }
+        core = next;
+    }
+}
+
+type DataBindings<'a> = HashMap<u32, (u32, &'a nash_plutus::data::PlutusData<'a>)>;
+fn data_bindings<'a>(core: &'a Core<'a>) -> DataBindings<'a> {
+    let mut facts = HashMap::new();
+    core.walk(&mut |node| {
+        let CoreKind::Let { binder, value, .. } = node.kind else {
+            return;
+        };
+        let fact = match value.kind {
+            CoreKind::Lit(Constant::Data(data)) => Some((binder.name.unique, *data)),
+            CoreKind::Var(name) => facts.get(&name.unique).copied(),
+            _ => None,
+        };
+        if let Some(fact) = fact {
+            facts.insert(binder.name.unique, fact);
+        }
+    });
+    facts
+}
+fn data_subject<'a>(
+    node: &'a Core<'a>,
+    facts: &DataBindings<'a>,
+) -> Option<(Option<u32>, &'a nash_plutus::data::PlutusData<'a>)> {
+    let CoreKind::Case {
+        kind: CaseKind::Data,
+        scrutinee,
+        branches,
+        ..
+    } = node.kind
+    else {
+        return None;
+    };
+    let mut seen = [false; 5];
+    for branch in branches {
+        let index = match branch.test {
+            Test::DataConstr => 0,
+            Test::DataMap => 1,
+            Test::DataList => 2,
+            Test::DataI => 3,
+            Test::DataB => 4,
+            _ => return None,
+        };
+        if seen[index] || branch.binders.len() != 1 {
+            return None;
+        }
+        seen[index] = true;
+    }
+    match scrutinee.kind {
+        CoreKind::Lit(Constant::Data(data)) => Some((None, data)),
+        CoreKind::Var(name) => facts
+            .get(&name.unique)
+            .map(|&(root, data)| (Some(root), data)),
+        _ => None,
+    }
+}
+fn data_test(data: &nash_plutus::data::PlutusData<'_>) -> Test<'static> {
+    use nash_plutus::data::PlutusData;
+    match data {
+        PlutusData::Constr { .. } => Test::DataConstr,
+        PlutusData::Map(_) => Test::DataMap,
+        PlutusData::List(_) => Test::DataList,
+        PlutusData::Integer(_) => Test::DataI,
+        PlutusData::ByteString(_) => Test::DataB,
+    }
+}
+fn data_payload<'a>(
+    b: &Builder<'a>,
+    data: &'a nash_plutus::data::PlutusData<'a>,
+) -> &'a Constant<'a> {
+    use nash_plutus::{data::PlutusData, typ::Type};
+    let a = b.arena;
+    let list = |items: &'a [&'a PlutusData<'a>]| {
+        let values = a.alloc_slice_fill_iter(items.iter().map(|item| Constant::data(a, item)));
+        Constant::proto_list(a, &Type::Data, values)
+    };
+    match data {
+        PlutusData::Integer(i) => Constant::integer(a, i),
+        PlutusData::ByteString(bytes) => Constant::byte_string(a, bytes),
+        PlutusData::List(items) => list(items),
+        PlutusData::Map(entries) => {
+            let values = a.alloc_slice_fill_iter(entries.iter().map(|(key, value)| {
+                Constant::proto_pair(
+                    a,
+                    &Type::Data,
+                    &Type::Data,
+                    Constant::data(a, key),
+                    Constant::data(a, value),
+                )
+            }));
+            Constant::proto_list(a, Type::pair(a, &Type::Data, &Type::Data), values)
+        }
+        PlutusData::Constr { tag, fields } => Constant::proto_pair(
+            a,
+            &Type::Integer,
+            Type::list(a, &Type::Data),
+            Constant::integer_from(a, i128::from(*tag)),
+            list(fields),
+        ),
+    }
+}

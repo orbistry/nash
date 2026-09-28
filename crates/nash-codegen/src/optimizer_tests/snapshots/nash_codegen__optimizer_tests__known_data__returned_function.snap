@@ -1,0 +1,65 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_data.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(case@Data (con data (I 40)) of
+  DataI payload#1 -> \x#2 : int -> addInteger payload#1 x#2) 2
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam generated_3
+    (force
+      [[[[[[(force (builtin chooseData)) generated_3] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay
+          [(lam payload_1 (lam x_2 [[(builtin addInteger) payload_1] x_2]))
+            [(builtin unIData) generated_3]])]
+        (delay (error))]))
+    (con data (I 40))]
+    (con integer 2)])
+--- optimized Core
+let anf#5 : int -> int = case@Data (con data (I 40)) of
+  DataI payload#3 -> \x#4 : int -> addInteger payload#3 x#4 in
+anf#5 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_8
+    [(lam anf_6 [anf_6 (con integer 2)])
+      [(lam generated_7
+        (force
+          [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
+            (delay
+              [(lam payload_1 (lam x_2 [[(builtin addInteger) payload_1] x_2]))
+                [(builtin unIData) generated_7]])]
+            (delay (error))]))
+        (con data (I 40))]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : int -> int = case@Data (con data (I 40)) of
+  DataI payload#1 -> \x#2 : int -> addInteger payload#1 x#2 in
+anf#3 2
+--- isolated folded Core
+let anf#3 : int -> int = let payload#1 : int = 40 in
+\x#2 : int -> addInteger payload#1 x#2 in
+anf#3 2
+--- isolated cleaned Core
+addInteger 40 2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3 [anf_3 (con integer 2)])
+    [(lam generated_4
+      (force
+        [[[[[[(force (builtin chooseData)) generated_4] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay
+            [(lam payload_1 (lam x_2 [[(builtin addInteger) payload_1] x_2]))
+              [(builtin unIData) generated_4]])]
+          (delay (error))]))
+      (con data (I 40))]])
+--- isolated UPLC after
+(program 1.1.0 [[(builtin addInteger) (con integer 40)] (con integer 2)])
+--- result
+(con integer 42)
+--- logs
+[]

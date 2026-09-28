@@ -1368,6 +1368,49 @@ Nextest again stalled at discovery; freshly built test binaries passed directly.
 Strict all-target/all-feature Clippy and formatting pass. All 23 performance
 rows and sources are unchanged; baseline settings now include list folding.
 
+**Known literal Data folding (implemented trial, awaiting acceptance).**
+`reduce_data` selects `DataI`, `DataB`, `DataList`, `DataMap` or `DataConstr`
+for direct `Constant::Data` subjects and let-bound literals/aliases. It validates
+all branches first (unique Data tests and exactly one payload binder). Missing
+arms use the default or an explicit error. Unknown subjects and malformed tables
+remain untouched. This is shape selection, not builtin wrap/unwrap cancellation.
+
+Payloads exactly match runtime unwraps: native integer/bytes, a list of Data,
+a list of native Data/Data pairs, or one native `(integer tag, list Data)` pair.
+Nested children stay Data; map order and duplicate keys, empty container metadata,
+arbitrary integers and full-width constructor tags are preserved. Matched bound
+literals share one derived payload at their original binding. Literal payloads
+are values, so creating them cannot move traces/failures. `simplify_data` repeats
+this rule with accepted list/constructor cleanup without another ANF pass.
+
+The isolated experiment compares accepted optimization with accepted plus this
+trial, using the same sharing and V3 budgets. Across 125 cases (102 targeted
+shape/size/use/escape combinations plus 23 existing workloads), results and logs
+match. CPU and memory improve in 102 cases and are unchanged in 23; no regressions.
+Savings range from 578,517–2,172,476 CPU and 2,964–10,956 memory. Size improves in
+57 cases by 4–89 bytes, is unchanged in 23, and grows in 45 by 1–1,210 bytes.
+Of those increases, 25 retain the original Data and its native payload (maximum
+1,210 bytes); 20 discard the original (maximum 743 bytes). Native lists/maps can
+encode larger than CBOR Data, and accepted short-byte propagation can duplicate
+small payloads. These measurements are synthetic fixtures, not a real-validator
+distribution. No size heuristic or constant propagation exception is added.
+
+The 23 existing workloads remain unchanged. Source `I 42` currently emits an
+`IData` call, which this literal-only trial intentionally does not recognize.
+Builtin-produced Data shapes require a separate strictness/check-preserving trial;
+wrap/unwrap cancellation remains Chunk 8. The accepted pipeline and baseline are
+unchanged. Temporary performance code is removed after recording the results.
+
+Validation: 497 codegen library tests pass, including 59 new Data snapshots;
+existing snapshots are unchanged. Tests cover all payload shapes and metadata,
+missing/default branches, shared aliases, strict traces/failures, returned and
+capturing closures/delays, nested Data/list folding, unknown/runtime-invalid
+subjects, full-width tags/integers and malformed unselected branches. Snapshot
+output precedes independent scope, ANF, type-view, equivalence and idempotence
+checks. Formatting and strict all-target/all-feature Clippy pass. Nextest stalled
+at discovery; the freshly built binary passed directly. Full-workspace test
+completion is not claimed for this isolated trial.
+
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:
 source literal patterns call their selected conversion and equality traits.

@@ -1,0 +1,74 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_data.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+force (case@Data (con data (I 42)) of
+  DataI payload#1 -> delay (trace "forced" in payload#1))
+--- unoptimized UPLC
+(program 1.1.0
+  (force
+    [(lam generated_2
+      (force
+        [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay
+            [(lam payload_1
+              (delay
+                (force [[(force (builtin trace)) (con string "forced")] (delay payload_1)])))
+              [(builtin unIData) generated_2]])]
+          (delay (error))]))
+      (con data (I 42))]))
+--- optimized Core
+let anf#3 : @delay int = case@Data (con data (I 42)) of
+  DataI payload#2 -> delay (trace "forced" in payload#2) in
+force anf#3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam builtin_7
+      [(lam anf_4 (force anf_4))
+        [(lam generated_5
+          (force
+            [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))] (delay (error))]
+              (delay
+                [(lam payload_1
+                  (delay (force [[builtin_6 (con string "forced")] (delay payload_1)])))
+                  [(builtin unIData) generated_5]])]
+              (delay (error))]))
+          (con data (I 42))]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : @delay int = case@Data (con data (I 42)) of
+  DataI payload#1 -> delay (trace "forced" in payload#1) in
+force anf#4
+--- isolated folded Core
+let anf#4 : @delay int = let payload#1 : int = 42 in
+delay (trace "forced" in payload#1) in
+force anf#4
+--- isolated cleaned Core
+trace "forced" in 42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4 (force anf_4))
+    [(lam generated_5
+      (force
+        [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay
+            [(lam payload_1
+              (delay
+                (force [[(force (builtin trace)) (con string "forced")] (delay payload_1)])))
+              [(builtin unIData) generated_5]])]
+          (delay (error))]))
+      (con data (I 42))]])
+--- isolated UPLC after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "forced")] (delay (con integer 42))]))
+--- result
+(con integer 42)
+--- logs
+["forced"]
