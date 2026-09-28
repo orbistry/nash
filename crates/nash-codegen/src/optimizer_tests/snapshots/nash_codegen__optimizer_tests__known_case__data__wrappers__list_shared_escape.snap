@@ -36,37 +36,14 @@ constr 0 data#15 (case@Data alias#16 of
 --- optimized Core
 let anf#5 : list Data = trace "once" in (con (list data) [(I 42)]) in
 let data#1 : Data = listData anf#5 in
-let anf#6 : list Data = case@Data data#1 of
-  DataList payload#3 -> payload#3 in
-let anf#7 : list Data = case@Data data#1 of
-  DataList payload#4 -> payload#4 in
-constr 0 data#1 anf#6 anf#7
+constr 0 data#1 anf#5 anf#5
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_14
-    [(lam builtin_16
-      [(lam anf_2
-        [(lam data_8
-          [(lam anf_10
-            [(lam anf_12 (constr 0 data_8 anf_10 anf_12))
-              [(lam generated_13
-                (force
-                  [[[[[[builtin_14 generated_13] (delay (error))] (delay (error))]
-                    (delay [(lam payload_11 payload_11) [(builtin unListData) generated_13]])]
-                    (delay (error))]
-                    (delay (error))]))
-                data_8]])
-            [(lam generated_15
-              (force
-                [[[[[[builtin_14 generated_15] (delay (error))] (delay (error))]
-                  (delay [(lam payload_9 payload_9) [(builtin unListData) generated_15]])]
-                  (delay (error))]
-                  (delay (error))]))
-              data_8]])
-          [(builtin listData) anf_2]])
-        (force [[builtin_16 (con string "once")] (delay (con (list data) [(I 42)]))])])
-      (force (builtin trace))])
-    (force (builtin chooseData))])
+  [(lam builtin_4
+    [(lam anf_2
+      [(lam data_3 (constr 0 data_3 anf_2 anf_2)) [(builtin listData) anf_2]])
+      (force [[builtin_4 (con string "once")] (delay (con (list data) [(I 42)]))])])
+    (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input
 let anf#19 : list Data = trace "once" in (con (list data) [(I 42)]) in

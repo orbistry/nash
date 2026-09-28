@@ -21,27 +21,15 @@ case@Data mapData (trace "operand" in (con (list (pair data data)) [((I 42), (I 
 --- optimized Core
 let anf#2 : list (pair Data Data) = trace "operand" in (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
 let anf#3 : Data = mapData anf#2 in
-case@Data anf#3 of
-  DataList wrong#1 -> trace "wrong" in error
+error
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
-    [(lam builtin_9
-      [(lam anf_4
-        [(lam anf_5
-          [(lam generated_7
-            (force
-              [[[[[[builtin_9 generated_7] (delay (error))] (delay (error))]
-                (delay (force [[builtin_8 (con string "wrong")] (delay (error))]))]
-                (delay (error))]
-                (delay (error))]))
-            anf_5])
-          [(builtin mapData) anf_4]])
-        (force
-          [[builtin_8 (con string "operand")]
-            (delay
-              (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
-      (force (builtin chooseData))])
+  [(lam builtin_5
+    [(lam anf_1 [(lam anf_4 (error)) [(builtin mapData) anf_1]])
+      (force
+        [[builtin_5 (con string "operand")]
+          (delay
+            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))])])
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

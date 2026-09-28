@@ -20,27 +20,15 @@ case@Data mapData (mkCons (con (pair data data) ((I 42), (I 42))) (con (list (pa
 --- optimized Core
 let anf#2 : list (pair Data Data) = mkCons (con (pair data data) ((I 42), (I 42))) (con (list (pair data data)) []) in
 let anf#3 : Data = mapData anf#2 in
-case@Data anf#3 of
-  DataMap payload#1 -> (con (list (pair data data)) [])
+(con (list (pair data data)) [])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
-    [(lam builtin_9
-      [(lam anf_4
-        [(lam anf_5
-          [(lam generated_7
-            (force
-              [[[[[[builtin_8 generated_7] (delay (error))]
-                (delay (con (list (pair data data)) []))]
-                (delay (error))]
-                (delay (error))]
-                (delay (error))]))
-            anf_5])
-          [(builtin mapData) anf_4]])
-        [[builtin_9 (con (pair data data) ((I 42), (I 42)))]
-          (con (list (pair data data)) [])]])
-      (force (builtin mkCons))])
-    (force (builtin chooseData))])
+  [(lam builtin_5
+    [(lam anf_1
+      [(lam anf_4 (con (list (pair data data)) [])) [(builtin mapData) anf_1]])
+      [[builtin_5 (con (pair data data) ((I 42), (I 42)))]
+        (con (list (pair data data)) [])]])
+    (force (builtin mkCons))])
 --- isolated pass
 --- isolated ANF input
 let anf#68 : list (pair Data Data) = mkCons (con (pair data data) ((I 42), (I 42))) (con (list (pair data data)) []) in

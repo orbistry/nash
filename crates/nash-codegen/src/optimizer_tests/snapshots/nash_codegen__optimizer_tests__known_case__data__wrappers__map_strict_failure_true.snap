@@ -29,27 +29,17 @@ case@Data data#29 of
 let anf#4 : list (pair Data Data) = trace "operand" in error in
 let data#1 : Data = mapData anf#4 in
 let effect#2 : int = trace "between" in 0 in
-case@Data data#1 of
-  DataMap payload#3 -> trace "selected" in 9
+trace "selected" in 9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_10
-    [(lam builtin_11
-      [(lam anf_5
-        [(lam data_6
-          [(lam effect_7
-            [(lam generated_9
-              (force
-                [[[[[[builtin_11 generated_9] (delay (error))]
-                  (delay (force [[builtin_10 (con string "selected")] (delay (con integer 9))]))]
-                  (delay (error))]
-                  (delay (error))]
-                  (delay (error))]))
-              data_6])
-            (force [[builtin_10 (con string "between")] (delay (con integer 0))])])
-          [(builtin mapData) anf_5]])
-        (force [[builtin_10 (con string "operand")] (delay (error))])])
-      (force (builtin chooseData))])
+  [(lam builtin_7
+    [(lam anf_3
+      [(lam data_5
+        [(lam effect_6
+          (force [[builtin_7 (con string "selected")] (delay (con integer 9))]))
+          (force [[builtin_7 (con string "between")] (delay (con integer 0))])])
+        [(builtin mapData) anf_3]])
+      (force [[builtin_7 (con string "operand")] (delay (error))])])
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

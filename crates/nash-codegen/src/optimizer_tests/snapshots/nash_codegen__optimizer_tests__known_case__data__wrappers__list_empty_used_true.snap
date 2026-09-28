@@ -15,22 +15,14 @@ case@Data listData (con (list data) []) of
         (delay (error))]))
     [(builtin listData) (con (list data) [])]])
 --- optimized Core
-let anf#2 : Data = listData (con (list data) []) in
-case@Data anf#2 of
-  DataList payload#1 -> payload#1
+let data_operand#3 : list Data = (con (list data) []) in
+let anf#2 : Data = listData data_operand#3 in
+data_operand#3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam anf_3
-      [(lam generated_5
-        (force
-          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))]
-            (delay [(lam payload_4 payload_4) [(builtin unListData) generated_5]])]
-            (delay (error))]
-            (delay (error))]))
-        anf_3])
-      [(builtin listData) (con (list data) [])]])
-    (force (builtin chooseData))])
+  [(lam data_operand_1
+    [(lam anf_4 data_operand_1) [(builtin listData) data_operand_1]])
+    (con (list data) [])])
 --- isolated pass
 --- isolated ANF input
 let anf#17 : Data = listData (con (list data) []) in

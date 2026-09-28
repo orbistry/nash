@@ -27,27 +27,10 @@ case@Data listData true of
     [(builtin listData) (con bool True)]])
 --- optimized Core
 let anf#2 : Data = listData true in
-case@Data anf#2 of
-  DataList unused#1 -> 9
-  _ -> trace "unreachable" in 0
+9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam builtin_7
-      [(lam partial_8
-        [(lam anf_3
-          [(lam generated_6
-            (force
-              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (con integer 0))]))]
-                (delay (force [partial_8 (delay (con integer 0))]))]
-                (delay (con integer 9))]
-                (delay (force [partial_8 (delay (con integer 0))]))]
-                (delay (force [partial_8 (delay (con integer 0))]))]))
-            anf_3])
-          [(builtin listData) (con bool True)]])
-        [builtin_5 (con string "unreachable")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam anf_1 (con integer 9)) [(builtin listData) (con bool True)]])
 --- isolated pass
 --- isolated ANF input
 let anf#41 : Data = listData true in

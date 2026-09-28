@@ -20,29 +20,14 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
       [(builtin mapData) input_26]])
     (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
 --- optimized Core
-let anf#3 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
-case@Data anf#3 of
-  DataMap payload#2 -> payload#2
-  _ -> trace "cold" in error
+let data_operand#4 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#3 : Data = mapData data_operand#4 in
+data_operand#4
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam builtin_7
-      [(lam partial_8
-        [(lam anf_1
-          [(lam generated_6
-            (force
-              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (error))]))]
-                (delay [(lam payload_4 payload_4) [(builtin unMapData) generated_6]])]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]))
-            anf_1])
-          [(builtin mapData)
-            (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
-        [builtin_5 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam data_operand_1
+    [(lam anf_2 data_operand_1) [(builtin mapData) data_operand_1]])
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
 --- isolated pass
 --- isolated ANF input
 (\input#26 : list (pair Data Data) -> let anf#28 : Data = mapData input#26 in

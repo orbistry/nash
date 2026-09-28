@@ -559,22 +559,13 @@ fn valid_data_branches(branches: &[Branch<'_>]) -> bool {
     true
 }
 
-/// IData/BData case folding on hygienic ANF with the same name supply.
+/// IData/BData/ListData/MapData case folding on hygienic ANF with the same name supply.
 /// Keep the saturated producer strict: its runtime operand check can still fail.
 pub fn reduce_data_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
-    reduce_wrappers(b, core, false)
-}
-
-/// Trial ListData/MapData folding alongside the accepted scalar wrappers.
-pub fn reduce_collection_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
-    reduce_wrappers(b, core, true)
-}
-
-fn reduce_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>, collections: bool) -> &'a Core<'a> {
-    let facts = wrapper_bindings(core, collections);
+    let facts = wrapper_bindings(core);
     let mut matched = HashSet::new();
     core.walk(&mut |node| {
-        if let Some((root, _, _)) = wrapper_subject(node, &facts, collections) {
+        if let Some((root, _, _)) = wrapper_subject(node, &facts) {
             matched.insert(root);
         }
     });
@@ -594,7 +585,7 @@ fn reduce_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>, collections: bool) -
         if !matched.contains(&binder.name.unique) {
             return None;
         }
-        let (_, operand) = data_wrapper(value, collections)?;
+        let (_, operand) = data_wrapper(value)?;
         if matches!(operand.kind, CoreKind::Var(_)) {
             return None;
         }
@@ -611,9 +602,9 @@ fn reduce_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>, collections: bool) -
             node.ty,
         ))
     });
-    let facts = wrapper_bindings(named, collections);
+    let facts = wrapper_bindings(named);
     named.map(b, &mut |node| {
-        let (_, test, operand) = wrapper_subject(node, &facts, collections)?;
+        let (_, test, operand) = wrapper_subject(node, &facts)?;
         let CoreKind::Case {
             branches, default, ..
         } = node.kind
@@ -639,19 +630,8 @@ pub fn simplify_data_wrappers<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'
     }
 }
 
-/// Isolated collection trial and accepted cleanup, without another ANF pass.
-pub fn simplify_collection_wrappers<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
-    loop {
-        let next = simplify_data_wrappers(b, reduce_collection_wrappers(b, core));
-        if std::ptr::eq(core, next) {
-            return next;
-        }
-        core = next;
-    }
-}
-
 type WrapperBindings<'a> = HashMap<u32, (u32, &'a Core<'a>)>;
-fn data_wrapper<'a>(value: &'a Core<'a>, collections: bool) -> Option<(Test<'a>, &'a Core<'a>)> {
+fn data_wrapper<'a>(value: &'a Core<'a>) -> Option<(Test<'a>, &'a Core<'a>)> {
     match value.kind {
         CoreKind::Builtin {
             func: DefaultFunction::IData,
@@ -664,21 +644,21 @@ fn data_wrapper<'a>(value: &'a Core<'a>, collections: bool) -> Option<(Test<'a>,
         CoreKind::Builtin {
             func: DefaultFunction::ListData,
             args: [operand],
-        } if collections => Some((Test::DataList, operand)),
+        } => Some((Test::DataList, operand)),
         CoreKind::Builtin {
             func: DefaultFunction::MapData,
             args: [operand],
-        } if collections => Some((Test::DataMap, operand)),
+        } => Some((Test::DataMap, operand)),
         _ => None,
     }
 }
-fn wrapper_bindings<'a>(core: &'a Core<'a>, collections: bool) -> WrapperBindings<'a> {
+fn wrapper_bindings<'a>(core: &'a Core<'a>) -> WrapperBindings<'a> {
     let mut facts = HashMap::new();
     core.walk(&mut |node| {
         let CoreKind::Let { binder, value, .. } = node.kind else {
             return;
         };
-        let fact = if data_wrapper(value, collections).is_some() {
+        let fact = if data_wrapper(value).is_some() {
             Some((binder.name.unique, value))
         } else if let CoreKind::Var(name) = value.kind {
             facts.get(&name.unique).copied()
@@ -694,7 +674,6 @@ fn wrapper_bindings<'a>(core: &'a Core<'a>, collections: bool) -> WrapperBinding
 fn wrapper_subject<'a>(
     node: &'a Core<'a>,
     facts: &WrapperBindings<'a>,
-    collections: bool,
 ) -> Option<(u32, Test<'a>, &'a Core<'a>)> {
     let CoreKind::Case {
         kind: CaseKind::Data,
@@ -712,6 +691,6 @@ fn wrapper_subject<'a>(
         return None;
     };
     let &(root, value) = facts.get(&name.unique)?;
-    let (test, operand) = data_wrapper(value, collections)?;
+    let (test, operand) = data_wrapper(value)?;
     Some((root, test, operand))
 }

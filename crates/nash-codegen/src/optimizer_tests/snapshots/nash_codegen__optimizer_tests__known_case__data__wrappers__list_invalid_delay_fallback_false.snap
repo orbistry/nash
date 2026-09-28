@@ -27,27 +27,10 @@ case@Data listData (delay (\x#39 : int -> x#39)) of
     [(builtin listData) (delay (lam x_39 x_39))]])
 --- optimized Core
 let anf#3 : Data = listData (delay (\x#1 : int -> x#1)) in
-case@Data anf#3 of
-  DataList unused#2 -> 9
-  _ -> trace "unreachable" in 0
+9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam builtin_9
-      [(lam partial_10
-        [(lam anf_5
-          [(lam generated_8
-            (force
-              [[[[[[builtin_9 generated_8] (delay (force [partial_10 (delay (con integer 0))]))]
-                (delay (force [partial_10 (delay (con integer 0))]))]
-                (delay (con integer 9))]
-                (delay (force [partial_10 (delay (con integer 0))]))]
-                (delay (force [partial_10 (delay (con integer 0))]))]))
-            anf_5])
-          [(builtin listData) (delay (lam x_4 x_4))]])
-        [builtin_7 (con string "unreachable")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam anf_4 (con integer 9)) [(builtin listData) (delay (lam x_2 x_2))]])
 --- isolated pass
 --- isolated ANF input
 let anf#53 : Data = listData (delay (\x#39 : int -> x#39)) in

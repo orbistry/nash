@@ -17,21 +17,10 @@ case@Data listData (con (list data) []) of
     [(builtin listData) (con (list data) [])]])
 --- optimized Core
 let anf#1 : Data = listData (con (list data) []) in
-case@Data anf#1 of
-  _ -> 42
+42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_4
-    [(lam anf_2
-      [(lam generated_3
-        (force
-          [[[[[[builtin_4 generated_3] (delay (con integer 42))] (delay (con integer 42))]
-            (delay (con integer 42))]
-            (delay (con integer 42))]
-            (delay (con integer 42))]))
-        anf_2])
-      [(builtin listData) (con (list data) [])]])
-    (force (builtin chooseData))])
+  [(lam anf_2 (con integer 42)) [(builtin listData) (con (list data) [])]])
 --- isolated pass
 --- isolated ANF input
 let anf#1 : Data = listData (con (list data) []) in

@@ -19,8 +19,8 @@ unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
-accepted, as is IData/BData producer case folding. Collection and constructor
-Data producers remain;
+accepted, as is IData/BData/ListData/MapData producer case folding. ConstrData
+producer folding remains;
 other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
@@ -1490,18 +1490,19 @@ during discovery, so the freshly built binaries were run directly. Both formatte
 checks, workspace and isolated-runner strict Clippy, and the explicit performance
 baseline check pass.
 
-**ListData/MapData producer case folding (28 September 2026), trial awaiting keep.**
-`reduce_collection_wrappers` extends the scalar-wrapper algorithm to exactly
+**ListData/MapData producer case folding (28 September 2026), accepted.**
+`reduce_data_wrappers` extends the scalar-wrapper algorithm to exactly
 saturated `ListData` and `MapData` bindings. `DataList` receives the original
 native Data list; `DataMap` receives the original native list of Data pairs.
 The producer remains strict, including when no branch uses the payload, so wrong
 operand types and incorrect empty-list element metadata still fail. Successful
 MapData construction preserves entry order and duplicate keys. Alias handling,
 non-variable operand sharing, full branch-table validation and defaults use the
-same code as the accepted scalar rule. The private collection switch isolates the
-trial; it is not a user-facing optimization flag. `simplify_collection_wrappers`
-repeats it with accepted cleanup without another ANF pass. The accepted pipeline
-and permanent baseline remain unchanged.
+same code as the accepted scalar rule. Adoption removes the temporary collection
+switch and separate trial entry points; `simplify_data_wrappers` now handles all
+four wrappers with accepted cleanup without another ANF pass. Both accepted
+pipelines pick up the rule through that existing entry point. Normal build assembly
+remains O0 pending Chunk 11 configuration decisions.
 
 The separate experiment compares accepted optimization against accepted plus
 this trial with identical sharing and V3 budgets. All 215 cases match results and
@@ -1524,6 +1525,14 @@ returned/capturing functions, defaults, saturation and malformed unselected arms
 Scope, ANF, type-view, equivalence/log and idempotence checks follow snapshots.
 Formatting, strict workspace Clippy, temporary-runner Clippy and the separate
 accepted performance check pass. Full-workspace tests were not rerun for this trial.
+
+Adoption validation: 511 codegen and 69 IR library tests pass; 64 snapshots update
+only accepted optimized output, preserving identical O0 and isolated-pass evidence.
+All 23 performance rows and source inputs remain unchanged; baseline settings now
+name the adopted collection wrappers. Formatting, strict workspace/runner Clippy
+and the explicit performance check pass. Nextest stalled at discovery; the freshly
+built library binaries passed directly. The temporary collection switch and trial
+entry points are removed.
 
 `ConstrData` remains a separate next trial: `DataConstr` binds one native
 `(tag, fields)` pair and is not a single-operand wrapper. This is case folding,

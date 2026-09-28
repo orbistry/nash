@@ -16,21 +16,11 @@ case@Data listData (con (list (pair data data)) []) of
     [(builtin listData) (con (list (pair data data)) [])]])
 --- optimized Core
 let anf#3 : Data = listData (con (list (pair data data)) []) in
-case@Data anf#3 of
-  DataList payload#2 -> (con (list data) [])
+(con (list data) [])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam anf_1
-      [(lam generated_5
-        (force
-          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))]
-            (delay (con (list data) []))]
-            (delay (error))]
-            (delay (error))]))
-        anf_1])
-      [(builtin listData) (con (list (pair data data)) [])]])
-    (force (builtin chooseData))])
+  [(lam anf_1 (con (list data) []))
+    [(builtin listData) (con (list (pair data data)) [])]])
 --- isolated pass
 --- isolated ANF input
 let anf#2 : Data = listData (con (list (pair data data)) []) in

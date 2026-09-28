@@ -1850,7 +1850,7 @@ mod data {
     }
 
     mod wrappers {
-        //! Scalar wrapper folding and isolated ListData/MapData trial; constructor checks remain strict.
+        //! Scalar and collection wrapper folding; constructor checks remain strict.
         use super::*;
         const BYTES: Ty<'static> = Ty::Const(&ConstTy::Bytes);
         fn kinds<'a>(b: &Builder<'a>) -> [(F, Test<'a>, &'static str, &'a Core<'a>); 4] {
@@ -1893,11 +1893,9 @@ mod data {
         }
         fn check(name: &str, b: &Builder<'_>, original: &Core<'_>, fails: bool) {
             let before = anf::normalize(b, original);
-            let folded = known_case::reduce_collection_wrappers(b, before);
-            let after = known_case::simplify_collection_wrappers(
-                b,
-                nash_ir::small_inline::simplify(b, folded),
-            );
+            let folded = known_case::reduce_data_wrappers(b, before);
+            let after =
+                known_case::simplify_data_wrappers(b, nash_ir::small_inline::simplify(b, folded));
             let left = crate::harness::eval_core_raw(b.arena, before);
             let middle = crate::harness::eval_core_raw(b.arena, folded);
             let right = crate::harness::eval_core_raw(b.arena, after);
@@ -1930,7 +1928,7 @@ mod data {
             }
             assert!(std::ptr::eq(
                 after,
-                known_case::simplify_collection_wrappers(b, after)
+                known_case::simplify_data_wrappers(b, after)
             ));
         }
         #[test]
@@ -2363,7 +2361,7 @@ mod data {
                         b.builtin(func, &[value], DATA),
                         b.case(CaseKind::Data, b.var(d.name, DATA), &arms, None, INT),
                     );
-                    let after = known_case::reduce_collection_wrappers(&b, before);
+                    let after = known_case::reduce_data_wrappers(&b, before);
                     let left = crate::lower::lower(&a, before).unwrap_err();
                     let right = crate::lower::lower(&a, after).unwrap_err();
                     insta::assert_snapshot!(

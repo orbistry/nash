@@ -16,23 +16,14 @@ case@Data mapData (con (list integer) [7]) of
         (delay (error))]))
     [(builtin mapData) (con (list integer) [7])]])
 --- optimized Core
-let anf#2 : Data = mapData (con (list integer) [7]) in
-case@Data anf#2 of
-  DataMap payload#1 -> payload#1
+let data_operand#3 : list int = (con (list integer) [7]) in
+let anf#2 : Data = mapData data_operand#3 in
+data_operand#3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam anf_3
-      [(lam generated_5
-        (force
-          [[[[[[builtin_6 generated_5] (delay (error))]
-            (delay [(lam payload_4 payload_4) [(builtin unMapData) generated_5]])]
-            (delay (error))]
-            (delay (error))]
-            (delay (error))]))
-        anf_3])
-      [(builtin mapData) (con (list integer) [7])]])
-    (force (builtin chooseData))])
+  [(lam data_operand_1
+    [(lam anf_4 data_operand_1) [(builtin mapData) data_operand_1]])
+    (con (list integer) [7])])
 --- isolated pass
 --- isolated ANF input
 let anf#83 : Data = mapData (con (list integer) [7]) in

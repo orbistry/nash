@@ -30,25 +30,13 @@ case@Bool false of
 --- optimized Core
 let anf#3 : list Data = trace "before" in (con (list data) [(I 42)]) in
 let data#1 : Data = listData anf#3 in
-case@Data data#1 of
-  DataList payload#2 -> payload#2
+anf#3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
-    [(lam builtin_9
-      [(lam anf_4
-        [(lam data_5
-          [(lam generated_7
-            (force
-              [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))]
-                (delay [(lam payload_6 payload_6) [(builtin unListData) generated_7]])]
-                (delay (error))]
-                (delay (error))]))
-            data_5])
-          [(builtin listData) anf_4]])
-        (force [[builtin_9 (con string "before")] (delay (con (list data) [(I 42)]))])])
-      (force (builtin trace))])
-    (force (builtin chooseData))])
+  [(lam builtin_5
+    [(lam anf_2 [(lam data_4 anf_2) [(builtin listData) anf_2]])
+      (force [[builtin_5 (con string "before")] (delay (con (list data) [(I 42)]))])])
+    (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input
 let anf#11 : list Data = trace "before" in (con (list data) [(I 42)]) in
