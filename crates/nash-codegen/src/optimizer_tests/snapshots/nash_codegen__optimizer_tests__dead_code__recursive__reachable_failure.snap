@@ -1,0 +1,59 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 68
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+letrec
+  f#1 : int -> int [static []] = \x#2 : int -> trace "failure" in error
+in
+f#1 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_1 [f_1 (con integer 42)])
+    [(lam self_3 [self_3 self_3])
+      (lam self_3
+        (lam x_2
+          (force [[(force (builtin trace)) (con string "failure")] (delay (error))])))]])
+--- optimized Core
+letrec
+  f#3 : int -> int [static []] = \x#4 : int -> trace "failure" in error
+in
+f#3 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_9
+    [(lam f_8 [f_8 (con integer 42)])
+      [(lam self_5 [self_5 self_5])
+        (lam self_6
+          (lam x_7 (force [[builtin_9 (con string "failure")] (delay (error))])))]])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+letrec
+  f#1 : int -> int [static []] = \x#2 : int -> trace "failure" in error
+in
+f#1 42
+--- uplc before
+(program 1.1.0
+  [(lam f_1 [f_1 (con integer 42)])
+    [(lam self_3 [self_3 self_3])
+      (lam self_3
+        (lam x_2
+          (force [[(force (builtin trace)) (con string "failure")] (delay (error))])))]])
+--- core after
+letrec
+  f#1 : int -> int [static []] = \x#2 : int -> trace "failure" in error
+in
+f#1 42
+--- uplc after
+(program 1.1.0
+  [(lam f_1 [f_1 (con integer 42)])
+    [(lam self_5 [self_5 self_5])
+      (lam self_5
+        (lam x_2
+          (force [[(force (builtin trace)) (con string "failure")] (delay (error))])))]])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["failure"]

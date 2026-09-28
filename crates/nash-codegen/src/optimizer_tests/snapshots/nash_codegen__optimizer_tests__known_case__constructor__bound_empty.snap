@@ -1,0 +1,36 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#3 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#3 of
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_3 (case subject_3)) (constr 0 (con integer 21) (con integer 22))])
+--- optimized Core
+let subject#1 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#1 of
+--- optimized UPLC
+(program 1.1.0
+  [(lam subject_2 (case subject_2)) (constr 0 (con integer 21) (con integer 22))])
+--- isolated pass
+--- isolated ANF input
+let subject#3 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#3 of
+--- isolated folded Core
+let subject#3 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#3 of
+--- isolated cleaned Core
+let subject#3 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#3 of
+--- isolated UPLC before
+(program 1.1.0
+  [(lam subject_3 (case subject_3)) (constr 0 (con integer 21) (con integer 22))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam subject_3 (case subject_3)) (constr 0 (con integer 21) (con integer 22))])
+--- result
+error: MissingCaseBranch([], Constr(0, [Con(Integer(21)), Con(Integer(22))]))
+--- logs
+[]

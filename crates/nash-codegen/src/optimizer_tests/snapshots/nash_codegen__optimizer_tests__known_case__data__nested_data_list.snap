@@ -1,0 +1,103 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data (con data (List [I 42])) of
+  DataList xs#1 -> case@List xs#1 of
+    Cons head#2 tail#3 -> case@Data head#2 of
+      DataI number#4 -> number#4
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_5
+    (force
+      [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+        (delay
+          [(lam xs_1
+            (case
+              xs_1
+              (lam head_2
+                (lam tail_3
+                  [(lam generated_6
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+                        (delay (error))]
+                        (delay [(lam number_4 number_4) [(builtin unIData) generated_6]])]
+                        (delay (error))]))
+                    head_2]))
+              (error)))
+            [(builtin unListData) generated_5]])]
+        (delay (error))]
+        (delay (error))]))
+    (con data (List [I 42]))])
+--- optimized Core
+case@Data (con data (List [I 42])) of
+  DataList xs#5 -> case@List xs#5 of
+    Cons head#6 tail#7 -> case@Data head#6 of
+      DataI number#8 -> number#8
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_7
+    [(lam generated_5
+      (force
+        [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))]
+          (delay
+            [(lam xs_1
+              (case
+                xs_1
+                (lam head_2
+                  (lam tail_3
+                    [(lam generated_6
+                      (force
+                        [[[[[[builtin_7 generated_6] (delay (error))] (delay (error))] (delay (error))]
+                          (delay [(lam number_4 number_4) [(builtin unIData) generated_6]])]
+                          (delay (error))]))
+                      head_2]))
+                (error)))
+              [(builtin unListData) generated_5]])]
+          (delay (error))]
+          (delay (error))]))
+      (con data (List [I 42]))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+case@Data (con data (List [I 42])) of
+  DataList xs#1 -> case@List xs#1 of
+    Cons head#2 tail#3 -> case@Data head#2 of
+      DataI number#4 -> number#4
+--- isolated folded Core
+let xs#1 : list Data = (con (list data) [(I 42)]) in
+case@List xs#1 of
+  Cons head#2 tail#3 -> case@Data head#2 of
+    DataI number#4 -> number#4
+--- isolated cleaned Core
+42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_5
+    (force
+      [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+        (delay
+          [(lam xs_1
+            (case
+              xs_1
+              (lam head_2
+                (lam tail_3
+                  [(lam generated_6
+                    (force
+                      [[[[[[(force (builtin chooseData)) generated_6] (delay (error))] (delay (error))]
+                        (delay (error))]
+                        (delay [(lam number_4 number_4) [(builtin unIData) generated_6]])]
+                        (delay (error))]))
+                    head_2]))
+              (error)))
+            [(builtin unListData) generated_5]])]
+        (delay (error))]
+        (delay (error))]))
+    (con data (List [I 42]))])
+--- isolated UPLC after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

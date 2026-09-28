@@ -1,63 +1,62 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
 let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
-let alias#7 : int -> int -> int = helper#3 in
-addInteger (helper#3 0 21) (alias#7 0 21)
+let alias#4 : int -> int -> int = helper#3 in
+addInteger (helper#3 0 21) (alias#4 0 21)
 --- unoptimized UPLC
 (program 1.1.0
   [(lam helper_3
-    [(lam alias_7
+    [(lam alias_4
       [[(builtin addInteger) [[helper_3 (con integer 0)] (con integer 21)]]
-        [[alias_7 (con integer 0)] (con integer 21)]])
+        [[alias_4 (con integer 0)] (con integer 21)]])
       helper_3])
     (lam unused_1 (lam used_2 used_2))])
 --- optimized Core
-let helper#6 : int -> int -> int = \unused#4 : int used#5 : int -> used#5 in
-let anf#9 : int = helper#6 0 21 in
-let anf#10 : int = helper#6 0 21 in
+let helper#7 : int -> int -> int = \unused#5 : int used#6 : int -> used#6 in
+let anf#9 : int = helper#7 0 21 in
+let anf#10 : int = helper#7 0 21 in
 addInteger anf#9 anf#10
 --- optimized UPLC
 (program 1.1.0
   [(lam helper_3
-    [(lam anf_7
-      [(lam anf_8 [[(builtin addInteger) anf_7] anf_8])
+    [(lam anf_4
+      [(lam anf_8 [[(builtin addInteger) anf_4] anf_8])
         [[helper_3 (con integer 0)] (con integer 21)]])
       [[helper_3 (con integer 0)] (con integer 21)]])
     (lam unused_1 (lam used_2 used_2))])
 --- isolated pass
 --- core before
 let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
-let alias#7 : int -> int -> int = helper#3 in
-let anf#8 : int = helper#3 0 21 in
-let anf#9 : int = alias#7 0 21 in
-addInteger anf#8 anf#9
+let alias#4 : int -> int -> int = helper#3 in
+addInteger (helper#3 0 21) (alias#4 0 21)
+--- core early
+let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
+let alias#4 : int -> int -> int = helper#3 in
+addInteger (helper#3 0 21) (alias#4 0 21)
+--- core after ANF
+let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
+let alias#4 : int -> int -> int = helper#3 in
+let anf#5 : int = helper#3 0 21 in
+let anf#6 : int = alias#4 0 21 in
+addInteger anf#5 anf#6
 --- uplc before
 (program 1.1.0
   [(lam helper_3
-    [(lam alias_7
-      [(lam anf_8
-        [(lam anf_9 [[(builtin addInteger) anf_8] anf_9])
-          [[alias_7 (con integer 0)] (con integer 21)]])
-        [[helper_3 (con integer 0)] (con integer 21)]])
+    [(lam alias_4
+      [[(builtin addInteger) [[helper_3 (con integer 0)] (con integer 21)]]
+        [[alias_4 (con integer 0)] (con integer 21)]])
       helper_3])
     (lam unused_1 (lam used_2 used_2))])
---- core after
-let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
-let alias#7 : int -> int -> int = helper#3 in
-let anf#8 : int = helper#3 0 21 in
-let anf#9 : int = alias#7 0 21 in
-addInteger anf#8 anf#9
 --- uplc after
 (program 1.1.0
   [(lam helper_3
-    [(lam alias_7
-      [(lam anf_8
-        [(lam anf_9 [[(builtin addInteger) anf_8] anf_9])
-          [[alias_7 (con integer 0)] (con integer 21)]])
+    [(lam alias_4
+      [(lam anf_5
+        [(lam anf_6 [[(builtin addInteger) anf_5] anf_6])
+          [[alias_4 (con integer 0)] (con integer 21)]])
         [[helper_3 (con integer 0)] (con integer 21)]])
       helper_3])
     (lam unused_1 (lam used_2 used_2))])

@@ -1,0 +1,83 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let xs#13 : list int = (con (list integer) [21, 7]) in
+let alias#14 : list int = xs#13 in
+let alias2#15 : list int = alias#14 in
+mkCons (addInteger (case@List alias2#15 of
+  Cons head#16 tail#17 -> head#16) (case@List alias2#15 of
+  Cons head#18 tail#19 -> head#18)) xs#13
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam xs_13
+    [(lam alias_14
+      [(lam alias2_15
+        [[(force (builtin mkCons))
+          [[(builtin addInteger)
+            (case alias2_15 (lam head_16 (lam tail_17 head_16)) (error))]
+            (case alias2_15 (lam head_18 (lam tail_19 head_18)) (error))]]
+          xs_13])
+        alias_14])
+      xs_13])
+    (con (list integer) [21, 7])])
+--- optimized Core
+let anf#10 : int = addInteger 21 21 in
+mkCons anf#10 (con (list integer) [21, 7])
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam anf_1 [[builtin_2 anf_1] (con (list integer) [21, 7])])
+      [[(builtin addInteger) (con integer 21)] (con integer 21)]])
+    (force (builtin mkCons))])
+--- isolated pass
+--- isolated ANF input
+let xs#13 : list int = (con (list integer) [21, 7]) in
+let alias#14 : list int = xs#13 in
+let alias2#15 : list int = alias#14 in
+let anf#20 : int = case@List alias2#15 of
+  Cons head#16 tail#17 -> head#16 in
+let anf#21 : int = case@List alias2#15 of
+  Cons head#18 tail#19 -> head#18 in
+let anf#22 : int = addInteger anf#20 anf#21 in
+mkCons anf#22 xs#13
+--- isolated folded Core
+let list_field#23 : int = 21 in
+let list_field#24 : list int = (con (list integer) [7]) in
+let xs#13 : list int = (con (list integer) [21, 7]) in
+let alias#14 : list int = xs#13 in
+let alias2#15 : list int = alias#14 in
+let anf#20 : int = let head#16 : int = list_field#23 in
+let tail#17 : list int = list_field#24 in
+head#16 in
+let anf#21 : int = let head#18 : int = list_field#23 in
+let tail#19 : list int = list_field#24 in
+head#18 in
+let anf#22 : int = addInteger anf#20 anf#21 in
+mkCons anf#22 xs#13
+--- isolated cleaned Core
+let anf#22 : int = addInteger 21 21 in
+mkCons anf#22 (con (list integer) [21, 7])
+--- isolated UPLC before
+(program 1.1.0
+  [(lam xs_13
+    [(lam alias_14
+      [(lam alias2_15
+        [(lam anf_20
+          [(lam anf_21
+            [(lam anf_22 [[(force (builtin mkCons)) anf_22] xs_13])
+              [[(builtin addInteger) anf_20] anf_21]])
+            (case alias2_15 (lam head_18 (lam tail_19 head_18)) (error))])
+          (case alias2_15 (lam head_16 (lam tail_17 head_16)) (error))])
+        alias_14])
+      xs_13])
+    (con (list integer) [21, 7])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_22 [[(force (builtin mkCons)) anf_22] (con (list integer) [21, 7])])
+    [[(builtin addInteger) (con integer 21)] (con integer 21)]])
+--- result
+(con (list integer) [42, 21, 7])
+--- logs
+[]

@@ -74,8 +74,8 @@ fn oversaturation_exposes_more_than_one_round() {
     let core = b.app(f, &[b.int(1), b.int(2), b.int(42)], INT);
     let first = reduce(&b, crate::propagate::propagate(&b, core));
     let second = reduce(&b, crate::propagate::propagate(&b, first));
-    assert_ne!(pretty(second), pretty(simplify(&b, core)));
     assert_optimization_snapshot!(&b, core);
+    assert_ne!(pretty(second), pretty(simplify(&b, core)));
 }
 #[test]
 fn beta_splices_nested_rhs_and_preserves_strict_computation() {

@@ -1,0 +1,41 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 453
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), candidate.result, candidate.logs))"
+---
+--- unoptimized Core
+let capture#8 : int = trace "kept" in 7 in
+letrec
+  dead#9 : int -> int [static []] = \x#10 : int -> addInteger capture#8 capture#8
+in
+42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam capture_8
+    [(lam dead_9 (con integer 42))
+      [(lam self_1 [self_1 self_1])
+        (lam self_1 (lam x_10 [[(builtin addInteger) capture_8] capture_8]))]])
+    (force [[(force (builtin trace)) (con string "kept")] (delay (con integer 7))])])
+--- optimized Core
+let capture#1 : int = trace "kept" in 7 in
+42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam capture_2 (con integer 42))
+      (force [[builtin_3 (con string "kept")] (delay (con integer 7))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let capture#8 : int = trace "kept" in 7 in
+letrec
+  dead#9 : int -> int [static []] = \x#10 : int -> addInteger capture#8 capture#8
+in
+42
+--- core after
+let capture#8 : int = trace "kept" in 7 in
+42
+--- result
+(con integer 42)
+--- logs
+["kept"]

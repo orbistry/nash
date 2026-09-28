@@ -96,8 +96,8 @@ fn computed_function_operand_remains_bound() {
     );
     let f = binder(&b, "f", value.ty);
     let core = b.let_(f, value, b.app(b.var(f.name, f.ty), &[b.int(42)], INT));
-    assert!(std::ptr::eq(core, inline(&b, core)));
     assert_optimization_snapshot!(&b, core);
+    assert!(std::ptr::eq(core, inline(&b, core)));
 }
 #[test]
 fn computed_capture_is_not_moved_into_a_delay() {
@@ -105,8 +105,8 @@ fn computed_capture_is_not_moved_into_a_delay() {
     let b = Builder::new(&a);
     let x = binder(&b, "x", INT);
     let core = b.let_(x, b.error(INT), b.delay(b.var(x.name, INT)));
-    assert!(std::ptr::eq(core, inline(&b, core)));
     assert_optimization_snapshot!(&b, core);
+    assert!(std::ptr::eq(core, inline(&b, core)));
 }
 #[test]
 fn multiple_use_function_stays_shared() {
@@ -125,8 +125,8 @@ fn multiple_use_function_stays_shared() {
             b.app(b.var(f.name, f.ty), &[b.int(42)], INT),
         ),
     );
-    assert!(std::ptr::eq(core, inline(&b, core)));
     assert_optimization_snapshot!(&b, core);
+    assert!(std::ptr::eq(core, inline(&b, core)));
 }
 #[test]
 fn occurrence_and_root_type_views_survive() {
@@ -193,6 +193,6 @@ fn forced_builtin_reference_stays_bound_even_when_returned() {
     )));
     let f = binder(&b, "tracer", ty);
     let core = b.let_(f, b.builtin(F::Trace, &[], ty), b.var(f.name, ty));
-    assert!(std::ptr::eq(core, inline(&b, core)));
     assert_optimization_snapshot!(&b, core);
+    assert!(std::ptr::eq(core, inline(&b, core)));
 }

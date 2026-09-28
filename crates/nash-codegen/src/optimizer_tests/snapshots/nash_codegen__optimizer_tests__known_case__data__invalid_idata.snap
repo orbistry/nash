@@ -1,0 +1,71 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data iData true of
+  DataI number#1 -> number#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay [(lam number_1 number_1) [(builtin unIData) generated_2]])]
+        (delay (error))]))
+    [(builtin iData) (con bool True)]])
+--- optimized Core
+let anf#3 : Data = iData true in
+case@Data anf#3 of
+  DataI number#2 -> number#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam anf_1
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))] (delay (error))]
+            (delay [(lam number_4 number_4) [(builtin unIData) generated_5]])]
+            (delay (error))]))
+        anf_1])
+      [(builtin iData) (con bool True)]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : Data = iData true in
+case@Data anf#4 of
+  DataI number#1 -> number#1
+--- isolated folded Core
+let anf#4 : Data = iData true in
+case@Data anf#4 of
+  DataI number#1 -> number#1
+--- isolated cleaned Core
+let anf#4 : Data = iData true in
+case@Data anf#4 of
+  DataI number#1 -> number#1
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4
+    [(lam generated_5
+      (force
+        [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay [(lam number_1 number_1) [(builtin unIData) generated_5]])]
+          (delay (error))]))
+      anf_4])
+    [(builtin iData) (con bool True)]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_4
+    [(lam generated_5
+      (force
+        [[[[[[(force (builtin chooseData)) generated_5] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay [(lam number_1 number_1) [(builtin unIData) generated_5]])]
+          (delay (error))]))
+      anf_4])
+    [(builtin iData) (con bool True)]])
+--- result
+error: Runtime(TypeMismatch(Integer, Boolean(true)))
+--- logs
+[]

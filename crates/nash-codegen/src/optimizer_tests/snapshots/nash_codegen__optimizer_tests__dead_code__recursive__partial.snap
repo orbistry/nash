@@ -1,0 +1,69 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+(letrec
+  f#1 : int -> int -> int [static []] = \x#3 : int y#4 : int -> addInteger x#3 y#4
+  dead#2 : int -> int [static []] = \z#5 : int -> error
+in
+f#1 40) 2
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam dispatch_6
+    [(lam f_1
+      [(lam dead_2 [f_1 (con integer 40)])
+        (lam z_16 [dispatch_6 (constr 1 dispatch_6 z_16)])])
+      (lam x_17 (lam y_18 [dispatch_6 (constr 0 dispatch_6 x_17 y_18)]))])
+    (lam request_7
+      (case
+        request_7
+        (lam self_8 (lam x_3 (lam y_4 [[(builtin addInteger) x_3] y_4])))
+        (lam self_12 (lam z_5 (error)))))]
+    (con integer 2)])
+--- optimized Core
+letrec
+  f#6 : int -> int -> int [static []] = \x#8 : int y#9 : int -> addInteger x#8 y#9
+in
+let anf#11 : int -> int = f#6 40 in
+anf#11 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam f_12 [(lam anf_13 [anf_13 (con integer 2)]) [f_12 (con integer 40)]])
+    [(lam self_4 [self_4 self_4])
+      (lam self_5 (lam x_7 (lam y_10 [[(builtin addInteger) x_7] y_10])))]])
+--- isolated pass
+--- core before
+(letrec
+  f#1 : int -> int -> int [static []] = \x#3 : int y#4 : int -> addInteger x#3 y#4
+  dead#2 : int -> int [static []] = \z#5 : int -> error
+in
+f#1 40) 2
+--- uplc before
+(program 1.1.0
+  [[(lam dispatch_23
+    [(lam f_1
+      [(lam dead_2 [f_1 (con integer 40)])
+        (lam z_33 [dispatch_23 (constr 1 dispatch_23 z_33)])])
+      (lam x_34 (lam y_35 [dispatch_23 (constr 0 dispatch_23 x_34 y_35)]))])
+    (lam request_24
+      (case
+        request_24
+        (lam self_25 (lam x_3 (lam y_4 [[(builtin addInteger) x_3] y_4])))
+        (lam self_29 (lam z_5 (error)))))]
+    (con integer 2)])
+--- core after
+(letrec
+  f#1 : int -> int -> int [static []] = \x#3 : int y#4 : int -> addInteger x#3 y#4
+in
+f#1 40) 2
+--- uplc after
+(program 1.1.0
+  [[(lam f_1 [f_1 (con integer 40)])
+    [(lam self_36 [self_36 self_36])
+      (lam self_36 (lam x_3 (lam y_4 [[(builtin addInteger) x_3] y_4])))]]
+    (con integer 2)])
+--- result
+(con integer 42)
+--- logs
+[]

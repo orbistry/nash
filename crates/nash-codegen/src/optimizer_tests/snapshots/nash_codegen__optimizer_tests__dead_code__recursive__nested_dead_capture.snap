@@ -1,0 +1,46 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 68
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+letrec
+  outer#5 : int -> int [static []] = \x#7 : int -> x#7
+in
+letrec
+  inner#6 : int -> int [static []] = \y#8 : int -> outer#5 y#8
+in
+42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam outer_5
+    [(lam inner_6 (con integer 42))
+      [(lam self_1 [self_1 self_1]) (lam self_1 (lam y_8 [outer_5 y_8]))]])
+    [(lam self_3 [self_3 self_3]) (lam self_3 (lam x_7 x_7))]])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated pass
+--- core before
+letrec
+  outer#5 : int -> int [static []] = \x#7 : int -> x#7
+in
+letrec
+  inner#6 : int -> int [static []] = \y#8 : int -> outer#5 y#8
+in
+42
+--- uplc before
+(program 1.1.0
+  [(lam outer_5
+    [(lam inner_6 (con integer 42))
+      [(lam self_9 [self_9 self_9]) (lam self_9 (lam y_8 [outer_5 y_8]))]])
+    [(lam self_11 [self_11 self_11]) (lam self_11 (lam x_7 x_7))]])
+--- core after
+42
+--- uplc after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

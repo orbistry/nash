@@ -1,0 +1,100 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let effect#1 : int = trace "before" in 0 in
+let data#2 : Data = (con data (I 42)) in
+case@Data data#2 of
+  DataI payload#3 -> trace "selected" in payload#3
+  _ -> trace "cold" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam effect_1
+    [(lam data_2
+      [(lam generated_4
+        (force
+          [[[[[[(force (builtin chooseData)) generated_4]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay
+              [(lam payload_3
+                (force [[(force (builtin trace)) (con string "selected")] (delay payload_3)]))
+                [(builtin unIData) generated_4]])]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+        data_2])
+      (con data (I 42))])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 0))])])
+--- optimized Core
+let effect#4 : int = trace "before" in 0 in
+case@Data (con data (I 42)) of
+  DataI payload#6 -> trace "selected" in payload#6
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam builtin_5
+      [(lam partial_6
+        [(lam effect_1
+          [(lam generated_4
+            (force
+              [[[[[[builtin_5 generated_4] (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay
+                  [(lam payload_2 (force [[builtin_3 (con string "selected")] (delay payload_2)]))
+                    [(builtin unIData) generated_4]])]
+                (delay (force [partial_6 (delay (error))]))]))
+            (con data (I 42))])
+          (force [[builtin_3 (con string "before")] (delay (con integer 0))])])
+        [builtin_3 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let effect#1 : int = trace "before" in 0 in
+let data#2 : Data = (con data (I 42)) in
+case@Data data#2 of
+  DataI payload#3 -> trace "selected" in payload#3
+  _ -> trace "cold" in error
+--- isolated folded Core
+let effect#1 : int = trace "before" in 0 in
+let data_payload#4 : int = 42 in
+let data#2 : Data = (con data (I 42)) in
+let payload#3 : int = data_payload#4 in
+trace "selected" in payload#3
+--- isolated cleaned Core
+let effect#1 : int = trace "before" in 0 in
+trace "selected" in 42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam effect_1
+    [(lam data_2
+      [(lam generated_4
+        (force
+          [[[[[[(force (builtin chooseData)) generated_4]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay
+              [(lam payload_3
+                (force [[(force (builtin trace)) (con string "selected")] (delay payload_3)]))
+                [(builtin unIData) generated_4]])]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+        data_2])
+      (con data (I 42))])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 0))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam effect_1
+    (force
+      [[(force (builtin trace)) (con string "selected")] (delay (con integer 42))]))
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 0))])])
+--- result
+(con integer 42)
+--- logs
+["before", "selected"]

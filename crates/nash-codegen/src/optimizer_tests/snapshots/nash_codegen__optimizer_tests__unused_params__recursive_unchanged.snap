@@ -1,7 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
 letrec
@@ -27,15 +26,20 @@ letrec
   helper#3 : int -> int -> int [static []] = \unused#1 : int used#2 : int -> used#2
 in
 helper#3 0 42
---- uplc before
-(program 1.1.0
-  [(lam helper_3 [[helper_3 (con integer 0)] (con integer 42)])
-    [(lam self_4 [self_4 self_4]) (lam self_4 (lam unused_1 (lam used_2 used_2)))]])
---- core after
+--- core early
 letrec
   helper#3 : int -> int -> int [static []] = \unused#1 : int used#2 : int -> used#2
 in
 helper#3 0 42
+--- core after ANF
+letrec
+  helper#3 : int -> int -> int [static []] = \unused#1 : int used#2 : int -> used#2
+in
+helper#3 0 42
+--- uplc before
+(program 1.1.0
+  [(lam helper_3 [[helper_3 (con integer 0)] (con integer 42)])
+    [(lam self_4 [self_4 self_4]) (lam self_4 (lam unused_1 (lam used_2 used_2)))]])
 --- uplc after
 (program 1.1.0
   [(lam helper_3 [[helper_3 (con integer 0)] (con integer 42)])

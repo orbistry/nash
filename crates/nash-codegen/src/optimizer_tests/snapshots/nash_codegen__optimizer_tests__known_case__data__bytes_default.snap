@@ -1,0 +1,84 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data (con data (B #6e617368)) of
+  _ -> trace "fallback" in 9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_1
+    (force
+      [[[[[[(force (builtin chooseData)) generated_1]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]))
+    (con data (B #6e617368))])
+--- optimized Core
+case@Data (con data (B #6e617368)) of
+  _ -> trace "fallback" in 9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    [(lam builtin_3
+      [(lam partial_4
+        [(lam generated_2
+          (force
+            [[[[[[builtin_3 generated_2] (delay (force [partial_4 (delay (con integer 9))]))]
+              (delay (force [partial_4 (delay (con integer 9))]))]
+              (delay (force [partial_4 (delay (con integer 9))]))]
+              (delay (force [partial_4 (delay (con integer 9))]))]
+              (delay (force [partial_4 (delay (con integer 9))]))]))
+          (con data (B #6e617368))])
+        [builtin_1 (con string "fallback")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+case@Data (con data (B #6e617368)) of
+  _ -> trace "fallback" in 9
+--- isolated folded Core
+trace "fallback" in 9
+--- isolated cleaned Core
+trace "fallback" in 9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_1
+    (force
+      [[[[[[(force (builtin chooseData)) generated_1]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))]))
+    (con data (B #6e617368))])
+--- isolated UPLC after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "fallback")] (delay (con integer 9))]))
+--- result
+(con integer 9)
+--- logs
+["fallback"]

@@ -1,0 +1,28 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 34
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+let unused#6 : list int -> int = headList in
+42
+--- unoptimized UPLC
+(program 1.1.0 [(lam unused_6 (con integer 42)) (force (builtin headList))])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated pass
+--- core before
+let unused#6 : list int -> int = headList in
+42
+--- uplc before
+(program 1.1.0 [(lam unused_6 (con integer 42)) (force (builtin headList))])
+--- core after
+42
+--- uplc after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

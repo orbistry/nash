@@ -1,0 +1,15 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "format!(\"--- before\\n{}\\n--- after\\n{}\\n--- errors\\n{left:?}\\n{right:?}\",\npretty(before), pretty(after))"
+---
+--- before
+let subject#3 : @constr[0]() = constr 0 in
+case@Tag subject#3 of
+  True -> 42
+--- after
+let subject#3 : @constr[0]() = constr 0 in
+case@Tag subject#3 of
+  True -> 42
+--- errors
+InvalidCase("tag branches must cover consecutive unique tags")
+InvalidCase("tag branches must cover consecutive unique tags")

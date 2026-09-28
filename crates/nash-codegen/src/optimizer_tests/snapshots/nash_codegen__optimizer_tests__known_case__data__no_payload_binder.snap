@@ -1,0 +1,13 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "format!(\"--- before\\n{}\\n--- after\\n{}\\n--- errors\\n{left:?}\\n{right:?}\",\npretty(before), pretty(after))"
+---
+--- before
+case@Data (con data (I 42)) of
+  DataI -> 42
+--- after
+case@Data (con data (I 42)) of
+  DataI -> 42
+--- errors
+InvalidCase("invalid Data branch")
+InvalidCase("invalid Data branch")

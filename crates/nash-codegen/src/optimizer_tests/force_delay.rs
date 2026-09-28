@@ -14,8 +14,6 @@ fn trace<'a>(b: &Builder<'a>, s: &'a str, x: &'a Core<'a>) -> &'a Core<'a> {
 fn check(name: &str, b: &Builder<'_>, before: &Core<'_>, fails: bool) {
     let after = force_delay::reduce(b, before);
 
-    hygiene::validate(after, &[]).unwrap();
-
     let left = crate::harness::eval_core_raw(b.arena, before);
     let right = crate::harness::eval_core_raw(b.arena, after);
 
@@ -36,6 +34,7 @@ fn check(name: &str, b: &Builder<'_>, before: &Core<'_>, fails: bool) {
             )
         )
     );
+    hygiene::validate(after, &[]).unwrap();
     // Properties independent of the expected snapshot.
     assert_eq!(before.ty, after.ty);
     assert!(std::ptr::eq(after, force_delay::reduce(b, after)));
@@ -104,11 +103,11 @@ fn reverse_pair_and_invalid_force_remain() {
     let a = Arena::new();
     let b = Builder::new(&a);
     let invalid = b.force(b.int(42), INT);
-    assert!(std::ptr::eq(invalid, force_delay::reduce(&b, invalid)));
     check("invalid_force", &b, invalid, true);
+    assert!(std::ptr::eq(invalid, force_delay::reduce(&b, invalid)));
     let suspended = b.delay(invalid);
-    assert!(std::ptr::eq(suspended, force_delay::reduce(&b, suspended)));
     check("reverse_pair", &b, suspended, false);
+    assert!(std::ptr::eq(suspended, force_delay::reduce(&b, suspended)));
 }
 #[test]
 fn outer_type_view_is_retained() {
@@ -138,8 +137,8 @@ fn exposed_let_body_needs_cleanup_but_not_another_anf_pass() {
         b.force(b.delay(delayed_body), INT),
         b.builtin(F::AddInteger, &[b.var(y.name, INT), b.int(21)], INT),
     );
-    nash_ir::anf::validate(root).unwrap();
     check("exposed_let", &b, root, false);
+    nash_ir::anf::validate(root).unwrap();
     let after = nash_ir::small_inline::simplify(&b, root);
     nash_ir::anf::validate(after).unwrap();
     let before_result = crate::harness::eval_core_raw(&a, root);

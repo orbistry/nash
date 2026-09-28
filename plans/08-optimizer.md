@@ -18,7 +18,8 @@ unused-binding removal, recursive-member reachability and pre-ANF nonrecursive
 unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 8
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
-native-list folding in Chunk 7 are accepted. Next is known Data-shape folding;
+native-list folding in Chunk 7 are accepted. Literal Data-shape folding is an
+implemented trial awaiting acceptance;
 other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
@@ -34,13 +35,29 @@ request. The measurements below are historical records; accepted semantic
 snapshots and the explicit budget regression runner remain. Future trial sources
 are temporary and should be removed after recording their decision.
 
-Accepted decisions (26 September 2026):
+Test layout cleanup (28 September 2026): codegen optimizer tests are grouped by
+pass. `known_case.rs` contains Boolean, constructor, list and Data submodules;
+`dead_code.rs` contains binding and recursive reachability submodules.
+`unused_params.rs` is one pre-ANF suite using the actual accepted placement;
+the old post-ANF test helper is removed, while its useful semantic fixtures remain.
+Complete calls with later effectful arguments now test successful pre-ANF reduction,
+rather than retaining the obsolete post-ANF no-change expectation. Independent
+properties follow snapshots; snapshots alone specify exact visible structure.
+Production pass behavior, the accepted pipeline and performance baseline are unchanged.
+The unaccepted Data rule remains isolated; historical measurement records remain.
+Cleanup validation: 498 codegen and 69 IR tests pass, along with strict workspace
+Clippy and formatting. All 188 snapshot moves retain their fixtures; O0 sections
+are unchanged. All 23 performance baseline rows still match. Nextest stalled
+during discovery, so the focused suites were run through Cargo instead.
+
+Accepted decisions (26 September 2026, reconciled with later keep decisions):
 
 - Start with binder hygiene, static-parameter lifting and A-normal form (ANF),
   retaining explicit recursive workers in Core. Lift before ANF splits calls;
   do not reconstruct application chains to recover this information.
 - Optimize while recursive functions remain explicit `LetRec`, then rewrite
-  recursion once, normalize the generated code and run cleanup.
+  recursion once and lower the generated code directly. Normalize only once,
+  before Core optimization; do not rerun ANF after recursion rewriting.
 - Consider inlining small functions even when used multiple times. This is a
   candidate to measure, not blanket permission to duplicate code.
 - Evaluate optimizations one chunk or one individual rewrite at a time. Review

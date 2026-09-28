@@ -1,0 +1,60 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Tag constr 2 (trace "field" in 0) (trace "field" in 0) of
+  0 -> 42
+  1 ignored#7 -> 42
+  2 ignored#8 ignored#9 -> 42
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (constr 2
+      (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))])
+      (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))]))
+    (con integer 42)
+    (lam ignored_7 (con integer 42))
+    (lam ignored_8 (lam ignored_9 (con integer 42)))))
+--- optimized Core
+let ignored#2 : int = trace "field" in 0 in
+let ignored#3 : int = trace "field" in 0 in
+42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam partial_6
+      [(lam ignored_1
+        [(lam ignored_4 (con integer 42)) (force [partial_6 (delay (con integer 0))])])
+        (force [partial_6 (delay (con integer 0))])])
+      [builtin_5 (con string "field")]])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+case@Tag constr 2 (trace "field" in 0) (trace "field" in 0) of
+  0 -> 42
+  1 ignored#7 -> 42
+  2 ignored#8 ignored#9 -> 42
+--- uplc before
+(program 1.1.0
+  (case
+    (constr 2
+      (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))])
+      (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))]))
+    (con integer 42)
+    (lam ignored_7 (con integer 42))
+    (lam ignored_8 (lam ignored_9 (con integer 42)))))
+--- core after
+let ignored#8 : int = trace "field" in 0 in
+let ignored#9 : int = trace "field" in 0 in
+42
+--- uplc after
+(program 1.1.0
+  [(lam ignored_8
+    [(lam ignored_9 (con integer 42))
+      (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))])])
+    (force [[(force (builtin trace)) (con string "field")] (delay (con integer 0))])])
+--- result
+(con integer 42)
+--- logs
+["field", "field"]

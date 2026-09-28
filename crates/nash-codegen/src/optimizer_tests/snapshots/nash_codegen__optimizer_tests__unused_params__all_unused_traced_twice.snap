@@ -1,0 +1,103 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
+assertion_line: 37
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+let helper#3 : int -> int -> int = \x#1 : int y#2 : int -> trace "body" in 21 in
+addInteger (helper#3 (trace "a" in 1) (trace "b" in 2)) (helper#3 (trace "a" in 1) (trace "b" in 2))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam helper_3
+    [[(builtin addInteger)
+      [[helper_3
+        (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])]
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])]]
+      [[helper_3
+        (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])]
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])]])
+    (lam x_1
+      (lam y_2
+        (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))])))])
+--- optimized Core
+let helper#6 : @delay int = delay (trace "body" in 21) in
+let arg#7 : int = trace "a" in 1 in
+let arg#8 : int = trace "b" in 2 in
+let anf#11 : int = force helper#6 in
+let arg#9 : int = trace "a" in 1 in
+let arg#10 : int = trace "b" in 2 in
+let anf#12 : int = force helper#6 in
+addInteger anf#11 anf#12
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_15
+    [(lam partial_16
+      [(lam partial_17
+        [(lam helper_1
+          [(lam arg_2
+            [(lam arg_3
+              [(lam anf_4
+                [(lam arg_5
+                  [(lam arg_13
+                    [(lam anf_14 [[(builtin addInteger) anf_4] anf_14]) (force helper_1)])
+                    (force [partial_16 (delay (con integer 2))])])
+                  (force [partial_17 (delay (con integer 1))])])
+                (force helper_1)])
+              (force [partial_16 (delay (con integer 2))])])
+            (force [partial_17 (delay (con integer 1))])])
+          (delay (force [[builtin_15 (con string "body")] (delay (con integer 21))]))])
+        [builtin_15 (con string "a")]])
+      [builtin_15 (con string "b")]])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let helper#3 : int -> int -> int = \x#1 : int y#2 : int -> trace "body" in 21 in
+addInteger (helper#3 (trace "a" in 1) (trace "b" in 2)) (helper#3 (trace "a" in 1) (trace "b" in 2))
+--- core early
+let helper#3 : @delay int = delay (trace "body" in 21) in
+addInteger (let arg#4 : int = trace "a" in 1 in
+let arg#5 : int = trace "b" in 2 in
+force helper#3) (let arg#6 : int = trace "a" in 1 in
+let arg#7 : int = trace "b" in 2 in
+force helper#3)
+--- core after ANF
+let helper#3 : @delay int = delay (trace "body" in 21) in
+let arg#4 : int = trace "a" in 1 in
+let arg#5 : int = trace "b" in 2 in
+let anf#8 : int = force helper#3 in
+let arg#6 : int = trace "a" in 1 in
+let arg#7 : int = trace "b" in 2 in
+let anf#9 : int = force helper#3 in
+addInteger anf#8 anf#9
+--- uplc before
+(program 1.1.0
+  [(lam helper_3
+    [[(builtin addInteger)
+      [[helper_3
+        (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])]
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])]]
+      [[helper_3
+        (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])]
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])]])
+    (lam x_1
+      (lam y_2
+        (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))])))])
+--- uplc after
+(program 1.1.0
+  [(lam helper_3
+    [(lam arg_4
+      [(lam arg_5
+        [(lam anf_8
+          [(lam arg_6
+            [(lam arg_7 [(lam anf_9 [[(builtin addInteger) anf_8] anf_9]) (force helper_3)])
+              (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])])
+            (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])])
+          (force helper_3)])
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 2))])])
+      (force [[(force (builtin trace)) (con string "a")] (delay (con integer 1))])])
+    (delay
+      (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))])
+--- result
+(con integer 42)
+--- logs
+["a", "b", "body", "a", "b", "body"]

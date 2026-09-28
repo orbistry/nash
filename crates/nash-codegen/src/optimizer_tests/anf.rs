@@ -32,7 +32,7 @@ fn constr<'a>(b: &Builder<'a>, tag: u16, fields: &[&'a Core<'a>]) -> &'a Core<'a
     )
 }
 
-pub(crate) use crate::harness::candidate;
+use crate::harness::candidate;
 
 fn check(name: &str, b: &Builder<'_>, core: &Core<'_>, fails: bool) {
     let before = crate::recursion::rewrite(b, core).unwrap();
@@ -41,10 +41,6 @@ fn check(name: &str, b: &Builder<'_>, core: &Core<'_>, fails: bool) {
     let first_anf = anf::normalize(b, lifted);
     let rewritten = crate::recursion::rewrite(b, first_anf).unwrap();
     let after = hygiene::freshen(b, rewritten);
-    for phase in [fresh, lifted, first_anf, after] {
-        hygiene::validate(phase, &[]).unwrap();
-    }
-    anf::validate(first_anf).unwrap();
 
     let baseline = crate::harness::eval_core_raw(b.arena, before);
     let normalized = crate::harness::eval_core_raw(b.arena, after);
@@ -66,6 +62,10 @@ fn check(name: &str, b: &Builder<'_>, core: &Core<'_>, fails: bool) {
             )
         )
     );
+    for phase in [fresh, lifted, first_anf, after] {
+        hygiene::validate(phase, &[]).unwrap();
+    }
+    anf::validate(first_anf).unwrap();
     // Properties independent of the expected snapshot.
     assert_eq!(core.ty, after.ty);
     assert_eq!(baseline.observable, normalized.observable);
@@ -771,17 +771,13 @@ fn optimized_recursion_lowers_without_renormalizing_self_application() {
     );
     let before = crate::recursion::rewrite(&b, core).unwrap();
     let after = candidate(&arena, core);
-    // Generated self-application remains nested. Lowering accepts this shape.
-    assert!(anf::validate(after).is_err());
     let baseline = crate::harness::eval_core_raw(&arena, before);
     let optimized = crate::harness::eval_core_raw(&arena, after);
-    assert_eq!(baseline.observable, optimized.observable);
     assert!(
         !optimized.result.starts_with("error:"),
         "{}",
         optimized.result
     );
-    assert_eq!(baseline.logs, optimized.logs);
 
     insta::assert_snapshot!(crate::harness::pass_snapshot(
         b.arena,
@@ -794,4 +790,8 @@ fn optimized_recursion_lowers_without_renormalizing_self_application() {
             semantic_output(&optimized),
         )
     ));
+    assert_eq!(baseline.logs, optimized.logs);
+    assert_eq!(baseline.observable, optimized.observable);
+    // Generated self-application remains nested. Lowering accepts this shape.
+    assert!(anf::validate(after).is_err());
 }

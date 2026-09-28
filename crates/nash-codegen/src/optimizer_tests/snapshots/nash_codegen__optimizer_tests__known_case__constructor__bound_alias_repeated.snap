@@ -1,0 +1,84 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#1 : @constr[0](int) = constr 0 (trace "field" in 21) in
+let subject#2 : @constr[0](int) = subject#1 in
+let subject#3 : @constr[0](int) = subject#2 in
+let first#6 : int = case@Tag subject#3 of
+  0 x#4 -> x#4 in
+let second#7 : int = case@Tag subject#1 of
+  0 y#5 -> y#5 in
+addInteger first#6 second#7
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1
+    [(lam subject_2
+      [(lam subject_3
+        [(lam first_6
+          [(lam second_7 [[(builtin addInteger) first_6] second_7])
+            (case subject_1 (lam y_5 y_5))])
+          (case subject_3 (lam x_4 x_4))])
+        subject_2])
+      subject_1])
+    (constr 0
+      (force
+        [[(force (builtin trace)) (con string "field")] (delay (con integer 21))]))])
+--- optimized Core
+let anf#15 : int = trace "field" in 21 in
+addInteger anf#15 anf#15
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam anf_1 [[(builtin addInteger) anf_1] anf_1])
+      (force [[builtin_2 (con string "field")] (delay (con integer 21))])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#8 : int = trace "field" in 21 in
+let subject#1 : @constr[0](int) = constr 0 anf#8 in
+let subject#2 : @constr[0](int) = subject#1 in
+let subject#3 : @constr[0](int) = subject#2 in
+let first#6 : int = case@Tag subject#3 of
+  0 x#4 -> x#4 in
+let second#7 : int = case@Tag subject#1 of
+  0 y#5 -> y#5 in
+addInteger first#6 second#7
+--- isolated folded Core
+let anf#8 : int = trace "field" in 21 in
+let subject#1 : @constr[0](int) = constr 0 anf#8 in
+let subject#2 : @constr[0](int) = subject#1 in
+let subject#3 : @constr[0](int) = subject#2 in
+let first#6 : int = let x#4 : int = anf#8 in
+x#4 in
+let second#7 : int = let y#5 : int = anf#8 in
+y#5 in
+addInteger first#6 second#7
+--- isolated cleaned Core
+let anf#8 : int = trace "field" in 21 in
+addInteger anf#8 anf#8
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_8
+    [(lam subject_1
+      [(lam subject_2
+        [(lam subject_3
+          [(lam first_6
+            [(lam second_7 [[(builtin addInteger) first_6] second_7])
+              (case subject_1 (lam y_5 y_5))])
+            (case subject_3 (lam x_4 x_4))])
+          subject_2])
+        subject_1])
+      (constr 0 anf_8)])
+    (force
+      [[(force (builtin trace)) (con string "field")] (delay (con integer 21))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_8 [[(builtin addInteger) anf_8] anf_8])
+    (force
+      [[(force (builtin trace)) (con string "field")] (delay (con integer 21))])])
+--- result
+(con integer 42)
+--- logs
+["field"]

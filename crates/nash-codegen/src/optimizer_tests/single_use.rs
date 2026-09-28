@@ -1,4 +1,4 @@
-//! Rule 3 candidate: paired Core/UPLC semantics, without budget assertions.
+//! Accepted rule 3: paired Core/UPLC semantics, without budget assertions.
 use nash_ir::{
     anf,
     build::Builder,
@@ -22,10 +22,6 @@ fn traced<'a>(b: &Builder<'a>, message: &'a str, value: &'a Core<'a>) -> &'a Cor
 fn check<'a>(name: &str, b: &Builder<'a>, core: &'a Core<'a>, fails: bool) {
     let before = nash_ir::beta::simplify(b, anf::normalize(b, core));
     let after = simplify(b, before);
-    for phase in [before, after] {
-        anf::validate(phase).unwrap();
-        hygiene::validate(phase, &[]).unwrap();
-    }
 
     let baseline = crate::harness::eval_core_raw(b.arena, before);
     let candidate = crate::harness::eval_core_raw(b.arena, after);
@@ -51,6 +47,10 @@ fn check<'a>(name: &str, b: &Builder<'a>, core: &'a Core<'a>, fails: bool) {
             )
         )
     );
+    for phase in [before, after] {
+        anf::validate(phase).unwrap();
+        hygiene::validate(phase, &[]).unwrap();
+    }
     // Properties independent of the expected snapshot.
     assert_eq!(before.ty, after.ty);
     assert_eq!(pretty(after), pretty(simplify(b, after)));

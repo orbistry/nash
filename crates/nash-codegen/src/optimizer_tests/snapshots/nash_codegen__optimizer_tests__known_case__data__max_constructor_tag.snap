@@ -1,0 +1,60 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data (con data (Constr 18446744073709551615 [])) of
+  DataConstr constr#2 -> constr#2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_3
+    (force
+      [[[[[[(force (builtin chooseData)) generated_3]
+        (delay [(lam constr_2 constr_2) [(builtin unConstrData) generated_3]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    (con data (Constr 18446744073709551615 []))])
+--- optimized Core
+case@Data (con data (Constr 18446744073709551615 [])) of
+  DataConstr constr#1 -> constr#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam generated_3
+      (force
+        [[[[[[builtin_4 generated_3]
+          (delay [(lam constr_2 constr_2) [(builtin unConstrData) generated_3]])]
+          (delay (error))]
+          (delay (error))]
+          (delay (error))]
+          (delay (error))]))
+      (con data (Constr 18446744073709551615 []))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+case@Data (con data (Constr 18446744073709551615 [])) of
+  DataConstr constr#2 -> constr#2
+--- isolated folded Core
+let constr#2 : pair int (list Data) = (con (pair integer (list data)) (18446744073709551615, [])) in
+constr#2
+--- isolated cleaned Core
+(con (pair integer (list data)) (18446744073709551615, []))
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_3
+    (force
+      [[[[[[(force (builtin chooseData)) generated_3]
+        (delay [(lam constr_2 constr_2) [(builtin unConstrData) generated_3]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    (con data (Constr 18446744073709551615 []))])
+--- isolated UPLC after
+(program 1.1.0 (con (pair integer (list data)) (18446744073709551615, [])))
+--- result
+(con (pair integer (list data)) (18446744073709551615, []))
+--- logs
+[]

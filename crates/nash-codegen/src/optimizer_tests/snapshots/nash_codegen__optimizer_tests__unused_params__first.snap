@@ -1,7 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
 let helper#4 : int -> int -> int -> int = \x#1 : int y#2 : int z#3 : int -> addInteger y#2 z#3 in
@@ -27,27 +26,27 @@ addInteger anf#9 anf#10
 --- isolated pass
 --- core before
 let helper#4 : int -> int -> int -> int = \x#1 : int y#2 : int z#3 : int -> addInteger y#2 z#3 in
-let anf#5 : int = helper#4 10 20 30 in
-let anf#6 : int = helper#4 10 20 30 in
-addInteger anf#5 anf#6
+addInteger (helper#4 10 20 30) (helper#4 10 20 30)
+--- core early
+let helper#4 : int -> int -> int = \y#2 : int z#3 : int -> addInteger y#2 z#3 in
+addInteger (helper#4 20 30) (helper#4 20 30)
+--- core after ANF
+let helper#4 : int -> int -> int = \y#2 : int z#3 : int -> addInteger y#2 z#3 in
+let anf#1 : int = helper#4 20 30 in
+let anf#5 : int = helper#4 20 30 in
+addInteger anf#1 anf#5
 --- uplc before
 (program 1.1.0
   [(lam helper_4
-    [(lam anf_5
-      [(lam anf_6 [[(builtin addInteger) anf_5] anf_6])
-        [[[helper_4 (con integer 10)] (con integer 20)] (con integer 30)]])
+    [[(builtin addInteger)
+      [[[helper_4 (con integer 10)] (con integer 20)] (con integer 30)]]
       [[[helper_4 (con integer 10)] (con integer 20)] (con integer 30)]])
     (lam x_1 (lam y_2 (lam z_3 [[(builtin addInteger) y_2] z_3])))])
---- core after
-let helper#4 : int -> int -> int = \y#2 : int z#3 : int -> addInteger y#2 z#3 in
-let anf#5 : int = helper#4 20 30 in
-let anf#6 : int = helper#4 20 30 in
-addInteger anf#5 anf#6
 --- uplc after
 (program 1.1.0
   [(lam helper_4
-    [(lam anf_5
-      [(lam anf_6 [[(builtin addInteger) anf_5] anf_6])
+    [(lam anf_1
+      [(lam anf_5 [[(builtin addInteger) anf_1] anf_5])
         [[helper_4 (con integer 20)] (con integer 30)]])
       [[helper_4 (con integer 20)] (con integer 30)]])
     (lam y_2 (lam z_3 [[(builtin addInteger) y_2] z_3]))])

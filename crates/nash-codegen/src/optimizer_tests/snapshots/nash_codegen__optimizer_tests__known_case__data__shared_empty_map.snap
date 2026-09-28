@@ -1,0 +1,122 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#29 : Data = (con data (Map [])) in
+let alias#30 : Data = data#29 in
+constr 0 data#29 (case@Data alias#30 of
+  DataMap payload#31 -> payload#31) (case@Data alias#30 of
+  DataMap payload#32 -> payload#32)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_29
+    [(lam alias_30
+      (constr 0
+        data_29
+        [(lam generated_33
+          (force
+            [[[[[[(force (builtin chooseData)) generated_33] (delay (error))]
+              (delay [(lam payload_31 payload_31) [(builtin unMapData) generated_33]])]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          alias_30]
+        [(lam generated_34
+          (force
+            [[[[[[(force (builtin chooseData)) generated_34] (delay (error))]
+              (delay [(lam payload_32 payload_32) [(builtin unMapData) generated_34]])]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          alias_30]))
+      data_29])
+    (con data (Map []))])
+--- optimized Core
+let data#1 : Data = (con data (Map [])) in
+let anf#5 : list (pair Data Data) = case@Data data#1 of
+  DataMap payload#3 -> payload#3 in
+let anf#6 : list (pair Data Data) = case@Data data#1 of
+  DataMap payload#4 -> payload#4 in
+constr 0 data#1 anf#5 anf#6
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_12
+    [(lam data_2
+      [(lam anf_8
+        [(lam anf_10 (constr 0 data_2 anf_8 anf_10))
+          [(lam generated_11
+            (force
+              [[[[[[builtin_12 generated_11] (delay (error))]
+                (delay [(lam payload_9 payload_9) [(builtin unMapData) generated_11]])]
+                (delay (error))]
+                (delay (error))]
+                (delay (error))]))
+            data_2]])
+        [(lam generated_13
+          (force
+            [[[[[[builtin_12 generated_13] (delay (error))]
+              (delay [(lam payload_7 payload_7) [(builtin unMapData) generated_13]])]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          data_2]])
+      (con data (Map []))])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+let data#29 : Data = (con data (Map [])) in
+let alias#30 : Data = data#29 in
+let anf#33 : list (pair Data Data) = case@Data alias#30 of
+  DataMap payload#31 -> payload#31 in
+let anf#34 : list (pair Data Data) = case@Data alias#30 of
+  DataMap payload#32 -> payload#32 in
+constr 0 data#29 anf#33 anf#34
+--- isolated folded Core
+let data_payload#35 : list (pair Data Data) = (con (list (pair data data)) []) in
+let data#29 : Data = (con data (Map [])) in
+let alias#30 : Data = data#29 in
+let anf#33 : list (pair Data Data) = let payload#31 : list (pair Data Data) = data_payload#35 in
+payload#31 in
+let anf#34 : list (pair Data Data) = let payload#32 : list (pair Data Data) = data_payload#35 in
+payload#32 in
+constr 0 data#29 anf#33 anf#34
+--- isolated cleaned Core
+let data_payload#35 : list (pair Data Data) = (con (list (pair data data)) []) in
+constr 0 (con data (Map [])) data_payload#35 data_payload#35
+--- isolated UPLC before
+(program 1.1.0
+  [(lam data_29
+    [(lam alias_30
+      [(lam anf_33
+        [(lam anf_34 (constr 0 data_29 anf_33 anf_34))
+          [(lam generated_35
+            (force
+              [[[[[[(force (builtin chooseData)) generated_35] (delay (error))]
+                (delay [(lam payload_32 payload_32) [(builtin unMapData) generated_35]])]
+                (delay (error))]
+                (delay (error))]
+                (delay (error))]))
+            alias_30]])
+        [(lam generated_36
+          (force
+            [[[[[[(force (builtin chooseData)) generated_36] (delay (error))]
+              (delay [(lam payload_31 payload_31) [(builtin unMapData) generated_36]])]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          alias_30]])
+      data_29])
+    (con data (Map []))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam data_payload_35
+    (constr 0 (con data (Map [])) data_payload_35 data_payload_35))
+    (con (list (pair data data)) [])])
+--- result
+(constr 0
+  (con data (Map []))
+  (con (list (pair data data)) [])
+  (con (list (pair data data)) []))
+--- logs
+[]

@@ -1,0 +1,54 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
+helper#3 0 (trace "later argument" in 42)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam helper_3
+    [[helper_3 (con integer 0)]
+      (force
+        [[(force (builtin trace)) (con string "later argument")]
+          (delay (con integer 42))])])
+    (lam unused_1 (lam used_2 used_2))])
+--- optimized Core
+trace "later argument" in 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    (force [[builtin_1 (con string "later argument")] (delay (con integer 42))]))
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in
+helper#3 0 (trace "later argument" in 42)
+--- core early
+let helper#3 : int -> int = \used#2 : int -> used#2 in
+let arg#4 : int = trace "later argument" in 42 in
+helper#3 arg#4
+--- core after ANF
+let helper#3 : int -> int = \used#2 : int -> used#2 in
+let arg#4 : int = trace "later argument" in 42 in
+helper#3 arg#4
+--- uplc before
+(program 1.1.0
+  [(lam helper_3
+    [[helper_3 (con integer 0)]
+      (force
+        [[(force (builtin trace)) (con string "later argument")]
+          (delay (con integer 42))])])
+    (lam unused_1 (lam used_2 used_2))])
+--- uplc after
+(program 1.1.0
+  [(lam helper_3
+    [(lam arg_4 [helper_3 arg_4])
+      (force
+        [[(force (builtin trace)) (con string "later argument")]
+          (delay (con integer 42))])])
+    (lam used_2 used_2)])
+--- result
+(con integer 42)
+--- logs
+["later argument"]

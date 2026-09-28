@@ -1,0 +1,42 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
+assertion_line: 261
+expression: "crate::harness::pass_snapshot(b.arena, root,\nformat!(\"--- core before\\n{}\\n--- core after\\n{}\", pretty(root),\npretty(after)))"
+---
+--- unoptimized Core
+let helper#2 : int -> int = \p#1 : int -> 42 in
+helper#2 (letrec
+  loop#4 : int -> int [static []] = \n#3 : int -> loop#4 n#3
+in
+loop#4 0)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam helper_2
+    [helper_2
+      [(lam loop_4 [loop_4 (con integer 0)])
+        [(lam self_5 [self_5 self_5]) (lam self_5 (lam n_3 [[self_5 self_5] n_3]))]]])
+    (lam p_1 (con integer 42))])
+--- optimized Core
+letrec
+  worker#9 : @delay int [static []] = \ -> delay (force worker#9)
+in
+let arg#10 : int = force worker#9 in
+42
+--- optimized UPLC
+(program 1.1.0
+  [(lam worker_4 [(lam arg_5 (con integer 42)) (force worker_4)])
+    [(lam self_2 [self_2 self_2]) (lam self_3 (delay (force [self_3 self_3])))]])
+--- isolated pass
+--- core before
+let helper#2 : int -> int = \p#1 : int -> 42 in
+helper#2 (letrec
+  loop#4 : int -> int [static []] = \n#3 : int -> loop#4 n#3
+in
+loop#4 0)
+--- core after
+let helper#2 : @delay int = delay 42 in
+let arg#5 : int = letrec
+  loop#4 : int -> int [static []] = \n#3 : int -> loop#4 n#3
+in
+loop#4 0 in
+force helper#2

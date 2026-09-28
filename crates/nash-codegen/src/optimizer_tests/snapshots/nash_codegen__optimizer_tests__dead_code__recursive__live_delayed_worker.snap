@@ -1,0 +1,58 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 68
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+letrec
+  worker#1 : @delay int [static []] = \ -> delay (case@Bool true of
+    True -> 42
+    False -> force worker#1)
+in
+force worker#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam worker_1 (force worker_1))
+    [(lam self_2 [self_2 self_2])
+      (lam self_2
+        (delay (case (con bool True) (force [self_2 self_2]) (con integer 42))))]])
+--- optimized Core
+letrec
+  worker#2 : @delay int [static []] = \ -> delay 42
+in
+force worker#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam worker_5 (force worker_5))
+    [(lam self_3 [self_3 self_3]) (lam self_4 (delay (con integer 42)))]])
+--- isolated pass
+--- core before
+letrec
+  worker#1 : @delay int [static []] = \ -> delay (case@Bool true of
+    True -> 42
+    False -> force worker#1)
+in
+force worker#1
+--- uplc before
+(program 1.1.0
+  [(lam worker_1 (force worker_1))
+    [(lam self_3 [self_3 self_3])
+      (lam self_3
+        (delay (case (con bool True) (force [self_3 self_3]) (con integer 42))))]])
+--- core after
+letrec
+  worker#1 : @delay int [static []] = \ -> delay (case@Bool true of
+    True -> 42
+    False -> force worker#1)
+in
+force worker#1
+--- uplc after
+(program 1.1.0
+  [(lam worker_1 (force worker_1))
+    [(lam self_4 [self_4 self_4])
+      (lam self_4
+        (delay (case (con bool True) (force [self_4 self_4]) (con integer 42))))]])
+--- result
+(con integer 42)
+--- logs
+[]

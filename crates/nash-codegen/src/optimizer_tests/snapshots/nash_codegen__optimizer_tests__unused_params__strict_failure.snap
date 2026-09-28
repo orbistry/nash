@@ -1,7 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
 let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> trace "body" in used#2 in
@@ -27,24 +26,28 @@ trace "body" in 42
 --- isolated pass
 --- core before
 let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> trace "body" in used#2 in
-let anf#5 : int = trace "argument" in error in
-helper#3 anf#5 42
+helper#3 (trace "argument" in error) 42
+--- core early
+let helper#3 : int -> int = \used#2 : int -> trace "body" in used#2 in
+let arg#4 : int = trace "argument" in error in
+helper#3 42
+--- core after ANF
+let helper#3 : int -> int = \used#2 : int -> trace "body" in used#2 in
+let arg#4 : int = trace "argument" in error in
+helper#3 42
 --- uplc before
 (program 1.1.0
   [(lam helper_3
-    [(lam anf_5 [[helper_3 anf_5] (con integer 42)])
-      (force [[(force (builtin trace)) (con string "argument")] (delay (error))])])
+    [[helper_3
+      (force [[(force (builtin trace)) (con string "argument")] (delay (error))])]
+      (con integer 42)])
     (lam unused_1
       (lam used_2
         (force [[(force (builtin trace)) (con string "body")] (delay used_2)])))])
---- core after
-let helper#3 : int -> int = \used#2 : int -> trace "body" in used#2 in
-let anf#5 : int = trace "argument" in error in
-helper#3 42
 --- uplc after
 (program 1.1.0
   [(lam helper_3
-    [(lam anf_5 [helper_3 (con integer 42)])
+    [(lam arg_4 [helper_3 (con integer 42)])
       (force [[(force (builtin trace)) (con string "argument")] (delay (error))])])
     (lam used_2
       (force [[(force (builtin trace)) (con string "body")] (delay used_2)]))])

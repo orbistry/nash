@@ -1,0 +1,36 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#2 : @constr[1]() = constr 1 in
+case@Tag subject#2 of
+  1 -> 42
+  0 -> 21
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_2 (case subject_2 (con integer 21) (con integer 42))) (constr 1)])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated pass
+--- isolated ANF input
+let subject#2 : @constr[1]() = constr 1 in
+case@Tag subject#2 of
+  1 -> 42
+  0 -> 21
+--- isolated folded Core
+let subject#2 : @constr[1]() = constr 1 in
+42
+--- isolated cleaned Core
+42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam subject_2 (case subject_2 (con integer 21) (con integer 42))) (constr 1)])
+--- isolated UPLC after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

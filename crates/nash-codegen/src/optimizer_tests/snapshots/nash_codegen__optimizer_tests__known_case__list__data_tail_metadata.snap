@@ -1,0 +1,39 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@List (con (list data) [(I 21), (I 42)]) of
+  Cons head#1 tail#2 -> tail#2
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con (list data) [(I 21), (I 42)])
+    (lam head_1 (lam tail_2 tail_2))
+    (error)))
+--- optimized Core
+(con (list data) [(I 42)])
+--- optimized UPLC
+(program 1.1.0 (con (list data) [(I 42)]))
+--- isolated pass
+--- isolated ANF input
+case@List (con (list data) [(I 21), (I 42)]) of
+  Cons head#1 tail#2 -> tail#2
+--- isolated folded Core
+let head#1 : Data = (con data (I 21)) in
+let tail#2 : list Data = (con (list data) [(I 42)]) in
+tail#2
+--- isolated cleaned Core
+(con (list data) [(I 42)])
+--- isolated UPLC before
+(program 1.1.0
+  (case
+    (con (list data) [(I 21), (I 42)])
+    (lam head_1 (lam tail_2 tail_2))
+    (error)))
+--- isolated UPLC after
+(program 1.1.0 (con (list data) [(I 42)]))
+--- result
+(con (list data) [(I 42)])
+--- logs
+[]

@@ -1,0 +1,32 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+assertion_line: 41
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Tag constr 0 0 of
+  0 -> 42
+--- unoptimized UPLC
+(program 1.1.0 (case (constr 0 (con integer 0)) (con integer 42)))
+--- optimized Core
+let anf#1 : @constr[0](int) = constr 0 0 in
+case@Tag anf#1 of
+  0 -> 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 (case anf_2 (con integer 42))) (constr 0 (con integer 0))])
+--- isolated pass
+--- core before
+case@Tag constr 0 0 of
+  0 -> 42
+--- uplc before
+(program 1.1.0 (case (constr 0 (con integer 0)) (con integer 42)))
+--- core after
+case@Tag constr 0 0 of
+  0 -> 42
+--- uplc after
+(program 1.1.0 (case (constr 0 (con integer 0)) (con integer 42)))
+--- result
+error: NonFunctionApplication(Con(Integer(0)), Con(Integer(42)))
+--- logs
+[]

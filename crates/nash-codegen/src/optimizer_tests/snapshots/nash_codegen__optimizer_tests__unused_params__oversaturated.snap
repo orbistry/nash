@@ -1,34 +1,36 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
-let returnsFunction#11 : int -> int -> int = \unused#1 : int -> \z#10 : int -> z#10 in
-returnsFunction#11 0 42
+let returnsFunction#6 : int -> int -> int = \unused#1 : int -> \z#5 : int -> z#5 in
+returnsFunction#6 0 42
 --- unoptimized UPLC
 (program 1.1.0
-  [(lam returnsFunction_11 [[returnsFunction_11 (con integer 0)] (con integer 42)])
-    (lam unused_1 (lam z_10 z_10))])
+  [(lam returnsFunction_6 [[returnsFunction_6 (con integer 0)] (con integer 42)])
+    (lam unused_1 (lam z_5 z_5))])
 --- optimized Core
 42
 --- optimized UPLC
 (program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
-let returnsFunction#11 : int -> int -> int = \unused#1 : int -> \z#10 : int -> z#10 in
-returnsFunction#11 0 42
+let returnsFunction#6 : int -> int -> int = \unused#1 : int -> \z#5 : int -> z#5 in
+returnsFunction#6 0 42
+--- core early
+let returnsFunction#6 : int -> int -> int = \unused#1 : int -> \z#5 : int -> z#5 in
+returnsFunction#6 0 42
+--- core after ANF
+let returnsFunction#6 : int -> int -> int = \unused#1 : int -> \z#5 : int -> z#5 in
+returnsFunction#6 0 42
 --- uplc before
 (program 1.1.0
-  [(lam returnsFunction_11 [[returnsFunction_11 (con integer 0)] (con integer 42)])
-    (lam unused_1 (lam z_10 z_10))])
---- core after
-let returnsFunction#11 : int -> int -> int = \unused#1 : int -> \z#10 : int -> z#10 in
-returnsFunction#11 0 42
+  [(lam returnsFunction_6 [[returnsFunction_6 (con integer 0)] (con integer 42)])
+    (lam unused_1 (lam z_5 z_5))])
 --- uplc after
 (program 1.1.0
-  [(lam returnsFunction_11 [[returnsFunction_11 (con integer 0)] (con integer 42)])
-    (lam unused_1 (lam z_10 z_10))])
+  [(lam returnsFunction_6 [[returnsFunction_6 (con integer 0)] (con integer 42)])
+    (lam unused_1 (lam z_5 z_5))])
 --- result
 (con integer 42)
 --- logs

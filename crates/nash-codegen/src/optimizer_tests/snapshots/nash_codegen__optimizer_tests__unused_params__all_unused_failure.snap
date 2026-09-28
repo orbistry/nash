@@ -1,14 +1,13 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 40
-expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
-let allUnused#6 : int -> int = \unused#1 : int -> trace "unreachable" in 42 in
-allUnused#6 error
+let allUnused#4 : int -> int = \unused#1 : int -> trace "unreachable" in 42 in
+allUnused#4 error
 --- unoptimized UPLC
 (program 1.1.0
-  [(lam allUnused_6 [allUnused_6 (error)])
+  [(lam allUnused_4 [allUnused_4 (error)])
     (lam unused_1
       (force
         [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 42))]))])
@@ -24,22 +23,25 @@ trace "unreachable" in 42
     (force (builtin trace))])
 --- isolated pass
 --- core before
-let allUnused#6 : int -> int = \unused#1 : int -> trace "unreachable" in 42 in
-let anf#7 : int = error in
-allUnused#6 anf#7
+let allUnused#4 : int -> int = \unused#1 : int -> trace "unreachable" in 42 in
+allUnused#4 error
+--- core early
+let allUnused#4 : @delay int = delay (trace "unreachable" in 42) in
+let arg#2 : int = error in
+force allUnused#4
+--- core after ANF
+let allUnused#4 : @delay int = delay (trace "unreachable" in 42) in
+let arg#2 : int = error in
+force allUnused#4
 --- uplc before
 (program 1.1.0
-  [(lam allUnused_6 [(lam anf_7 [allUnused_6 anf_7]) (error)])
+  [(lam allUnused_4 [allUnused_4 (error)])
     (lam unused_1
       (force
         [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 42))]))])
---- core after
-let allUnused#6 : @delay int = delay (trace "unreachable" in 42) in
-let anf#7 : int = error in
-force allUnused#6
 --- uplc after
 (program 1.1.0
-  [(lam allUnused_6 [(lam anf_7 (force allUnused_6)) (error)])
+  [(lam allUnused_4 [(lam arg_2 (force allUnused_4)) (error)])
     (delay
       (force
         [[(force (builtin trace)) (con string "unreachable")] (delay (con integer 42))]))])

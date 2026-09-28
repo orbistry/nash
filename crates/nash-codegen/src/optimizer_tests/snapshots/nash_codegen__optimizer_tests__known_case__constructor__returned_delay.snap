@@ -1,0 +1,52 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+force (case@Tag constr 0 (trace "field" in 42) of
+  0 x#3 -> delay (trace "body" in x#3))
+--- unoptimized UPLC
+(program 1.1.0
+  (force
+    (case
+      (constr 0
+        (force
+          [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))
+      (lam x_3
+        (delay (force [[(force (builtin trace)) (con string "body")] (delay x_3)]))))))
+--- optimized Core
+let x#1 : int = trace "field" in 42 in
+trace "body" in x#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam x_2 (force [[builtin_3 (con string "body")] (delay x_2)]))
+      (force [[builtin_3 (con string "field")] (delay (con integer 42))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+force (case@Tag constr 0 (trace "field" in 42) of
+  0 x#3 -> delay (trace "body" in x#3))
+--- uplc before
+(program 1.1.0
+  (force
+    (case
+      (constr 0
+        (force
+          [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))
+      (lam x_3
+        (delay (force [[(force (builtin trace)) (con string "body")] (delay x_3)]))))))
+--- core after
+force (let x#3 : int = trace "field" in 42 in
+delay (trace "body" in x#3))
+--- uplc after
+(program 1.1.0
+  (force
+    [(lam x_3
+      (delay (force [[(force (builtin trace)) (con string "body")] (delay x_3)])))
+      (force
+        [[(force (builtin trace)) (con string "field")] (delay (con integer 42))])]))
+--- result
+(con integer 42)
+--- logs
+["field", "body"]

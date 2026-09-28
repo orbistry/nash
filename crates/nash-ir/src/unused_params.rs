@@ -1,4 +1,4 @@
-//! Trial: shorten nonrecursive helper signatures with exact, direct calls only.
+//! Shorten nonrecursive helper signatures before ANF, with exact direct calls only.
 use crate::{
     analysis, anf,
     build::Builder,

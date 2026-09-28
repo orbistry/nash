@@ -1,0 +1,71 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
+assertion_line: 37
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- core early\\n{}\\n--- core after ANF\\n{}\\n--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(early), pretty(after), baseline.uplc, candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+let helper#4 : int -> int -> int -> int = \p#1 : int p#2 : int p#3 : int -> trace "body" in p#2 in
+helper#4 (trace "a" in error) (trace "b" in 42) (trace "c" in 42)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam helper_4
+    [[[helper_4 (force [[(force (builtin trace)) (con string "a")] (delay (error))])]
+      (force [[(force (builtin trace)) (con string "b")] (delay (con integer 42))])]
+      (force [[(force (builtin trace)) (con string "c")] (delay (con integer 42))])])
+    (lam p_1
+      (lam p_2
+        (lam p_3 (force [[(force (builtin trace)) (con string "body")] (delay p_2)]))))])
+--- optimized Core
+let arg#9 : int = trace "a" in error in
+let arg#10 : int = trace "b" in 42 in
+let arg#11 : int = trace "c" in 42 in
+trace "body" in arg#10
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam arg_1
+      [(lam arg_2
+        [(lam arg_3 (force [[builtin_4 (con string "body")] (delay arg_2)]))
+          (force [[builtin_4 (con string "c")] (delay (con integer 42))])])
+        (force [[builtin_4 (con string "b")] (delay (con integer 42))])])
+      (force [[builtin_4 (con string "a")] (delay (error))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let helper#4 : int -> int -> int -> int = \p#1 : int p#2 : int p#3 : int -> trace "body" in p#2 in
+helper#4 (trace "a" in error) (trace "b" in 42) (trace "c" in 42)
+--- core early
+let helper#4 : int -> int = \p#2 : int -> trace "body" in p#2 in
+let arg#5 : int = trace "a" in error in
+let arg#6 : int = trace "b" in 42 in
+let arg#7 : int = trace "c" in 42 in
+helper#4 arg#6
+--- core after ANF
+let helper#4 : int -> int = \p#2 : int -> trace "body" in p#2 in
+let arg#5 : int = trace "a" in error in
+let arg#6 : int = trace "b" in 42 in
+let arg#7 : int = trace "c" in 42 in
+helper#4 arg#6
+--- uplc before
+(program 1.1.0
+  [(lam helper_4
+    [[[helper_4 (force [[(force (builtin trace)) (con string "a")] (delay (error))])]
+      (force [[(force (builtin trace)) (con string "b")] (delay (con integer 42))])]
+      (force [[(force (builtin trace)) (con string "c")] (delay (con integer 42))])])
+    (lam p_1
+      (lam p_2
+        (lam p_3 (force [[(force (builtin trace)) (con string "body")] (delay p_2)]))))])
+--- uplc after
+(program 1.1.0
+  [(lam helper_4
+    [(lam arg_5
+      [(lam arg_6
+        [(lam arg_7 [helper_4 arg_6])
+          (force [[(force (builtin trace)) (con string "c")] (delay (con integer 42))])])
+        (force [[(force (builtin trace)) (con string "b")] (delay (con integer 42))])])
+      (force [[(force (builtin trace)) (con string "a")] (delay (error))])])
+    (lam p_2 (force [[(force (builtin trace)) (con string "body")] (delay p_2)]))])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["a"]

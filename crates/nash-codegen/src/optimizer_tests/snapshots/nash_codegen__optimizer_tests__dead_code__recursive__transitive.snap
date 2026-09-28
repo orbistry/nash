@@ -1,0 +1,110 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+assertion_line: 68
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+letrec
+  g#2 : int -> int [static []] = \y#5 : int -> trace "g" in y#5
+  dead#3 : int -> int [static []] = \z#6 : int -> dead#3 z#6
+  f#1 : int -> int [static []] = \x#4 : int -> trace "f" in g#2 x#4
+in
+f#1 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_7
+    [(lam g_2
+      [(lam dead_3
+        [(lam f_1 [f_1 (con integer 42)])
+          (lam x_21 [dispatch_7 (constr 2 dispatch_7 x_21)])])
+        (lam z_22 [dispatch_7 (constr 1 dispatch_7 z_22)])])
+      (lam y_23 [dispatch_7 (constr 0 dispatch_7 y_23)])])
+    (lam request_8
+      (case
+        request_8
+        (lam self_9
+          (lam y_5 (force [[(force (builtin trace)) (con string "g")] (delay y_5)])))
+        (lam self_13 (lam z_6 [self_13 (constr 1 self_13 z_6)]))
+        (lam self_17
+          (lam x_4
+            (force
+              [[(force (builtin trace)) (con string "f")]
+                (delay [self_17 (constr 0 self_17 x_4)])])))))])
+--- optimized Core
+letrec
+  g#7 : int -> int [static []] = \y#10 : int -> trace "g" in y#10
+  f#9 : int -> int [static []] = \x#12 : int -> trace "f" in g#7 x#12
+in
+f#9 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_25
+    [(lam dispatch_20
+      [(lam g_22
+        [(lam f_24 [f_24 (con integer 42)])
+          (lam x_23 [dispatch_20 (constr 1 dispatch_20 x_23)])])
+        (lam y_21 [dispatch_20 (constr 0 dispatch_20 y_21)])])
+      (lam request_15
+        (case
+          request_15
+          (lam self_16 (lam y_17 (force [[builtin_25 (con string "g")] (delay y_17)])))
+          (lam self_18
+            (lam x_19
+              (force
+                [[builtin_25 (con string "f")] (delay [self_18 (constr 0 self_18 x_19)])])))))])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+letrec
+  g#2 : int -> int [static []] = \y#5 : int -> trace "g" in y#5
+  dead#3 : int -> int [static []] = \z#6 : int -> dead#3 z#6
+  f#1 : int -> int [static []] = \x#4 : int -> trace "f" in g#2 x#4
+in
+f#1 42
+--- uplc before
+(program 1.1.0
+  [(lam dispatch_7
+    [(lam g_2
+      [(lam dead_3
+        [(lam f_1 [f_1 (con integer 42)])
+          (lam x_21 [dispatch_7 (constr 2 dispatch_7 x_21)])])
+        (lam z_22 [dispatch_7 (constr 1 dispatch_7 z_22)])])
+      (lam y_23 [dispatch_7 (constr 0 dispatch_7 y_23)])])
+    (lam request_8
+      (case
+        request_8
+        (lam self_9
+          (lam y_5 (force [[(force (builtin trace)) (con string "g")] (delay y_5)])))
+        (lam self_13 (lam z_6 [self_13 (constr 1 self_13 z_6)]))
+        (lam self_17
+          (lam x_4
+            (force
+              [[(force (builtin trace)) (con string "f")]
+                (delay [self_17 (constr 0 self_17 x_4)])])))))])
+--- core after
+letrec
+  g#2 : int -> int [static []] = \y#5 : int -> trace "g" in y#5
+  f#1 : int -> int [static []] = \x#4 : int -> trace "f" in g#2 x#4
+in
+f#1 42
+--- uplc after
+(program 1.1.0
+  [(lam dispatch_24
+    [(lam g_2
+      [(lam f_1 [f_1 (con integer 42)])
+        (lam x_32 [dispatch_24 (constr 1 dispatch_24 x_32)])])
+      (lam y_33 [dispatch_24 (constr 0 dispatch_24 y_33)])])
+    (lam request_25
+      (case
+        request_25
+        (lam self_26
+          (lam y_5 (force [[(force (builtin trace)) (con string "g")] (delay y_5)])))
+        (lam self_29
+          (lam x_4
+            (force
+              [[(force (builtin trace)) (con string "f")]
+                (delay [self_29 (constr 0 self_29 x_4)])])))))])
+--- result
+(con integer 42)
+--- logs
+["f", "g"]

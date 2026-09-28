@@ -1,0 +1,155 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
+---
+--- unoptimized Core
+letrec
+  f#1 : int -> int [static []] = \x#4 : int -> case@Bool equalsInteger x#4 0 of
+    True -> 42
+    False -> g#2 (subtractInteger x#4 1)
+  dead#3 : int -> int [static []] = \z#6 : int -> error
+  g#2 : int -> int [static []] = \y#5 : int -> case@Bool equalsInteger y#5 0 of
+    True -> 42
+    False -> f#1 (subtractInteger y#5 1)
+in
+f#1 4
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_7
+    [(lam f_1
+      [(lam dead_3
+        [(lam g_2 [f_1 (con integer 4)])
+          (lam y_21 [dispatch_7 (constr 2 dispatch_7 y_21)])])
+        (lam z_22 [dispatch_7 (constr 1 dispatch_7 z_22)])])
+      (lam x_23 [dispatch_7 (constr 0 dispatch_7 x_23)])])
+    (lam request_8
+      (case
+        request_8
+        (lam self_9
+          (lam x_4
+            (case
+              [[(builtin equalsInteger) x_4] (con integer 0)]
+              [self_9 (constr 2 self_9 [[(builtin subtractInteger) x_4] (con integer 1)])]
+              (con integer 42))))
+        (lam self_13 (lam z_6 (error)))
+        (lam self_17
+          (lam y_5
+            (case
+              [[(builtin equalsInteger) y_5] (con integer 0)]
+              [self_17 (constr 0 self_17 [[(builtin subtractInteger) y_5] (con integer 1)])]
+              (con integer 42))))))])
+--- optimized Core
+letrec
+  f#7 : int -> int [static []] = \x#10 : int -> let anf#13 : bool = equalsInteger x#10 0 in
+  case@Bool anf#13 of
+    True -> 42
+    False -> let anf#14 : int = subtractInteger x#10 1 in
+    g#9 anf#14
+  g#9 : int -> int [static []] = \y#12 : int -> let anf#15 : bool = equalsInteger y#12 0 in
+  case@Bool anf#15 of
+    True -> 42
+    False -> let anf#16 : int = subtractInteger y#12 1 in
+    f#7 anf#16
+in
+f#7 4
+--- optimized UPLC
+(program 1.1.0
+  [(lam dispatch_28
+    [(lam f_30
+      [(lam g_32 [f_30 (con integer 4)])
+        (lam y_31 [dispatch_28 (constr 1 dispatch_28 y_31)])])
+      (lam x_29 [dispatch_28 (constr 0 dispatch_28 x_29)])])
+    (lam request_19
+      (case
+        request_19
+        (lam self_20
+          (lam x_21
+            [(lam anf_22
+              (case
+                anf_22
+                [(lam anf_23 [self_20 (constr 1 self_20 anf_23)])
+                  [[(builtin subtractInteger) x_21] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) x_21] (con integer 0)]]))
+        (lam self_24
+          (lam y_25
+            [(lam anf_26
+              (case
+                anf_26
+                [(lam anf_27 [self_24 (constr 0 self_24 anf_27)])
+                  [[(builtin subtractInteger) y_25] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) y_25] (con integer 0)]]))))])
+--- isolated pass
+--- core before
+letrec
+  f#1 : int -> int [static []] = \x#4 : int -> case@Bool equalsInteger x#4 0 of
+    True -> 42
+    False -> g#2 (subtractInteger x#4 1)
+  dead#3 : int -> int [static []] = \z#6 : int -> error
+  g#2 : int -> int [static []] = \y#5 : int -> case@Bool equalsInteger y#5 0 of
+    True -> 42
+    False -> f#1 (subtractInteger y#5 1)
+in
+f#1 4
+--- uplc before
+(program 1.1.0
+  [(lam dispatch_7
+    [(lam f_1
+      [(lam dead_3
+        [(lam g_2 [f_1 (con integer 4)])
+          (lam y_21 [dispatch_7 (constr 2 dispatch_7 y_21)])])
+        (lam z_22 [dispatch_7 (constr 1 dispatch_7 z_22)])])
+      (lam x_23 [dispatch_7 (constr 0 dispatch_7 x_23)])])
+    (lam request_8
+      (case
+        request_8
+        (lam self_9
+          (lam x_4
+            (case
+              [[(builtin equalsInteger) x_4] (con integer 0)]
+              [self_9 (constr 2 self_9 [[(builtin subtractInteger) x_4] (con integer 1)])]
+              (con integer 42))))
+        (lam self_13 (lam z_6 (error)))
+        (lam self_17
+          (lam y_5
+            (case
+              [[(builtin equalsInteger) y_5] (con integer 0)]
+              [self_17 (constr 0 self_17 [[(builtin subtractInteger) y_5] (con integer 1)])]
+              (con integer 42))))))])
+--- core after
+letrec
+  f#1 : int -> int [static []] = \x#4 : int -> case@Bool equalsInteger x#4 0 of
+    True -> 42
+    False -> g#2 (subtractInteger x#4 1)
+  g#2 : int -> int [static []] = \y#5 : int -> case@Bool equalsInteger y#5 0 of
+    True -> 42
+    False -> f#1 (subtractInteger y#5 1)
+in
+f#1 4
+--- uplc after
+(program 1.1.0
+  [(lam dispatch_24
+    [(lam f_1
+      [(lam g_2 [f_1 (con integer 4)])
+        (lam y_32 [dispatch_24 (constr 1 dispatch_24 y_32)])])
+      (lam x_33 [dispatch_24 (constr 0 dispatch_24 x_33)])])
+    (lam request_25
+      (case
+        request_25
+        (lam self_26
+          (lam x_4
+            (case
+              [[(builtin equalsInteger) x_4] (con integer 0)]
+              [self_26 (constr 1 self_26 [[(builtin subtractInteger) x_4] (con integer 1)])]
+              (con integer 42))))
+        (lam self_29
+          (lam y_5
+            (case
+              [[(builtin equalsInteger) y_5] (con integer 0)]
+              [self_29 (constr 0 self_29 [[(builtin subtractInteger) y_5] (con integer 1)])]
+              (con integer 42))))))])
+--- result
+(con integer 42)
+--- logs
+[]

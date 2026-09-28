@@ -1,0 +1,45 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#1 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#1 of
+  0 x#2 -> x#2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1 (case subject_1 (lam x_2 x_2)))
+    (constr 0 (con integer 21) (con integer 22))])
+--- optimized Core
+let subject#3 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#3 of
+  0 x#4 -> x#4
+--- optimized UPLC
+(program 1.1.0
+  [(lam subject_1 (case subject_1 (lam x_2 x_2)))
+    (constr 0 (con integer 21) (con integer 22))])
+--- isolated pass
+--- isolated ANF input
+let subject#1 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#1 of
+  0 x#2 -> x#2
+--- isolated folded Core
+let subject#1 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#1 of
+  0 x#2 -> x#2
+--- isolated cleaned Core
+let subject#1 : @constr[0](int, int) = constr 0 21 22 in
+case@Tag subject#1 of
+  0 x#2 -> x#2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam subject_1 (case subject_1 (lam x_2 x_2)))
+    (constr 0 (con integer 21) (con integer 22))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam subject_1 (case subject_1 (lam x_2 x_2)))
+    (constr 0 (con integer 21) (con integer 22))])
+--- result
+error: NonFunctionApplication(Con(Integer(22)), Con(Integer(21)))
+--- logs
+[]
