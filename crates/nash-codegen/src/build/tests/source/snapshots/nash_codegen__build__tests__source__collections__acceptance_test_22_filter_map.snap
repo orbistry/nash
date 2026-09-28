@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 74
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nfoldr xs f zero =\n    case xs of\n        [] -> zero\n        x :: rest -> f x (foldr rest f zero)\nfilterMap xs f =\n    foldr xs (\\x ys ->\n        case f x of\n            None -> ys\n            Some y -> mkCons y ys\n    ) []\nempty : list int\nempty = []\nmain = eq (filterMap empty (\\_ -> Some 42)) []\n"
 ---
 --- unoptimized Core
@@ -142,20 +141,17 @@ letrec
   worker#88 : list 'erased -> 'erased [static []] = \xs#87 : list 'erased -> case@List xs#87 of
     Nil -> (con (list integer) [])
     Cons field#68 field#69 -> let anf#91 : 'erased = worker#88 field#69 in
-    let match#76 : Main.option int = constr 1 42 in
-    case@Tag match#76 of
-      0 -> anf#91
-      1 field#77 -> mkCons field#77 anf#91
+    mkCons 42 anf#91
 in
 let anf#93 : list int = worker#88 (con (list integer) []) in
 eq#47 anf#93 (con (list integer) [])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_28
+  [(lam builtin_26
     [(lam eq_17
-      [(lam worker_26
-        [(lam anf_27 [[eq_17 anf_27] (con (list integer) [])])
-          [worker_26 (con (list integer) [])]])
+      [(lam worker_24
+        [(lam anf_25 [[eq_17 anf_25] (con (list integer) [])])
+          [worker_24 (con (list integer) [])]])
         [(lam self_18 [self_18 self_18])
           (lam self_19
             (lam xs_20
@@ -163,10 +159,7 @@ eq#47 anf#93 (con (list integer) [])
                 xs_20
                 (lam field_21
                   (lam field_22
-                    [(lam anf_23
-                      [(lam match_24
-                        (case match_24 anf_23 (lam field_25 [[builtin_28 field_25] anf_23])))
-                        (constr 1 (con integer 42))])
+                    [(lam anf_23 [[builtin_26 (con integer 42)] anf_23])
                       [[self_19 self_19] field_22]]))
                 (con (list integer) []))))]])
       [(lam self_6 [self_6 self_6])

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 445
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\norElse opt default =\n    case opt of\n        None -> default\n        Some a -> a\nmain = equalsInteger (orElse (Some 42) 14) 42\n"
 ---
 --- unoptimized Core
@@ -27,17 +26,9 @@ main#1
         [(lam match_8 (case match_8 default_6 (lam field_9 [(lam a_7 a_7) field_9])))
           opt_5]))])
 --- optimized Core
-let anf#22 : Main.option int = constr 1 42 in
-let anf#25 : int = case@Tag anf#22 of
-  0 -> 14
-  1 field#14 -> field#14 in
-equalsInteger anf#25 42
+equalsInteger 42 42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    [(lam anf_3 [[(builtin equalsInteger) anf_3] (con integer 42)])
-      (case anf_1 (con integer 14) (lam field_2 field_2))])
-    (constr 1 (con integer 42))])
+(program 1.1.0 [[(builtin equalsInteger) (con integer 42)] (con integer 42)])
 --- result
 (con bool True)
 --- logs

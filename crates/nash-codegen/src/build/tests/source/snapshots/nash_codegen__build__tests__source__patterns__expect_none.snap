@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 269
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option = Some int | None\nmain : bool\nmain =\n    let\n        x = None\n    in\n    case x of\n        None -> True\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -22,13 +21,9 @@ main#1
       (constr 1)])
     (lam value_6 value_6)])
 --- optimized Core
-let x#9 : Main.option = constr 1 in
-case@Tag x#9 of
-  0 field#11 -> error
-  1 -> true
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam x_1 (case x_1 (lam field_2 (error)) (con bool True))) (constr 1)])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

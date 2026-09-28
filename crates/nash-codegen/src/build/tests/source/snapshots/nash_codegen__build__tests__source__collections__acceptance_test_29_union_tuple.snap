@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 313
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\n-- Native lists require Storable elements; tuples use a recursive source list.\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nseqEq same left right =\n    case (left, right) of\n        (Nil, Nil) -> True\n        (Cons x xs, Cons y ys) -> if same x y then seqEq same xs ys else False\n        _ -> False\ntupleEq (a, b) (c, d) = if eq a c then eq b d else False\ntype assocList 'key 'value = AssocList { inner : sequence ('key, 'value) }\nimpl (Eq 'key, Eq 'value) => Eq (assocList 'key 'value) where\n    eq left right = seqEq tupleEq left.inner right.inner\nemptyList = AssocList { inner = Nil }\nfromList xs = AssocList { inner = (doFromList xs) }\ndoFromList xs =\n    case xs of\n        Nil -> Nil\n        Cons (k, v) rest -> doInsert (doFromList rest) k v\ninsert : Eq 'key => assocList 'key 'value -> 'key -> 'value -> assocList 'key 'value\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        Nil -> Cons (k, v) Nil\n        Cons (k2, v2) rest ->\n            if eq k k2 then Cons (k, v) rest\n            else Cons (k2, v2) (doInsert rest k v)\nunion : Eq 'key => assocList 'key 'value -> assocList 'key 'value -> assocList 'key 'value\nunion left right = AssocList { inner = (doUnion left.inner right.inner) }\ndoUnion left right =\n    case left of\n        Nil -> right\n        Cons (k, v) rest -> doUnion rest (doInsert right k v)\nfixture1 : assocList bytes int\nfixture1 = insert (insert emptyList \"foo\" 42) \"bar\" 14\nmain = eq (union fixture1 emptyList) fixture1\n"
 ---
 --- unoptimized Core
@@ -291,24 +290,22 @@ let anf#210 : Main.assocList bytes int = constr 0 anf#198 in
 let projection#130 : Main.sequence ('erased, 'erased) = field@0/1 anf#210 in
 let projection#131 : Main.sequence ('erased, 'erased) = field@0/1 fixture1#179 in
 letrec
-  worker#185 : Main.sequence 'erased -> Main.sequence 'erased -> 'erased [static []] = \left#183 : Main.sequence 'erased right#184 : Main.sequence 'erased -> let match#99 : (Main.sequence 'erased, Main.sequence 'erased) = constr 0 left#183 right#184 in
-  let leaf#100 : @delay 'erased = delay false in
-  case@Tag match#99 of
-    0 field#101 field#102 -> case@Tag field#101 of
-      0 -> case@Tag field#102 of
-        0 -> true
-        1 field#103 field#104 -> force leaf#100
-      1 field#105 field#106 -> case@Tag field#102 of
-        0 -> force leaf#100
-        1 field#107 field#108 -> let anf#186 : bool = case@Tag field#105 of
-          0 field#118 field#119 -> case@Tag field#107 of
-            0 field#123 field#124 -> let anf#187 : bool = eq#113 field#118 field#123 in
-            case@Bool anf#187 of
-              True -> equalsInteger field#119 field#124
-              False -> false in
-        case@Bool anf#186 of
-          True -> worker#185 field#106 field#108
-          False -> false
+  worker#185 : Main.sequence 'erased -> Main.sequence 'erased -> 'erased [static []] = \left#183 : Main.sequence 'erased right#184 : Main.sequence 'erased -> let leaf#100 : @delay 'erased = delay false in
+  case@Tag left#183 of
+    0 -> case@Tag right#184 of
+      0 -> true
+      1 field#103 field#104 -> force leaf#100
+    1 field#105 field#106 -> case@Tag right#184 of
+      0 -> force leaf#100
+      1 field#107 field#108 -> let anf#186 : bool = case@Tag field#105 of
+        0 field#118 field#119 -> case@Tag field#107 of
+          0 field#123 field#124 -> let anf#187 : bool = eq#113 field#118 field#123 in
+          case@Bool anf#187 of
+            True -> equalsInteger field#119 field#124
+            False -> false in
+      case@Bool anf#186 of
+        True -> worker#185 field#106 field#108
+        False -> false
 in
 worker#185 projection#130 projection#131
 --- optimized UPLC
@@ -334,48 +331,42 @@ worker#185 projection#130 projection#131
                                       [(lam anf_59
                                         [(lam projection_60
                                           [(lam projection_61
-                                            [(lam worker_82 [[worker_82 projection_60] projection_61])
+                                            [(lam worker_79 [[worker_79 projection_60] projection_61])
                                               [(lam self_62 [self_62 self_62])
                                                 (lam self_63
                                                   (lam left_64
                                                     (lam right_65
-                                                      [(lam match_66
-                                                        [(lam leaf_67
-                                                          (case
-                                                            match_66
-                                                            (lam field_68
-                                                              (lam field_69
-                                                                (case
-                                                                  field_68
-                                                                  (case field_69 (con bool True) (lam field_70 (lam field_71 (force leaf_67))))
+                                                      [(lam leaf_66
+                                                        (case
+                                                          left_64
+                                                          (case right_65 (con bool True) (lam field_67 (lam field_68 (force leaf_66))))
+                                                          (lam field_69
+                                                            (lam field_70
+                                                              (case
+                                                                right_65
+                                                                (force leaf_66)
+                                                                (lam field_71
                                                                   (lam field_72
-                                                                    (lam field_73
+                                                                    [(lam anf_78
+                                                                      (case anf_78 (con bool False) [[[self_63 self_63] field_70] field_72]))
                                                                       (case
                                                                         field_69
-                                                                        (force leaf_67)
-                                                                        (lam field_74
-                                                                          (lam field_75
-                                                                            [(lam anf_81
-                                                                              (case anf_81 (con bool False) [[[self_63 self_63] field_73] field_75]))
-                                                                              (case
-                                                                                field_72
+                                                                        (lam field_73
+                                                                          (lam field_74
+                                                                            (case
+                                                                              field_71
+                                                                              (lam field_75
                                                                                 (lam field_76
-                                                                                  (lam field_77
-                                                                                    (case
-                                                                                      field_74
-                                                                                      (lam field_78
-                                                                                        (lam field_79
-                                                                                          [(lam anf_80
-                                                                                            (case anf_80 (con bool False) [[(builtin equalsInteger) field_77] field_79]))
-                                                                                            [[eq_9 field_76] field_78]]))))))]))))))))))
-                                                          (delay (con bool False))])
-                                                        (constr 0 left_64 right_65)])))]])
-                                            (case fixture1_55 (lam generated_83 generated_83))])
-                                          (case anf_59 (lam generated_84 generated_84))])
+                                                                                  [(lam anf_77
+                                                                                    (case anf_77 (con bool False) [[(builtin equalsInteger) field_74] field_76]))
+                                                                                    [[eq_9 field_73] field_75]]))))))])))))))
+                                                        (delay (con bool False))])))]])
+                                            (case fixture1_55 (lam generated_80 generated_80))])
+                                          (case anf_59 (lam generated_81 generated_81))])
                                         (constr 0 anf_58)])
                                       [[doUnion_38 projection_56] projection_57]])
-                                    (case emptyList_40 (lam generated_85 generated_85))])
-                                  (case fixture1_55 (lam generated_86 generated_86))])
+                                    (case emptyList_40 (lam generated_82 generated_82))])
+                                  (case fixture1_55 (lam generated_83 generated_83))])
                                 [anf_54 (con integer 14)]])
                               [anf_52 anf_53]])
                             [fromString_47 (con string "bar")]])
@@ -390,7 +381,7 @@ worker#185 projection#130 projection#131
                   (lam v_43
                     [(lam projection_44
                       [(lam anf_45 (constr 0 anf_45)) [[[doInsert_27 projection_44] k_42] v_43]])
-                      (case m_41 (lam generated_87 generated_87))])))])
+                      (case m_41 (lam generated_84 generated_84))])))])
             (constr 0 anf_39)])
           (constr 0)])
         [(lam self_28 [self_28 self_28])

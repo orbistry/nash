@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 203
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype sequence 'a = Nil | Cons 'a (sequence 'a)\nunzip xs =\n    case xs of\n        Nil -> ([], [])\n        Cons (a, b) rest ->\n            let\n                (aTail, bTail) = unzip rest\n            in\n            (mkCons a aTail, mkCons b bTail)\nsame (a, b) (c, d) = if eq a c then eq b d else False\nmain =\n    let\n        x = Cons (3, #\"55\") (Cons (4, #\"7799\") Nil)\n    in\n    same (unzip x) ([3, 4], [#\"55\", #\"7799\"])\n"
 ---
 --- unoptimized Core
@@ -289,16 +288,14 @@ let anf#183 : list int = mkCons 4 (con (list integer) []) in
 let anf#184 : list int = mkCons 3 anf#183 in
 let anf#187 : list bytes = mkCons (con bytestring #7799) (con (list bytestring) []) in
 let anf#188 : list bytes = mkCons (con bytestring #55) anf#187 in
-let anf#189 : (list int, list bytes) = constr 0 anf#184 anf#188 in
 case@Tag anf#179 of
-  0 field#121 field#122 -> case@Tag anf#189 of
-    0 field#126 field#127 -> let anf#165 : bool = eq#85 field#121 field#126 in
-    case@Bool anf#165 of
-      True -> eq#102 field#122 field#127
-      False -> false
+  0 field#121 field#122 -> let anf#165 : bool = eq#85 field#121 anf#184 in
+  case@Bool anf#165 of
+    True -> eq#102 field#122 anf#188
+    False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_66
+  [(lam builtin_63
     [(lam eq_20
       [(lam eq_32
         [(lam unzip_49
@@ -312,22 +309,16 @@ case@Tag anf#179 of
                         [(lam anf_57
                           [(lam anf_58
                             [(lam anf_59
-                              [(lam anf_60
-                                (case
-                                  anf_55
+                              (case
+                                anf_55
+                                (lam field_60
                                   (lam field_61
-                                    (lam field_62
-                                      (case
-                                        anf_60
-                                        (lam field_63
-                                          (lam field_64
-                                            [(lam anf_65 (case anf_65 (con bool False) [[eq_32 field_62] field_64]))
-                                              [[eq_20 field_61] field_63]])))))))
-                                (constr 0 anf_57 anf_59)])
-                              [[builtin_66 (con bytestring #55)] anf_58]])
-                            [[builtin_66 (con bytestring #7799)] (con (list bytestring) [])]])
-                          [[builtin_66 (con integer 3)] anf_56]])
-                        [[builtin_66 (con integer 4)] (con (list integer) [])]])
+                                    [(lam anf_62 (case anf_62 (con bool False) [[eq_32 field_61] anf_59]))
+                                      [[eq_20 field_60] anf_57]]))))
+                              [[builtin_63 (con bytestring #55)] anf_58]])
+                            [[builtin_63 (con bytestring #7799)] (con (list bytestring) [])]])
+                          [[builtin_63 (con integer 3)] anf_56]])
+                        [[builtin_63 (con integer 4)] (con (list integer) [])]])
                       [unzip_49 x_54]])
                     (constr 1 anf_50 anf_53)])
                   (constr 1 anf_51 anf_52)])
@@ -350,9 +341,9 @@ case@Tag anf#179 of
                               [(lam anf_43
                                 [(lam evaluated_44
                                   [(lam anf_47
-                                    [(lam anf_48 (constr 0 evaluated_44 anf_48)) [[builtin_66 field_39] anf_47]])
+                                    [(lam anf_48 (constr 0 evaluated_44 anf_48)) [[builtin_63 field_39] anf_47]])
                                     (case destruct_40 (lam field_45 (lam field_46 field_46)))])
-                                  [[builtin_66 field_38] anf_43]])
+                                  [[builtin_63 field_38] anf_43]])
                                 (case destruct_40 (lam field_41 (lam field_42 field_41)))])
                               [[self_34 self_34] field_37]]))))))))]])
         [(lam self_21 [self_21 self_21])

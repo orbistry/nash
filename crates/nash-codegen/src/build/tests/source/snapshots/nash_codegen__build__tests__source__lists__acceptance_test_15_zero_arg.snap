@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 400
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\ntype pairs = Pairs { inner : list (pair Data Data) }\nnew () = Pairs { inner = [] }\nsame (Pairs a) (Pairs b) = equalsData (toData (mapData a)) (toData (mapData b))\nmain = same (new ()) (Pairs { inner = [] })\n"
 ---
 --- unoptimized Core
@@ -51,28 +50,15 @@ main#1
             arg_6]))])
     (lam coerce_19 coerce_19)])
 --- optimized Core
-let anf#44 : Main.pairs = constr 0 (con (list (pair data data)) []) in
-let anf#46 : Main.pairs = constr 0 (con (list (pair data data)) []) in
-case@Tag anf#44 of
-  0 field#25 -> case@Tag anf#46 of
-    0 field#28 -> let anf#39 : Map Data Data = mapData field#25 in
-    let anf#41 : Map Data Data = mapData field#28 in
-    equalsData anf#39 anf#41
+let anf#39 : Map Data Data = mapData (con (list (pair data data)) []) in
+let anf#41 : Map Data Data = mapData (con (list (pair data data)) []) in
+equalsData anf#39 anf#41
 --- optimized UPLC
 (program 1.1.0
   [(lam anf_1
-    [(lam anf_2
-      (case
-        anf_1
-        (lam field_3
-          (case
-            anf_2
-            (lam field_4
-              [(lam anf_5
-                [(lam anf_6 [[(builtin equalsData) anf_5] anf_6]) [(builtin mapData) field_4]])
-                [(builtin mapData) field_3]])))))
-      (constr 0 (con (list (pair data data)) []))])
-    (constr 0 (con (list (pair data data)) []))])
+    [(lam anf_2 [[(builtin equalsData) anf_1] anf_2])
+      [(builtin mapData) (con (list (pair data data)) [])]])
+    [(builtin mapData) (con (list (pair data data)) [])]])
 --- result
 (con bool True)
 --- logs

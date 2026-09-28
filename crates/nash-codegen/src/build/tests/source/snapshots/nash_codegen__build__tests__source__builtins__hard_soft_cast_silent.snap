@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 63
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Option exposing (type option(..))\ntype foo = Bar | Bax\ntoData : foo -> Data\ntoData value =\n    case value of\n        Bar -> Builtin.constrData 0 []\n        Bax -> Builtin.constrData 1 []\ndecode : Data -> option foo\ndecode value =\n    case value of\n        Constr pair(0, []) -> Some Bar\n        Constr pair(1, []) -> Some Bax\n        _ -> None\nhardCast value =\n    case decode value of\n        Some result -> result\n        None -> fail\nsame a b =\n    case (a, b) of\n        (Bar, Bar) -> True\n        (Bax, Bax) -> True\n        _ -> False\nmain : bool\nmain =\n    let\n        x = toData Bar\n    in\n    case decode x of\n        Some _ -> True\n        None ->\n            let\n                y = hardCast x\n            in\n            same y y\n"
 ---
 --- unoptimized Core
@@ -153,10 +152,7 @@ case@Data value#22 of
   DataList field#63 -> force leaf#24
   DataI field#64 -> force leaf#24
   DataB field#65 -> force leaf#24 in
-let anf#99 : Main.foo = constr 0 in
-let x#84 : Data = case@Tag anf#99 of
-  0 -> constrData 0 (con (list data) [])
-  1 -> constrData 1 (con (list data) []) in
+let x#84 : Data = constrData 0 (con (list data) []) in
 let match#85 : nash/base:Option.option Main.foo = decode#66 x#84 in
 case@Tag match#85 of
   0 field#86 -> true
@@ -164,54 +160,41 @@ case@Tag match#85 of
   let y#87 : Main.foo = case@Tag match#77 of
     0 field#78 -> field#78
     1 -> error in
-  let match#71 : (Main.foo, Main.foo) = constr 0 y#87 y#87 in
   let leaf#72 : @delay 'erased = delay false in
-  case@Tag match#71 of
-    0 field#73 field#74 -> case@Tag field#73 of
-      0 -> case@Tag field#74 of
-        0 -> true
-        1 -> force leaf#72
-      1 -> case@Tag field#74 of
-        0 -> force leaf#72
-        1 -> true
+  case@Tag y#87 of
+    0 -> case@Tag y#87 of
+      0 -> true
+      1 -> force leaf#72
+    1 -> case@Tag y#87 of
+      0 -> force leaf#72
+      1 -> true
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_40
+  [(lam builtin_36
     [(lam eq_1
       [(lam decode_23
-        [(lam anf_28
-          [(lam x_29
-            [(lam match_30
-              (case
-                match_30
-                (lam field_31 (con bool True))
-                [(lam match_32
-                  [(lam y_34
-                    [(lam match_35
-                      [(lam leaf_36
-                        (case
-                          match_35
-                          (lam field_37
-                            (lam field_38
-                              (case
-                                field_37
-                                (case field_38 (con bool True) (force leaf_36))
-                                (case field_38 (force leaf_36) (con bool True)))))))
-                        (delay (con bool False))])
-                      (constr 0 y_34 y_34)])
-                    (case match_32 (lam field_33 field_33) (error))])
-                  [decode_23 x_29]]))
-              [decode_23 x_29]])
+        [(lam x_28
+          [(lam match_29
             (case
-              anf_28
-              [[(builtin constrData) (con integer 0)] (con (list data) [])]
-              [[(builtin constrData) (con integer 1)] (con (list data) [])])])
-          (constr 0)])
+              match_29
+              (lam field_30 (con bool True))
+              [(lam match_31
+                [(lam y_33
+                  [(lam leaf_34
+                    (case
+                      y_33
+                      (case y_33 (con bool True) (force leaf_34))
+                      (case y_33 (force leaf_34) (con bool True))))
+                    (delay (con bool False))])
+                  (case match_31 (lam field_32 field_32) (error))])
+                [decode_23 x_28]]))
+            [decode_23 x_28]])
+          [[(builtin constrData) (con integer 0)] (con (list data) [])]])
         (lam value_2
           [(lam leaf_3
-            [(lam generated_39
+            [(lam generated_35
               (force
-                [[[[[[builtin_40 generated_39]
+                [[[[[[builtin_36 generated_35]
                   (delay
                     [(lam field_4
                       (case
@@ -239,7 +222,7 @@ case@Tag match#85 of
                                     [(lam anf_9 (constr 0 anf_9)) (constr 0)])))
                                 [anf_7 (con integer 0)]])
                               [eq_1 field_5]]))))
-                      [(builtin unConstrData) generated_39]])]
+                      [(builtin unConstrData) generated_35]])]
                   (delay (force leaf_3))]
                   (delay (force leaf_3))]
                   (delay (force leaf_3))]

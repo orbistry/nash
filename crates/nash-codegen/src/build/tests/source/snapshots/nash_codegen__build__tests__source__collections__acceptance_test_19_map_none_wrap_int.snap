@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 1
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmap opt f =\n    case opt of\n        None -> None\n        Some a -> Some (f a)\nnone : option int\nnone = None\nmain = eq (map none (\\_ -> 14)) None\n"
 ---
 --- unoptimized Core
@@ -72,45 +71,9 @@ main#1
       (builtin equalsInteger)])
     (lam value_33 value_33)])
 --- optimized Core
-let none#51 : Main.option int = constr 0 in
-let anf#58 : Main.option int = case@Tag none#51 of
-  0 -> constr 0
-  1 field#47 -> constr 1 14 in
-let anf#60 : Main.option int = constr 0 in
-let match#34 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#58 anf#60 in
-let leaf#35 : @delay bool = delay false in
-case@Tag match#34 of
-  0 field#36 field#37 -> case@Tag field#36 of
-    0 -> case@Tag field#37 of
-      0 -> true
-      1 field#38 -> force leaf#35
-    1 field#39 -> case@Tag field#37 of
-      0 -> force leaf#35
-      1 field#40 -> equalsInteger field#39 field#40
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam none_1
-    [(lam anf_3
-      [(lam anf_4
-        [(lam match_5
-          [(lam leaf_6
-            (case
-              match_5
-              (lam field_7
-                (lam field_8
-                  (case
-                    field_7
-                    (case field_8 (con bool True) (lam field_9 (force leaf_6)))
-                    (lam field_10
-                      (case
-                        field_8
-                        (force leaf_6)
-                        (lam field_11 [[(builtin equalsInteger) field_10] field_11]))))))))
-            (delay (con bool False))])
-          (constr 0 anf_3 anf_4)])
-        (constr 0)])
-      (case none_1 (constr 0) (lam field_2 (constr 1 (con integer 14))))])
-    (constr 0)])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

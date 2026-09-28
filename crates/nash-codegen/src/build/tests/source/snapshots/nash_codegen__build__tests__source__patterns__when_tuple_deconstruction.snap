@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 91
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype thing = Thing { idx : int }\ntype datum = A thing | B\ntype redSpend = Spend int | Buy\nmain : bool\nmain =\n    case (A (Thing { idx = 42 }), Buy) of\n        (A a, Spend x) ->\n            if equalsInteger a.idx x then True\n            else trace \"a.idx == x ? False\" False\n        (_, _) -> True\n"
 ---
 --- unoptimized Core
@@ -65,56 +64,9 @@ main#1
       (lam value_19 value_19)])
     (con string "a.idx == x ? False")])
 --- optimized Core
-let anf#40 : Main.thing = constr 0 42 in
-let anf#41 : Main.datum = constr 0 anf#40 in
-let anf#42 : Main.redSpend = constr 1 in
-let match#29 : (Main.datum, Main.redSpend) = constr 0 anf#41 anf#42 in
-let leaf#30 : @delay bool = delay true in
-case@Tag match#29 of
-  0 field#31 field#32 -> case@Tag field#31 of
-    0 field#33 -> case@Tag field#32 of
-      0 field#34 -> let projection#37 : int = field@0/1 field#33 in
-      let anf#43 : bool = equalsInteger projection#37 field#34 in
-      case@Bool anf#43 of
-        True -> true
-        False -> trace "a.idx == x ? False" in false
-      1 -> force leaf#30
-    1 -> force leaf#30
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_12
-    [(lam anf_1
-      [(lam anf_2
-        [(lam anf_3
-          [(lam match_4
-            [(lam leaf_5
-              (case
-                match_4
-                (lam field_6
-                  (lam field_7
-                    (case
-                      field_6
-                      (lam field_8
-                        (case
-                          field_7
-                          (lam field_9
-                            [(lam projection_10
-                              [(lam anf_11
-                                (case
-                                  anf_11
-                                  (force
-                                    [[builtin_12 (con string "a.idx == x ? False")] (delay (con bool False))])
-                                  (con bool True)))
-                                [[(builtin equalsInteger) projection_10] field_9]])
-                              (case field_8 (lam generated_13 generated_13))])
-                          (force leaf_5)))
-                      (force leaf_5))))))
-              (delay (con bool True))])
-            (constr 0 anf_2 anf_3)])
-          (constr 1)])
-        (constr 0 anf_1)])
-      (constr 0 (con integer 42))])
-    (force (builtin trace))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 88
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmain =\n    let\n        head = \\xs ->\n            case xs of\n                [] -> None\n                [a] -> Some xs\n                a :: b :: rest -> Some [a, b]\n    in\n    eq (head [1, 2, 3]) (Some [1, 2])\n"
 ---
 --- unoptimized Core
@@ -169,22 +168,14 @@ let anf#106 : Main.option (list int) = case@List anf#105 of
     constr 1 anf#99 in
 let anf#110 : list int = mkCons 2 (con (list integer) []) in
 let anf#111 : list int = mkCons 1 anf#110 in
-let anf#112 : Main.option (list int) = constr 1 anf#111 in
-let match#70 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#106 anf#112 in
-let leaf#71 : @delay bool = delay false in
-case@Tag match#70 of
-  0 field#72 field#73 -> case@Tag field#72 of
-    0 -> case@Tag field#73 of
-      0 -> true
-      1 field#74 -> force leaf#71
-    1 field#75 -> case@Tag field#73 of
-      0 -> force leaf#71
-      1 field#76 -> eq#28 field#75 field#76
+case@Tag anf#106 of
+  0 -> false
+  1 field#75 -> eq#28 field#75 anf#111
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_38
-    [(lam partial_39
-      [(lam partial_40
+  [(lam builtin_31
+    [(lam partial_32
+      [(lam partial_33
         [(lam eq_15
           [(lam anf_16
             [(lam anf_17
@@ -192,23 +183,9 @@ case@Tag match#70 of
                 [(lam anf_25
                   [(lam anf_26
                     [(lam anf_27
-                      [(lam anf_30
-                        [(lam match_31
-                          [(lam leaf_32
-                            (case
-                              match_31
-                              (lam field_33
-                                (lam field_34
-                                  (case
-                                    field_33
-                                    (case field_34 (con bool True) (lam field_35 (force leaf_32)))
-                                    (lam field_36
-                                      (case field_34 (force leaf_32) (lam field_37 [[eq_15 field_36] field_37]))))))))
-                            (delay (con bool False))])
-                          (constr 0 anf_25 anf_30)])
-                        (constr 1 anf_27)])
-                      [partial_39 anf_26]])
-                    [partial_40 (con (list integer) [])]])
+                      (case anf_25 (con bool False) (lam field_30 [[eq_15 field_30] anf_27])))
+                      [partial_32 anf_26]])
+                    [partial_33 (con (list integer) [])]])
                   (case
                     anf_18
                     (lam field_19
@@ -217,13 +194,13 @@ case@Tag match#70 of
                           field_20
                           (lam field_21
                             (lam field_22
-                              [(lam anf_23 [(lam anf_24 (constr 1 anf_24)) [[builtin_38 field_19] anf_23]])
-                                [[builtin_38 field_21] (con (list integer) [])]]))
+                              [(lam anf_23 [(lam anf_24 (constr 1 anf_24)) [[builtin_31 field_19] anf_23]])
+                                [[builtin_31 field_21] (con (list integer) [])]]))
                           (constr 1 anf_18))))
                     (constr 0))])
-                [partial_39 anf_17]])
-              [partial_40 anf_16]])
-            [[builtin_38 (con integer 3)] (con (list integer) [])]])
+                [partial_32 anf_17]])
+              [partial_33 anf_16]])
+            [[builtin_31 (con integer 3)] (con (list integer) [])]])
           [(lam self_4 [self_4 self_4])
             (lam self_5
               (lam xs_6
@@ -241,8 +218,8 @@ case@Tag match#70 of
                                 [[(builtin equalsInteger) field_10] field_12]]))
                           (con bool False))))
                     (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
-        [builtin_38 (con integer 2)]])
-      [builtin_38 (con integer 1)]])
+        [builtin_31 (con integer 2)]])
+      [builtin_31 (con integer 1)]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

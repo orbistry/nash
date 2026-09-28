@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 221
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\ninit self =\n    case self of\n        [] -> None\n        _ -> Some (doInit self)\ndoInit self =\n    case self of\n        [] -> trace \"unreachable\" fail\n        [_] -> []\n        x :: xs -> mkCons x (doInit xs)\nvalues : list int\nvalues = [1, 2, 3, 4]\nmain = eq (init values) (Some [1, 2, 3])\n"
 ---
 --- unoptimized Core
@@ -195,24 +194,16 @@ let anf#120 : Main.option (list int) = case@List values#106 of
 let anf#125 : list int = mkCons 3 (con (list integer) []) in
 let anf#126 : list int = mkCons 2 anf#125 in
 let anf#127 : list int = mkCons 1 anf#126 in
-let anf#128 : Main.option (list int) = constr 1 anf#127 in
-let match#77 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#120 anf#128 in
-let leaf#78 : @delay bool = delay false in
-case@Tag match#77 of
-  0 field#79 field#80 -> case@Tag field#79 of
-    0 -> case@Tag field#80 of
-      0 -> true
-      1 field#81 -> force leaf#78
-    1 field#82 -> case@Tag field#80 of
-      0 -> force leaf#78
-      1 field#83 -> eq#18 field#82 field#83
+case@Tag anf#120 of
+  0 -> false
+  1 field#82 -> eq#18 field#82 anf#127
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_47
-    [(lam builtin_48
-      [(lam partial_49
-        [(lam partial_50
-          [(lam partial_51
+  [(lam builtin_40
+    [(lam builtin_41
+      [(lam partial_42
+        [(lam partial_43
+          [(lam partial_44
             [(lam eq_17
               [(lam doInit_27
                 [(lam anf_28
@@ -223,33 +214,19 @@ case@Tag match#77 of
                           [(lam anf_36
                             [(lam anf_37
                               [(lam anf_38
-                                [(lam anf_39
-                                  [(lam match_40
-                                    [(lam leaf_41
-                                      (case
-                                        match_40
-                                        (lam field_42
-                                          (lam field_43
-                                            (case
-                                              field_42
-                                              (case field_43 (con bool True) (lam field_44 (force leaf_41)))
-                                              (lam field_45
-                                                (case field_43 (force leaf_41) (lam field_46 [[eq_17 field_45] field_46]))))))))
-                                      (delay (con bool False))])
-                                    (constr 0 anf_35 anf_39)])
-                                  (constr 1 anf_38)])
-                                [partial_49 anf_37]])
-                              [partial_50 anf_36]])
-                            [partial_51 (con (list integer) [])]])
+                                (case anf_35 (con bool False) (lam field_39 [[eq_17 field_39] anf_38])))
+                                [partial_42 anf_37]])
+                              [partial_43 anf_36]])
+                            [partial_44 (con (list integer) [])]])
                           (case
                             values_31
                             (lam field_32
                               (lam field_33 [(lam anf_34 (constr 1 anf_34)) [doInit_27 values_31]]))
                             (constr 0))])
-                        [partial_49 anf_30]])
-                      [partial_50 anf_29]])
-                    [partial_51 anf_28]])
-                  [[builtin_47 (con integer 4)] (con (list integer) [])]])
+                        [partial_42 anf_30]])
+                      [partial_43 anf_29]])
+                    [partial_44 anf_28]])
+                  [[builtin_40 (con integer 4)] (con (list integer) [])]])
                 [(lam self_19 [self_19 self_19])
                   (lam self_20
                     (lam self_21
@@ -261,9 +238,9 @@ case@Tag match#77 of
                               field_23
                               (lam field_24
                                 (lam field_25
-                                  [(lam anf_26 [[builtin_47 field_22] anf_26]) [[self_20 self_20] field_23]]))
+                                  [(lam anf_26 [[builtin_40 field_22] anf_26]) [[self_20 self_20] field_23]]))
                               (con (list integer) []))))
-                        (force [[builtin_48 (con string "unreachable")] (delay (error))]))))]])
+                        (force [[builtin_41 (con string "unreachable")] (delay (error))]))))]])
               [(lam self_6 [self_6 self_6])
                 (lam self_7
                   (lam xs_8
@@ -281,9 +258,9 @@ case@Tag match#77 of
                                     [[(builtin equalsInteger) field_12] field_14]]))
                               (con bool False))))
                         (case ys_9 (lam field_10 (lam field_11 (con bool False))) (con bool True))))))]])
-            [builtin_47 (con integer 3)]])
-          [builtin_47 (con integer 2)]])
-        [builtin_47 (con integer 1)]])
+            [builtin_40 (con integer 3)]])
+          [builtin_40 (con integer 2)]])
+        [builtin_40 (con integer 1)]])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

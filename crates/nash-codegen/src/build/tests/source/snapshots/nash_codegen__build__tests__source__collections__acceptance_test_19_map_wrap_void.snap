@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 26
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmap opt f =\n    case opt of\n        None -> None\n        Some a -> Some (f a)\nnone : option int\nnone = None\nmain = eq (map none (\\_ -> ())) None\n"
 ---
 --- unoptimized Core
@@ -75,41 +74,9 @@ main#1
         (lam arg_35 (case arg_34 (case arg_35 [fromBool_10 (con bool True)]))))])
     (lam value_33 value_33)])
 --- optimized Core
-let none#59 : Main.option int = constr 0 in
-let anf#66 : Main.option unit = case@Tag none#59 of
-  0 -> constr 0
-  1 field#55 -> constr 1 () in
-let anf#68 : Main.option unit = constr 0 in
-let match#42 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#66 anf#68 in
-let leaf#43 : @delay bool = delay false in
-case@Tag match#42 of
-  0 field#44 field#45 -> case@Tag field#44 of
-    0 -> case@Tag field#45 of
-      0 -> true
-      1 field#46 -> force leaf#43
-    1 field#47 -> case@Tag field#45 of
-      0 -> force leaf#43
-      1 field#48 -> true
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam none_1
-    [(lam anf_3
-      [(lam anf_4
-        [(lam match_5
-          [(lam leaf_6
-            (case
-              match_5
-              (lam field_7
-                (lam field_8
-                  (case
-                    field_7
-                    (case field_8 (con bool True) (lam field_9 (force leaf_6)))
-                    (lam field_10 (case field_8 (force leaf_6) (lam field_11 (con bool True)))))))))
-            (delay (con bool False))])
-          (constr 0 anf_3 anf_4)])
-        (constr 0)])
-      (case none_1 (constr 0) (lam field_2 (constr 1 (con unit ()))))])
-    (constr 0)])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

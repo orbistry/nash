@@ -23,7 +23,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/known-constr/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+force-delay+known-bool/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/known-constr/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+force-delay+known-bool/bound-constr-cleanup/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -188,6 +188,7 @@ fn accepted<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     let core = nash_ir::unused_params::reduce(&b, core);
     let core = nash_ir::known_case::reduce_constr(&b, core);
     let core = nash_ir::small_inline::simplify(&b, anf::normalize(&b, core));
+    let core = nash_ir::known_case::simplify_bound_constr(&b, core);
     anf::validate(core).expect("ANF before recursion rewriting");
     let core = nash_codegen::recursion::rewrite(&b, core).expect("recursion rewrite");
     let core = hygiene::freshen(&b, core);

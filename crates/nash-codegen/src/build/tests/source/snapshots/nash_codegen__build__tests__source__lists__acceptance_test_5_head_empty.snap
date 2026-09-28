@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 137
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nhead : list int -> option int\nhead xs =\n    case xs of\n        [] -> None\n        _ -> Some (headList xs)\nmain = eq (head []) None\n"
 ---
 --- unoptimized Core
@@ -62,38 +61,12 @@ main#1
 let anf#45 : Main.option int = case@List (con (list integer) []) of
   Nil -> constr 0
   Cons field#40 field#41 -> constr 1 field#40 in
-let anf#47 : Main.option int = constr 0 in
-let match#28 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#45 anf#47 in
-let leaf#29 : @delay bool = delay false in
-case@Tag match#28 of
-  0 field#30 field#31 -> case@Tag field#30 of
-    0 -> case@Tag field#31 of
-      0 -> true
-      1 field#32 -> force leaf#29
-    1 field#33 -> case@Tag field#31 of
-      0 -> force leaf#29
-      1 field#34 -> equalsInteger field#33 field#34
+case@Tag anf#45 of
+  0 -> true
+  1 field#33 -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_3
-    [(lam anf_4
-      [(lam match_5
-        [(lam leaf_6
-          (case
-            match_5
-            (lam field_7
-              (lam field_8
-                (case
-                  field_7
-                  (case field_8 (con bool True) (lam field_9 (force leaf_6)))
-                  (lam field_10
-                    (case
-                      field_8
-                      (force leaf_6)
-                      (lam field_11 [[(builtin equalsInteger) field_10] field_11]))))))))
-          (delay (con bool False))])
-        (constr 0 anf_3 anf_4)])
-      (constr 0)])
+  [(lam anf_3 (case anf_3 (con bool True) (lam field_4 (con bool False))))
     (case
       (con (list integer) [])
       (lam field_1 (lam field_2 (constr 1 field_1)))

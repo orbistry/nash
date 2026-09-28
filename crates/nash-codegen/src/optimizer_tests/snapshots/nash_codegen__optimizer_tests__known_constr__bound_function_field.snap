@@ -16,23 +16,19 @@ addInteger (case@Tag subject#2 of
       (lam parameter_1
         (force [[(force (builtin trace)) (con string "called")] (delay parameter_1)])))])
 --- optimized Core
-let subject#6 : @constr[0](int -> int) = constr 0 (\parameter#5 : int -> trace "called" in parameter#5) in
-let anf#9 : int = case@Tag subject#6 of
-  0 x#7 -> x#7 21 in
-let anf#10 : int = case@Tag subject#6 of
-  0 y#8 -> y#8 21 in
+let field#11 : int -> int = \parameter#5 : int -> trace "called" in parameter#5 in
+let anf#9 : int = field#11 21 in
+let anf#10 : int = field#11 21 in
 addInteger anf#9 anf#10
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_13
-    [(lam subject_2
-      [(lam anf_4
-        [(lam anf_12 [[(builtin addInteger) anf_4] anf_12])
-          (case subject_2 (lam y_11 [y_11 (con integer 21)]))])
-        (case subject_2 (lam x_3 [x_3 (con integer 21)]))])
-      (constr 0
-        (lam parameter_1
-          (force [[builtin_13 (con string "called")] (delay parameter_1)])))])
+  [(lam builtin_5
+    [(lam field_2
+      [(lam anf_3
+        [(lam anf_4 [[(builtin addInteger) anf_3] anf_4]) [field_2 (con integer 21)]])
+        [field_2 (con integer 21)]])
+      (lam parameter_1
+        (force [[builtin_5 (con string "called")] (delay parameter_1)]))])
     (force (builtin trace))])
 --- isolated pass
 --- trial ANF input

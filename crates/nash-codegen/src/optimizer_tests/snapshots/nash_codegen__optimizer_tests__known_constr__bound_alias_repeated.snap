@@ -27,23 +27,12 @@ addInteger first#6 second#7
         [[(force (builtin trace)) (con string "field")] (delay (con integer 21))]))])
 --- optimized Core
 let anf#15 : int = trace "field" in 21 in
-let subject#8 : @constr[0](int) = constr 0 anf#15 in
-let first#12 : int = case@Tag subject#8 of
-  0 x#11 -> x#11 in
-let second#14 : int = case@Tag subject#8 of
-  0 y#13 -> y#13 in
-addInteger first#12 second#14
+addInteger anf#15 anf#15
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam anf_1
-      [(lam subject_2
-        [(lam first_4
-          [(lam second_6 [[(builtin addInteger) first_4] second_6])
-            (case subject_2 (lam y_5 y_5))])
-          (case subject_2 (lam x_3 x_3))])
-        (constr 0 anf_1)])
-      (force [[builtin_7 (con string "field")] (delay (con integer 21))])])
+  [(lam builtin_2
+    [(lam anf_1 [[(builtin addInteger) anf_1] anf_1])
+      (force [[builtin_2 (con string "field")] (delay (con integer 21))])])
     (force (builtin trace))])
 --- isolated pass
 --- trial ANF input

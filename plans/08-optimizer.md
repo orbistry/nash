@@ -1259,7 +1259,7 @@ only accepted optimized output; original Core/O0 UPLC and isolated-pass evidence
 including results and logs, are byte-for-byte unchanged. The explicit 23-row
 budget check passes.
 
-**Let-bound constructor trial (awaiting acceptance).** Source
+**Let-bound constructor folding (accepted).** Source
 `decision_tree::compile` binds the subject before matching, so direct-subject
 folding alone misses this normal source shape. `reduce_bound_constr` tracks
 lexical constructor bindings and their variable aliases by globally unique name.
@@ -1275,11 +1275,12 @@ ordinary cleanup proves it unused, so escaping values and repeated matches work.
 Strict fields, including ignored fields, stay evaluated once in source order,
 even when the matched case sits in a cold branch.
 
-The trial runs on ANF after accepted cleanup, followed by the existing cleanup
+The pass runs on ANF after ordinary cleanup, followed by the existing cleanup
 loop. Selecting a branch can expose leading lets, which existing beta binding
-splicing flattens; ANF is not rerun. Repeat trial plus cleanup to a fixed point:
-folding an outer case can expose aliases that make an inner case known. The trial
-is separate from both accepted pipelines and the committed performance baseline.
+splicing flattens; ANF is not rerun. Repeat folding plus cleanup to a fixed point:
+folding an outer case can expose aliases that make an inner case known. This extension is now accepted in both the shared snapshot pipeline and the
+performance pipeline, after ordinary ANF cleanup. `simplify_bound_constr` owns
+the fold/cleanup fixed point. Isolated-pass snapshots retain the trial evidence.
 
 Temporary measurements compare accepted optimization against accepted plus this
 trial and cleanup, with identical lowerer sharing settings. Of 85 cases:
@@ -1306,6 +1307,19 @@ Strict workspace Clippy, formatting and the unchanged 23-row accepted performanc
 baseline pass. A full `cargo nextest run --workspace` was attempted, but stopped
 after two `nash-driver` rustc processes remained idle for over two minutes without
 diagnostics; this trial does not claim a completed full-workspace test run.
+
+Adoption validation: all 475 codegen unit/integration tests pass through the
+compiled test binaries, including both V3 vesting tests. Strict Clippy and
+formatting pass. Forty-one reviewed snapshots change accepted optimized output;
+original Core/O0 UPLC, isolated-pass evidence, results and logs remain unchanged.
+All 23 performance rows and source inputs remain identical; baseline settings and
+provenance record the added pass. Full-workspace nextest and Cargo attempts were
+stopped after idle compiler stalls in driver/language-server targets, so full
+workspace test completion is not claimed.
+
+Next, trial the smallest native-list case: a known empty list selects the `Nil`
+branch (or its fallback), retaining malformed-table errors. Then extend to known
+nonempty lists with strict head/tail evaluation and branch bindings preserved.
 
 Known native-list cases (`Nil`/`Cons`) can follow. Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:

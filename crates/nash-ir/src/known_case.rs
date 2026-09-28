@@ -69,7 +69,7 @@ pub fn reduce_constr<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     })
 }
 
-/// Trial: fold matches on let-bound constructors without moving field evaluation.
+/// Fold matches on let-bound constructors without moving field evaluation.
 /// Requires ANF with globally unique, well-scoped binders and the same name supply.
 /// Keep constructor bindings for escaping uses; ordinary cleanup removes dead ones.
 /// Run binding-splice cleanup afterwards: a selected branch can contain lets.
@@ -136,6 +136,18 @@ pub fn reduce_bound_constr<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<
         }
         Some(b.with_type(body, node.ty))
     })
+}
+
+/// Fold known bindings and clean up newly exposed aliases to a fixed point.
+/// Input has already passed the ordinary ANF cleanup; no normalization is repeated.
+pub fn simplify_bound_constr<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
+    loop {
+        let next = crate::small_inline::simplify(b, reduce_bound_constr(b, core));
+        if std::ptr::eq(core, next) {
+            return next;
+        }
+        core = next;
+    }
 }
 
 type ConstructorBindings<'a> = HashMap<u32, (u32, &'a Core<'a>)>;

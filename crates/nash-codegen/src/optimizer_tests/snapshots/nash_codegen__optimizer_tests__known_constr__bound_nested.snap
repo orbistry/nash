@@ -17,22 +17,11 @@ case@Tag subject#2 of
       (force
         [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))])
 --- optimized Core
-let anf#9 : int = trace "field" in 42 in
-let subject#5 : @constr[0](int) = constr 0 anf#9 in
-let subject#6 : @constr[0](@constr[0](int)) = constr 0 subject#5 in
-case@Tag subject#6 of
-  0 subject#7 -> case@Tag subject#7 of
-    0 x#8 -> x#8
+trace "field" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_11
-    [(lam anf_1
-      [(lam subject_2
-        [(lam subject_3
-          (case subject_3 (lam subject_4 (case subject_4 (lam x_10 x_10)))))
-          (constr 0 subject_2)])
-        (constr 0 anf_1)])
-      (force [[builtin_11 (con string "field")] (delay (con integer 42))])])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "field")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- isolated pass
 --- trial ANF input

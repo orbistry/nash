@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 190
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nsame : (int, list int) -> (int, list int) -> bool\nsame (a, b) (c, d) = if eq a c then eq b d else False\nmain = same (1, []) (1, [])\n"
 ---
 --- unoptimized Core
@@ -123,32 +122,20 @@ letrec
         True -> eq#39 field#47 field#52
         False -> false
 in
-let anf#74 : (int, list int) = constr 0 1 (con (list integer) []) in
-let anf#77 : (int, list int) = constr 0 1 (con (list integer) []) in
-case@Tag anf#74 of
-  0 field#58 field#59 -> case@Tag anf#77 of
-    0 field#63 field#64 -> let anf#72 : bool = eq#38 field#58 field#63 in
-    case@Bool anf#72 of
-      True -> eq#39 field#59 field#64
-      False -> false
+let anf#72 : bool = eq#38 1 1 in
+case@Bool anf#72 of
+  True -> eq#39 (con (list integer) []) (con (list integer) [])
+  False -> false
 --- optimized UPLC
 (program 1.1.0
   [(lam eq_4
     [(lam eq_16
       [(lam anf_17
-        [(lam anf_18
-          (case
-            anf_17
-            (lam field_19
-              (lam field_20
-                (case
-                  anf_18
-                  (lam field_21
-                    (lam field_22
-                      [(lam anf_23 (case anf_23 (con bool False) [[eq_16 field_20] field_22]))
-                        [[eq_4 field_19] field_21]])))))))
-          (constr 0 (con integer 1) (con (list integer) []))])
-        (constr 0 (con integer 1) (con (list integer) []))])
+        (case
+          anf_17
+          (con bool False)
+          [[eq_16 (con (list integer) [])] (con (list integer) [])]))
+        [[eq_4 (con integer 1)] (con integer 1)]])
       [(lam self_5 [self_5 self_5])
         (lam self_6
           (lam xs_7

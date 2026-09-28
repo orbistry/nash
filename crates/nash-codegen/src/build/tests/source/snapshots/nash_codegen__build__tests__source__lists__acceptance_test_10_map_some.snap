@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 319
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmap opt f =\n    case opt of\n        None -> None\n        Some a -> Some (f a)\naddOne n = addInteger n 1\nmain = eq (map (Some 1) addOne) (Some 2)\n"
 ---
 --- unoptimized Core
@@ -72,50 +71,12 @@ main#1
       (builtin equalsInteger)])
     (lam value_34 value_34)])
 --- optimized Core
-let anf#62 : Main.option int = constr 1 1 in
-let anf#63 : Main.option int = case@Tag anf#62 of
-  0 -> constr 0
-  1 field#48 -> let anf#59 : 'erased = addInteger field#48 1 in
-  constr 1 anf#59 in
-let anf#66 : Main.option int = constr 1 2 in
-let match#35 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#63 anf#66 in
-let leaf#36 : @delay bool = delay false in
-case@Tag match#35 of
-  0 field#37 field#38 -> case@Tag field#37 of
-    0 -> case@Tag field#38 of
-      0 -> true
-      1 field#39 -> force leaf#36
-    1 field#40 -> case@Tag field#38 of
-      0 -> force leaf#36
-      1 field#41 -> equalsInteger field#40 field#41
+let anf#59 : 'erased = addInteger 1 1 in
+equalsInteger anf#59 2
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1
-    [(lam anf_4
-      [(lam anf_5
-        [(lam match_6
-          [(lam leaf_7
-            (case
-              match_6
-              (lam field_8
-                (lam field_9
-                  (case
-                    field_8
-                    (case field_9 (con bool True) (lam field_10 (force leaf_7)))
-                    (lam field_11
-                      (case
-                        field_9
-                        (force leaf_7)
-                        (lam field_12 [[(builtin equalsInteger) field_11] field_12]))))))))
-            (delay (con bool False))])
-          (constr 0 anf_4 anf_5)])
-        (constr 1 (con integer 2))])
-      (case
-        anf_1
-        (constr 0)
-        (lam field_2
-          [(lam anf_3 (constr 1 anf_3)) [[(builtin addInteger) field_2] (con integer 1)]]))])
-    (constr 1 (con integer 1))])
+  [(lam anf_1 [[(builtin equalsInteger) anf_1] (con integer 2)])
+    [[(builtin addInteger) (con integer 1)] (con integer 1)]])
 --- result
 (con bool True)
 --- logs

@@ -11,13 +11,9 @@ case@Tag subject#1 of
 (program 1.1.0
   [(lam subject_1 (case subject_1 (con integer 21) (con integer 42))) (constr 0)])
 --- optimized Core
-let subject#2 : @constr[0]() = constr 0 in
-case@Tag subject#2 of
-  1 -> 42
-  0 -> 21
+21
 --- optimized UPLC
-(program 1.1.0
-  [(lam subject_1 (case subject_1 (con integer 21) (con integer 42))) (constr 0)])
+(program 1.1.0 (con integer 21))
 --- isolated pass
 --- trial ANF input
 let subject#1 : @constr[0]() = constr 0 in

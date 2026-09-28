@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype option 'a = None | Some 'a\nunwrap fallback opt =\n    case opt of\n        None -> fallback\n        Some x -> x\nmain : unit\nmain = unwrap () (Some ())\n"
 ---
 --- unoptimized Core
@@ -25,14 +24,9 @@ main#1
         [(lam match_8 (case match_8 fallback_5 (lam field_9 [(lam x_7 x_7) field_9])))
           opt_6]))])
 --- optimized Core
-let anf#24 : Main.option unit = constr 1 () in
-case@Tag anf#24 of
-  0 -> ()
-  1 field#14 -> field#14
+()
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 (case anf_1 (con unit ()) (lam field_2 field_2)))
-    (constr 1 (con unit ()))])
+(program 1.1.0 (con unit ()))
 --- result
 (con unit ())
 --- logs

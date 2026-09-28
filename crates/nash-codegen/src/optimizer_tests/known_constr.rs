@@ -308,18 +308,12 @@ fn empty_table_and_effectful_subject_are_unchanged() {
     assert!(std::ptr::eq(c, known_case::reduce_constr(&b, c)));
 }
 
-// The bound-constructor extension remains an isolated trial.
+// Retain isolated evidence for bound-constructor folding and its cleanup.
 fn check_bound(name: &str, b: &Builder<'_>, original: &Core<'_>, fails: bool) {
     let before = nash_ir::anf::normalize(b, original);
     let folded = known_case::reduce_bound_constr(b, before);
-    let mut after = nash_ir::small_inline::simplify(b, folded);
-    loop {
-        let next = nash_ir::small_inline::simplify(b, known_case::reduce_bound_constr(b, after));
-        if std::ptr::eq(after, next) {
-            break;
-        }
-        after = next;
-    }
+    let after = nash_ir::small_inline::simplify(b, folded);
+    let after = known_case::simplify_bound_constr(b, after);
     let left = crate::harness::eval_core_raw(b.arena, before);
     let middle = crate::harness::eval_core_raw(b.arena, folded);
     let right = crate::harness::eval_core_raw(b.arena, after);

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 63
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\nimpl Eq 'a => Eq (option 'a) where\n    eq a b =\n        case (a, b) of\n            (None, None) -> True\n            (Some x, Some y) -> eq x y\n            _ -> False\nmain =\n    let\n        head = \\xs ->\n            case xs of\n                [] -> None\n                _ -> Some (headList xs)\n    in\n    eq (head [1, 2, 3]) (Some 1)\n"
 ---
 --- unoptimized Core
@@ -74,46 +73,24 @@ let anf#56 : list int = mkCons 1 anf#55 in
 let anf#57 : Main.option int = case@List anf#56 of
   Nil -> constr 0
   Cons field#45 field#46 -> constr 1 field#45 in
-let anf#60 : Main.option int = constr 1 1 in
-let match#31 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#57 anf#60 in
-let leaf#32 : @delay bool = delay false in
-case@Tag match#31 of
-  0 field#33 field#34 -> case@Tag field#33 of
-    0 -> case@Tag field#34 of
-      0 -> true
-      1 field#35 -> force leaf#32
-    1 field#36 -> case@Tag field#34 of
-      0 -> force leaf#32
-      1 field#37 -> equalsInteger field#36 field#37
+case@Tag anf#57 of
+  0 -> false
+  1 field#36 -> equalsInteger field#36 1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_15
+  [(lam builtin_8
     [(lam anf_1
       [(lam anf_2
         [(lam anf_3
           [(lam anf_6
-            [(lam anf_7
-              [(lam match_8
-                [(lam leaf_9
-                  (case
-                    match_8
-                    (lam field_10
-                      (lam field_11
-                        (case
-                          field_10
-                          (case field_11 (con bool True) (lam field_12 (force leaf_9)))
-                          (lam field_13
-                            (case
-                              field_11
-                              (force leaf_9)
-                              (lam field_14 [[(builtin equalsInteger) field_13] field_14]))))))))
-                  (delay (con bool False))])
-                (constr 0 anf_6 anf_7)])
-              (constr 1 (con integer 1))])
+            (case
+              anf_6
+              (con bool False)
+              (lam field_7 [[(builtin equalsInteger) field_7] (con integer 1)])))
             (case anf_3 (lam field_4 (lam field_5 (constr 1 field_4))) (constr 0))])
-          [[builtin_15 (con integer 1)] anf_2]])
-        [[builtin_15 (con integer 2)] anf_1]])
-      [[builtin_15 (con integer 3)] (con (list integer) [])]])
+          [[builtin_8 (con integer 1)] anf_2]])
+        [[builtin_8 (con integer 2)] anf_1]])
+      [[builtin_8 (con integer 3)] (con (list integer) [])]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

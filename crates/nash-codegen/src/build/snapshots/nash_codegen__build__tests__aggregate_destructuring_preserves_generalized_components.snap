@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : (unit, bool)\nmain =\n    let\n        (identity, second) = (\\x -> x, \\x -> x)\n    in\n    (identity (), second True)\n"
 ---
 --- unoptimized Core
@@ -45,25 +44,9 @@ main#1
       (lam value_18 value_18)])
     (lam value_17 value_17)])
 --- optimized Core
-let destruct#26 : ('erased -> 'erased, 'erased -> 'erased) = constr 0 (\x#24 : 'erased -> x#24) (\x#25 : 'erased -> x#25) in
-let anf#39 : unit -> unit = case@Tag destruct#26 of
-  0 field#28 field#29 -> field#28 in
-let evaluated#32 : unit = anf#39 () in
-let anf#41 : bool -> bool = case@Tag destruct#26 of
-  0 field#34 field#35 -> field#35 in
-let anf#43 : bool = anf#41 true in
-constr 0 evaluated#32 anf#43
+constr 0 () true
 --- optimized UPLC
-(program 1.1.0
-  [(lam destruct_3
-    [(lam anf_6
-      [(lam evaluated_7
-        [(lam anf_10
-          [(lam anf_11 (constr 0 evaluated_7 anf_11)) [anf_10 (con bool True)]])
-          (case destruct_3 (lam field_8 (lam field_9 field_9)))])
-        [anf_6 (con unit ())]])
-      (case destruct_3 (lam field_4 (lam field_5 field_4)))])
-    (constr 0 (lam x_1 x_1) (lam x_2 x_2))])
+(program 1.1.0 (constr 0 (con unit ()) (con bool True)))
 --- result
 (constr 0 (con unit ()) (con bool True))
 --- logs

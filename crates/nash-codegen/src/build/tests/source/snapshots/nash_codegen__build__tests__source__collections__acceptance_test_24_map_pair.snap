@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 105
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype option 'a = None | Some 'a\noptionEq same a b =\n    case (a, b) of\n        (None, None) -> True\n        (Some x, Some y) -> same x y\n        _ -> False\nmap2 optA optB f =\n    case optA of\n        None -> None\n        Some a ->\n            case optB of\n                None -> None\n                Some b -> Some (f a b)\nmain = optionEq pairEq (map2 (Some 14) (Some 42) (\\a b -> mkPairData (iData a) (iData b))) (Some (mkPairData (iData 14) (iData 42)))\npairEq a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False\n"
 ---
 --- unoptimized Core
@@ -115,95 +114,49 @@ main#1
               (constr 0 a_12 b_13)])))])
     (lam value_43 value_43)])
 --- optimized Core
-let anf#97 : Main.option int = constr 1 14 in
-let anf#100 : Main.option int = constr 1 42 in
-let anf#103 : Main.option (pair Int Int) = case@Tag anf#97 of
-  0 -> constr 0
-  1 field#76 -> case@Tag anf#100 of
-    0 -> constr 0
-    1 field#79 -> let anf#101 : Int = iData field#76 in
-    let anf#102 : Int = iData field#79 in
-    let anf#94 : 'erased = mkPairData anf#101 anf#102 in
-    constr 1 anf#94 in
+let anf#101 : Int = iData 14 in
+let anf#102 : Int = iData 42 in
+let anf#94 : 'erased = mkPairData anf#101 anf#102 in
 let anf#106 : Int = iData 14 in
 let anf#108 : Int = iData 42 in
 let anf#109 : pair Int Int = mkPairData anf#106 anf#108 in
-let anf#110 : Main.option (pair Int Int) = constr 1 anf#109 in
-let match#51 : (Main.option 'erased, Main.option 'erased) = constr 0 anf#103 anf#110 in
-let leaf#52 : @delay 'erased = delay false in
-case@Tag match#51 of
-  0 field#53 field#54 -> case@Tag field#53 of
-    0 -> case@Tag field#54 of
-      0 -> true
-      1 field#55 -> force leaf#52
-    1 field#56 -> case@Tag field#54 of
-      0 -> force leaf#52
-      1 field#57 -> let projection#65 : 'erased = fstPair field#56 in
-      let projection#67 : 'erased = fstPair field#57 in
-      let anf#92 : bool = equalsData projection#65 projection#67 in
-      case@Bool anf#92 of
-        True -> let projection#68 : 'erased = sndPair field#56 in
-        let projection#70 : 'erased = sndPair field#57 in
-        equalsData projection#68 projection#70
-        False -> false
+let projection#65 : 'erased = fstPair anf#94 in
+let projection#67 : 'erased = fstPair anf#109 in
+let anf#92 : bool = equalsData projection#65 projection#67 in
+case@Bool anf#92 of
+  True -> let projection#68 : 'erased = sndPair anf#94 in
+  let projection#70 : 'erased = sndPair anf#109 in
+  equalsData projection#68 projection#70
+  False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_25
-    [(lam builtin_26
+  [(lam builtin_12
+    [(lam builtin_13
       [(lam anf_1
         [(lam anf_2
-          [(lam anf_8
-            [(lam anf_9
-              [(lam anf_10
-                [(lam anf_11
-                  [(lam anf_12
-                    [(lam match_13
-                      [(lam leaf_14
+          [(lam anf_3
+            [(lam anf_4
+              [(lam anf_5
+                [(lam anf_6
+                  [(lam projection_7
+                    [(lam projection_8
+                      [(lam anf_9
                         (case
-                          match_13
-                          (lam field_15
-                            (lam field_16
-                              (case
-                                field_15
-                                (case field_16 (con bool True) (lam field_17 (force leaf_14)))
-                                (lam field_18
-                                  (case
-                                    field_16
-                                    (force leaf_14)
-                                    (lam field_19
-                                      [(lam projection_20
-                                        [(lam projection_21
-                                          [(lam anf_22
-                                            (case
-                                              anf_22
-                                              (con bool False)
-                                              [(lam projection_23
-                                                [(lam projection_24 [[(builtin equalsData) projection_23] projection_24])
-                                                  [builtin_25 field_19]])
-                                                [builtin_25 field_18]]))
-                                            [[(builtin equalsData) projection_20] projection_21]])
-                                          [builtin_26 field_19]])
-                                        [builtin_26 field_18]]))))))))
-                        (delay (con bool False))])
-                      (constr 0 anf_8 anf_12)])
-                    (constr 1 anf_11)])
-                  [[(builtin mkPairData) anf_9] anf_10]])
+                          anf_9
+                          (con bool False)
+                          [(lam projection_10
+                            [(lam projection_11 [[(builtin equalsData) projection_10] projection_11])
+                              [builtin_12 anf_6]])
+                            [builtin_12 anf_3]]))
+                        [[(builtin equalsData) projection_7] projection_8]])
+                      [builtin_13 anf_6]])
+                    [builtin_13 anf_3]])
+                  [[(builtin mkPairData) anf_4] anf_5]])
                 [(builtin iData) (con integer 42)]])
               [(builtin iData) (con integer 14)]])
-            (case
-              anf_1
-              (constr 0)
-              (lam field_3
-                (case
-                  anf_2
-                  (constr 0)
-                  (lam field_4
-                    [(lam anf_5
-                      [(lam anf_6 [(lam anf_7 (constr 1 anf_7)) [[(builtin mkPairData) anf_5] anf_6]])
-                        [(builtin iData) field_4]])
-                      [(builtin iData) field_3]]))))])
-          (constr 1 (con integer 42))])
-        (constr 1 (con integer 14))])
+            [[(builtin mkPairData) anf_1] anf_2]])
+          [(builtin iData) (con integer 42)]])
+        [(builtin iData) (con integer 14)]])
       (force (force (builtin fstPair)))])
     (force (force (builtin sndPair)))])
 --- result
