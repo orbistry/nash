@@ -1850,7 +1850,7 @@ mod data {
     }
 
     mod wrappers {
-        //! IData/BData shape selection trial; constructor checks remain strict.
+        //! IData/BData shape selection; constructor checks remain strict.
         use super::*;
         const BYTES: Ty<'static> = Ty::Const(&ConstTy::Bytes);
         fn kinds<'a>(b: &Builder<'a>) -> [(F, Test<'a>, &'static str, &'a Core<'a>); 2] {

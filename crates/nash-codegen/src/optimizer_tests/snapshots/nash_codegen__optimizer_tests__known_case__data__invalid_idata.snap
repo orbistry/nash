@@ -15,21 +15,14 @@ case@Data iData true of
         (delay (error))]))
     [(builtin iData) (con bool True)]])
 --- optimized Core
-let anf#3 : Data = iData true in
-case@Data anf#3 of
-  DataI number#2 -> number#2
+let data_operand#4 : bool = true in
+let anf#3 : Data = iData data_operand#4 in
+data_operand#4
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam anf_1
-      [(lam generated_5
-        (force
-          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))] (delay (error))]
-            (delay [(lam number_4 number_4) [(builtin unIData) generated_5]])]
-            (delay (error))]))
-        anf_1])
-      [(builtin iData) (con bool True)]])
-    (force (builtin chooseData))])
+  [(lam data_operand_1
+    [(lam anf_2 data_operand_1) [(builtin iData) data_operand_1]])
+    (con bool True)])
 --- isolated pass
 --- isolated ANF input
 let anf#4 : Data = iData true in

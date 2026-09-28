@@ -19,27 +19,10 @@ case@Data iData 42 of
     [(builtin iData) (con integer 42)]])
 --- optimized Core
 let anf#2 : Data = iData 42 in
-case@Data anf#2 of
-  DataI payload#1 -> payload#1
-  _ -> trace "cold" in error
+42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam builtin_7
-      [(lam partial_8
-        [(lam anf_3
-          [(lam generated_6
-            (force
-              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay [(lam payload_4 payload_4) [(builtin unIData) generated_6]])]
-                (delay (force [partial_8 (delay (error))]))]))
-            anf_3])
-          [(builtin iData) (con integer 42)]])
-        [builtin_5 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam anf_1 (con integer 42)) [(builtin iData) (con integer 42)]])
 --- isolated pass
 --- isolated ANF input
 let anf#3 : Data = iData 42 in

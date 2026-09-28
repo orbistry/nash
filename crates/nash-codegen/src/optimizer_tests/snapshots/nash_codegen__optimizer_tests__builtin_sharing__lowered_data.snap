@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/builtin_sharing.rs
-assertion_line: 45
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -21,24 +20,13 @@ case@Data iData 42 of
     [(builtin iData) (con integer 42)]])
 --- optimized Core
 let anf#3 : Data = iData 42 in
-case@Data anf#3 of
-  DataI decoded#2 -> trace "integer" in decoded#2
-  _ -> error
+trace "integer" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_6
-    [(lam builtin_7
-      [(lam anf_1
-        [(lam generated_5
-          (force
-            [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))] (delay (error))]
-              (delay
-                [(lam decoded_4 (force [[builtin_6 (con string "integer")] (delay decoded_4)]))
-                  [(builtin unIData) generated_5]])]
-              (delay (error))]))
-          anf_1])
-        [(builtin iData) (con integer 42)]])
-      (force (builtin chooseData))])
+  [(lam builtin_2
+    [(lam anf_1
+      (force [[builtin_2 (con string "integer")] (delay (con integer 42))]))
+      [(builtin iData) (con integer 42)]])
     (force (builtin trace))])
 --- isolated pass
 --- uplc before

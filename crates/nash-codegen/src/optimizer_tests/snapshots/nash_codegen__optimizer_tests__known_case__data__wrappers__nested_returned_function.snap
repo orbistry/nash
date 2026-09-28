@@ -29,36 +29,14 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     (con integer 2)])
 --- optimized Core
 let anf#7 : Data = iData 40 in
-let anf#9 : int -> int = case@Data anf#7 of
-  DataI payload#4 -> let anf#8 : Data = iData payload#4 in
-  case@Data anf#8 of
-    DataI inner#5 -> \x#6 : int -> addInteger inner#5 x#6 in
-anf#9 2
+let anf#8 : Data = iData 40 in
+addInteger 40 2
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_15
-    [(lam anf_1
-      [(lam anf_12 [anf_12 (con integer 2)])
-        [(lam generated_13
-          (force
-            [[[[[[builtin_15 generated_13] (delay (error))] (delay (error))] (delay (error))]
-              (delay
-                [(lam payload_2
-                  [(lam anf_3
-                    [(lam generated_14
-                      (force
-                        [[[[[[builtin_15 generated_14] (delay (error))] (delay (error))] (delay (error))]
-                          (delay
-                            [(lam inner_10 (lam x_11 [[(builtin addInteger) inner_10] x_11]))
-                              [(builtin unIData) generated_14]])]
-                          (delay (error))]))
-                      anf_3])
-                    [(builtin iData) payload_2]])
-                  [(builtin unIData) generated_13]])]
-              (delay (error))]))
-          anf_1]])
+  [(lam anf_1
+    [(lam anf_2 [[(builtin addInteger) (con integer 40)] (con integer 2)])
       [(builtin iData) (con integer 40)]])
-    (force (builtin chooseData))])
+    [(builtin iData) (con integer 40)]])
 --- isolated pass
 --- isolated ANF input
 let anf#4 : Data = iData 40 in

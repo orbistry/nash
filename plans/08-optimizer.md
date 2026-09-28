@@ -19,7 +19,8 @@ unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
-accepted. Next is folding builtin-produced Data shapes;
+accepted, as is IData/BData producer case folding. Collection and constructor
+Data producers remain;
 other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
@@ -1437,7 +1438,7 @@ and the separate performance check pass. All 23 performance rows and source inpu
 are unchanged; baseline settings now include Data folding. Nextest stalled during
 discovery, so the freshly built binaries were run directly.
 
-**IData/BData producer case folding (28 September 2026), trial awaiting keep.**
+**IData/BData producer case folding (28 September 2026), accepted.**
 `reduce_data_wrappers` recognizes exactly saturated `IData`/`BData` let bindings
 and aliases in hygienic ANF. Both literal operands (`iData 42`) and variable
 operands (`iData x`) qualify. It selects the known Data arm and binds its payload
@@ -1450,8 +1451,10 @@ operands are named once before the producer, preventing duplicated lambda/delay
 binders. Traces, failures, intervening effects and suspended matches retain their
 evaluation order. Partial, overapplied, traced and unrelated producers and
 unknown Data parameters do not establish wrapper facts. `simplify_data_wrappers`
-repeats the trial with accepted cleanup without another ANF pass. The accepted
-pipeline and performance baseline remain unchanged pending a keep decision.
+repeats producer folding with accepted cleanup without another ANF pass. The user
+accepted the measured size tradeoffs without another heuristic. The shared accepted
+snapshot and performance pipelines now use `simplify_data_wrappers`; normal build
+assembly remains O0 pending Chunk 11.
 
 The separate experiment compares accepted optimization against accepted plus the
 trial with identical lowering/sharing. All 191 cases have matching results and
@@ -1478,6 +1481,14 @@ and log equivalence, and idempotence checks. Malformed tables retain their lower
 errors. Formatting, diff checks and strict workspace Clippy pass. Nextest stalled
 at discovery; Cargo test passed after restarting a stalled compiler invocation.
 The full workspace test suite was not rerun for this isolated trial.
+
+Adoption validation: 509 codegen and 69 IR tests pass. The 34 updated snapshots
+retain identical unoptimized Core/UPLC and isolated-pass evidence. The reviewed
+23-case baseline incorporates only the four workload improvements listed above;
+source inputs, results, logs and all O0 measurements are unchanged. Nextest stalled
+during discovery, so the freshly built binaries were run directly. Both formatter
+checks, workspace and isolated-runner strict Clippy, and the explicit performance
+baseline check pass.
 
 Collection and constructor producers need a separate trial; `DataConstr` binds
 one native `(tag, fields)` pair and is not a single-operand wrapper. This is case

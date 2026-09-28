@@ -559,7 +559,7 @@ fn valid_data_branches(branches: &[Branch<'_>]) -> bool {
     true
 }
 
-/// Trial IData/BData case folding on hygienic ANF with the same name supply.
+/// IData/BData case folding on hygienic ANF with the same name supply.
 /// Keep the saturated producer strict: its runtime operand check can still fail.
 pub fn reduce_data_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let facts = wrapper_bindings(core);
@@ -619,7 +619,7 @@ pub fn reduce_data_wrappers<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core
     })
 }
 
-/// Isolated producer trial plus accepted cleanup, without another ANF pass.
+/// Producer case folding plus accepted cleanup, without another ANF pass.
 pub fn simplify_data_wrappers<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
         let next = simplify_data(b, reduce_data_wrappers(b, core));

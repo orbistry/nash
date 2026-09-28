@@ -30,28 +30,15 @@ case@Data iData (trace "operand" in 42) of
 --- optimized Core
 let anf#3 : int = trace "operand" in 42 in
 let anf#4 : Data = iData anf#3 in
-case@Data anf#4 of
-  DataList wrong#2 -> trace "wrong" in error
-  _ -> trace "fallback" in 9
+trace "fallback" in 9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam builtin_9
-      [(lam partial_10
-        [(lam anf_1
-          [(lam anf_5
-            [(lam generated_8
-              (force
-                [[[[[[builtin_9 generated_8] (delay (force [partial_10 (delay (con integer 9))]))]
-                  (delay (force [partial_10 (delay (con integer 9))]))]
-                  (delay (force [[builtin_7 (con string "wrong")] (delay (error))]))]
-                  (delay (force [partial_10 (delay (con integer 9))]))]
-                  (delay (force [partial_10 (delay (con integer 9))]))]))
-              anf_5])
-            [(builtin iData) anf_1]])
-          (force [[builtin_7 (con string "operand")] (delay (con integer 42))])])
-        [builtin_7 (con string "fallback")]])
-      (force (builtin chooseData))])
+  [(lam builtin_3
+    [(lam anf_1
+      [(lam anf_2
+        (force [[builtin_3 (con string "fallback")] (delay (con integer 9))]))
+        [(builtin iData) anf_1]])
+      (force [[builtin_3 (con string "operand")] (delay (con integer 42))])])
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input
