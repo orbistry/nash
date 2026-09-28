@@ -1317,11 +1317,50 @@ provenance record the added pass. Full-workspace nextest and Cargo attempts were
 stopped after idle compiler stalls in driver/language-server targets, so full
 workspace test completion is not claimed.
 
-Next, trial the smallest native-list case: a known empty list selects the `Nil`
-branch (or its fallback), retaining malformed-table errors. Then extend to known
-nonempty lists with strict head/tail evaluation and branch bindings preserved.
+**Known native-list folding (implemented trial, awaiting acceptance).**
+`reduce_list` handles literal `ProtoList` subjects and let-bound literals or
+exactly saturated `MkCons` values, following variable aliases. It validates the
+whole branch table: unique `Nil` with zero binders and `Cons` with two binders.
+The selected arm receives head/tail bindings, or selection uses the default or
+an explicit error when that arm is absent. Malformed tables remain unchanged.
 
-Known native-list cases (`Nil`/`Cons`) can follow. Native `CaseKind::Int`/`Bytes`
+`MkCons` stays strict at its original position even when folding removes its last
+use. Besides evaluating head then tail, the builtin checks that the head is a
+constant, the tail is a list, and their runtime element types match. Core type
+annotations alone do not prove those checks; removing the construction belongs
+to a separately justified builtin reduction. Partial/oversaturated `MkCons` and
+other unknown subjects do not establish list facts.
+
+Matched bound lists share stable head/tail bindings across their cases. This
+avoids copying lambda/delay operands and repeated literal-tail serialization.
+Literal tails retain the original element metadata. The original list stays if
+it escapes. `simplify_list` repeats folding and the accepted cleanup to expose
+nested tail matches; ANF is not rerun. This entry point remains separate from
+the accepted pipelines and performance baseline.
+
+Temporary measurements compare accepted optimization with accepted plus this
+trial using identical lowerer sharing and V3 budgets. Across 86 cases (42
+construction/head-use combinations, 18 literal-tail cases, three Nash examples,
+and the existing 23 workloads), results and ordered logs match. CPU and memory
+improve in 63 cases, with 23 unchanged and no regressions. Savings range from
+32,000 to 544,000 CPU and 200 to 3,400 memory. Size improves in 57 cases by up to
+43 bytes, is unchanged in 23, and increases by 11–200 bytes in six cases that
+retain both the original 32/128-element literal list and its derived tail.
+Sharing derived fields reduced the initial worst growth from 804 to 200 bytes.
+These are fixture measurements, not a real-validator distribution.
+
+The actual Nash empty-list example saves 32,000 CPU, 200 memory and 6 bytes;
+nonempty head selection saves 64,000 CPU, 400 memory and 5 bytes; tail selection
+saves 64,000 CPU, 400 memory and 6 bytes. The existing 23 workloads are unchanged.
+Temporary measurement code is removed after recording the findings.
+
+Validation: all 486 codegen library tests pass, including 30 new list snapshots;
+existing snapshots are unchanged. Formatting and strict all-target/all-feature
+Clippy pass. The separate 23-case performance baseline check passes. Nextest
+stalled during test discovery, so the codegen suite was run with Cargo instead;
+full-workspace test completion is not claimed for this trial.
+
+Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:
 source literal patterns call their selected conversion and equality traits.
 Do not bypass those calls to manufacture an optimization opportunity.

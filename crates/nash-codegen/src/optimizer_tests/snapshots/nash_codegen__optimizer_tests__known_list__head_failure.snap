@@ -1,0 +1,93 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_list.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@List mkCons (trace "head" in error) (trace "tail" in (con (list integer) [7])) of
+  Nil -> trace "cold" in error
+  Cons ignored#8 ignored#9 -> trace "body" in 21
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    [[(force (builtin mkCons))
+      (force [[(force (builtin trace)) (con string "head")] (delay (error))])]
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) [7]))])]
+    (lam ignored_8
+      (lam ignored_9
+        (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))])))
+    (force [[(force (builtin trace)) (con string "cold")] (delay (error))])))
+--- optimized Core
+let anf#3 : int = trace "head" in error in
+let anf#4 : list int = trace "tail" in (con (list integer) [7]) in
+let anf#5 : list int = mkCons anf#3 anf#4 in
+case@List anf#5 of
+  Nil -> trace "cold" in error
+  Cons ignored#1 ignored#2 -> trace "body" in 21
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_11
+    [(lam builtin_12
+      [(lam anf_6
+        [(lam anf_7
+          [(lam anf_8
+            (case
+              anf_8
+              (lam ignored_9
+                (lam ignored_10
+                  (force [[builtin_11 (con string "body")] (delay (con integer 21))])))
+              (force [[builtin_11 (con string "cold")] (delay (error))])))
+            [[builtin_12 anf_6] anf_7]])
+          (force [[builtin_11 (con string "tail")] (delay (con (list integer) [7]))])])
+        (force [[builtin_11 (con string "head")] (delay (error))])])
+      (force (builtin mkCons))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#10 : int = trace "head" in error in
+let anf#11 : list int = trace "tail" in (con (list integer) [7]) in
+let anf#12 : list int = mkCons anf#10 anf#11 in
+case@List anf#12 of
+  Nil -> trace "cold" in error
+  Cons ignored#8 ignored#9 -> trace "body" in 21
+--- isolated folded Core
+let anf#10 : int = trace "head" in error in
+let anf#11 : list int = trace "tail" in (con (list integer) [7]) in
+let anf#12 : list int = mkCons anf#10 anf#11 in
+let ignored#8 : int = anf#10 in
+let ignored#9 : list int = anf#11 in
+trace "body" in 21
+--- isolated cleaned Core
+let anf#10 : int = trace "head" in error in
+let anf#11 : list int = trace "tail" in (con (list integer) [7]) in
+let anf#12 : list int = mkCons anf#10 anf#11 in
+trace "body" in 21
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_10
+    [(lam anf_11
+      [(lam anf_12
+        (case
+          anf_12
+          (lam ignored_8
+            (lam ignored_9
+              (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))])))
+          (force [[(force (builtin trace)) (con string "cold")] (delay (error))])))
+        [[(force (builtin mkCons)) anf_10] anf_11]])
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) [7]))])])
+    (force [[(force (builtin trace)) (con string "head")] (delay (error))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_10
+    [(lam anf_11
+      [(lam anf_12
+        (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))
+        [[(force (builtin mkCons)) anf_10] anf_11]])
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) [7]))])])
+    (force [[(force (builtin trace)) (con string "head")] (delay (error))])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["head"]

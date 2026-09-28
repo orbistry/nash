@@ -3,7 +3,7 @@ use crate::{
     build::Builder,
     core::{Binder, Branch, CaseKind, Core, CoreKind, Test},
 };
-use nash_plutus::constant::Constant;
+use nash_plutus::{builtin::DefaultFunction, constant::Constant};
 use std::collections::{HashMap, HashSet};
 
 /// No evaluation or substitution: the literal subject is already a value.
@@ -211,4 +211,175 @@ fn select_constr<'a>(branches: &'a [Branch<'a>], tag: u16, arity: usize) -> Opti
         .iter()
         .find(|branch| branch.test == Test::Tag(tag))?;
     (selected.binders.len() == arity).then_some(selected)
+}
+
+/// Trial native-list folding on hygienic ANF. A successful MkCons proves Cons,
+/// but its runtime operand checks must still run at the original construction.
+/// Branch selection can expose lets; run ordinary cleanup before another pass.
+pub fn reduce_list<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
+    let facts = list_bindings(core);
+    let mut matched = HashSet::new();
+    core.walk(&mut |node| {
+        if let Some((Some(root), _)) = list_subject(node, &facts) {
+            matched.insert(root);
+        }
+    });
+    // Share derived literal fields as well as MkCons operands. This avoids
+    // serializing the same literal tail again for every match on one binding.
+    // Never copy operand subtrees: ANF lambdas/delays still contain binders.
+    let mut named_fields = HashMap::new();
+    let named = core.map(b, &mut |node| {
+        let CoreKind::Let {
+            binder,
+            value,
+            body,
+        } = node.kind
+        else {
+            return None;
+        };
+        if !matched.contains(&binder.name.unique) {
+            return None;
+        }
+        let fields = list_fields(b, value)?;
+        let mut bindings = Vec::new();
+        let refs = fields.map(|field| {
+            if matches!(field.kind, CoreKind::Var(_)) {
+                return field;
+            }
+            let field_binder = Binder {
+                name: b.fresh("list_field"),
+                ty: field.ty,
+            };
+            bindings.push((field_binder, field));
+            b.var(field_binder.name, field_binder.ty)
+        });
+        named_fields.insert(binder.name.unique, refs);
+        if bindings.is_empty() {
+            return None;
+        }
+        let value = if matches!(value.kind, CoreKind::Builtin { .. }) {
+            b.builtin(DefaultFunction::MkCons, &refs, value.ty)
+        } else {
+            value
+        };
+        let mut result = b.let_(binder, value, body);
+        for (binder, value) in bindings.into_iter().rev() {
+            result = b.let_(binder, value, result);
+        }
+        Some(b.with_type(result, node.ty))
+    });
+    let facts = list_bindings(named);
+    named.map(b, &mut |node| {
+        let (root, value) = list_subject(node, &facts)?;
+        let CoreKind::Case {
+            branches, default, ..
+        } = node.kind
+        else {
+            return None;
+        };
+        let (nil, cons) = list_arms(branches)?;
+        let fields = root
+            .and_then(|id| named_fields.get(&id).copied())
+            .or_else(|| list_fields(b, value));
+        let selected = if fields.is_some() { cons } else { nil };
+        let fields = fields.as_ref().map_or(&[][..], |fields| fields.as_slice());
+        let body = match selected {
+            Some(branch) => {
+                let mut body = branch.body;
+                for (&binder, &field) in branch.binders.iter().zip(fields).rev() {
+                    body = b.let_(binder, field, body);
+                }
+                body
+            }
+            None => default.unwrap_or_else(|| b.error(node.ty)),
+        };
+        Some(b.with_type(body, node.ty))
+    })
+}
+
+fn list_fields<'a>(b: &Builder<'a>, value: &'a Core<'a>) -> Option<[&'a Core<'a>; 2]> {
+    match value.kind {
+        CoreKind::Lit(Constant::ProtoList(inner, values)) => {
+            let (head, tail) = values.split_first()?;
+            Some([
+                b.lit(head),
+                b.lit(Constant::proto_list(b.arena, inner, tail)),
+            ])
+        }
+        CoreKind::Builtin {
+            func: DefaultFunction::MkCons,
+            args: [head, tail],
+        } => Some([*head, *tail]),
+        _ => None,
+    }
+}
+
+/// Isolated list trial plus the accepted cleanup; normalize only once upstream.
+pub fn simplify_list<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
+    loop {
+        let next = crate::small_inline::simplify(b, reduce_list(b, core));
+        let next = simplify_bound_constr(b, next);
+        if std::ptr::eq(core, next) {
+            return next;
+        }
+        core = next;
+    }
+}
+
+type ListBindings<'a> = HashMap<u32, (u32, &'a Core<'a>)>;
+fn list_bindings<'a>(core: &'a Core<'a>) -> ListBindings<'a> {
+    let mut facts = HashMap::new();
+    core.walk(&mut |node| {
+        let CoreKind::Let { binder, value, .. } = node.kind else {
+            return;
+        };
+        let fact = match value.kind {
+            CoreKind::Lit(Constant::ProtoList(..))
+            | CoreKind::Builtin {
+                func: DefaultFunction::MkCons,
+                args: [_, _],
+            } => Some((binder.name.unique, value)),
+            CoreKind::Var(name) => facts.get(&name.unique).copied(),
+            _ => None,
+        };
+        if let Some(fact) = fact {
+            facts.insert(binder.name.unique, fact);
+        }
+    });
+    facts
+}
+fn list_subject<'a>(
+    node: &'a Core<'a>,
+    facts: &ListBindings<'a>,
+) -> Option<(Option<u32>, &'a Core<'a>)> {
+    let CoreKind::Case {
+        kind: CaseKind::List,
+        scrutinee,
+        branches,
+        ..
+    } = node.kind
+    else {
+        return None;
+    };
+    list_arms(branches)?;
+    match scrutinee.kind {
+        CoreKind::Lit(Constant::ProtoList(..)) => Some((None, scrutinee)),
+        CoreKind::Var(name) => facts
+            .get(&name.unique)
+            .map(|&(root, value)| (Some(root), value)),
+        _ => None,
+    }
+}
+fn list_arms<'a>(
+    branches: &'a [Branch<'a>],
+) -> Option<(Option<&'a Branch<'a>>, Option<&'a Branch<'a>>)> {
+    let (mut nil, mut cons) = (None, None);
+    for branch in branches {
+        match branch.test {
+            Test::Nil if nil.is_none() && branch.binders.is_empty() => nil = Some(branch),
+            Test::Cons if cons.is_none() && branch.binders.len() == 2 => cons = Some(branch),
+            _ => return None,
+        }
+    }
+    Some((nil, cons))
 }

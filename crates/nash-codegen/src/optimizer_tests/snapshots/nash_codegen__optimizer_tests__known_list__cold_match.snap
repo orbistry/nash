@@ -1,0 +1,101 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_list.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let xs#1 : list int = mkCons (trace "head" in 42) (trace "tail" in (con (list integer) [])) in
+case@Bool false of
+  True -> case@List xs#1 of
+    Cons head#2 tail#3 -> trace "cold" in head#2
+  False -> trace "chosen" in 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam xs_1
+    (case
+      (con bool False)
+      (force
+        [[(force (builtin trace)) (con string "chosen")] (delay (con integer 0))])
+      (case
+        xs_1
+        (lam head_2
+          (lam tail_3
+            (force [[(force (builtin trace)) (con string "cold")] (delay head_2)])))
+        (error))))
+    [[(force (builtin mkCons))
+      (force [[(force (builtin trace)) (con string "head")] (delay (con integer 42))])]
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) []))])]])
+--- optimized Core
+let anf#7 : int = trace "head" in 42 in
+let anf#8 : list int = trace "tail" in (con (list integer) []) in
+let xs#4 : list int = mkCons anf#7 anf#8 in
+trace "chosen" in 0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam builtin_5
+      [(lam anf_1
+        [(lam anf_2
+          [(lam xs_3 (force [[builtin_4 (con string "chosen")] (delay (con integer 0))]))
+            [[builtin_5 anf_1] anf_2]])
+          (force [[builtin_4 (con string "tail")] (delay (con (list integer) []))])])
+        (force [[builtin_4 (con string "head")] (delay (con integer 42))])])
+      (force (builtin mkCons))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : int = trace "head" in 42 in
+let anf#5 : list int = trace "tail" in (con (list integer) []) in
+let xs#1 : list int = mkCons anf#4 anf#5 in
+case@Bool false of
+  True -> case@List xs#1 of
+    Cons head#2 tail#3 -> trace "cold" in head#2
+  False -> trace "chosen" in 0
+--- isolated folded Core
+let anf#4 : int = trace "head" in 42 in
+let anf#5 : list int = trace "tail" in (con (list integer) []) in
+let xs#1 : list int = mkCons anf#4 anf#5 in
+case@Bool false of
+  True -> let head#2 : int = anf#4 in
+  let tail#3 : list int = anf#5 in
+  trace "cold" in head#2
+  False -> trace "chosen" in 0
+--- isolated cleaned Core
+let anf#4 : int = trace "head" in 42 in
+let anf#5 : list int = trace "tail" in (con (list integer) []) in
+let xs#1 : list int = mkCons anf#4 anf#5 in
+trace "chosen" in 0
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4
+    [(lam anf_5
+      [(lam xs_1
+        (case
+          (con bool False)
+          (force
+            [[(force (builtin trace)) (con string "chosen")] (delay (con integer 0))])
+          (case
+            xs_1
+            (lam head_2
+              (lam tail_3
+                (force [[(force (builtin trace)) (con string "cold")] (delay head_2)])))
+            (error))))
+        [[(force (builtin mkCons)) anf_4] anf_5]])
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) []))])])
+    (force [[(force (builtin trace)) (con string "head")] (delay (con integer 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_4
+    [(lam anf_5
+      [(lam xs_1
+        (force
+          [[(force (builtin trace)) (con string "chosen")] (delay (con integer 0))]))
+        [[(force (builtin mkCons)) anf_4] anf_5]])
+      (force
+        [[(force (builtin trace)) (con string "tail")] (delay (con (list integer) []))])])
+    (force [[(force (builtin trace)) (con string "head")] (delay (con integer 42))])])
+--- result
+(con integer 0)
+--- logs
+["head", "tail", "chosen"]

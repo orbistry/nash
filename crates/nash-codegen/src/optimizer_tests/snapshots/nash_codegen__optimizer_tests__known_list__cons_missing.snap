@@ -1,0 +1,39 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_list.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@List (con (list integer) [42]) of
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con (list integer) [42])
+    (lam generated_2 (lam generated_1 (error)))
+    (error)))
+--- optimized Core
+case@List (con (list integer) [42]) of
+--- optimized UPLC
+(program 1.1.0
+  (case
+    (con (list integer) [42])
+    (lam generated_2 (lam generated_1 (error)))
+    (error)))
+--- isolated pass
+--- isolated ANF input
+case@List (con (list integer) [42]) of
+--- isolated folded Core
+error
+--- isolated cleaned Core
+error
+--- isolated UPLC before
+(program 1.1.0
+  (case
+    (con (list integer) [42])
+    (lam generated_2 (lam generated_1 (error)))
+    (error)))
+--- isolated UPLC after
+(program 1.1.0 (error))
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]

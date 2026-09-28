@@ -10,6 +10,7 @@ mod dead_recursive;
 mod force_delay;
 mod known_bool;
 mod known_constr;
+mod known_list;
 mod propagate;
 mod single_use;
 mod small_inline;

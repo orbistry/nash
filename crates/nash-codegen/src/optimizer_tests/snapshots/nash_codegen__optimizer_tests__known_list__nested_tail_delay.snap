@@ -1,0 +1,57 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_list.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+force (case@List (con (list integer) [21, 42]) of
+  Cons head#1 tail#2 -> delay (case@List tail#2 of
+    Cons head#3 tail#4 -> head#3))
+--- unoptimized UPLC
+(program 1.1.0
+  (force
+    (case
+      (con (list integer) [21, 42])
+      (lam head_1
+        (lam tail_2 (delay (case tail_2 (lam head_3 (lam tail_4 head_3)) (error)))))
+      (error))))
+--- optimized Core
+let anf#9 : @delay int = case@List (con (list integer) [21, 42]) of
+  Cons head#5 tail#6 -> delay (case@List tail#6 of
+    Cons head#7 tail#8 -> head#7) in
+force anf#9
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_10 (force anf_10))
+    (case
+      (con (list integer) [21, 42])
+      (lam head_1
+        (lam tail_2 (delay (case tail_2 (lam head_3 (lam tail_4 head_3)) (error)))))
+      (error))])
+--- isolated pass
+--- isolated ANF input
+let anf#5 : @delay int = case@List (con (list integer) [21, 42]) of
+  Cons head#1 tail#2 -> delay (case@List tail#2 of
+    Cons head#3 tail#4 -> head#3) in
+force anf#5
+--- isolated folded Core
+let anf#5 : @delay int = let head#1 : int = 21 in
+let tail#2 : list int = (con (list integer) [42]) in
+delay (case@List tail#2 of
+  Cons head#3 tail#4 -> head#3) in
+force anf#5
+--- isolated cleaned Core
+42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_5 (force anf_5))
+    (case
+      (con (list integer) [21, 42])
+      (lam head_1
+        (lam tail_2 (delay (case tail_2 (lam head_3 (lam tail_4 head_3)) (error)))))
+      (error))])
+--- isolated UPLC after
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

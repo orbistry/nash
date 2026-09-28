@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_list.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@List mkCons 21 (mkCons (trace "inner" in 42) (con (list integer) [])) of
+  Cons head#1 tail#2 -> case@List tail#2 of
+    Cons head#3 tail#4 -> head#3
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    [[(force (builtin mkCons)) (con integer 21)]
+      [[(force (builtin mkCons))
+        (force
+          [[(force (builtin trace)) (con string "inner")] (delay (con integer 42))])]
+        (con (list integer) [])]]
+    (lam head_1 (lam tail_2 (case tail_2 (lam head_3 (lam tail_4 head_3)) (error))))
+    (error)))
+--- optimized Core
+let anf#9 : int = trace "inner" in 42 in
+let anf#10 : list int = mkCons anf#9 (con (list integer) []) in
+let anf#11 : list int = mkCons 21 anf#10 in
+case@List anf#11 of
+  Cons head#5 tail#6 -> case@List tail#6 of
+    Cons head#7 tail#8 -> head#7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_15
+    [(lam builtin_16
+      [(lam anf_1
+        [(lam anf_2
+          [(lam anf_3
+            (case
+              anf_3
+              (lam head_4
+                (lam tail_12 (case tail_12 (lam head_13 (lam tail_14 head_13)) (error))))
+              (error)))
+            [[builtin_15 (con integer 21)] anf_2]])
+          [[builtin_15 anf_1] (con (list integer) [])]])
+        (force [[builtin_16 (con string "inner")] (delay (con integer 42))])])
+      (force (builtin trace))])
+    (force (builtin mkCons))])
+--- isolated pass
+--- isolated ANF input
+let anf#5 : int = trace "inner" in 42 in
+let anf#6 : list int = mkCons anf#5 (con (list integer) []) in
+let anf#7 : list int = mkCons 21 anf#6 in
+case@List anf#7 of
+  Cons head#1 tail#2 -> case@List tail#2 of
+    Cons head#3 tail#4 -> head#3
+--- isolated folded Core
+let anf#5 : int = trace "inner" in 42 in
+let anf#6 : list int = mkCons anf#5 (con (list integer) []) in
+let list_field#8 : int = 21 in
+let anf#7 : list int = mkCons list_field#8 anf#6 in
+let head#1 : int = list_field#8 in
+let tail#2 : list int = anf#6 in
+case@List tail#2 of
+  Cons head#3 tail#4 -> head#3
+--- isolated cleaned Core
+let anf#5 : int = trace "inner" in 42 in
+let anf#6 : list int = mkCons anf#5 (con (list integer) []) in
+let anf#7 : list int = mkCons 21 anf#6 in
+anf#5
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_5
+    [(lam anf_6
+      [(lam anf_7
+        (case
+          anf_7
+          (lam head_1 (lam tail_2 (case tail_2 (lam head_3 (lam tail_4 head_3)) (error))))
+          (error)))
+        [[(force (builtin mkCons)) (con integer 21)] anf_6]])
+      [[(force (builtin mkCons)) anf_5] (con (list integer) [])]])
+    (force
+      [[(force (builtin trace)) (con string "inner")] (delay (con integer 42))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_5
+    [(lam anf_6
+      [(lam anf_7 anf_5) [[(force (builtin mkCons)) (con integer 21)] anf_6]])
+      [[(force (builtin mkCons)) anf_5] (con (list integer) [])]])
+    (force
+      [[(force (builtin trace)) (con string "inner")] (delay (con integer 42))])])
+--- result
+(con integer 42)
+--- logs
+["inner"]
