@@ -58,19 +58,9 @@ main#1
       (builtin equalsInteger)])
     (lam value_27 value_27)])
 --- optimized Core
-let anf#45 : Main.option int = case@List (con (list integer) []) of
-  Nil -> constr 0
-  Cons field#40 field#41 -> constr 1 field#40 in
-case@Tag anf#45 of
-  0 -> true
-  1 field#33 -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_3 (case anf_3 (con bool True) (lam field_4 (con bool False))))
-    (case
-      (con (list integer) [])
-      (lam field_1 (lam field_2 (constr 1 field_1)))
-      (constr 0))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

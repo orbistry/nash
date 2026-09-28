@@ -20,23 +20,15 @@ p#37)) (trace "tail" in (con (list integer) [7])) of
 --- optimized Core
 let anf#4 : list int = trace "tail" in (con (list integer) [7]) in
 let anf#5 : list int = mkCons (delay 42) anf#4 in
-case@List anf#5 of
-  Nil -> trace "cold" in error
-  Cons ignored#2 ignored#3 -> trace "body" in 21
+trace "body" in 21
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_9
-    [(lam builtin_10
+  [(lam builtin_3
+    [(lam builtin_4
       [(lam anf_1
-        [(lam anf_6
-          (case
-            anf_6
-            (lam ignored_7
-              (lam ignored_8
-                (force [[builtin_9 (con string "body")] (delay (con integer 21))])))
-            (force [[builtin_9 (con string "cold")] (delay (error))])))
-          [[builtin_10 (delay (con integer 42))] anf_1]])
-        (force [[builtin_9 (con string "tail")] (delay (con (list integer) [7]))])])
+        [(lam anf_2 (force [[builtin_3 (con string "body")] (delay (con integer 21))]))
+          [[builtin_4 (delay (con integer 42))] anf_1]])
+        (force [[builtin_3 (con string "tail")] (delay (con (list integer) [7]))])])
       (force (builtin mkCons))])
     (force (builtin trace))])
 --- isolated pass

@@ -16,17 +16,11 @@ case@List (con (list integer) []) of
     (force
       [[(force (builtin trace)) (con string "nil")] (delay (con (list integer) [0]))])))
 --- optimized Core
-case@List (con (list integer) []) of
-  Cons head#3 tail#4 -> trace "cons" in tail#4
-  Nil -> trace "nil" in (con (list integer) [0])
+trace "nil" in (con (list integer) [0])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_3
-    (case
-      (con (list integer) [])
-      (lam head_1
-        (lam tail_2 (force [[builtin_3 (con string "cons")] (delay tail_2)])))
-      (force [[builtin_3 (con string "nil")] (delay (con (list integer) [0]))])))
+  [(lam builtin_1
+    (force [[builtin_1 (con string "nil")] (delay (con (list integer) [0]))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

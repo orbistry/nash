@@ -17,8 +17,9 @@ for one leading literal; the retained Chunk 5 scope is complete. Chunk 6 safe
 unused-binding removal, recursive-member reachability and pre-ANF nonrecursive
 unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 8
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
-but remains unimplemented. Known Boolean case folding in Chunk 7 was accepted on 28 September 2026.
-Other Chunk 7 case-folding work remains. Continue
+but remains unimplemented. Known Boolean, direct/bound native-constructor and
+native-list folding in Chunk 7 are accepted. Next is known Data-shape folding;
+other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
 Chunk 11 configuration decisions.
@@ -1317,7 +1318,7 @@ provenance record the added pass. Full-workspace nextest and Cargo attempts were
 stopped after idle compiler stalls in driver/language-server targets, so full
 workspace test completion is not claimed.
 
-**Known native-list folding (implemented trial, awaiting acceptance).**
+**Known native-list folding (accepted 28 September 2026).**
 `reduce_list` handles literal `ProtoList` subjects and let-bound literals or
 exactly saturated `MkCons` values, following variable aliases. It validates the
 whole branch table: unique `Nil` with zero binders and `Cons` with two binders.
@@ -1335,8 +1336,9 @@ Matched bound lists share stable head/tail bindings across their cases. This
 avoids copying lambda/delay operands and repeated literal-tail serialization.
 Literal tails retain the original element metadata. The original list stays if
 it escapes. `simplify_list` repeats folding and the accepted cleanup to expose
-nested tail matches; ANF is not rerun. This entry point remains separate from
-the accepted pipelines and performance baseline.
+nested tail matches; ANF is not rerun. The keep decision adds this entry point to the shared accepted snapshot and
+performance pipelines, replacing the constructor-only cleanup entry point.
+Production assembly remains O0.
 
 Temporary measurements compare accepted optimization with accepted plus this
 trial using identical lowerer sharing and V3 budgets. Across 86 cases (42
@@ -1359,6 +1361,12 @@ existing snapshots are unchanged. Formatting and strict all-target/all-feature
 Clippy pass. The separate 23-case performance baseline check passes. Nextest
 stalled during test discovery, so the codegen suite was run with Cargo instead;
 full-workspace test completion is not claimed for this trial.
+
+Adoption validation: 486 codegen library tests and two vesting integration tests
+pass, with 36 updated snapshots and unchanged unoptimized Core/UPLC sections.
+Nextest again stalled at discovery; freshly built test binaries passed directly.
+Strict all-target/all-feature Clippy and formatting pass. All 23 performance
+rows and sources are unchanged; baseline settings now include list folding.
 
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:

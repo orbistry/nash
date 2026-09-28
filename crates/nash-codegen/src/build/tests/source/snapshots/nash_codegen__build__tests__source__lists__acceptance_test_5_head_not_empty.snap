@@ -70,27 +70,16 @@ main#1
 let anf#54 : list int = mkCons 3 (con (list integer) []) in
 let anf#55 : list int = mkCons 2 anf#54 in
 let anf#56 : list int = mkCons 1 anf#55 in
-let anf#57 : Main.option int = case@List anf#56 of
-  Nil -> constr 0
-  Cons field#43 field#44 -> constr 1 field#43 in
-case@Tag anf#57 of
-  0 -> false
-  1 field#36 -> equalsInteger field#36 1
+equalsInteger 1 1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
+  [(lam builtin_4
     [(lam anf_1
       [(lam anf_2
-        [(lam anf_3
-          [(lam anf_6
-            (case
-              anf_6
-              (con bool False)
-              (lam field_7 [[(builtin equalsInteger) field_7] (con integer 1)])))
-            (case anf_3 (lam field_4 (lam field_5 (constr 1 field_4))) (constr 0))])
-          [[builtin_8 (con integer 1)] anf_2]])
-        [[builtin_8 (con integer 2)] anf_1]])
-      [[builtin_8 (con integer 3)] (con (list integer) [])]])
+        [(lam anf_3 [[(builtin equalsInteger) (con integer 1)] (con integer 1)])
+          [[builtin_4 (con integer 1)] anf_2]])
+        [[builtin_4 (con integer 2)] anf_1]])
+      [[builtin_4 (con integer 3)] (con (list integer) [])]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

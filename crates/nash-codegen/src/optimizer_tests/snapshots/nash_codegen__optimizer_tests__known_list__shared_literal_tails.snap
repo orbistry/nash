@@ -16,20 +16,13 @@ constr 0 xs#1 (case@List xs#1 of
       (case xs_1 (lam head_4 (lam tail_5 tail_5)) (error))))
     (con (list integer) [21, 42, 7, 9])])
 --- optimized Core
-let xs#6 : list int = (con (list integer) [21, 42, 7, 9]) in
-let anf#11 : list int = case@List xs#6 of
-  Cons head#7 tail#8 -> tail#8 in
-let anf#12 : list int = case@List xs#6 of
-  Cons head#9 tail#10 -> tail#10 in
-constr 0 xs#6 anf#11 anf#12
+let list_field#14 : list int = (con (list integer) [42, 7, 9]) in
+constr 0 (con (list integer) [21, 42, 7, 9]) list_field#14 list_field#14
 --- optimized UPLC
 (program 1.1.0
-  [(lam xs_1
-    [(lam anf_4
-      [(lam anf_14 (constr 0 xs_1 anf_4 anf_14))
-        (case xs_1 (lam head_5 (lam tail_13 tail_13)) (error))])
-      (case xs_1 (lam head_2 (lam tail_3 tail_3)) (error))])
-    (con (list integer) [21, 42, 7, 9])])
+  [(lam list_field_1
+    (constr 0 (con (list integer) [21, 42, 7, 9]) list_field_1 list_field_1))
+    (con (list integer) [42, 7, 9])])
 --- isolated pass
 --- isolated ANF input
 let xs#1 : list int = (con (list integer) [21, 42, 7, 9]) in

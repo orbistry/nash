@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 13
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    let\n        x : list int\n        x = [1, 2]\n    in\n    case x of\n        [] -> True\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -28,16 +27,12 @@ main#1
 --- optimized Core
 let anf#21 : list int = mkCons 2 (con (list integer) []) in
 let x#14 : list int = mkCons 1 anf#21 in
-case@List x#14 of
-  Nil -> true
-  Cons field#16 field#17 -> error
+error
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam anf_1
-      [(lam x_2 (case x_2 (lam field_3 (lam field_4 (error))) (con bool True)))
-        [[builtin_5 (con integer 1)] anf_1]])
-      [[builtin_5 (con integer 2)] (con (list integer) [])]])
+  [(lam builtin_3
+    [(lam anf_1 [(lam x_2 (error)) [[builtin_3 (con integer 1)] anf_1]])
+      [[builtin_3 (con integer 2)] (con (list integer) [])]])
     (force (builtin mkCons))])
 --- result
 error: ExplicitErrorTerm

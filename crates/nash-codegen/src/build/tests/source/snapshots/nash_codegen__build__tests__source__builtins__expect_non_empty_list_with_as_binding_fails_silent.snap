@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 276
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nfromAssetList : list int -> list int\nfromAssetList inner =\n    case inner of\n        (_ :: _) as x -> x\n        _ -> fail\nmain : bool\nmain =\n    let\n        x = fromAssetList []\n    in\n    eq x x\n"
 ---
 --- unoptimized Core
@@ -94,18 +93,11 @@ letrec
         True -> eq#31 field#39 field#44
         False -> false
 in
-let inner#47 : list int = (con (list integer) []) in
-let x#53 : list int = case@List inner#47 of
-  Nil -> error
-  Cons field#49 field#50 -> inner#47 in
+let x#53 : list int = error in
 eq#31 x#53 x#53
 --- optimized UPLC
 (program 1.1.0
-  [(lam eq_15
-    [(lam inner_16
-      [(lam x_19 [[eq_15 x_19] x_19])
-        (case inner_16 (lam field_17 (lam field_18 inner_16)) (error))])
-      (con (list integer) [])])
+  [(lam eq_15 [(lam x_16 [[eq_15 x_16] x_16]) (error)])
     [(lam self_4 [self_4 self_4])
       (lam self_5
         (lam xs_6

@@ -20,24 +20,15 @@ case@List mkCons 21 (mkCons (trace "inner" in 42) (con (list integer) [])) of
 let anf#9 : int = trace "inner" in 42 in
 let anf#10 : list int = mkCons anf#9 (con (list integer) []) in
 let anf#11 : list int = mkCons 21 anf#10 in
-case@List anf#11 of
-  Cons head#5 tail#6 -> case@List tail#6 of
-    Cons head#7 tail#8 -> head#7
+anf#9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_15
-    [(lam builtin_16
+  [(lam builtin_4
+    [(lam builtin_5
       [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            (case
-              anf_3
-              (lam head_4
-                (lam tail_12 (case tail_12 (lam head_13 (lam tail_14 head_13)) (error))))
-              (error)))
-            [[builtin_15 (con integer 21)] anf_2]])
-          [[builtin_15 anf_1] (con (list integer) [])]])
-        (force [[builtin_16 (con string "inner")] (delay (con integer 42))])])
+        [(lam anf_2 [(lam anf_3 anf_1) [[builtin_4 (con integer 21)] anf_2]])
+          [[builtin_4 anf_1] (con (list integer) [])]])
+        (force [[builtin_5 (con string "inner")] (delay (con integer 42))])])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- isolated pass

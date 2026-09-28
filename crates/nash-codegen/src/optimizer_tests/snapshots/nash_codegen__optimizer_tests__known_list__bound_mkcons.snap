@@ -26,25 +26,17 @@ mkCons (addInteger (case@List alias2#3 of
 --- optimized Core
 let anf#15 : int = trace "head" in 21 in
 let xs#8 : list int = mkCons anf#15 (con (list integer) [7]) in
-let anf#16 : int = case@List xs#8 of
-  Cons head#11 tail#12 -> head#11 in
-let anf#17 : int = case@List xs#8 of
-  Cons head#13 tail#14 -> head#13 in
-let anf#18 : int = addInteger anf#16 anf#17 in
+let anf#18 : int = addInteger anf#15 anf#15 in
 mkCons anf#18 xs#8
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_11
-    [(lam builtin_12
+  [(lam builtin_4
+    [(lam builtin_5
       [(lam anf_1
         [(lam xs_2
-          [(lam anf_5
-            [(lam anf_9
-              [(lam anf_10 [[builtin_11 anf_10] xs_2]) [[(builtin addInteger) anf_5] anf_9]])
-              (case xs_2 (lam head_6 (lam tail_7 head_6)) (error))])
-            (case xs_2 (lam head_3 (lam tail_4 head_3)) (error))])
-          [[builtin_11 anf_1] (con (list integer) [7])]])
-        (force [[builtin_12 (con string "head")] (delay (con integer 21))])])
+          [(lam anf_3 [[builtin_4 anf_3] xs_2]) [[(builtin addInteger) anf_1] anf_1]])
+          [[builtin_4 anf_1] (con (list integer) [7])]])
+        (force [[builtin_5 (con string "head")] (delay (con integer 21))])])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- isolated pass

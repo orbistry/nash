@@ -187,46 +187,34 @@ let anf#117 : list int = mkCons 4 (con (list integer) []) in
 let anf#118 : list int = mkCons 3 anf#117 in
 let anf#119 : list int = mkCons 2 anf#118 in
 let values#106 : list int = mkCons 1 anf#119 in
-let anf#120 : Main.option (list int) = case@List values#106 of
-  Nil -> constr 0
-  Cons field#100 field#101 -> let anf#112 : list int = doInit#89 values#106 in
-  constr 1 anf#112 in
+let anf#112 : list int = doInit#89 values#106 in
 let anf#125 : list int = mkCons 3 (con (list integer) []) in
 let anf#126 : list int = mkCons 2 anf#125 in
 let anf#127 : list int = mkCons 1 anf#126 in
-case@Tag anf#120 of
-  0 -> false
-  1 field#82 -> eq#18 field#82 anf#127
+eq#18 anf#112 anf#127
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_40
-    [(lam builtin_41
-      [(lam partial_42
-        [(lam partial_43
-          [(lam partial_44
+  [(lam builtin_36
+    [(lam builtin_37
+      [(lam partial_38
+        [(lam partial_39
+          [(lam partial_40
             [(lam eq_17
               [(lam doInit_27
                 [(lam anf_28
                   [(lam anf_29
                     [(lam anf_30
                       [(lam values_31
-                        [(lam anf_35
-                          [(lam anf_36
-                            [(lam anf_37
-                              [(lam anf_38
-                                (case anf_35 (con bool False) (lam field_39 [[eq_17 field_39] anf_38])))
-                                [partial_42 anf_37]])
-                              [partial_43 anf_36]])
-                            [partial_44 (con (list integer) [])]])
-                          (case
-                            values_31
-                            (lam field_32
-                              (lam field_33 [(lam anf_34 (constr 1 anf_34)) [doInit_27 values_31]]))
-                            (constr 0))])
-                        [partial_42 anf_30]])
-                      [partial_43 anf_29]])
-                    [partial_44 anf_28]])
-                  [[builtin_40 (con integer 4)] (con (list integer) [])]])
+                        [(lam anf_32
+                          [(lam anf_33
+                            [(lam anf_34 [(lam anf_35 [[eq_17 anf_32] anf_35]) [partial_38 anf_34]])
+                              [partial_39 anf_33]])
+                            [partial_40 (con (list integer) [])]])
+                          [doInit_27 values_31]])
+                        [partial_38 anf_30]])
+                      [partial_39 anf_29]])
+                    [partial_40 anf_28]])
+                  [[builtin_36 (con integer 4)] (con (list integer) [])]])
                 [(lam self_19 [self_19 self_19])
                   (lam self_20
                     (lam self_21
@@ -238,9 +226,9 @@ case@Tag anf#120 of
                               field_23
                               (lam field_24
                                 (lam field_25
-                                  [(lam anf_26 [[builtin_40 field_22] anf_26]) [[self_20 self_20] field_23]]))
+                                  [(lam anf_26 [[builtin_36 field_22] anf_26]) [[self_20 self_20] field_23]]))
                               (con (list integer) []))))
-                        (force [[builtin_41 (con string "unreachable")] (delay (error))]))))]])
+                        (force [[builtin_37 (con string "unreachable")] (delay (error))]))))]])
               [(lam self_6 [self_6 self_6])
                 (lam self_7
                   (lam xs_8
@@ -258,9 +246,9 @@ case@Tag anf#120 of
                                     [[(builtin equalsInteger) field_12] field_14]]))
                               (con bool False))))
                         (case ys_9 (lam field_10 (lam field_11 (con bool False))) (con bool True))))))]])
-            [builtin_40 (con integer 3)]])
-          [builtin_40 (con integer 2)]])
-        [builtin_40 (con integer 1)]])
+            [builtin_36 (con integer 3)]])
+          [builtin_36 (con integer 2)]])
+        [builtin_36 (con integer 1)]])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

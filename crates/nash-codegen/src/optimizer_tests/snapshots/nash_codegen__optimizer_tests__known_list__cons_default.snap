@@ -16,17 +16,11 @@ case@List (con (list integer) [42]) of
     (force
       [[(force (builtin trace)) (con string "fallback")] (delay (con integer 42))])))
 --- optimized Core
-case@List (con (list integer) [42]) of
-  _ -> trace "fallback" in 42
+trace "fallback" in 42
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_1
-    [(lam partial_4
-      (case
-        (con (list integer) [42])
-        (lam generated_3 (lam generated_2 (force [partial_4 (delay (con integer 42))])))
-        (force [partial_4 (delay (con integer 42))])))
-      [builtin_1 (con string "fallback")]])
+    (force [[builtin_1 (con string "fallback")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

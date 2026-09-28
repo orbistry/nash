@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 31
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nmain : bool\nmain =\n    let\n        x : list int\n        x = []\n    in\n    case x of\n        [] -> True\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -22,15 +21,9 @@ main#1
       (con (list integer) [])])
     (lam value_7 value_7)])
 --- optimized Core
-case@List (con (list integer) []) of
-  Nil -> true
-  Cons field#12 field#13 -> error
+true
 --- optimized UPLC
-(program 1.1.0
-  (case
-    (con (list integer) [])
-    (lam field_1 (lam field_2 (error)))
-    (con bool True)))
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

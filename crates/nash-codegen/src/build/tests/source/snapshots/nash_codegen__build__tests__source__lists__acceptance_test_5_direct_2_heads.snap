@@ -159,48 +159,29 @@ in
 let anf#103 : list int = mkCons 3 (con (list integer) []) in
 let anf#104 : list int = mkCons 2 anf#103 in
 let anf#105 : list int = mkCons 1 anf#104 in
-let anf#106 : Main.option (list int) = case@List anf#105 of
-  Nil -> constr 0
-  Cons field#84 field#85 -> case@List field#85 of
-    Nil -> constr 1 anf#105
-    Cons field#88 field#89 -> let anf#98 : list int = mkCons field#88 (con (list integer) []) in
-    let anf#99 : list int = mkCons field#84 anf#98 in
-    constr 1 anf#99 in
+let anf#98 : list int = mkCons 2 (con (list integer) []) in
+let anf#99 : list int = mkCons 1 anf#98 in
 let anf#110 : list int = mkCons 2 (con (list integer) []) in
 let anf#111 : list int = mkCons 1 anf#110 in
-case@Tag anf#106 of
-  0 -> false
-  1 field#75 -> eq#28 field#75 anf#111
+eq#28 anf#99 anf#111
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_31
-    [(lam partial_32
-      [(lam partial_33
+  [(lam builtin_23
+    [(lam partial_24
+      [(lam partial_25
         [(lam eq_15
           [(lam anf_16
             [(lam anf_17
               [(lam anf_18
-                [(lam anf_25
-                  [(lam anf_26
-                    [(lam anf_27
-                      (case anf_25 (con bool False) (lam field_30 [[eq_15 field_30] anf_27])))
-                      [partial_32 anf_26]])
-                    [partial_33 (con (list integer) [])]])
-                  (case
-                    anf_18
-                    (lam field_19
-                      (lam field_20
-                        (case
-                          field_20
-                          (lam field_21
-                            (lam field_22
-                              [(lam anf_23 [(lam anf_24 (constr 1 anf_24)) [[builtin_31 field_19] anf_23]])
-                                [[builtin_31 field_21] (con (list integer) [])]]))
-                          (constr 1 anf_18))))
-                    (constr 0))])
-                [partial_32 anf_17]])
-              [partial_33 anf_16]])
-            [[builtin_31 (con integer 3)] (con (list integer) [])]])
+                [(lam anf_19
+                  [(lam anf_20
+                    [(lam anf_21 [(lam anf_22 [[eq_15 anf_20] anf_22]) [partial_24 anf_21]])
+                      [partial_25 (con (list integer) [])]])
+                    [partial_24 anf_19]])
+                  [partial_25 (con (list integer) [])]])
+                [partial_24 anf_17]])
+              [partial_25 anf_16]])
+            [[builtin_23 (con integer 3)] (con (list integer) [])]])
           [(lam self_4 [self_4 self_4])
             (lam self_5
               (lam xs_6
@@ -218,8 +199,8 @@ case@Tag anf#106 of
                                 [[(builtin equalsInteger) field_10] field_12]]))
                           (con bool False))))
                     (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
-        [builtin_31 (con integer 2)]])
-      [builtin_31 (con integer 1)]])
+        [builtin_23 (con integer 2)]])
+      [builtin_23 (con integer 1)]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

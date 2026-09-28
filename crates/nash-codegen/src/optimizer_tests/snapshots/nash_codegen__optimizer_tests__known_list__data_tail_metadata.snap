@@ -12,14 +12,9 @@ case@List (con (list data) [(I 21), (I 42)]) of
     (lam head_1 (lam tail_2 tail_2))
     (error)))
 --- optimized Core
-case@List (con (list data) [(I 21), (I 42)]) of
-  Cons head#3 tail#4 -> tail#4
+(con (list data) [(I 42)])
 --- optimized UPLC
-(program 1.1.0
-  (case
-    (con (list data) [(I 21), (I 42)])
-    (lam head_1 (lam tail_2 tail_2))
-    (error)))
+(program 1.1.0 (con (list data) [(I 42)]))
 --- isolated pass
 --- isolated ANF input
 case@List (con (list data) [(I 21), (I 42)]) of

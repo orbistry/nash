@@ -213,7 +213,7 @@ fn select_constr<'a>(branches: &'a [Branch<'a>], tag: u16, arity: usize) -> Opti
     (selected.binders.len() == arity).then_some(selected)
 }
 
-/// Trial native-list folding on hygienic ANF. A successful MkCons proves Cons,
+/// Native-list folding on hygienic ANF. A successful MkCons proves Cons,
 /// but its runtime operand checks must still run at the original construction.
 /// Branch selection can expose lets; run ordinary cleanup before another pass.
 pub fn reduce_list<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
@@ -314,7 +314,7 @@ fn list_fields<'a>(b: &Builder<'a>, value: &'a Core<'a>) -> Option<[&'a Core<'a>
     }
 }
 
-/// Isolated list trial plus the accepted cleanup; normalize only once upstream.
+/// Fold known lists and constructors with cleanup; normalize only once upstream.
 pub fn simplify_list<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
         let next = crate::small_inline::simplify(b, reduce_list(b, core));

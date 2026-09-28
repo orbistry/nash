@@ -15,18 +15,9 @@ force (case@List (con (list integer) [21, 42]) of
         (lam tail_2 (delay (case tail_2 (lam head_3 (lam tail_4 head_3)) (error)))))
       (error))))
 --- optimized Core
-let anf#9 : @delay int = case@List (con (list integer) [21, 42]) of
-  Cons head#5 tail#6 -> delay (case@List tail#6 of
-    Cons head#7 tail#8 -> head#7) in
-force anf#9
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_10 (force anf_10))
-    (case
-      (con (list integer) [21, 42])
-      (lam head_1
-        (lam tail_2 (delay (case tail_2 (lam head_3 (lam tail_4 head_3)) (error)))))
-      (error))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 let anf#5 : @delay int = case@List (con (list integer) [21, 42]) of
