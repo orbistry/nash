@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_constr.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- trial ANF input\\n{}\\n--- trial folded Core\\n{}\\n--- trial cleaned Core\\n{}\\n--- trial UPLC before\\n{}\\n--- trial UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#5 : @constr[0](int) = constr 0 (trace "field" in 42) in
+force (delay (case@Tag subject#5 of
+  0 x#6 -> x#6))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_5 (force (delay (case subject_5 (lam x_6 x_6)))))
+    (constr 0
+      (force
+        [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))])
+--- optimized Core
+let anf#3 : int = trace "field" in 42 in
+let subject#1 : @constr[0](int) = constr 0 anf#3 in
+case@Tag subject#1 of
+  0 x#2 -> x#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_7
+    [(lam anf_4 [(lam subject_5 (case subject_5 (lam x_6 x_6))) (constr 0 anf_4)])
+      (force [[builtin_7 (con string "field")] (delay (con integer 42))])])
+    (force (builtin trace))])
+--- isolated pass
+--- trial ANF input
+let anf#8 : int = trace "field" in 42 in
+let subject#5 : @constr[0](int) = constr 0 anf#8 in
+force (delay (case@Tag subject#5 of
+  0 x#6 -> x#6))
+--- trial folded Core
+let anf#8 : int = trace "field" in 42 in
+let subject#5 : @constr[0](int) = constr 0 anf#8 in
+force (delay (let x#6 : int = anf#8 in
+x#6))
+--- trial cleaned Core
+trace "field" in 42
+--- trial UPLC before
+(program 1.1.0
+  [(lam anf_8
+    [(lam subject_5 (force (delay (case subject_5 (lam x_6 x_6)))))
+      (constr 0 anf_8)])
+    (force
+      [[(force (builtin trace)) (con string "field")] (delay (con integer 42))])])
+--- trial UPLC after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))
+--- result
+(con integer 42)
+--- logs
+["field"]

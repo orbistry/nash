@@ -1,0 +1,70 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_constr.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- trial ANF input\\n{}\\n--- trial folded Core\\n{}\\n--- trial cleaned Core\\n{}\\n--- trial UPLC before\\n{}\\n--- trial UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#1 : @constr[0](int) = constr 0 (trace "field" in 42) in
+let subject#2 : @constr[0](@constr[0](int)) = constr 0 subject#1 in
+case@Tag subject#2 of
+  0 subject#3 -> case@Tag subject#3 of
+    0 x#4 -> x#4
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1
+    [(lam subject_2 (case subject_2 (lam subject_3 (case subject_3 (lam x_4 x_4)))))
+      (constr 0 subject_1)])
+    (constr 0
+      (force
+        [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))])
+--- optimized Core
+let anf#9 : int = trace "field" in 42 in
+let subject#5 : @constr[0](int) = constr 0 anf#9 in
+let subject#6 : @constr[0](@constr[0](int)) = constr 0 subject#5 in
+case@Tag subject#6 of
+  0 subject#7 -> case@Tag subject#7 of
+    0 x#8 -> x#8
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_11
+    [(lam anf_1
+      [(lam subject_2
+        [(lam subject_3
+          (case subject_3 (lam subject_4 (case subject_4 (lam x_10 x_10)))))
+          (constr 0 subject_2)])
+        (constr 0 anf_1)])
+      (force [[builtin_11 (con string "field")] (delay (con integer 42))])])
+    (force (builtin trace))])
+--- isolated pass
+--- trial ANF input
+let anf#5 : int = trace "field" in 42 in
+let subject#1 : @constr[0](int) = constr 0 anf#5 in
+let subject#2 : @constr[0](@constr[0](int)) = constr 0 subject#1 in
+case@Tag subject#2 of
+  0 subject#3 -> case@Tag subject#3 of
+    0 x#4 -> x#4
+--- trial folded Core
+let anf#5 : int = trace "field" in 42 in
+let subject#1 : @constr[0](int) = constr 0 anf#5 in
+let subject#2 : @constr[0](@constr[0](int)) = constr 0 subject#1 in
+let subject#3 : @constr[0](int) = subject#1 in
+case@Tag subject#3 of
+  0 x#4 -> x#4
+--- trial cleaned Core
+trace "field" in 42
+--- trial UPLC before
+(program 1.1.0
+  [(lam anf_5
+    [(lam subject_1
+      [(lam subject_2 (case subject_2 (lam subject_3 (case subject_3 (lam x_4 x_4)))))
+        (constr 0 subject_1)])
+      (constr 0 anf_5)])
+    (force
+      [[(force (builtin trace)) (con string "field")] (delay (con integer 42))])])
+--- trial UPLC after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "field")] (delay (con integer 42))]))
+--- result
+(con integer 42)
+--- logs
+["field"]

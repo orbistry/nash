@@ -1259,15 +1259,53 @@ only accepted optimized output; original Core/O0 UPLC and isolated-pass evidence
 including results and logs, are byte-for-byte unchanged. The explicit 23-row
 budget check passes.
 
-Next proposed trial: cases on known let-bound native constructors. Source
+**Let-bound constructor trial (awaiting acceptance).** Source
 `decision_tree::compile` binds the subject before matching, so direct-subject
-folding alone misses this normal source shape. Track a constructor binding's tag
-and already-evaluated fields, reuse those fields at matching cases, and let
-ordinary dead-binding cleanup remove the construction only when unused. Trial
-this with ANF field bindings so effects remain evaluated once in their original
-order, including ignored fields and cases inside cold branches. Cover aliases,
-multiple matches and a constructor value that also escapes. This is a proposed
-extension, not part of the accepted direct-constructor rule.
+folding alone misses this normal source shape. `reduce_bound_constr` tracks
+lexical constructor bindings and their variable aliases by globally unique name.
+It selects only complete, consecutive native tag tables with a matching tag and
+exact field arity, using the same table checks as direct-constructor folding.
+
+For constructors with eligible matches, non-variable fields are named once at
+the original construction site. This includes lambda/delay atoms: copying them
+would duplicate their internal binder IDs. Naming literals also leaves the
+existing constant propagation size policy in charge. Matching branches receive
+aliases to those stable field references. The original constructor stays until
+ordinary cleanup proves it unused, so escaping values and repeated matches work.
+Strict fields, including ignored fields, stay evaluated once in source order,
+even when the matched case sits in a cold branch.
+
+The trial runs on ANF after accepted cleanup, followed by the existing cleanup
+loop. Selecting a branch can expose leading lets, which existing beta binding
+splicing flattens; ANF is not rerun. Repeat trial plus cleanup to a fixed point:
+folding an outer case can expose aliases that make an inner case known. The trial
+is separate from both accepted pipelines and the committed performance baseline.
+
+Temporary measurements compare accepted optimization against accepted plus this
+trial and cleanup, with identical lowerer sharing settings. Of 85 cases:
+
+- 60 generated cases cover 0/1/2/4/8 fields, 1/2/4 matches, pure/traced fields,
+  and retained/escaping constructor values. All improve CPU and memory.
+- Two actual Nash examples improve: one `case One 42` saves 112,000 CPU,
+  700 memory and 16 Flat bytes (22 to 6); two matches on `Two 20 22` save
+  304,000 CPU, 1,900 memory and 27 bytes (37 to 10).
+- All 23 existing workloads, including V3 vesting inputs, are unchanged.
+
+Across the 62 improved cases, CPU savings range from 48,000 to 816,000 and memory
+savings from 300 to 5,100. Serialized size improves in 60 cases by up to 40 bytes;
+the other 25 cases are unchanged. No measured metric regresses; all results and
+ordered logs match. These are fixture results, not a real-validator distribution.
+Temporary measurement code is removed after recording these findings.
+
+Validation: 18 new reviewed snapshots cover aliases, repeated matches, escaping
+values, strict traced/failing fields before cold matches, function/delay fields
+and captures, nested matches exposed by cleanup, nullary/reordered cases, absent
+tags, empty tables, arity mismatches and malformed tables. All 473 codegen tests
+pass using the compiled test binary after focused nextest discovery stalled.
+Strict workspace Clippy, formatting and the unchanged 23-row accepted performance
+baseline pass. A full `cargo nextest run --workspace` was attempted, but stopped
+after two `nash-driver` rustc processes remained idle for over two minutes without
+diagnostics; this trial does not claim a completed full-workspace test run.
 
 Known native-list cases (`Nil`/`Cons`) can follow. Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:
