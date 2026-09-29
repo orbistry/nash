@@ -1,0 +1,27 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+iData (unIData 1)
+--- unoptimized UPLC
+(program 1.1.0 [(builtin iData) [(builtin unIData) (con integer 1)]])
+--- optimized Core
+let anf#1 : int = unIData 1 in
+iData anf#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 [(builtin iData) anf_2]) [(builtin unIData) (con integer 1)]])
+--- isolated pass
+--- core before
+iData (unIData 1)
+--- uplc before
+(program 1.1.0 [(builtin iData) [(builtin unIData) (con integer 1)]])
+--- core after
+iData (unIData 1)
+--- uplc after
+(program 1.1.0 [(builtin iData) [(builtin unIData) (con integer 1)]])
+--- result
+error: Runtime(NotData(Integer(1)))
+--- logs
+[]

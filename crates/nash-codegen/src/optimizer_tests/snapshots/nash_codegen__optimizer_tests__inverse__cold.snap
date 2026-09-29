@@ -1,0 +1,47 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Bool true of
+  True -> 7
+  False -> unIData (iData (trace "cold" in 42))
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin unIData)
+      [(builtin iData)
+        (force [[(force (builtin trace)) (con string "cold")] (delay (con integer 42))])]]
+    (con integer 7)))
+--- optimized Core
+7
+--- optimized UPLC
+(program 1.1.0 (con integer 7))
+--- isolated pass
+--- core before
+case@Bool true of
+  True -> 7
+  False -> unIData (iData (trace "cold" in 42))
+--- uplc before
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin unIData)
+      [(builtin iData)
+        (force [[(force (builtin trace)) (con string "cold")] (delay (con integer 42))])]]
+    (con integer 7)))
+--- core after
+case@Bool true of
+  True -> 7
+  False -> trace "cold" in 42
+--- uplc after
+(program 1.1.0
+  (case
+    (con bool True)
+    (force [[(force (builtin trace)) (con string "cold")] (delay (con integer 42))])
+    (con integer 7)))
+--- result
+(con integer 7)
+--- logs
+[]

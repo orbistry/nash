@@ -1678,6 +1678,24 @@ cases still match. Adoption validation also passed all 519 tests without snapsho
 changes, strict Clippy and formatting. The 23 baseline rows remain identical;
 only pipeline settings and revision metadata changed.
 
+**Direct integer inverse trial (29 September 2026), not yet adopted.**
+`inverse::reduce` cancels a directly nested `unIData (iData x)` when successful
+evaluation of `x` is structurally known to produce a native integer: an integer
+literal, a saturated `unIData`, or traces around those expressions. It keeps
+`x` at the original evaluation point and preserves the result type view.
+Type annotations alone are not proof: unknown variables, forged annotations,
+wrong-kind values, partial applications and the reverse direction remain intact.
+The retained `unIData` can still fail; cancellation does not remove its check.
+
+The first trial deliberately handles adjacent calls before ANF only. It is not
+in the accepted cleanup pipeline; let-bound producers and broader integer-result
+proofs remain subsequent work. Snapshots cover successful/failed decoding,
+traces, nested pairs, cold branches, unknown arguments, forged metadata,
+partial applications and both reverse-direction outcomes. The temporary
+16-case isolated benchmark used negative/zero/positive/large integer values,
+literal/decoded operands and traced/untraced paths. Every case saved 100,043 CPU,
+464 memory and 3–4 Flat bytes with identical results/logs. The runner was removed.
+
 Cancel `force (delay x)` and valid inverse builtin pairs such as
 `unIData (iData x)`. Establish preconditions per direction and representation;
 `iData (unIData d)` is not an unconditional replacement for arbitrary Data.

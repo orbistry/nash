@@ -34,3 +34,5 @@ mod test_support {
         b.constr(tag, fields, ty)
     }
 }
+
+pub mod inverse;

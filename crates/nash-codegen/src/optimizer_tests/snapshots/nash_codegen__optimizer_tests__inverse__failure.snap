@@ -1,0 +1,43 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unIData (iData (trace "before failure" in error))
+--- unoptimized UPLC
+(program 1.1.0
+  [(builtin unIData)
+    [(builtin iData)
+      (force
+        [[(force (builtin trace)) (con string "before failure")] (delay (error))])]])
+--- optimized Core
+let anf#1 : int = trace "before failure" in error in
+let anf#2 : Data = iData anf#1 in
+unIData anf#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam anf_3 [(lam anf_4 [(builtin unIData) anf_4]) [(builtin iData) anf_3]])
+      (force [[builtin_5 (con string "before failure")] (delay (error))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+unIData (iData (trace "before failure" in error))
+--- uplc before
+(program 1.1.0
+  [(builtin unIData)
+    [(builtin iData)
+      (force
+        [[(force (builtin trace)) (con string "before failure")] (delay (error))])]])
+--- core after
+unIData (iData (trace "before failure" in error))
+--- uplc after
+(program 1.1.0
+  [(builtin unIData)
+    [(builtin iData)
+      (force
+        [[(force (builtin trace)) (con string "before failure")] (delay (error))])]])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["before failure"]

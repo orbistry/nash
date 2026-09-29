@@ -12,3 +12,5 @@ mod propagate;
 mod single_use;
 mod small_inline;
 mod unused_params;
+
+mod inverse;
