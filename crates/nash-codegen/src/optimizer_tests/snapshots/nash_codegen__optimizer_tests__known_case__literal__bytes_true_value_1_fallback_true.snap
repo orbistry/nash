@@ -1,0 +1,81 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let strict#1 : int = trace "before" in 7 in
+case@Bytes (con bytestring #01) of
+  #00 -> trace "unselected" in 0
+  #01 -> trace "chosen" in error
+  #02 -> trace "unselected" in 2
+  _ -> trace "fallback" in 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam strict_1
+    [(lam generated_2
+      (case
+        [[(builtin equalsByteString) generated_2] (con bytestring #00)]
+        (case
+          [[(builtin equalsByteString) generated_2] (con bytestring #01)]
+          (case
+            [[(builtin equalsByteString) generated_2] (con bytestring #02)]
+            (force
+              [[(force (builtin trace)) (con string "fallback")] (delay (con integer 42))])
+            (force
+              [[(force (builtin trace)) (con string "unselected")] (delay (con integer 2))]))
+          (force [[(force (builtin trace)) (con string "chosen")] (delay (error))]))
+        (force
+          [[(force (builtin trace)) (con string "unselected")] (delay (con integer 0))])))
+      (con bytestring #01)])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 7))])])
+--- optimized Core
+let strict#2 : int = trace "before" in 7 in
+trace "chosen" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam strict_1 (force [[builtin_2 (con string "chosen")] (delay (error))]))
+      (force [[builtin_2 (con string "before")] (delay (con integer 7))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let strict#1 : int = trace "before" in 7 in
+case@Bytes (con bytestring #01) of
+  #00 -> trace "unselected" in 0
+  #01 -> trace "chosen" in error
+  #02 -> trace "unselected" in 2
+  _ -> trace "fallback" in 42
+--- uplc before
+(program 1.1.0
+  [(lam strict_1
+    [(lam generated_2
+      (case
+        [[(builtin equalsByteString) generated_2] (con bytestring #00)]
+        (case
+          [[(builtin equalsByteString) generated_2] (con bytestring #01)]
+          (case
+            [[(builtin equalsByteString) generated_2] (con bytestring #02)]
+            (force
+              [[(force (builtin trace)) (con string "fallback")] (delay (con integer 42))])
+            (force
+              [[(force (builtin trace)) (con string "unselected")] (delay (con integer 2))]))
+          (force [[(force (builtin trace)) (con string "chosen")] (delay (error))]))
+        (force
+          [[(force (builtin trace)) (con string "unselected")] (delay (con integer 0))])))
+      (con bytestring #01)])
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 7))])])
+--- core after
+let strict#1 : int = trace "before" in 7 in
+trace "chosen" in error
+--- uplc after
+(program 1.1.0
+  [(lam strict_1
+    (force [[(force (builtin trace)) (con string "chosen")] (delay (error))]))
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 7))])])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["before", "chosen"]

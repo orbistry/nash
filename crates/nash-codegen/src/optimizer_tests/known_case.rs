@@ -2939,3 +2939,225 @@ mod data {
         }
     }
 }
+
+mod literal {
+    use nash_ir::{
+        build::Builder,
+        core::*,
+        hygiene, known_case,
+        pretty::pretty,
+        ty::{ConstTy, Ty},
+    };
+    use nash_plutus::{arena::Arena, constant::Constant};
+    const INT: Ty<'static> = Ty::Const(&ConstTy::Int);
+    fn trace<'a>(b: &Builder<'a>, s: &'a str, x: &'a Core<'a>) -> &'a Core<'a> {
+        b.trace(b.lit(Constant::string(b.arena, s)), x)
+    }
+    fn check<'a>(name: &str, b: &Builder<'a>, before: &'a Core<'a>, fails: bool) -> &'a Core<'a> {
+        let after = known_case::reduce_literals(b, before);
+
+        let left = crate::harness::eval_core_raw(b.arena, before);
+        let right = crate::harness::eval_core_raw(b.arena, after);
+
+        assert_eq!(right.result.starts_with("error:"), fails);
+        insta::assert_snapshot!(
+            name,
+            crate::harness::pass_snapshot(
+                b.arena,
+                before,
+                format!(
+                    "--- core before\n{}\n--- uplc before\n{}\n--- core after\n{}\n--- uplc after\n{}\n--- result\n{}\n--- logs\n{:?}",
+                    pretty(before),
+                    left.uplc,
+                    pretty(after),
+                    right.uplc,
+                    right.result,
+                    right.logs
+                )
+            )
+        );
+        hygiene::validate(after, &[]).unwrap();
+        // Properties independent of the expected snapshot.
+        assert_eq!(before.ty, after.ty);
+        assert_eq!(left.observable, right.observable);
+        assert_eq!(left.logs, right.logs);
+        after
+    }
+
+    #[test]
+    fn matches_misses_defaults_and_effects() {
+        for bytes in [false, true] {
+            for value in [0, 1, 2, 9] {
+                for fallback in [false, true] {
+                    let a = Arena::new();
+                    let b = Builder::new(&a);
+                    let literal = |n| {
+                        if bytes {
+                            b.lit(Constant::byte_string(&a, a.alloc_slice_copy(&[n])))
+                        } else {
+                            b.int(n.into())
+                        }
+                    };
+                    let test = |n| match literal(n).kind {
+                        CoreKind::Lit(Constant::Integer(i)) => Test::Int(i),
+                        CoreKind::Lit(Constant::ByteString(bs)) => Test::Bytes(bs),
+                        _ => unreachable!(),
+                    };
+                    let branches: Vec<_> = (0..3)
+                        .map(|n| Branch {
+                            test: test(n),
+                            binders: &[],
+                            body: trace(
+                                &b,
+                                if n == value { "chosen" } else { "unselected" },
+                                if n == 1 {
+                                    b.error(INT)
+                                } else {
+                                    b.int(n.into())
+                                },
+                            ),
+                        })
+                        .collect();
+                    let case = b.case(
+                        if bytes {
+                            CaseKind::Bytes
+                        } else {
+                            CaseKind::Int
+                        },
+                        literal(value),
+                        &branches,
+                        fallback.then(|| trace(&b, "fallback", b.int(42))),
+                        INT,
+                    );
+                    let strict = Binder {
+                        name: b.fresh("strict"),
+                        ty: INT,
+                    };
+                    let root = b.let_(strict, trace(&b, "before", b.int(7)), case);
+                    check(
+                        &format!("bytes_{bytes}_value_{value}_fallback_{fallback}"),
+                        &b,
+                        root,
+                        value == 1 || (value == 9 && !fallback),
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn empty_tables_and_nonmatching_subjects() {
+        let a = Arena::new();
+        let b = Builder::new(&a);
+        for (name, kind, subject) in [
+            ("negative", CaseKind::Int, b.int(-7)),
+            (
+                "empty_bytes",
+                CaseKind::Bytes,
+                b.lit(Constant::byte_string(&a, &[])),
+            ),
+            (
+                "wrong_runtime_kind",
+                CaseKind::Int,
+                b.lit(Constant::bool(&a, true)),
+            ),
+        ] {
+            for fallback in [false, true] {
+                check(
+                    &format!("empty_{name}_{fallback}"),
+                    &b,
+                    b.case(kind, subject, &[], fallback.then(|| b.int(42)), INT),
+                    !fallback,
+                );
+            }
+        }
+        let p = Binder {
+            name: b.fresh("subject"),
+            ty: INT,
+        };
+        let CoreKind::Lit(Constant::Integer(i)) = b.int(7).kind else {
+            unreachable!()
+        };
+        let arms = [Branch {
+            test: Test::Int(i),
+            binders: &[],
+            body: b.int(42),
+        }];
+        let matched = b.case(
+            CaseKind::Int,
+            b.var(p.name, p.ty),
+            &arms,
+            Some(b.int(0)),
+            INT,
+        );
+        let root = b.app(b.lam(&[p], matched), &[b.int(7)], INT);
+        let after = check("unknown_subject", &b, root, false);
+        assert!(std::ptr::eq(root, after));
+        let delay = b.delay(trace(&b, "forced", b.int(42)));
+        let arms = [Branch {
+            test: Test::Int(i),
+            binders: &[],
+            body: delay,
+        }];
+        check(
+            "selected_delay",
+            &b,
+            b.force(b.case(CaseKind::Int, b.int(7), &arms, None, delay.ty), INT),
+            false,
+        );
+        check(
+            "effectful_subject",
+            &b,
+            b.case(
+                CaseKind::Int,
+                trace(&b, "subject", b.int(7)),
+                &[Branch {
+                    test: Test::Int(i),
+                    binders: &[],
+                    body: b.int(42),
+                }],
+                None,
+                INT,
+            ),
+            false,
+        );
+    }
+
+    #[test]
+    fn invalid_tables_remain_errors() {
+        for mode in 0..3 {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let CoreKind::Lit(Constant::Integer(i)) = b.int(7).kind else {
+                unreachable!()
+            };
+            let binder = Binder {
+                name: b.fresh("bad"),
+                ty: INT,
+            };
+            let arm = Branch {
+                test: if mode == 0 { Test::True } else { Test::Int(i) },
+                binders: if mode == 1 {
+                    a.alloc_slice_copy(&[binder])
+                } else {
+                    &[]
+                },
+                body: b.int(42),
+            };
+            let arms = if mode == 2 { vec![arm, arm] } else { vec![arm] };
+            let root = b.case(CaseKind::Int, b.int(7), &arms, Some(b.int(0)), INT);
+            let after = known_case::reduce_literals(&b, root);
+            let left = crate::lower::lower(&a, root).unwrap_err();
+            let right = crate::lower::lower(&a, after).unwrap_err();
+            insta::assert_snapshot!(
+                format!("invalid_literal_{mode}"),
+                format!(
+                    "--- before\n{}\n{left:?}\n--- after\n{}\n{right:?}",
+                    pretty(root),
+                    pretty(after)
+                )
+            );
+            assert!(std::ptr::eq(root, after));
+        }
+    }
+}

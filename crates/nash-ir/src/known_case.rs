@@ -1,4 +1,4 @@
-//! Known-subject case folding: Boolean cleanup and pre-ANF native constructors.
+//! Known-subject case and field folding with strict evaluation preserved.
 use crate::{
     build::Builder,
     core::{Binder, Branch, CaseKind, Core, CoreKind, Test},
@@ -40,6 +40,46 @@ pub fn reduce_bool<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
         }
         let selected = (if *value { yes } else { no }).or(default)?;
         Some(b.with_type(selected, node.ty))
+    })
+}
+
+/// Select native integer/byte literal branches without bypassing source Eq calls.
+/// Validate the whole table before folding, including unselected branches.
+pub fn reduce_literals<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
+    core.map(b, &mut |node| {
+        let CoreKind::Case {
+            kind,
+            scrutinee,
+            branches,
+            default,
+        } = node.kind
+        else {
+            return None;
+        };
+        let subject = match (kind, scrutinee.kind) {
+            (CaseKind::Int, CoreKind::Lit(Constant::Integer(i))) => Test::Int(i),
+            (CaseKind::Bytes, CoreKind::Lit(Constant::ByteString(bs))) => Test::Bytes(bs),
+            _ => return None,
+        };
+        let mut seen = Vec::new();
+        let mut selected = None;
+        for branch in branches {
+            if !branch.binders.is_empty() || seen.contains(&branch.test) {
+                return None;
+            }
+            if !matches!(
+                (kind, branch.test),
+                (CaseKind::Int, Test::Int(_)) | (CaseKind::Bytes, Test::Bytes(_))
+            ) {
+                return None;
+            }
+            seen.push(branch.test);
+            if branch.test == subject {
+                selected = Some(branch.body);
+            }
+        }
+        // A missing branch without a default retains the runtime failure.
+        Some(b.with_type(selected.or(default)?, node.ty))
     })
 }
 

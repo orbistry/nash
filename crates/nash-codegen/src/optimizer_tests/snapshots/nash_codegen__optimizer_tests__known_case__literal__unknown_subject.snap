@@ -1,0 +1,55 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+(\subject#1 : int -> case@Int subject#1 of
+  7 -> 42
+  _ -> 0) 7
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1
+    [(lam generated_2
+      (case
+        [[(builtin equalsInteger) generated_2] (con integer 7)]
+        (con integer 0)
+        (con integer 42)))
+      subject_1])
+    (con integer 7)])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated pass
+--- core before
+(\subject#1 : int -> case@Int subject#1 of
+  7 -> 42
+  _ -> 0) 7
+--- uplc before
+(program 1.1.0
+  [(lam subject_1
+    [(lam generated_2
+      (case
+        [[(builtin equalsInteger) generated_2] (con integer 7)]
+        (con integer 0)
+        (con integer 42)))
+      subject_1])
+    (con integer 7)])
+--- core after
+(\subject#1 : int -> case@Int subject#1 of
+  7 -> 42
+  _ -> 0) 7
+--- uplc after
+(program 1.1.0
+  [(lam subject_1
+    [(lam generated_2
+      (case
+        [[(builtin equalsInteger) generated_2] (con integer 7)]
+        (con integer 0)
+        (con integer 42)))
+      subject_1])
+    (con integer 7)])
+--- result
+(con integer 42)
+--- logs
+[]

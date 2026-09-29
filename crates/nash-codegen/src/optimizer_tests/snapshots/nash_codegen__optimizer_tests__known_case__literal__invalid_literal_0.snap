@@ -1,0 +1,14 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "format!(\"--- before\\n{}\\n{left:?}\\n--- after\\n{}\\n{right:?}\", pretty(root),\npretty(after))"
+---
+--- before
+case@Int 7 of
+  True -> 42
+  _ -> 0
+InvalidCase("literal test has wrong kind")
+--- after
+case@Int 7 of
+  True -> 42
+  _ -> 0
+InvalidCase("literal test has wrong kind")

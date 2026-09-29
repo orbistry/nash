@@ -20,8 +20,8 @@ is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
-known native-constructor field folding is accepted as well. Other Chunk 7 case
-simplification work remains. Continue
+known native-constructor field and native integer/byte case folding are accepted
+as well. The retained Chunk 7 scope is complete. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
 Chunk 11 configuration decisions.
@@ -1584,10 +1584,23 @@ construction without evaluating that existing panic path. In-range boundary tags
 are evaluated normally. This is case folding, not permission to remove producers
 through cancellation (Chunk 8).
 
-Native `CaseKind::Int`/`Bytes`
-literal folding remains in scope, but currently has no source codegen producer:
-source literal patterns call their selected conversion and equality traits.
-Do not bypass those calls to manufacture an optimization opportunity.
+**Native integer/byte literal cases (29 September 2026), accepted.**
+`reduce_literals` selects a matching branch or default for literal subjects,
+inside the existing cleanup fixed point. The entire table must have tests of the
+correct kind, no duplicate tests and no binders. Invalid tables and missing
+matches without defaults remain unchanged. Effectful/unknown subjects are not
+folded by this rule; strict surrounding bindings retain their evaluation.
+The rule preserves the enclosing result type and selected branch delay boundaries.
+
+These Core kinds currently have no source codegen producer: source literal
+patterns call their selected conversion and equality traits. Those calls are
+not bypassed. Hand-built Core snapshots cover hits, misses, defaults, errors,
+empty tables, unknown/effectful subjects, delayed results and malformed tables.
+An isolated 80-case experiment covered integer/byte tables of 0, 1, 3, 8 and 32
+branches, early/middle/late hits and misses, with/without defaults. 64 cases
+improved CPU, memory and size; 16 missing-match cases were unchanged. Maximum
+savings were 4,794,656 CPU, 19,532 memory and 374 Flat bytes. Results/logs matched;
+the temporary runner was removed. This completes the retained Chunk 7 scope.
 
 **Future late UPLC application packing, separate from Core folding.**
 Measure replacing a chain such as `f a b c` with native

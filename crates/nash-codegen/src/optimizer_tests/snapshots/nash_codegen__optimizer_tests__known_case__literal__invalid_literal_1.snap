@@ -1,0 +1,14 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "format!(\"--- before\\n{}\\n{left:?}\\n--- after\\n{}\\n{right:?}\", pretty(root),\npretty(after))"
+---
+--- before
+case@Int 7 of
+  7 bad#1 -> 42
+  _ -> 0
+InvalidCase("invalid literal branch")
+--- after
+case@Int 7 of
+  7 bad#1 -> 42
+  _ -> 0
+InvalidCase("invalid literal branch")

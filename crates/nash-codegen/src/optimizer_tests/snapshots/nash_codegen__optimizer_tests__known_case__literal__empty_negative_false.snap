@@ -1,0 +1,25 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Int -7 of
+--- unoptimized UPLC
+(program 1.1.0 [(lam generated_1 (error)) (con integer -7)])
+--- optimized Core
+case@Int -7 of
+--- optimized UPLC
+(program 1.1.0 [(lam generated_1 (error)) (con integer -7)])
+--- isolated pass
+--- core before
+case@Int -7 of
+--- uplc before
+(program 1.1.0 [(lam generated_1 (error)) (con integer -7)])
+--- core after
+case@Int -7 of
+--- uplc after
+(program 1.1.0 [(lam generated_1 (error)) (con integer -7)])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]

@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{collections::HashSet, ptr};
 
-/// Compose rules 1–4, dead-code cleanup, force/delay cancellation and known Boolean folding.
+/// Compose rules 1–4, dead-code cleanup, force/delay cancellation and known Boolean/literal folding.
 /// Input is typed ANF with globally unique binders.
 /// Conditional bodies, partial calls and indirect calls are not selected by rule 4.
 pub fn simplify<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
@@ -15,6 +15,7 @@ pub fn simplify<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
         // Beta cleanup flattens lets exposed by cancellation before other ANF rules.
         let core_without_delays = force_delay::reduce(b, core);
         let selected = known_case::reduce_bool(b, core_without_delays);
+        let selected = known_case::reduce_literals(b, selected);
         let next = dead_code::simplify_bindings(b, inline(b, single_use::simplify(b, selected)));
         let next = dead_code::prune_recursive(b, next);
         if ptr::eq(core, next) {
