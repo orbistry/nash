@@ -1,0 +1,37 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+field@0/1 (constr 1 1)
+--- unoptimized UPLC
+(program 1.1.0 (case (constr 1 (con integer 1)) (lam generated_1 generated_1)))
+--- optimized Core
+let anf#1 : @constr[1](int) = constr 1 1 in
+field@0/1 anf#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 (case anf_2 (lam generated_3 generated_3)))
+    (constr 1 (con integer 1))])
+--- isolated pass
+--- isolated ANF input
+let anf#1 : @constr[1](int) = constr 1 1 in
+field@0/1 anf#1
+--- isolated folded Core
+let anf#1 : @constr[1](int) = constr 1 1 in
+field@0/1 anf#1
+--- isolated cleaned Core
+let anf#1 : @constr[1](int) = constr 1 1 in
+field@0/1 anf#1
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_1 (case anf_1 (lam generated_2 generated_2)))
+    (constr 1 (con integer 1))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_1 (case anf_1 (lam generated_2 generated_2)))
+    (constr 1 (con integer 1))])
+--- result
+error: MissingCaseBranch([Lambda { parameter: DeBruijn(0), body: Var(DeBruijn(1)) }], Constr(1, [Con(Integer(1))]))
+--- logs
+[]

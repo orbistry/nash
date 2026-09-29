@@ -69,7 +69,7 @@ pub fn reduce_constr<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     })
 }
 
-/// Fold matches on let-bound constructors without moving field evaluation.
+/// Fold matches and field accesses on let-bound constructors without moving field evaluation.
 /// Requires ANF with globally unique, well-scoped binders and the same name supply.
 /// Keep constructor bindings for escaping uses; ordinary cleanup removes dead ones.
 /// Run binding-splice cleanup afterwards: a selected branch can contain lets.
@@ -79,6 +79,9 @@ pub fn reduce_bound_constr<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<
     let mut matched = HashSet::new();
     core.walk(&mut |node| {
         if let Some((root, _, _)) = bound_match(node, &facts) {
+            matched.insert(root);
+        }
+        if let Some((root, _)) = bound_field(node, &facts) {
             matched.insert(root);
         }
     });
@@ -129,6 +132,9 @@ pub fn reduce_bound_constr<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<
     });
     let facts = constructor_bindings(named);
     named.map(b, &mut |node| {
+        if let Some((_, field)) = bound_field(node, &facts) {
+            return Some(b.with_type(field, node.ty));
+        }
         let (_, fields, selected) = bound_match(node, &facts)?;
         let mut body = selected.body;
         for (&binder, &field) in selected.binders.iter().zip(fields).rev() {
@@ -170,6 +176,33 @@ fn constructor_bindings<'a>(core: &'a Core<'a>) -> ConstructorBindings<'a> {
         }
     });
     facts
+}
+
+fn bound_field<'a>(
+    node: &'a Core<'a>,
+    facts: &ConstructorBindings<'a>,
+) -> Option<(u32, &'a Core<'a>)> {
+    let CoreKind::Field {
+        record,
+        index,
+        arity,
+    } = node.kind
+    else {
+        return None;
+    };
+    let CoreKind::Var(name) = record.kind else {
+        return None;
+    };
+    let &(root, value) = facts.get(&name.unique)?;
+    let CoreKind::Constr { tag: 0, fields } = value.kind else {
+        return None;
+    };
+    // Field lowers to a single tag-zero branch with exactly `arity` lambdas.
+    // Too few fields leave a function; extra fields apply the selected value.
+    if index >= arity || fields.len() != usize::from(arity) {
+        return None;
+    }
+    Some((root, fields[usize::from(index)]))
 }
 
 fn bound_match<'a>(

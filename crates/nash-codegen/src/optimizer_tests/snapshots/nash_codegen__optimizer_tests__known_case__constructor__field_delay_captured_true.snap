@@ -1,0 +1,77 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#1 : @constr[0](int) = constr 0 (trace "constructed" in 7) in
+let subject#2 : @delay int = delay (field@0/1 subject#1) in
+constr 0 (force subject#2) (force subject#2)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1
+    [(lam subject_2 (constr 0 (force subject_2) (force subject_2)))
+      (delay (case subject_1 (lam generated_3 generated_3)))])
+    (constr 0
+      (force
+        [[(force (builtin trace)) (con string "constructed")] (delay (con integer 7))]))])
+--- optimized Core
+let anf#5 : int = trace "constructed" in 7 in
+let subject#4 : @delay int = delay anf#5 in
+let anf#6 : int = force subject#4 in
+let anf#7 : int = force subject#4 in
+constr 0 anf#6 anf#7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_9
+    [(lam anf_1
+      [(lam subject_2
+        [(lam anf_3 [(lam anf_8 (constr 0 anf_3 anf_8)) (force subject_2)])
+          (force subject_2)])
+        (delay anf_1)])
+      (force [[builtin_9 (con string "constructed")] (delay (con integer 7))])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : int = trace "constructed" in 7 in
+let subject#1 : @constr[0](int) = constr 0 anf#3 in
+let subject#2 : @delay int = delay (field@0/1 subject#1) in
+let anf#4 : int = force subject#2 in
+let anf#5 : int = force subject#2 in
+constr 0 anf#4 anf#5
+--- isolated folded Core
+let anf#3 : int = trace "constructed" in 7 in
+let subject#1 : @constr[0](int) = constr 0 anf#3 in
+let subject#2 : @delay int = delay anf#3 in
+let anf#4 : int = force subject#2 in
+let anf#5 : int = force subject#2 in
+constr 0 anf#4 anf#5
+--- isolated cleaned Core
+let anf#3 : int = trace "constructed" in 7 in
+let subject#2 : @delay int = delay anf#3 in
+let anf#4 : int = force subject#2 in
+let anf#5 : int = force subject#2 in
+constr 0 anf#4 anf#5
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3
+    [(lam subject_1
+      [(lam subject_2
+        [(lam anf_4 [(lam anf_5 (constr 0 anf_4 anf_5)) (force subject_2)])
+          (force subject_2)])
+        (delay (case subject_1 (lam generated_6 generated_6)))])
+      (constr 0 anf_3)])
+    (force
+      [[(force (builtin trace)) (con string "constructed")] (delay (con integer 7))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_3
+    [(lam subject_2
+      [(lam anf_4 [(lam anf_5 (constr 0 anf_4 anf_5)) (force subject_2)])
+        (force subject_2)])
+      (delay anf_3)])
+    (force
+      [[(force (builtin trace)) (con string "constructed")] (delay (con integer 7))])])
+--- result
+(constr 0 (con integer 7) (con integer 7))
+--- logs
+["constructed"]

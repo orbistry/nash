@@ -1,0 +1,76 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#2 : int -> int = field@0/1 (field@0/1 (constr 0 (constr 0 (\x#1 : int -> trace "called" in x#1)))) in
+constr 0 (subject#2 1) (subject#2 2)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_2
+    (constr 0 [subject_2 (con integer 1)] [subject_2 (con integer 2)]))
+    (case
+      (case
+        (constr 0
+          (constr 0
+            (lam x_1 (force [[(force (builtin trace)) (con string "called")] (delay x_1)]))))
+        (lam generated_4 generated_4))
+      (lam generated_3 generated_3))])
+--- optimized Core
+let field#10 : int -> int = \x#3 : int -> trace "called" in x#3 in
+let anf#8 : int = field#10 1 in
+let anf#9 : int = field#10 2 in
+constr 0 anf#8 anf#9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam field_2
+      [(lam anf_4 [(lam anf_5 (constr 0 anf_4 anf_5)) [field_2 (con integer 2)]])
+        [field_2 (con integer 1)]])
+      (lam x_1 (force [[builtin_6 (con string "called")] (delay x_1)]))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#3 : @constr[0](int -> int) = constr 0 (\x#1 : int -> trace "called" in x#1) in
+let anf#4 : @constr[0](@constr[0](int -> int)) = constr 0 anf#3 in
+let anf#5 : @constr[0](int -> int) = field@0/1 anf#4 in
+let subject#2 : int -> int = field@0/1 anf#5 in
+let anf#6 : int = subject#2 1 in
+let anf#7 : int = subject#2 2 in
+constr 0 anf#6 anf#7
+--- isolated folded Core
+let anf#3 : @constr[0](int -> int) = constr 0 (\x#1 : int -> trace "called" in x#1) in
+let anf#4 : @constr[0](@constr[0](int -> int)) = constr 0 anf#3 in
+let anf#5 : @constr[0](int -> int) = anf#3 in
+let subject#2 : int -> int = field@0/1 anf#5 in
+let anf#6 : int = subject#2 1 in
+let anf#7 : int = subject#2 2 in
+constr 0 anf#6 anf#7
+--- isolated cleaned Core
+let field#8 : int -> int = \x#1 : int -> trace "called" in x#1 in
+let anf#6 : int = field#8 1 in
+let anf#7 : int = field#8 2 in
+constr 0 anf#6 anf#7
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_3
+    [(lam anf_4
+      [(lam anf_5
+        [(lam subject_2
+          [(lam anf_6 [(lam anf_7 (constr 0 anf_6 anf_7)) [subject_2 (con integer 2)]])
+            [subject_2 (con integer 1)]])
+          (case anf_5 (lam generated_8 generated_8))])
+        (case anf_4 (lam generated_9 generated_9))])
+      (constr 0 anf_3)])
+    (constr 0
+      (lam x_1 (force [[(force (builtin trace)) (con string "called")] (delay x_1)])))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam field_8
+    [(lam anf_6 [(lam anf_7 (constr 0 anf_6 anf_7)) [field_8 (con integer 2)]])
+      [field_8 (con integer 1)]])
+    (lam x_1 (force [[(force (builtin trace)) (con string "called")] (delay x_1)]))])
+--- result
+(constr 0 (con integer 1) (con integer 2))
+--- logs
+["called", "called"]

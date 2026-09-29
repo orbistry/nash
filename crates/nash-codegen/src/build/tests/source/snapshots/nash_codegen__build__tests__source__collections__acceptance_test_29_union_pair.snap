@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 269
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype assocList = AssocList { inner : list (pair Bytes Int) }\nimpl Eq assocList where\n    eq left right = equalsData (toData (mapData left.inner)) (toData (mapData right.inner))\nnew = AssocList { inner = [] }\ntoList : assocList -> list (pair Bytes Int)\ntoList m = m.inner\ninsert : assocList -> bytes -> int -> assocList\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        [] -> [mkPairData (bData k) (iData v)]\n        entry :: rest ->\n            let\n                k2 = unBData (fstPair entry)\n                v2 = unIData (sndPair entry)\n            in\n            if eq k k2 then mkCons (mkPairData (bData k) (iData v)) rest\n            else mkCons (mkPairData (bData k2) (iData v2)) (doInsert rest k v)\nfixture1 = insert (insert new \"foo\" 42) \"bar\" 14\nfromList xs = AssocList { inner = (doFromList xs) }\ndoFromList : list (pair Bytes Int) -> list (pair Bytes Int)\ndoFromList xs =\n    case xs of\n        [] -> []\n        entry :: rest -> doInsert (doFromList rest) (unBData (fstPair entry)) (unIData (sndPair entry))\nunion : assocList -> assocList -> assocList\nunion left right = AssocList { inner = (doUnion left.inner right.inner) }\ndoUnion left right =\n    case left of\n        [] -> right\n        entry :: rest -> doUnion rest (doInsert right (unBData (fstPair entry)) (unIData (sndPair entry)))\nmain = eq (union fixture1 new) fixture1\n"
 ---
 --- unoptimized Core
@@ -193,7 +192,8 @@ letrec
     let anf#128 : list (pair Bytes Int) = anf#126 anf#127 in
     anf#125 anf#128
 in
-let new#97 : Main.assocList = constr 0 (con (list (pair data data)) []) in
+let field#145 : list (pair Bytes Int) = (con (list (pair data data)) []) in
+let new#97 : Main.assocList = constr 0 field#145 in
 let insert#103 : Main.assocList -> bytes -> int -> Main.assocList = \m#98 : Main.assocList k#99 : bytes v#100 : int -> let projection#101 : list (pair Bytes Int) = field@0/1 m#98 in
 let anf#130 : list (pair Bytes Int) = doInsert#66 projection#101 k#99 v#100 in
 constr 0 anf#130 in
@@ -207,64 +207,57 @@ let anf#137 : bytes = fromString#104 "bar" in
 let anf#138 : int -> Main.assocList = anf#136 anf#137 in
 let fixture1#107 : Main.assocList = anf#138 14 in
 let projection#92 : list (pair Bytes Int) = field@0/1 fixture1#107 in
-let projection#93 : list (pair Bytes Int) = field@0/1 new#97 in
-let anf#129 : list (pair Bytes Int) = doUnion#79 projection#92 projection#93 in
-let anf#140 : Main.assocList = constr 0 anf#129 in
-let projection#61 : list (pair Bytes Int) = field@0/1 anf#140 in
-let anf#111 : Map Bytes Int = mapData projection#61 in
+let anf#129 : list (pair Bytes Int) = doUnion#79 projection#92 field#145 in
+let anf#111 : Map Bytes Int = mapData anf#129 in
 let projection#63 : list (pair Bytes Int) = field@0/1 fixture1#107 in
 let anf#112 : Map Bytes Int = mapData projection#63 in
 equalsData anf#111 anf#112
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_91
-    [(lam builtin_92
-      [(lam builtin_93
+  [(lam builtin_77
+    [(lam builtin_78
+      [(lam builtin_79
         [(lam doInsert_30
           [(lam doUnion_44
-            [(lam new_45
-              [(lam insert_51
-                [(lam fromString_52
-                  [(lam anf_53
+            [(lam field_45
+              [(lam new_46
+                [(lam insert_52
+                  [(lam fromString_53
                     [(lam anf_54
                       [(lam anf_55
                         [(lam anf_56
                           [(lam anf_57
                             [(lam anf_58
                               [(lam anf_59
-                                [(lam fixture1_60
-                                  [(lam projection_62
-                                    [(lam projection_64
-                                      [(lam anf_65
-                                        [(lam anf_70
-                                          [(lam projection_73
-                                            [(lam anf_74
-                                              [(lam projection_82
-                                                [(lam anf_85 [[(builtin equalsData) anf_74] anf_85])
-                                                  [(builtin mapData) projection_82]])
-                                                (case fixture1_60 (lam generated_86 generated_86))])
-                                              [(builtin mapData) projection_73]])
-                                            (case anf_70 (lam generated_87 generated_87))])
-                                          (constr 0 anf_65)])
-                                        [[doUnion_44 projection_62] projection_64]])
-                                      (case new_45 (lam generated_88 generated_88))])
-                                    (case fixture1_60 (lam generated_89 generated_89))])
-                                  [anf_59 (con integer 14)]])
-                                [anf_57 anf_58]])
-                              [fromString_52 (con string "bar")]])
-                            [insert_51 anf_56]])
-                          [anf_55 (con integer 42)]])
-                        [anf_53 anf_54]])
-                      [fromString_52 (con string "foo")]])
-                    [insert_51 new_45]])
-                  (builtin encodeUtf8)])
-                (lam m_46
-                  (lam k_47
-                    (lam v_48
-                      [(lam projection_49
-                        [(lam anf_50 (constr 0 anf_50)) [[[doInsert_30 projection_49] k_47] v_48]])
-                        (case m_46 (lam generated_90 generated_90))])))])
-              (constr 0 (con (list (pair data data)) []))])
+                                [(lam anf_60
+                                  [(lam fixture1_61
+                                    [(lam projection_62
+                                      [(lam anf_64
+                                        [(lam anf_65
+                                          [(lam projection_70
+                                            [(lam anf_73 [[(builtin equalsData) anf_65] anf_73])
+                                              [(builtin mapData) projection_70]])
+                                            (case fixture1_61 (lam generated_74 generated_74))])
+                                          [(builtin mapData) anf_64]])
+                                        [[doUnion_44 projection_62] field_45]])
+                                      (case fixture1_61 (lam generated_75 generated_75))])
+                                    [anf_60 (con integer 14)]])
+                                  [anf_58 anf_59]])
+                                [fromString_53 (con string "bar")]])
+                              [insert_52 anf_57]])
+                            [anf_56 (con integer 42)]])
+                          [anf_54 anf_55]])
+                        [fromString_53 (con string "foo")]])
+                      [insert_52 new_46]])
+                    (builtin encodeUtf8)])
+                  (lam m_47
+                    (lam k_48
+                      (lam v_49
+                        [(lam projection_50
+                          [(lam anf_51 (constr 0 anf_51)) [[[doInsert_30 projection_50] k_48] v_49]])
+                          (case m_47 (lam generated_76 generated_76))])))])
+                (constr 0 field_45)])
+              (con (list (pair data data)) [])])
             [(lam self_31 [self_31 self_31])
               (lam self_32
                 (lam left_33
@@ -282,9 +275,9 @@ equalsData anf#111 anf#112
                                       [(builtin unIData) projection_39]])
                                     [[doInsert_30 right_34] evaluated_38]])
                                   [[self_32 self_32] field_36]])
-                                [builtin_91 field_35]])
+                                [builtin_77 field_35]])
                               [(builtin unBData) projection_37]])
-                            [builtin_92 field_35]]))
+                            [builtin_78 field_35]]))
                       right_34))))]])
           (lam elems_6
             (lam k_7
@@ -307,24 +300,24 @@ equalsData anf#111 anf#112
                                           [(lam anf_25
                                             [(lam anf_26
                                               [(lam anf_27
-                                                [(lam anf_28 [[builtin_93 anf_27] anf_28]) [[self_10 self_10] field_16]])
+                                                [(lam anf_28 [[builtin_79 anf_27] anf_28]) [[self_10 self_10] field_16]])
                                                 [[(builtin mkPairData) anf_25] anf_26]])
                                               [(builtin iData) v2_18]])
                                             [(builtin bData) k2_20]]
                                           [(lam anf_22
                                             [(lam anf_23
-                                              [(lam anf_24 [[builtin_93 anf_24] field_16])
+                                              [(lam anf_24 [[builtin_79 anf_24] field_16])
                                                 [[(builtin mkPairData) anf_22] anf_23]])
                                               [(builtin iData) v_8]])
                                             [(builtin bData) k_7]]))
                                         [[(builtin equalsByteString) k_7] k2_20]])
                                       [(builtin unBData) projection_19]])
-                                    [builtin_92 field_15]])
+                                    [builtin_78 field_15]])
                                   [(builtin unIData) projection_17]])
-                                [builtin_91 field_15]]))
+                                [builtin_77 field_15]]))
                           [(lam anf_12
                             [(lam anf_13
-                              [(lam anf_14 [[builtin_93 anf_14] (con (list (pair data data)) [])])
+                              [(lam anf_14 [[builtin_79 anf_14] (con (list (pair data data)) [])])
                                 [[(builtin mkPairData) anf_12] anf_13]])
                               [(builtin iData) v_8]])
                             [(builtin bData) k_7]])))]])))])

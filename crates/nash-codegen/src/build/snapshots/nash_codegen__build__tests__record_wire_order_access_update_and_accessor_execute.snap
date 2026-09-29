@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias person = { age : int, active : bool }\nread : person -> int\nread = .age\noriginal : person\noriginal = { active = True, age = 1 }\nmain : int\nmain = read { original | age = 42 }\n"
 ---
 --- unoptimized Core
@@ -34,18 +33,9 @@ main#1
       [(lam projection_10 projection_10)
         (case record_6 (lam generated_15 (lam generated_16 generated_15)))])])
 --- optimized Core
-let original#20 : { _0 : int, _1 : bool } = constr 0 1 true in
-let projection#23 : bool = field@1/2 original#20 in
-let anf#27 : { _0 : int, _1 : bool } = constr 0 42 projection#23 in
-field@0/2 anf#27
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam original_1
-    [(lam projection_2
-      [(lam anf_3 (case anf_3 (lam generated_4 (lam generated_5 generated_4))))
-        (constr 0 (con integer 42) projection_2)])
-      (case original_1 (lam generated_6 (lam generated_7 generated_7)))])
-    (constr 0 (con integer 1) (con bool True))])
+(program 1.1.0 (con integer 42))
 --- result
 (con integer 42)
 --- logs

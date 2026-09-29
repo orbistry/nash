@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias box 'a = { value : 'a }\ntrait Pass 'f where\n    pass : 'f 'a -> 'f 'a\n    pass x = x\n    other : 'f 'a -> 'f 'a\nimpl Pass box where\n    other x = x\nboxed : box unit\nboxed = { value = () }\nmain = (pass boxed).value\n"
 ---
 --- unoptimized Core
@@ -24,12 +23,9 @@ main#1
       (lam value_6 value_6)])
     (lam x_4 x_4)])
 --- optimized Core
-let boxed#13 : { _0 : unit } = constr 0 () in
-field@0/1 boxed#13
+()
 --- optimized UPLC
-(program 1.1.0
-  [(lam boxed_1 (case boxed_1 (lam generated_2 generated_2)))
-    (constr 0 (con unit ()))])
+(program 1.1.0 (con unit ()))
 --- result
 (con unit ())
 --- logs

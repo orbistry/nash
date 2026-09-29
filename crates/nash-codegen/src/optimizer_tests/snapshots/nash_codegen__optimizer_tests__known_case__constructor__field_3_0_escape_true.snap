@@ -1,0 +1,73 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let subject#1 : @constr[0](int, int, int) = constr 0 0 1 2 in
+let subject#2 : @constr[0](int, int, int) = subject#1 in
+constr 0 (field@0/3 subject#2) (field@0/3 subject#2) subject#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam subject_1
+    [(lam subject_2
+      (constr 0
+        (case
+          subject_2
+          (lam generated_3 (lam generated_4 (lam generated_5 generated_3))))
+        (case
+          subject_2
+          (lam generated_6 (lam generated_7 (lam generated_8 generated_6))))
+        subject_1))
+      subject_1])
+    (constr 0 (con integer 0) (con integer 1) (con integer 2))])
+--- optimized Core
+let subject#3 : @constr[0](int, int, int) = constr 0 0 1 2 in
+constr 0 0 0 subject#3
+--- optimized UPLC
+(program 1.1.0
+  [(lam subject_1 (constr 0 (con integer 0) (con integer 0) subject_1))
+    (constr 0 (con integer 0) (con integer 1) (con integer 2))])
+--- isolated pass
+--- isolated ANF input
+let subject#1 : @constr[0](int, int, int) = constr 0 0 1 2 in
+let subject#2 : @constr[0](int, int, int) = subject#1 in
+let anf#3 : int = field@0/3 subject#2 in
+let anf#4 : int = field@0/3 subject#2 in
+constr 0 anf#3 anf#4 subject#1
+--- isolated folded Core
+let field#5 : int = 0 in
+let field#6 : int = 1 in
+let field#7 : int = 2 in
+let subject#1 : @constr[0](int, int, int) = constr 0 field#5 field#6 field#7 in
+let subject#2 : @constr[0](int, int, int) = subject#1 in
+let anf#3 : int = field#5 in
+let anf#4 : int = field#5 in
+constr 0 anf#3 anf#4 subject#1
+--- isolated cleaned Core
+let subject#1 : @constr[0](int, int, int) = constr 0 0 1 2 in
+constr 0 0 0 subject#1
+--- isolated UPLC before
+(program 1.1.0
+  [(lam subject_1
+    [(lam subject_2
+      [(lam anf_3
+        [(lam anf_4 (constr 0 anf_3 anf_4 subject_1))
+          (case
+            subject_2
+            (lam generated_5 (lam generated_6 (lam generated_7 generated_5))))])
+        (case
+          subject_2
+          (lam generated_8 (lam generated_9 (lam generated_10 generated_8))))])
+      subject_1])
+    (constr 0 (con integer 0) (con integer 1) (con integer 2))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam subject_1 (constr 0 (con integer 0) (con integer 0) subject_1))
+    (constr 0 (con integer 0) (con integer 1) (con integer 2))])
+--- result
+(constr 0
+  (con integer 0)
+  (con integer 0)
+  (constr 0 (con integer 0) (con integer 1) (con integer 2)))
+--- logs
+[]

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1450
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype entry = Entry { count : int, enabled : bool, label : bytes }\nmain =\n    let\n        item = Entry { label = #\"aabb\", enabled = True, count = 42 }\n    in\n    if item.enabled then addInteger item.count (lengthOfByteString item.label) else 0\n"
 ---
 --- unoptimized Core
@@ -47,33 +46,12 @@ main#1
       (lam value_10 value_10)])
     (lam value_9 value_9)])
 --- optimized Core
-let item#24 : Main.entry = constr 0 42 true (con bytestring #aabb) in
-let projection#25 : bool = field@1/3 item#24 in
-case@Bool projection#25 of
-  True -> let projection#26 : int = field@0/3 item#24 in
-  let projection#27 : bytes = field@2/3 item#24 in
-  let anf#34 : int = lengthOfByteString projection#27 in
-  addInteger projection#26 anf#34
-  False -> 0
+let anf#34 : int = lengthOfByteString (con bytestring #aabb) in
+addInteger 42 anf#34
 --- optimized UPLC
 (program 1.1.0
-  [(lam item_1
-    [(lam projection_2
-      (case
-        projection_2
-        (con integer 0)
-        [(lam projection_3
-          [(lam projection_4
-            [(lam anf_5 [[(builtin addInteger) projection_3] anf_5])
-              [(builtin lengthOfByteString) projection_4]])
-            (case item_1 (lam generated_6 (lam generated_7 (lam generated_8 generated_8))))])
-          (case
-            item_1
-            (lam generated_9 (lam generated_10 (lam generated_11 generated_9))))]))
-      (case
-        item_1
-        (lam generated_12 (lam generated_13 (lam generated_14 generated_13))))])
-    (constr 0 (con integer 42) (con bool True) (con bytestring #aabb))])
+  [(lam anf_1 [[(builtin addInteger) (con integer 42)] anf_1])
+    [(builtin lengthOfByteString) (con bytestring #aabb)]])
 --- result
 (con integer 44)
 --- logs

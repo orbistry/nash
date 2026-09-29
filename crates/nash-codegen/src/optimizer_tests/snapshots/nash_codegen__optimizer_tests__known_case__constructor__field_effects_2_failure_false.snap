@@ -1,0 +1,68 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+field@2/3 (constr 0 (trace "first" in 1) (trace "middle" in 2) (trace "last" in 3))
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (constr 0
+      (force [[(force (builtin trace)) (con string "first")] (delay (con integer 1))])
+      (force
+        [[(force (builtin trace)) (con string "middle")] (delay (con integer 2))])
+      (force [[(force (builtin trace)) (con string "last")] (delay (con integer 3))]))
+    (lam generated_1 (lam generated_2 (lam generated_3 generated_3)))))
+--- optimized Core
+let anf#1 : int = trace "first" in 1 in
+let anf#2 : int = trace "middle" in 2 in
+trace "last" in 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam anf_3
+      [(lam anf_4 (force [[builtin_5 (con string "last")] (delay (con integer 3))]))
+        (force [[builtin_5 (con string "middle")] (delay (con integer 2))])])
+      (force [[builtin_5 (con string "first")] (delay (con integer 1))])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#1 : int = trace "first" in 1 in
+let anf#2 : int = trace "middle" in 2 in
+let anf#3 : int = trace "last" in 3 in
+let anf#4 : @constr[0](int, int, int) = constr 0 anf#1 anf#2 anf#3 in
+field@2/3 anf#4
+--- isolated folded Core
+let anf#1 : int = trace "first" in 1 in
+let anf#2 : int = trace "middle" in 2 in
+let anf#3 : int = trace "last" in 3 in
+let anf#4 : @constr[0](int, int, int) = constr 0 anf#1 anf#2 anf#3 in
+anf#3
+--- isolated cleaned Core
+let anf#1 : int = trace "first" in 1 in
+let anf#2 : int = trace "middle" in 2 in
+trace "last" in 3
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_1
+    [(lam anf_2
+      [(lam anf_3
+        [(lam anf_4
+          (case anf_4 (lam generated_5 (lam generated_6 (lam generated_7 generated_7)))))
+          (constr 0 anf_1 anf_2 anf_3)])
+        (force [[(force (builtin trace)) (con string "last")] (delay (con integer 3))])])
+      (force
+        [[(force (builtin trace)) (con string "middle")] (delay (con integer 2))])])
+    (force [[(force (builtin trace)) (con string "first")] (delay (con integer 1))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_1
+    [(lam anf_2
+      (force [[(force (builtin trace)) (con string "last")] (delay (con integer 3))]))
+      (force
+        [[(force (builtin trace)) (con string "middle")] (delay (con integer 2))])])
+    (force [[(force (builtin trace)) (con string "first")] (delay (con integer 1))])])
+--- result
+(con integer 3)
+--- logs
+["first", "middle", "last"]

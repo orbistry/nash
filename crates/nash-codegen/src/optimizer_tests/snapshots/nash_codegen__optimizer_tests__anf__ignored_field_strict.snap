@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/anf.rs
-assertion_line: 53
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before static lifting\\n{}\\n--- core after static lifting / before ANF\\n{}\\n--- core after ANF\\n{}\\n--- rewritten core (no second ANF)\\n{}\\n--- baseline\\n{}\\n--- candidate\\n{}\",\npretty(fresh), pretty(lifted), pretty(first_anf), pretty(after),\nsemantic_output(&baseline), semantic_output(&normalized),))"
 ---
 --- unoptimized Core
@@ -14,15 +13,12 @@ field@0/2 (constr 0 42 (trace "ignored field" in error))
     (lam generated_1 (lam generated_2 generated_1))))
 --- optimized Core
 let anf#1 : int = trace "ignored field" in error in
-let anf#2 : @constr[0](int, int) = constr 0 42 anf#1 in
-field@0/2 anf#2
+42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam anf_3
-      [(lam anf_4 (case anf_4 (lam generated_5 (lam generated_6 generated_5))))
-        (constr 0 (con integer 42) anf_3)])
-      (force [[builtin_7 (con string "ignored field")] (delay (error))])])
+  [(lam builtin_3
+    [(lam anf_2 (con integer 42))
+      (force [[builtin_3 (con string "ignored field")] (delay (error))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before static lifting

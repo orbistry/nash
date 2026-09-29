@@ -866,6 +866,146 @@ mod constructor {
             );
         }
     }
+    #[test]
+    fn known_fields_positions_aliases_and_escape() {
+        for arity in [1, 3, 8] {
+            for index in 0..arity {
+                for escape in [false, true] {
+                    let a = Arena::new();
+                    let b = Builder::new(&a);
+                    let fields: Vec<_> = (0..arity).map(|i| b.int(i.into())).collect();
+                    let value = constr(&b, 0, &fields);
+                    let subject = bound_subject(&b, value);
+                    let alias = bound_subject(&b, value);
+                    let get = b.field(b.var(alias.name, alias.ty), index, arity, INT);
+                    let output = if escape {
+                        constr(&b, 0, &[get, get, b.var(subject.name, subject.ty)])
+                    } else {
+                        constr(&b, 0, &[get, get])
+                    };
+                    check_bound(
+                        &format!("field_{arity}_{index}_escape_{escape}"),
+                        &b,
+                        b.let_(
+                            subject,
+                            value,
+                            b.let_(alias, b.var(subject.name, subject.ty), output),
+                        ),
+                        false,
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn known_fields_preserve_strict_effects() {
+        for index in 0..3 {
+            for failure in [false, true] {
+                let a = Arena::new();
+                let b = Builder::new(&a);
+                let middle = if failure { b.error(INT) } else { b.int(2) };
+                let value = constr(
+                    &b,
+                    0,
+                    &[
+                        trace(&b, "first", b.int(1)),
+                        trace(&b, "middle", middle),
+                        trace(&b, "last", b.int(3)),
+                    ],
+                );
+                check_bound(
+                    &format!("field_effects_{index}_failure_{failure}"),
+                    &b,
+                    b.field(value, index, 3, INT),
+                    failure,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn known_fields_preserve_runtime_shape_mismatches() {
+        let a = Arena::new();
+        let b = Builder::new(&a);
+        check_bound(
+            "field_nonzero_tag",
+            &b,
+            b.field(constr(&b, 1, &[b.int(1)]), 0, 1, INT),
+            true,
+        );
+        check_bound(
+            "field_extra_fields",
+            &b,
+            b.field(constr(&b, 0, &[b.int(1), b.int(2)]), 0, 1, INT),
+            true,
+        );
+        let selector = b.field(constr(&b, 0, &[b.int(7)]), 0, 2, Ty::Erased);
+        check_bound(
+            "field_missing_field_returns_function",
+            &b,
+            b.app(selector, &[b.int(9)], INT),
+            false,
+        );
+    }
+
+    #[test]
+    fn known_fields_keep_delay_boundaries() {
+        for captured in [false, true] {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let value = constr(&b, 0, &[trace(&b, "constructed", b.int(7))]);
+            let subject = bound_subject(&b, value);
+            let get = b.field(b.var(subject.name, subject.ty), 0, 1, INT);
+            let delayed = if captured {
+                b.delay(get)
+            } else {
+                b.delay(b.let_(subject, value, get))
+            };
+            let thunk = bound_subject(&b, delayed);
+            let calls = constr(
+                &b,
+                0,
+                &[
+                    b.force(b.var(thunk.name, thunk.ty), INT),
+                    b.force(b.var(thunk.name, thunk.ty), INT),
+                ],
+            );
+            let root = b.let_(thunk, delayed, calls);
+            let root = if captured {
+                b.let_(subject, value, root)
+            } else {
+                root
+            };
+            check_bound(&format!("field_delay_captured_{captured}"), &b, root, false);
+        }
+    }
+
+    #[test]
+    fn known_fields_nested_and_function_values() {
+        let a = Arena::new();
+        let b = Builder::new(&a);
+        let x = bind(&b, "x");
+        let fun = b.lam(&[x], trace(&b, "called", b.var(x.name, INT)));
+        let inner = constr(&b, 0, &[fun]);
+        let outer = constr(&b, 0, &[inner]);
+        let selected = b.field(b.field(outer, 0, 1, inner.ty), 0, 1, fun.ty);
+        let f = bound_subject(&b, selected);
+        let calls = constr(
+            &b,
+            0,
+            &[
+                b.app(b.var(f.name, f.ty), &[b.int(1)], INT),
+                b.app(b.var(f.name, f.ty), &[b.int(2)], INT),
+            ],
+        );
+        check_bound(
+            "field_nested_function",
+            &b,
+            b.let_(f, selected, calls),
+            false,
+        );
+    }
 }
 
 mod list {

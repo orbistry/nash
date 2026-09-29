@@ -126,12 +126,9 @@ main#1
 --- optimized Core
 let anf#85 : bls_g1 = bls12_381_G1_uncompress (con bytestring #b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce) in
 let anf#87 : bls_g2 = bls12_381_G2_uncompress (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423) in
-let pk#21 : { _0 : bls_g1, _1 : bls_g2 } = constr 0 anf#85 anf#87 in
-let projection#13 : bls_g1 = field@0/2 pk#21 in
-let anf#79 : bytes = bls12_381_G1_compress projection#13 in
+let anf#79 : bytes = bls12_381_G1_compress anf#85 in
 let evaluated#15 : Data = bData anf#79 in
-let projection#16 : bls_g2 = field@1/2 pk#21 in
-let anf#80 : bytes = bls12_381_G2_compress projection#16 in
+let anf#80 : bytes = bls12_381_G2_compress anf#87 in
 let anf#81 : Data = bData anf#80 in
 let anf#82 : list Data = mkCons anf#81 (con (list data) []) in
 let anf#83 : list Data = mkCons evaluated#15 anf#82 in
@@ -153,77 +150,68 @@ case@Pair field#25 of
           Nil -> force leaf#24
           Cons field#67 field#68 -> case@List field#68 of
             Nil -> let evaluated#70 : bls_g1 = bls12_381_G1_uncompress field#66 in
-            let projection#71 : bls_g1 = field@0/2 pk#21 in
-            bls12_381_G1_equal evaluated#70 projection#71
+            bls12_381_G1_equal evaluated#70 anf#85
             Cons field#72 field#73 -> force leaf#24
     False -> force leaf#24
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_43
-    [(lam builtin_44
+  [(lam builtin_34
+    [(lam builtin_35
       [(lam anf_1
         [(lam anf_2
-          [(lam pk_3
-            [(lam projection_4
+          [(lam anf_3
+            [(lam evaluated_4
               [(lam anf_5
-                [(lam evaluated_6
-                  [(lam projection_7
+                [(lam anf_6
+                  [(lam anf_7
                     [(lam anf_8
-                      [(lam anf_9
-                        [(lam anf_10
-                          [(lam anf_11
-                            [(lam match_12
-                              [(lam leaf_14
-                                [(lam field_17
-                                  (case
-                                    field_17
-                                    (lam field_18
-                                      (lam field_19
-                                        [(lam anf_20
-                                          [(lam anf_22
-                                            (case
-                                              anf_22
-                                              (force leaf_14)
-                                              (case
-                                                field_19
-                                                (lam field_27
-                                                  (lam field_28
-                                                    [(lam generated_40
-                                                      (force
-                                                        [[[[[[builtin_43 generated_40] (delay (force leaf_14))] (delay (force leaf_14))]
-                                                          (delay (force leaf_14))]
-                                                          (delay (force leaf_14))]
-                                                          (delay
-                                                            [(lam field_33
+                      [(lam match_9
+                        [(lam leaf_10
+                          [(lam field_11
+                            (case
+                              field_11
+                              (lam field_12
+                                (lam field_13
+                                  [(lam anf_14
+                                    [(lam anf_16
+                                      (case
+                                        anf_16
+                                        (force leaf_10)
+                                        (case
+                                          field_13
+                                          (lam field_17
+                                            (lam field_18
+                                              [(lam generated_33
+                                                (force
+                                                  [[[[[[builtin_34 generated_33] (delay (force leaf_10))] (delay (force leaf_10))]
+                                                    (delay (force leaf_10))]
+                                                    (delay (force leaf_10))]
+                                                    (delay
+                                                      [(lam field_27
+                                                        (case
+                                                          field_18
+                                                          (lam field_28
+                                                            (lam field_29
                                                               (case
-                                                                field_28
-                                                                (lam field_34
-                                                                  (lam field_35
-                                                                    (case
-                                                                      field_35
-                                                                      (lam field_38 (lam field_39 (force leaf_14)))
-                                                                      [(lam evaluated_36
-                                                                        [(lam projection_37 [[(builtin bls12_381_G1_equal) evaluated_36] projection_37])
-                                                                          (case pk_3 (lam generated_41 (lam generated_42 generated_41)))])
-                                                                        [(builtin bls12_381_G1_uncompress) field_33]])))
-                                                                (force leaf_14)))
-                                                              [(builtin unBData) generated_40]])]))
-                                                      field_27]))
-                                                (force leaf_14))))
-                                            [anf_20 (con integer 0)]])
-                                          [(builtin equalsInteger) field_18]]))))
-                                  [(builtin unConstrData) match_12]])
-                                (delay (error))])
-                              [[(builtin constrData) (con integer 0)] anf_11]])
-                            [[builtin_44 evaluated_6] anf_10]])
-                          [[builtin_44 anf_9] (con (list data) [])]])
-                        [(builtin bData) anf_8]])
-                      [(builtin bls12_381_G2_compress) projection_7]])
-                    (case pk_3 (lam generated_45 (lam generated_46 generated_46)))])
+                                                                field_29
+                                                                (lam field_31 (lam field_32 (force leaf_10)))
+                                                                [(lam evaluated_30 [[(builtin bls12_381_G1_equal) evaluated_30] anf_1])
+                                                                  [(builtin bls12_381_G1_uncompress) field_27]])))
+                                                          (force leaf_10)))
+                                                        [(builtin unBData) generated_33]])]))
+                                                field_17]))
+                                          (force leaf_10))))
+                                      [anf_14 (con integer 0)]])
+                                    [(builtin equalsInteger) field_12]]))))
+                            [(builtin unConstrData) match_9]])
+                          (delay (error))])
+                        [[(builtin constrData) (con integer 0)] anf_8]])
+                      [[builtin_35 evaluated_4] anf_7]])
+                    [[builtin_35 anf_6] (con (list data) [])]])
                   [(builtin bData) anf_5]])
-                [(builtin bls12_381_G1_compress) projection_4]])
-              (case pk_3 (lam generated_47 (lam generated_48 generated_47)))])
-            (constr 0 anf_1 anf_2)])
+                [(builtin bls12_381_G2_compress) anf_2]])
+              [(builtin bData) anf_3]])
+            [(builtin bls12_381_G1_compress) anf_1]])
           [(builtin bls12_381_G2_uncompress)
             (con bytestring #b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423)]])
         [(builtin bls12_381_G1_uncompress)

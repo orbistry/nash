@@ -20,7 +20,8 @@ is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
-other Chunk 7 case/field simplification work remains. Continue
+known native-constructor field folding is accepted as well. Other Chunk 7 case
+simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
 Chunk 11 configuration decisions.
@@ -1607,9 +1608,25 @@ and constructor-field evaluation in the original order. An ignored failing field
 must still fail. Preserve out-of-range/malformed-case errors; do not assume every
 hand-built Core case has a matching branch.
 
-Simplify fields of known constructors without dropping observable evaluation of
-other fields. ANF often makes that evaluation explicit; do not mistake a selected
-field alone for the original strict construction.
+**Known native-constructor fields (29 September 2026), accepted.**
+The existing bound-constructor reducer now replaces `Field` of a known tag-zero
+constructor with the selected field reference. It follows aliases and requires
+an exact field count and an in-range index: other tags still fail, too few fields
+still return a partial selector, and extra fields still apply the selected value.
+Fields are named at the original construction site, preserving strict evaluation
+and sharing lambda/delay values without duplicating binders. Escaping records
+retain their construction; ordinary cleanup removes unused safe constructions.
+Nested accesses become eligible through the existing cleanup fixed point.
+
+The accepted test/performance pipeline includes this rule; normal build integration
+remains Chunk 11. Snapshot fixtures cover every position at arities 1, 3 and 8,
+aliases, repeated access, escaping records, ordered traces and ignored failures,
+nested records, returned functions, delay boundaries and malformed runtime shapes.
+The temporary 144-case experiment covered literal, runtime and computed fields,
+one/three uses, and escaping/non-escaping records. All 144 improved: CPU by
+96,000–800,000, memory by 600–5,000 and Flat size by 5–46 bytes. The existing
+23-case baseline was unchanged. Results and logs matched in every case; the
+temporary runner was removed after measurement.
 
 Tests: selected/default branches, empty/nonempty lists, each Data shape, field
 ordering, ignored failing/traced fields, returned functions/delays, and Big/little
