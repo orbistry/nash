@@ -1,0 +1,70 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData of
+  DataConstr pair#5 -> pair#5
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_6
+    (force
+      [[[[[[(force (builtin chooseData)) generated_6]
+        (delay [(lam pair_5 pair_5) [(builtin unConstrData) generated_6]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    (builtin constrData)])
+--- optimized Core
+case@Data constrData of
+  DataConstr pair#1 -> pair#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_4
+    [(lam generated_3
+      (force
+        [[[[[[builtin_4 generated_3]
+          (delay [(lam pair_2 pair_2) [(builtin unConstrData) generated_3]])]
+          (delay (error))]
+          (delay (error))]
+          (delay (error))]
+          (delay (error))]))
+      (builtin constrData)])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated ANF input
+case@Data constrData of
+  DataConstr pair#5 -> pair#5
+--- isolated folded Core
+case@Data constrData of
+  DataConstr pair#5 -> pair#5
+--- isolated cleaned Core
+case@Data constrData of
+  DataConstr pair#5 -> pair#5
+--- isolated UPLC before
+(program 1.1.0
+  [(lam generated_6
+    (force
+      [[[[[[(force (builtin chooseData)) generated_6]
+        (delay [(lam pair_5 pair_5) [(builtin unConstrData) generated_6]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    (builtin constrData)])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam generated_6
+    (force
+      [[[[[[(force (builtin chooseData)) generated_6]
+        (delay [(lam pair_5 pair_5) [(builtin unConstrData) generated_6]])]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    (builtin constrData)])
+--- result
+error: NotAConstant(Builtin(Runtime { args: [], fun: ConstrData, forces: 0 }))
+--- logs
+[]

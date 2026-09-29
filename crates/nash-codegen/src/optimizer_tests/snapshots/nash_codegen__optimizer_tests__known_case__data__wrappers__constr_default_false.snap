@@ -1,0 +1,64 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData 59 (con (list data) [(I 42)]) of
+  DataI wrong#1 -> trace "wrong" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (error))] (delay (error))]
+        (delay (error))]
+        (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+        (delay (error))]))
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- optimized Core
+let anf#3 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#3 of
+  DataI wrong#2 -> trace "wrong" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam builtin_7
+      [(lam anf_1
+        [(lam generated_5
+          (force
+            [[[[[[builtin_7 generated_5] (delay (error))] (delay (error))] (delay (error))]
+              (delay (force [[builtin_6 (con string "wrong")] (delay (error))]))]
+              (delay (error))]))
+          anf_1])
+        [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#2 of
+  DataI wrong#1 -> trace "wrong" in error
+--- isolated folded Core
+let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
+error
+--- isolated cleaned Core
+let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
+error
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_2
+    [(lam generated_3
+      (force
+        [[[[[[(force (builtin chooseData)) generated_3] (delay (error))] (delay (error))]
+          (delay (error))]
+          (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+          (delay (error))]))
+      anf_2])
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_2 (error))
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- result
+error: ExplicitErrorTerm
+--- logs
+[]

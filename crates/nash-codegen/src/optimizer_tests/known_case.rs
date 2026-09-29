@@ -1893,9 +1893,10 @@ mod data {
         }
         fn check(name: &str, b: &Builder<'_>, original: &Core<'_>, fails: bool) {
             let before = anf::normalize(b, original);
-            let folded = known_case::reduce_data_wrappers(b, before);
+            let folded =
+                known_case::reduce_constr_data(b, known_case::reduce_data_wrappers(b, before));
             let after =
-                known_case::simplify_data_wrappers(b, nash_ir::small_inline::simplify(b, folded));
+                known_case::simplify_constr_data(b, nash_ir::small_inline::simplify(b, folded));
             let left = crate::harness::eval_core_raw(b.arena, before);
             let middle = crate::harness::eval_core_raw(b.arena, folded);
             let right = crate::harness::eval_core_raw(b.arena, after);
@@ -1928,7 +1929,7 @@ mod data {
             }
             assert!(std::ptr::eq(
                 after,
-                known_case::simplify_data_wrappers(b, after)
+                known_case::simplify_constr_data(b, after)
             ));
         }
         #[test]
@@ -2424,6 +2425,377 @@ mod data {
                 ),
                 false,
             );
+        }
+        fn constr_fields<'a>(b: &Builder<'a>, empty: bool) -> &'a Core<'a> {
+            let data = Constant::data(b.arena, PlutusData::integer_from(b.arena, 42));
+            b.lit(Constant::proto_list(
+                b.arena,
+                &nash_plutus::typ::Type::Data,
+                if empty {
+                    &[]
+                } else {
+                    b.arena.alloc_slice_copy(&[data])
+                },
+            ))
+        }
+        fn constr_pair_ty<'a>(b: &Builder<'a>) -> Ty<'a> {
+            Ty::Const(b.arena.alloc(ConstTy::Pair(
+                INT,
+                Ty::Const(b.arena.alloc(ConstTy::List(DATA))),
+            )))
+        }
+        #[test]
+        fn constr_literal_and_runtime_operands_supply_native_pair() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for tag in [0, 59, u64::MAX] {
+                for empty in [false, true] {
+                    for parameter in [false, true] {
+                        let fields = constr_fields(&b, empty);
+                        let t = bind(&b, "tag", INT);
+                        let f = bind(&b, "fields", fields.ty);
+                        let p = bind(&b, "pair", constr_pair_ty(&b));
+                        let root = b.case(
+                            CaseKind::Data,
+                            b.builtin(
+                                F::ConstrData,
+                                &[
+                                    if parameter {
+                                        b.var(t.name, t.ty)
+                                    } else {
+                                        b.int(i128::from(tag))
+                                    },
+                                    if parameter {
+                                        b.var(f.name, f.ty)
+                                    } else {
+                                        fields
+                                    },
+                                ],
+                                DATA,
+                            ),
+                            &[arm(&b, Test::DataConstr, &[p], b.var(p.name, p.ty))],
+                            Some(trace(&b, "cold", b.error(p.ty))),
+                            p.ty,
+                        );
+                        let root = if parameter {
+                            b.app(
+                                b.lam(&[t, f], root),
+                                &[b.int(i128::from(tag)), fields],
+                                p.ty,
+                            )
+                        } else {
+                            root
+                        };
+                        check(
+                            &format!("constr_tag_{tag}_empty_{empty}_parameter_{parameter}"),
+                            &b,
+                            root,
+                            false,
+                        );
+                    }
+                }
+            }
+        }
+        #[test]
+        fn constr_operand_effects_failures_and_runtime_checks_stay_strict() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let fields = constr_fields(&b, false);
+            for (label, tag, input, fails) in [
+                ("valid", b.int(59), fields, false),
+                ("tag_failure", b.error(INT), fields, true),
+                ("fields_failure", b.int(59), b.error(fields.ty), true),
+                ("wrong_tag", b.lit(Constant::bool(&a, true)), fields, true),
+                (
+                    "wrong_fields",
+                    b.int(59),
+                    b.lit(Constant::bool(&a, true)),
+                    true,
+                ),
+                (
+                    "wrong_empty_metadata",
+                    b.int(59),
+                    b.lit(Constant::proto_list(
+                        &a,
+                        &nash_plutus::typ::Type::Integer,
+                        &[],
+                    )),
+                    true,
+                ),
+            ] {
+                for used in [false, true] {
+                    let d = bind(&b, "data", DATA);
+                    let effect = bind(&b, "effect", INT);
+                    let p = bind(&b, "pair", constr_pair_ty(&b));
+                    let body = if used {
+                        b.builtin(F::FstPair, &[b.var(p.name, p.ty)], INT)
+                    } else {
+                        b.int(9)
+                    };
+                    let c = b.case(
+                        CaseKind::Data,
+                        b.var(d.name, DATA),
+                        &[arm(&b, Test::DataConstr, &[p], trace(&b, "selected", body))],
+                        None,
+                        INT,
+                    );
+                    check(
+                        &format!("constr_{label}_used_{used}"),
+                        &b,
+                        b.let_(
+                            d,
+                            b.builtin(
+                                F::ConstrData,
+                                &[trace(&b, "tag", tag), trace(&b, "fields", input)],
+                                DATA,
+                            ),
+                            b.let_(effect, trace(&b, "between", b.int(0)), c),
+                        ),
+                        fails,
+                    );
+                }
+            }
+        }
+        #[test]
+        fn constr_aliases_repeated_pair_uses_and_capture() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for cold in [false, true] {
+                let fields = constr_fields(&b, false);
+                let d = bind(&b, "data", DATA);
+                let alias = bind(&b, "alias", DATA);
+                let p = bind(&b, "pair", constr_pair_ty(&b));
+                let x = bind(&b, "x", INT);
+                let tag = bind(&b, "tag", INT);
+                let fs = bind(&b, "fields", fields.ty);
+                let pair_case = b.case(
+                    CaseKind::Pair,
+                    b.var(p.name, p.ty),
+                    &[arm(
+                        &b,
+                        Test::Pair,
+                        &[tag, fs],
+                        b.constr(
+                            0,
+                            &[b.var(tag.name, INT), b.var(fs.name, fs.ty)],
+                            Ty::Erased,
+                        ),
+                    )],
+                    None,
+                    Ty::Erased,
+                );
+                let fun = b.lam(
+                    &[x],
+                    b.constr(
+                        0,
+                        &[b.var(p.name, p.ty), pair_case, b.var(x.name, x.ty)],
+                        Ty::Erased,
+                    ),
+                );
+                let c = b.case(
+                    CaseKind::Data,
+                    b.var(alias.name, DATA),
+                    &[arm(&b, Test::DataConstr, &[p], fun)],
+                    None,
+                    fun.ty,
+                );
+                let p2 = bind(&b, "second", p.ty);
+                let c2 = b.case(
+                    CaseKind::Data,
+                    b.var(alias.name, DATA),
+                    &[arm(&b, Test::DataConstr, &[p2], b.var(p2.name, p2.ty))],
+                    None,
+                    p2.ty,
+                );
+                let selected = b.constr(
+                    0,
+                    &[b.var(d.name, DATA), b.app(c, &[b.int(7)], Ty::Erased), c2],
+                    Ty::Erased,
+                );
+                let branch = b.if_(
+                    b.lit(Constant::bool(&a, cold)),
+                    b.constr(1, &[], Ty::Erased),
+                    b.force(b.delay(selected), Ty::Erased),
+                );
+                check(
+                    &format!("constr_aliases_cold_{cold}"),
+                    &b,
+                    b.let_(
+                        d,
+                        b.builtin(
+                            F::ConstrData,
+                            &[trace(&b, "tag", b.int(59)), trace(&b, "fields", fields)],
+                            DATA,
+                        ),
+                        b.let_(alias, b.var(d.name, DATA), branch),
+                    ),
+                    false,
+                );
+            }
+        }
+        #[test]
+        fn constr_defaults_partial_and_traced_producers() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let fields = constr_fields(&b, false);
+            for default in [false, true] {
+                let wrong = bind(&b, "wrong", INT);
+                check(
+                    &format!("constr_default_{default}"),
+                    &b,
+                    b.case(
+                        CaseKind::Data,
+                        b.builtin(F::ConstrData, &[b.int(59), fields], DATA),
+                        &[arm(
+                            &b,
+                            Test::DataI,
+                            &[wrong],
+                            trace(&b, "wrong", b.error(INT)),
+                        )],
+                        default.then(|| trace(&b, "default", b.int(9))),
+                        INT,
+                    ),
+                    !default,
+                );
+            }
+            let full = b.builtin(F::ConstrData, &[b.int(59), fields], DATA);
+            for (label, subject, fails) in [
+                ("bare", b.builtin(F::ConstrData, &[], DATA), true),
+                (
+                    "partial",
+                    b.builtin(F::ConstrData, &[b.int(59)], DATA),
+                    true,
+                ),
+                ("overapplied", b.app(full, &[b.int(0)], DATA), true),
+                ("traced", trace(&b, "producer", full), false),
+            ] {
+                let p = bind(&b, "pair", constr_pair_ty(&b));
+                check(
+                    &format!("constr_{label}"),
+                    &b,
+                    b.case(
+                        CaseKind::Data,
+                        subject,
+                        &[arm(&b, Test::DataConstr, &[p], b.var(p.name, p.ty))],
+                        None,
+                        p.ty,
+                    ),
+                    fails,
+                );
+            }
+        }
+        #[test]
+        fn constr_invalid_tables_stay_lowering_errors() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let p = bind(&b, "pair", constr_pair_ty(&b));
+            let d = bind(&b, "data", DATA);
+            let valid = arm(&b, Test::DataConstr, &[p], b.int(42));
+            for (label, arms) in [
+                ("duplicate", vec![valid, valid]),
+                (
+                    "unselected_arity",
+                    vec![valid, arm(&b, Test::DataList, &[], b.int(0))],
+                ),
+                (
+                    "selected_arity",
+                    vec![arm(&b, Test::DataConstr, &[], b.int(0))],
+                ),
+                (
+                    "wrong_test",
+                    vec![valid, arm(&b, Test::True, &[], b.int(0))],
+                ),
+            ] {
+                let before = b.let_(
+                    d,
+                    b.builtin(F::ConstrData, &[b.int(59), constr_fields(&b, false)], DATA),
+                    b.case(CaseKind::Data, b.var(d.name, DATA), &arms, None, INT),
+                );
+                let after = known_case::reduce_constr_data(&b, before);
+                let left = crate::lower::lower(&a, before).unwrap_err();
+                let right = crate::lower::lower(&a, after).unwrap_err();
+                insta::assert_snapshot!(
+                    format!("constr_invalid_{label}"),
+                    format!(
+                        "--- before\n{}\n--- after\n{}\n--- errors\n{left:?}\n{right:?}",
+                        pretty(before),
+                        pretty(after)
+                    )
+                );
+                assert!(std::ptr::eq(before, after));
+            }
+        }
+        #[test]
+        fn constr_inside_cold_delay_is_not_evaluated() {
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            let p = bind(&b, "pair", constr_pair_ty(&b));
+            let c = b.case(
+                CaseKind::Data,
+                b.builtin(
+                    F::ConstrData,
+                    &[trace(&b, "cold", b.error(INT)), constr_fields(&b, false)],
+                    DATA,
+                ),
+                &[arm(&b, Test::DataConstr, &[p], b.int(0))],
+                None,
+                INT,
+            );
+            check(
+                "constr_cold_producer",
+                &b,
+                b.if_(
+                    b.lit(Constant::bool(&a, false)),
+                    b.force(b.delay(c), INT),
+                    b.int(9),
+                ),
+                false,
+            );
+        }
+        #[test]
+        fn constr_out_of_range_tags_retain_producer_without_evaluation() {
+            // The existing evaluator panics for these tags. Render the transformation
+            // and verify retained construction without executing that evaluator path.
+            let a = Arena::new();
+            let b = Builder::new(&a);
+            for (label, tag) in [("negative", -1), ("too_large", i128::from(u64::MAX) + 1)] {
+                let p = bind(&b, "unused", constr_pair_ty(&b));
+                let producer =
+                    b.builtin(F::ConstrData, &[b.int(tag), constr_fields(&b, true)], DATA);
+                let core = b.case(
+                    CaseKind::Data,
+                    producer,
+                    &[arm(&b, Test::DataConstr, &[p], b.int(9))],
+                    None,
+                    INT,
+                );
+                let before = anf::normalize(&b, core);
+                let after = known_case::simplify_constr_data(&b, before);
+                let left = crate::lower::lower(&a, before).unwrap();
+                let right = crate::lower::lower(&a, after).unwrap();
+                insta::assert_snapshot!(
+                    format!("constr_{label}_retained"),
+                    crate::harness::pass_snapshot(
+                        &a,
+                        core,
+                        format!(
+                            "--- isolated Core before\n{}\n--- isolated Core after\n{}\n--- isolated UPLC before\n{}\n--- isolated UPLC after\n{}",
+                            pretty(before),
+                            pretty(after),
+                            nash_plutus::pretty::term(left),
+                            nash_plutus::pretty::term(right)
+                        )
+                    )
+                );
+                hygiene::validate(after, &[]).unwrap();
+                anf::validate(after).unwrap();
+                assert_eq!(core.ty, after.ty);
+                let mut retained = false;
+                after.walk(&mut |node| {
+                    if matches!(node.kind, CoreKind::Builtin {func: F::ConstrData, args: [t, _]} if matches!(t.kind, CoreKind::Lit(c) if *c == *Constant::integer_from(&a, tag))) { retained = true; }
+                });
+                assert!(retained);
+            }
         }
     }
 }

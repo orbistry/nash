@@ -1,0 +1,137 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+let data#46 : Data = constrData (trace "tag" in 59) (trace "fields" in true) in
+let effect#47 : int = trace "between" in 0 in
+case@Data data#46 of
+  DataConstr pair#48 -> trace "selected" in fstPair pair#48
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam data_46
+    [(lam effect_47
+      [(lam generated_49
+        (force
+          [[[[[[(force (builtin chooseData)) generated_49]
+            (delay
+              [(lam pair_48
+                (force
+                  [[(force (builtin trace)) (con string "selected")]
+                    (delay [(force (force (builtin fstPair))) pair_48])]))
+                [(builtin unConstrData) generated_49]])]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        data_46])
+      (force
+        [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+    [[(builtin constrData)
+      (force [[(force (builtin trace)) (con string "tag")] (delay (con integer 59))])]
+      (force
+        [[(force (builtin trace)) (con string "fields")] (delay (con bool True))])]])
+--- optimized Core
+let anf#4 : int = trace "tag" in 59 in
+let anf#5 : bool = trace "fields" in true in
+let data#1 : Data = constrData anf#4 anf#5 in
+let effect#2 : int = trace "between" in 0 in
+case@Data data#1 of
+  DataConstr pair#3 -> trace "selected" in fstPair pair#3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_12
+    [(lam builtin_13
+      [(lam builtin_14
+        [(lam anf_6
+          [(lam anf_7
+            [(lam data_8
+              [(lam effect_9
+                [(lam generated_11
+                  (force
+                    [[[[[[builtin_14 generated_11]
+                      (delay
+                        [(lam pair_10
+                          (force [[builtin_13 (con string "selected")] (delay [builtin_12 pair_10])]))
+                          [(builtin unConstrData) generated_11]])]
+                      (delay (error))]
+                      (delay (error))]
+                      (delay (error))]
+                      (delay (error))]))
+                  data_8])
+                (force [[builtin_13 (con string "between")] (delay (con integer 0))])])
+              [[(builtin constrData) anf_6] anf_7]])
+            (force [[builtin_13 (con string "fields")] (delay (con bool True))])])
+          (force [[builtin_13 (con string "tag")] (delay (con integer 59))])])
+        (force (builtin chooseData))])
+      (force (builtin trace))])
+    (force (force (builtin fstPair)))])
+--- isolated pass
+--- isolated ANF input
+let anf#49 : int = trace "tag" in 59 in
+let anf#50 : bool = trace "fields" in true in
+let data#46 : Data = constrData anf#49 anf#50 in
+let effect#47 : int = trace "between" in 0 in
+case@Data data#46 of
+  DataConstr pair#48 -> trace "selected" in fstPair pair#48
+--- isolated folded Core
+let anf#49 : int = trace "tag" in 59 in
+let anf#50 : bool = trace "fields" in true in
+let data#46 : Data = constrData anf#49 anf#50 in
+let effect#47 : int = trace "between" in 0 in
+let pair#48 : pair int (list Data) = unConstrData data#46 in
+trace "selected" in fstPair pair#48
+--- isolated cleaned Core
+let anf#49 : int = trace "tag" in 59 in
+let anf#50 : bool = trace "fields" in true in
+let data#46 : Data = constrData anf#49 anf#50 in
+let effect#47 : int = trace "between" in 0 in
+let pair#48 : pair int (list Data) = unConstrData data#46 in
+trace "selected" in fstPair pair#48
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_49
+    [(lam anf_50
+      [(lam data_46
+        [(lam effect_47
+          [(lam generated_51
+            (force
+              [[[[[[(force (builtin chooseData)) generated_51]
+                (delay
+                  [(lam pair_48
+                    (force
+                      [[(force (builtin trace)) (con string "selected")]
+                        (delay [(force (force (builtin fstPair))) pair_48])]))
+                    [(builtin unConstrData) generated_51]])]
+                (delay (error))]
+                (delay (error))]
+                (delay (error))]
+                (delay (error))]))
+            data_46])
+          (force
+            [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+        [[(builtin constrData) anf_49] anf_50]])
+      (force
+        [[(force (builtin trace)) (con string "fields")] (delay (con bool True))])])
+    (force [[(force (builtin trace)) (con string "tag")] (delay (con integer 59))])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_49
+    [(lam anf_50
+      [(lam data_46
+        [(lam effect_47
+          [(lam pair_48
+            (force
+              [[(force (builtin trace)) (con string "selected")]
+                (delay [(force (force (builtin fstPair))) pair_48])]))
+            [(builtin unConstrData) data_46]])
+          (force
+            [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])
+        [[(builtin constrData) anf_49] anf_50]])
+      (force
+        [[(force (builtin trace)) (con string "fields")] (delay (con bool True))])])
+    (force [[(force (builtin trace)) (con string "tag")] (delay (con integer 59))])])
+--- result
+error: Runtime(ExpectedList(Boolean(true)))
+--- logs
+["tag", "fields"]

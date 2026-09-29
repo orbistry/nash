@@ -39,12 +39,10 @@ case@Data anf#5 of
   _ -> 42
 --- isolated folded Core
 let anf#5 : Data = constrData 0 (con (list data) []) in
-case@Data anf#5 of
-  _ -> 42
+42
 --- isolated cleaned Core
 let anf#5 : Data = constrData 0 (con (list data) []) in
-case@Data anf#5 of
-  _ -> 42
+42
 --- isolated UPLC before
 (program 1.1.0
   [(lam anf_5
@@ -59,15 +57,7 @@ case@Data anf#5 of
     [[(builtin constrData) (con integer 0)] (con (list data) [])]])
 --- isolated UPLC after
 (program 1.1.0
-  [(lam anf_5
-    [(lam generated_6
-      (force
-        [[[[[[(force (builtin chooseData)) generated_6] (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]
-          (delay (con integer 42))]))
-      anf_5])
+  [(lam anf_5 (con integer 42))
     [[(builtin constrData) (con integer 0)] (con (list data) [])]])
 --- result
 (con integer 42)

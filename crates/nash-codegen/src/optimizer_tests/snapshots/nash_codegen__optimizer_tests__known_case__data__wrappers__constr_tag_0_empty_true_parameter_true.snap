@@ -1,0 +1,85 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(\tag#13 : int fields#14 : list Data -> case@Data constrData tag#13 fields#14 of
+  DataConstr pair#15 -> pair#15
+  _ -> trace "cold" in error) 0 (con (list data) [])
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam tag_13
+    (lam fields_14
+      [(lam generated_16
+        (force
+          [[[[[[(force (builtin chooseData)) generated_16]
+            (delay [(lam pair_15 pair_15) [(builtin unConstrData) generated_16]])]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+        [[(builtin constrData) tag_13] fields_14]]))
+    (con integer 0)]
+    (con (list data) [])])
+--- optimized Core
+let anf#4 : Data = constrData 0 (con (list data) []) in
+case@Data anf#4 of
+  DataConstr pair#3 -> pair#3
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam builtin_5
+      [(lam partial_6
+        [(lam anf_1
+          [(lam generated_4
+            (force
+              [[[[[[builtin_5 generated_4]
+                (delay [(lam pair_2 pair_2) [(builtin unConstrData) generated_4]])]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]))
+            anf_1])
+          [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+        [builtin_3 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+(\tag#13 : int fields#14 : list Data -> let anf#16 : Data = constrData tag#13 fields#14 in
+case@Data anf#16 of
+  DataConstr pair#15 -> pair#15
+  _ -> trace "cold" in error) 0 (con (list data) [])
+--- isolated folded Core
+(\tag#13 : int fields#14 : list Data -> let anf#16 : Data = constrData tag#13 fields#14 in
+let pair#15 : pair int (list Data) = unConstrData anf#16 in
+pair#15) 0 (con (list data) [])
+--- isolated cleaned Core
+let anf#16 : Data = constrData 0 (con (list data) []) in
+unConstrData anf#16
+--- isolated UPLC before
+(program 1.1.0
+  [[(lam tag_13
+    (lam fields_14
+      [(lam anf_16
+        [(lam generated_17
+          (force
+            [[[[[[(force (builtin chooseData)) generated_17]
+              (delay [(lam pair_15 pair_15) [(builtin unConstrData) generated_17]])]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+          anf_16])
+        [[(builtin constrData) tag_13] fields_14]]))
+    (con integer 0)]
+    (con (list data) [])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_16 [(builtin unConstrData) anf_16])
+    [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+--- result
+(con (pair integer (list data)) (0, []))
+--- logs
+[]

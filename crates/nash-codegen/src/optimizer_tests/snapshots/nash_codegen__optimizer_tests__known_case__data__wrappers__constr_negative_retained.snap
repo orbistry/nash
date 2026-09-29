@@ -1,0 +1,56 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(&a, core,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\",\npretty(before), pretty(after), nash_plutus::pretty::term(left),\nnash_plutus::pretty::term(right)))"
+---
+--- unoptimized Core
+case@Data constrData -1 (con (list data) []) of
+  DataConstr unused#1 -> 9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_2
+    (force
+      [[[[[[(force (builtin chooseData)) generated_2] (delay (con integer 9))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    [[(builtin constrData) (con integer -1)] (con (list data) [])]])
+--- optimized Core
+let anf#3 : Data = constrData -1 (con (list data) []) in
+case@Data anf#3 of
+  DataConstr unused#2 -> 9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_6
+    [(lam anf_1
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (con integer 9))] (delay (error))]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        anf_1])
+      [[(builtin constrData) (con integer -1)] (con (list data) [])]])
+    (force (builtin chooseData))])
+--- isolated pass
+--- isolated Core before
+let anf#2 : Data = constrData -1 (con (list data) []) in
+case@Data anf#2 of
+  DataConstr unused#1 -> 9
+--- isolated Core after
+let anf#2 : Data = constrData -1 (con (list data) []) in
+9
+--- isolated UPLC before
+[(lam anf_2
+  [(lam generated_3
+    (force
+      [[[[[[(force (builtin chooseData)) generated_3] (delay (con integer 9))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]
+        (delay (error))]))
+    anf_2])
+  [[(builtin constrData) (con integer -1)] (con (list data) [])]]
+--- isolated UPLC after
+[(lam anf_2 (con integer 9))
+  [[(builtin constrData) (con integer -1)] (con (list data) [])]]

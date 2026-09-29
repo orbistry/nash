@@ -1,0 +1,77 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData 59 (con (list data) [(I 42)]) of
+  DataConstr pair#19 -> pair#19
+  _ -> trace "cold" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_20
+    (force
+      [[[[[[(force (builtin chooseData)) generated_20]
+        (delay [(lam pair_19 pair_19) [(builtin unConstrData) generated_20]])]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- optimized Core
+let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#2 of
+  DataConstr pair#1 -> pair#1
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_3
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6]
+                (delay [(lam pair_4 pair_4) [(builtin unConstrData) generated_6]])]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]))
+            anf_3])
+          [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+        [builtin_5 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#20 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#20 of
+  DataConstr pair#19 -> pair#19
+  _ -> trace "cold" in error
+--- isolated folded Core
+let anf#20 : Data = constrData 59 (con (list data) [(I 42)]) in
+let pair#19 : pair int (list Data) = unConstrData anf#20 in
+pair#19
+--- isolated cleaned Core
+let anf#20 : Data = constrData 59 (con (list data) [(I 42)]) in
+unConstrData anf#20
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_20
+    [(lam generated_21
+      (force
+        [[[[[[(force (builtin chooseData)) generated_21]
+          (delay [(lam pair_19 pair_19) [(builtin unConstrData) generated_21]])]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+      anf_20])
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_20 [(builtin unConstrData) anf_20])
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- result
+(con (pair integer (list data)) (59, [(I 42)]))
+--- logs
+[]

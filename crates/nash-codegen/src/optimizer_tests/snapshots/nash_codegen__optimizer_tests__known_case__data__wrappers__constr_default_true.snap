@@ -1,0 +1,93 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData 59 (con (list data) [(I 42)]) of
+  DataI wrong#3 -> trace "wrong" in error
+  _ -> trace "default" in 9
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_4
+    (force
+      [[[[[[(force (builtin chooseData)) generated_4]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+        (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+        (delay
+          (force
+            [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]))
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- optimized Core
+let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#2 of
+  DataI wrong#1 -> trace "wrong" in error
+  _ -> trace "default" in 9
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_3
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6] (delay (force [partial_8 (delay (con integer 9))]))]
+                (delay (force [partial_8 (delay (con integer 9))]))]
+                (delay (force [partial_8 (delay (con integer 9))]))]
+                (delay (force [[builtin_5 (con string "wrong")] (delay (error))]))]
+                (delay (force [partial_8 (delay (con integer 9))]))]))
+            anf_3])
+          [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+        [builtin_5 (con string "default")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#4 : Data = constrData 59 (con (list data) [(I 42)]) in
+case@Data anf#4 of
+  DataI wrong#3 -> trace "wrong" in error
+  _ -> trace "default" in 9
+--- isolated folded Core
+let anf#4 : Data = constrData 59 (con (list data) [(I 42)]) in
+trace "default" in 9
+--- isolated cleaned Core
+let anf#4 : Data = constrData 59 (con (list data) [(I 42)]) in
+trace "default" in 9
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_4
+    [(lam generated_5
+      (force
+        [[[[[[(force (builtin chooseData)) generated_5]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]
+          (delay (force [[(force (builtin trace)) (con string "wrong")] (delay (error))]))]
+          (delay
+            (force
+              [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]))
+      anf_4])
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_4
+    (force
+      [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))
+    [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+--- result
+(con integer 9)
+--- logs
+["default"]

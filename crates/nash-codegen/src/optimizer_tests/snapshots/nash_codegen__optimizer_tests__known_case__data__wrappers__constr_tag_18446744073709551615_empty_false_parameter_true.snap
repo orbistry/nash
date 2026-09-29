@@ -1,0 +1,87 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+(\tag#37 : int fields#38 : list Data -> case@Data constrData tag#37 fields#38 of
+  DataConstr pair#39 -> pair#39
+  _ -> trace "cold" in error) 18446744073709551615 (con (list data) [(I 42)])
+--- unoptimized UPLC
+(program 1.1.0
+  [[(lam tag_37
+    (lam fields_38
+      [(lam generated_40
+        (force
+          [[[[[[(force (builtin chooseData)) generated_40]
+            (delay [(lam pair_39 pair_39) [(builtin unConstrData) generated_40]])]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+            (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+        [[(builtin constrData) tag_37] fields_38]]))
+    (con integer 18446744073709551615)]
+    (con (list data) [(I 42)])])
+--- optimized Core
+let anf#4 : Data = constrData 18446744073709551615 (con (list data) [(I 42)]) in
+case@Data anf#4 of
+  DataConstr pair#3 -> pair#3
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam builtin_5
+      [(lam partial_6
+        [(lam anf_1
+          [(lam generated_4
+            (force
+              [[[[[[builtin_5 generated_4]
+                (delay [(lam pair_2 pair_2) [(builtin unConstrData) generated_4]])]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]
+                (delay (force [partial_6 (delay (error))]))]))
+            anf_1])
+          [[(builtin constrData) (con integer 18446744073709551615)]
+            (con (list data) [(I 42)])]])
+        [builtin_3 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+(\tag#37 : int fields#38 : list Data -> let anf#40 : Data = constrData tag#37 fields#38 in
+case@Data anf#40 of
+  DataConstr pair#39 -> pair#39
+  _ -> trace "cold" in error) 18446744073709551615 (con (list data) [(I 42)])
+--- isolated folded Core
+(\tag#37 : int fields#38 : list Data -> let anf#40 : Data = constrData tag#37 fields#38 in
+let pair#39 : pair int (list Data) = unConstrData anf#40 in
+pair#39) 18446744073709551615 (con (list data) [(I 42)])
+--- isolated cleaned Core
+let anf#40 : Data = constrData 18446744073709551615 (con (list data) [(I 42)]) in
+unConstrData anf#40
+--- isolated UPLC before
+(program 1.1.0
+  [[(lam tag_37
+    (lam fields_38
+      [(lam anf_40
+        [(lam generated_41
+          (force
+            [[[[[[(force (builtin chooseData)) generated_41]
+              (delay [(lam pair_39 pair_39) [(builtin unConstrData) generated_41]])]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+              (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+          anf_40])
+        [[(builtin constrData) tag_37] fields_38]]))
+    (con integer 18446744073709551615)]
+    (con (list data) [(I 42)])])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_40 [(builtin unConstrData) anf_40])
+    [[(builtin constrData) (con integer 18446744073709551615)]
+      (con (list data) [(I 42)])]])
+--- result
+(con (pair integer (list data)) (18446744073709551615, [(I 42)]))
+--- logs
+[]

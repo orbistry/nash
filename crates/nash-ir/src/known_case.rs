@@ -694,3 +694,78 @@ fn wrapper_subject<'a>(
     let (test, operand) = data_wrapper(value)?;
     Some((root, test, operand))
 }
+
+/// Trial ConstrData shape folding in hygienic ANF. Construction stays strict;
+/// a used native pair payload is still extracted at the original case site.
+pub fn reduce_constr_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
+    let mut known = HashSet::new();
+    core.walk(&mut |node| {
+        let CoreKind::Let { binder, value, .. } = node.kind else {
+            return;
+        };
+        let recognized = match value.kind {
+            CoreKind::Builtin {
+                func: DefaultFunction::ConstrData,
+                args: [_, _],
+            } => true,
+            CoreKind::Var(name) => known.contains(&name.unique),
+            _ => false,
+        };
+        if recognized {
+            known.insert(binder.name.unique);
+        }
+    });
+    if known.is_empty() {
+        return core;
+    }
+    core.map(b, &mut |node| {
+        let CoreKind::Case {
+            kind: CaseKind::Data,
+            scrutinee,
+            branches,
+            default,
+        } = node.kind
+        else {
+            return None;
+        };
+        let CoreKind::Var(name) = scrutinee.kind else {
+            return None;
+        };
+        if !known.contains(&name.unique) || !valid_data_branches(branches) {
+            return None;
+        }
+        let body = match branches
+            .iter()
+            .find(|branch| branch.test == Test::DataConstr)
+        {
+            Some(branch) => {
+                let payload = branch.binders[0];
+                if crate::analysis::free_variables(branch.body)
+                    .iter()
+                    .any(|name| name.unique == payload.name.unique)
+                {
+                    b.let_(
+                        payload,
+                        b.builtin(DefaultFunction::UnConstrData, &[scrutinee], payload.ty),
+                        branch.body,
+                    )
+                } else {
+                    branch.body
+                }
+            }
+            None => default.unwrap_or_else(|| b.error(node.ty)),
+        };
+        Some(b.with_type(body, node.ty))
+    })
+}
+
+/// Isolated ConstrData trial with accepted cleanup, without another ANF pass.
+pub fn simplify_constr_data<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
+    loop {
+        let next = simplify_data_wrappers(b, reduce_constr_data(b, core));
+        if std::ptr::eq(core, next) {
+            return next;
+        }
+        core = next;
+    }
+}

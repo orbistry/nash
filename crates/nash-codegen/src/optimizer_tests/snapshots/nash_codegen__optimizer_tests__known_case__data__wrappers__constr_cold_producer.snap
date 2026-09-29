@@ -1,0 +1,71 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Bool false of
+  True -> force (delay (case@Data constrData (trace "cold" in error) (con (list data) [(I 42)]) of
+    DataConstr pair#1 -> 0))
+  False -> 9
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con bool False)
+    (con integer 9)
+    (force
+      (delay
+        [(lam generated_2
+          (force
+            [[[[[[(force (builtin chooseData)) generated_2] (delay (con integer 0))]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]
+              (delay (error))]))
+          [[(builtin constrData)
+            (force [[(force (builtin trace)) (con string "cold")] (delay (error))])]
+            (con (list data) [(I 42)])]]))))
+--- optimized Core
+9
+--- optimized UPLC
+(program 1.1.0 (con integer 9))
+--- isolated pass
+--- isolated ANF input
+case@Bool false of
+  True -> force (delay (let anf#2 : int = trace "cold" in error in
+  let anf#3 : Data = constrData anf#2 (con (list data) [(I 42)]) in
+  case@Data anf#3 of
+    DataConstr pair#1 -> 0))
+  False -> 9
+--- isolated folded Core
+case@Bool false of
+  True -> force (delay (let anf#2 : int = trace "cold" in error in
+  let anf#3 : Data = constrData anf#2 (con (list data) [(I 42)]) in
+  0))
+  False -> 9
+--- isolated cleaned Core
+9
+--- isolated UPLC before
+(program 1.1.0
+  (case
+    (con bool False)
+    (con integer 9)
+    (force
+      (delay
+        [(lam anf_2
+          [(lam anf_3
+            [(lam generated_4
+              (force
+                [[[[[[(force (builtin chooseData)) generated_4] (delay (con integer 0))]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay (error))]
+                  (delay (error))]))
+              anf_3])
+            [[(builtin constrData) anf_2] (con (list data) [(I 42)])]])
+          (force [[(force (builtin trace)) (con string "cold")] (delay (error))])]))))
+--- isolated UPLC after
+(program 1.1.0 (con integer 9))
+--- result
+(con integer 9)
+--- logs
+[]

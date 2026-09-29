@@ -1,0 +1,77 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/known_case.rs
+expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- isolated ANF input\\n{}\\n--- isolated folded Core\\n{}\\n--- isolated cleaned Core\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(folded), pretty(after), left.uplc, right.uplc,\nright.result, right.logs))"
+---
+--- unoptimized Core
+case@Data constrData 18446744073709551615 (con (list data) []) of
+  DataConstr pair#43 -> pair#43
+  _ -> trace "cold" in error
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam generated_44
+    (force
+      [[[[[[(force (builtin chooseData)) generated_44]
+        (delay [(lam pair_43 pair_43) [(builtin unConstrData) generated_44]])]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+        (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+    [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
+--- optimized Core
+let anf#2 : Data = constrData 18446744073709551615 (con (list data) []) in
+case@Data anf#2 of
+  DataConstr pair#1 -> pair#1
+  _ -> trace "cold" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam builtin_7
+      [(lam partial_8
+        [(lam anf_3
+          [(lam generated_6
+            (force
+              [[[[[[builtin_7 generated_6]
+                (delay [(lam pair_4 pair_4) [(builtin unConstrData) generated_6]])]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]
+                (delay (force [partial_8 (delay (error))]))]))
+            anf_3])
+          [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
+        [builtin_5 (con string "cold")]])
+      (force (builtin chooseData))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated ANF input
+let anf#44 : Data = constrData 18446744073709551615 (con (list data) []) in
+case@Data anf#44 of
+  DataConstr pair#43 -> pair#43
+  _ -> trace "cold" in error
+--- isolated folded Core
+let anf#44 : Data = constrData 18446744073709551615 (con (list data) []) in
+let pair#43 : pair int (list Data) = unConstrData anf#44 in
+pair#43
+--- isolated cleaned Core
+let anf#44 : Data = constrData 18446744073709551615 (con (list data) []) in
+unConstrData anf#44
+--- isolated UPLC before
+(program 1.1.0
+  [(lam anf_44
+    [(lam generated_45
+      (force
+        [[[[[[(force (builtin chooseData)) generated_45]
+          (delay [(lam pair_43 pair_43) [(builtin unConstrData) generated_45]])]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]
+          (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
+      anf_44])
+    [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam anf_44 [(builtin unConstrData) anf_44])
+    [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
+--- result
+(con (pair integer (list data)) (18446744073709551615, []))
+--- logs
+[]

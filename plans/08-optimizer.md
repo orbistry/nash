@@ -1534,9 +1534,47 @@ and the explicit performance check pass. Nextest stalled at discovery; the fresh
 built library binaries passed directly. The temporary collection switch and trial
 entry points are removed.
 
-`ConstrData` remains a separate next trial: `DataConstr` binds one native
-`(tag, fields)` pair and is not a single-operand wrapper. This is case folding,
-not permission to remove the producer through cancellation (Chunk 8).
+**ConstrData producer shape folding (28 September 2026), trial awaiting keep.**
+`reduce_constr_data` recognizes exactly saturated, let-bound `ConstrData` producers
+and aliases in hygienic ANF. It validates the full Data branch table, selects
+`DataConstr`, and uses the original default or error when that arm is absent.
+The original producer remains strict at its existing position, preserving tag
+and field evaluation, runtime type checks and tag-range behavior. Partial,
+overapplied, traced and unknown producers do not establish facts.
+
+Core has no general constructor for the dynamic native `(int, list Data)` pair
+that `DataConstr` binds. Therefore this step removes `chooseData` dispatch but
+retains `UnConstrData(scrutinee)` at the original case site when the selected
+payload is used. Unused payloads and defaults need no extraction, matching ordinary
+lowering. This does not substitute tag/fields directly or change pair representation.
+`simplify_constr_data` composes the trial with accepted cleanup without another
+ANF pass. Accepted snapshot/performance pipelines remain unchanged pending keep.
+
+Across 215 accepted-versus-trial comparisons, results and logs match; 193 improve
+CPU, memory and size and 22 are unchanged, with no regressions. The 192 targeted
+cases cover tags 0, 59 and `u64::MAX`, zero/four fields, one/three matches, literal
+or runtime arguments, escaping/nonescaping Data and ignored/pair/tag/fields payload
+uses. Savings range from 366,375–1,307,125 CPU, 1,732–6,496 memory and 16–51 bytes.
+One existing source workload, `Workloads.decoding`, improves by 366,375 CPU, 1,732
+memory and 19 bytes; the other 22 are unchanged. These are synthetic coverage
+measurements. The accepted baseline is unchanged, and temporary runner source is
+removed after recording the results.
+
+Validation: 518 codegen, 69 IR and two vesting tests pass (589 total) in the
+freshly built binaries after nextest stalled at discovery. There are 39 new
+snapshots and one updated isolated producer example; existing accepted-pipeline
+Core/UPLC output is unchanged. Tests cover operand order/failure, wrong types,
+empty/nonempty fields, alias/repeated/captured pair uses, cold producers, defaults,
+partial/overapplied/traced producers and malformed tables. Scope, type-view, ANF,
+semantic/log equivalence and idempotence checks follow executable snapshots.
+Formatting, strict workspace/temporary-runner Clippy and the separate accepted
+performance baseline check pass. Full-workspace tests were not rerun for this trial.
+
+The evaluator currently panics for negative tags and tags above `u64::MAX`.
+Those two fixtures render before/after Core and UPLC and independently check retained
+construction without evaluating that existing panic path. In-range boundary tags
+are evaluated normally. This is case folding, not permission to remove producers
+through cancellation (Chunk 8).
 
 Native `CaseKind::Int`/`Bytes`
 literal folding remains in scope, but currently has no source codegen producer:
