@@ -19,28 +19,11 @@ case@Data constrData 18446744073709551615 (con (list data) []) of
     [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
 --- optimized Core
 let anf#2 : Data = constrData 18446744073709551615 (con (list data) []) in
-case@Data anf#2 of
-  DataConstr pair#1 -> pair#1
-  _ -> trace "cold" in error
+unConstrData anf#2
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam builtin_7
-      [(lam partial_8
-        [(lam anf_3
-          [(lam generated_6
-            (force
-              [[[[[[builtin_7 generated_6]
-                (delay [(lam pair_4 pair_4) [(builtin unConstrData) generated_6]])]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]
-                (delay (force [partial_8 (delay (error))]))]))
-            anf_3])
-          [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
-        [builtin_5 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam anf_1 [(builtin unConstrData) anf_1])
+    [[(builtin constrData) (con integer 18446744073709551615)] (con (list data) [])]])
 --- isolated pass
 --- isolated ANF input
 let anf#44 : Data = constrData 18446744073709551615 (con (list data) []) in

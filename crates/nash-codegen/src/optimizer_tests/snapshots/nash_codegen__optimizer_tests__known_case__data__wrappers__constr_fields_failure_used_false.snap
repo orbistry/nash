@@ -32,30 +32,19 @@ let anf#4 : int = trace "tag" in 59 in
 let anf#5 : list Data = trace "fields" in error in
 let data#1 : Data = constrData anf#4 anf#5 in
 let effect#2 : int = trace "between" in 0 in
-case@Data data#1 of
-  DataConstr pair#3 -> trace "selected" in 9
+trace "selected" in 9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_12
-    [(lam builtin_13
+  [(lam builtin_9
+    [(lam anf_3
       [(lam anf_6
-        [(lam anf_7
-          [(lam data_8
-            [(lam effect_9
-              [(lam generated_11
-                (force
-                  [[[[[[builtin_13 generated_11]
-                    (delay (force [[builtin_12 (con string "selected")] (delay (con integer 9))]))]
-                    (delay (error))]
-                    (delay (error))]
-                    (delay (error))]
-                    (delay (error))]))
-                data_8])
-              (force [[builtin_12 (con string "between")] (delay (con integer 0))])])
-            [[(builtin constrData) anf_6] anf_7]])
-          (force [[builtin_12 (con string "fields")] (delay (error))])])
-        (force [[builtin_12 (con string "tag")] (delay (con integer 59))])])
-      (force (builtin chooseData))])
+        [(lam data_7
+          [(lam effect_8
+            (force [[builtin_9 (con string "selected")] (delay (con integer 9))]))
+            (force [[builtin_9 (con string "between")] (delay (con integer 0))])])
+          [[(builtin constrData) anf_3] anf_6]])
+        (force [[builtin_9 (con string "fields")] (delay (error))])])
+      (force [[builtin_9 (con string "tag")] (delay (con integer 59))])])
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

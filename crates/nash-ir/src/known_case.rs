@@ -695,7 +695,7 @@ fn wrapper_subject<'a>(
     Some((root, test, operand))
 }
 
-/// Trial ConstrData shape folding in hygienic ANF. Construction stays strict;
+/// ConstrData shape folding in hygienic ANF. Construction stays strict;
 /// a used native pair payload is still extracted at the original case site.
 pub fn reduce_constr_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let mut known = HashSet::new();
@@ -759,7 +759,7 @@ pub fn reduce_constr_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'
     })
 }
 
-/// Isolated ConstrData trial with accepted cleanup, without another ANF pass.
+/// ConstrData folding with accepted cleanup, without another ANF pass.
 pub fn simplify_constr_data<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
         let next = simplify_data_wrappers(b, reduce_constr_data(b, core));

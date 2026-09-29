@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 42
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (ToData)\ntype Option = Some Int | None\ntype never = Never\ndecodeNever : Data -> never\ndecodeNever value =\n    case value of\n        Constr pair(1, []) -> Never\n        _ -> fail\nmain : unit\nmain =\n    case decodeNever (toData None) of\n        Never -> ()\n"
 ---
 --- unoptimized Core
@@ -65,52 +64,37 @@ main#1
 --- optimized Core
 let anf#50 : Main.Option = constrData 1 (con (list data) []) in
 let leaf#16 : @delay Main.never = delay error in
-let match#45 : Main.never = case@Data anf#50 of
-  DataConstr field#17 -> case@Pair field#17 of
-    Pair field#18 field#19 -> let anf#47 : int -> bool = equalsInteger field#18 in
-    let anf#49 : bool = anf#47 1 in
-    case@Bool anf#49 of
-      True -> case@List field#19 of
-        Nil -> constr 0
-        Cons field#34 field#35 -> force leaf#16
-      False -> force leaf#16
-  DataMap field#36 -> force leaf#16
-  DataList field#37 -> force leaf#16
-  DataI field#38 -> force leaf#16
-  DataB field#39 -> force leaf#16 in
+let field#17 : pair int (list Data) = unConstrData anf#50 in
+let match#45 : Main.never = case@Pair field#17 of
+  Pair field#18 field#19 -> let anf#47 : int -> bool = equalsInteger field#18 in
+  let anf#49 : bool = anf#47 1 in
+  case@Bool anf#49 of
+    True -> case@List field#19 of
+      Nil -> constr 0
+      Cons field#34 field#35 -> force leaf#16
+    False -> force leaf#16 in
 ()
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_16
-    [(lam anf_1
-      [(lam leaf_2
-        [(lam match_14 (con unit ()))
-          [(lam generated_15
-            (force
-              [[[[[[builtin_16 generated_15]
-                (delay
-                  [(lam field_3
+  [(lam anf_1
+    [(lam leaf_2
+      [(lam field_3
+        [(lam match_10 (con unit ()))
+          (case
+            field_3
+            (lam field_4
+              (lam field_5
+                [(lam anf_6
+                  [(lam anf_7
                     (case
-                      field_3
-                      (lam field_4
-                        (lam field_5
-                          [(lam anf_6
-                            [(lam anf_7
-                              (case
-                                anf_7
-                                (force leaf_2)
-                                (case field_5 (lam field_8 (lam field_9 (force leaf_2))) (constr 0))))
-                              [anf_6 (con integer 1)]])
-                            [(builtin equalsInteger) field_4]]))))
-                    [(builtin unConstrData) generated_15]])]
-                (delay (force leaf_2))]
-                (delay (force leaf_2))]
-                (delay (force leaf_2))]
-                (delay (force leaf_2))]))
-            anf_1]])
-        (delay (error))])
-      [[(builtin constrData) (con integer 1)] (con (list data) [])]])
-    (force (builtin chooseData))])
+                      anf_7
+                      (force leaf_2)
+                      (case field_5 (lam field_8 (lam field_9 (force leaf_2))) (constr 0))))
+                    [anf_6 (con integer 1)]])
+                  [(builtin equalsInteger) field_4]])))])
+        [(builtin unConstrData) anf_1]])
+      (delay (error))])
+    [[(builtin constrData) (con integer 1)] (con (list data) [])]])
 --- result
 (con unit ())
 --- logs

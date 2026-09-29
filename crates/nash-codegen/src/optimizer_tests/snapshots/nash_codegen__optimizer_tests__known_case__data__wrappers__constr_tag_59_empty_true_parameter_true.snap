@@ -23,28 +23,11 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     (con (list data) [])])
 --- optimized Core
 let anf#4 : Data = constrData 59 (con (list data) []) in
-case@Data anf#4 of
-  DataConstr pair#3 -> pair#3
-  _ -> trace "cold" in error
+unConstrData anf#4
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_3
-    [(lam builtin_5
-      [(lam partial_6
-        [(lam anf_1
-          [(lam generated_4
-            (force
-              [[[[[[builtin_5 generated_4]
-                (delay [(lam pair_2 pair_2) [(builtin unConstrData) generated_4]])]
-                (delay (force [partial_6 (delay (error))]))]
-                (delay (force [partial_6 (delay (error))]))]
-                (delay (force [partial_6 (delay (error))]))]
-                (delay (force [partial_6 (delay (error))]))]))
-            anf_1])
-          [[(builtin constrData) (con integer 59)] (con (list data) [])]])
-        [builtin_3 (con string "cold")]])
-      (force (builtin chooseData))])
-    (force (builtin trace))])
+  [(lam anf_1 [(builtin unConstrData) anf_1])
+    [[(builtin constrData) (con integer 59)] (con (list data) [])]])
 --- isolated pass
 --- isolated ANF input
 (\tag#29 : int fields#30 : list Data -> let anf#32 : Data = constrData tag#29 fields#30 in

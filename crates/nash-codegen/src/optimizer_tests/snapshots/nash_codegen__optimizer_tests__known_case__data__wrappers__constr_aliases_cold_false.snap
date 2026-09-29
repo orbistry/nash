@@ -58,53 +58,30 @@ case@Bool false of
 let anf#15 : int = trace "tag" in 59 in
 let anf#16 : list Data = trace "fields" in (con (list data) [(I 42)]) in
 let data#8 : Data = constrData anf#15 anf#16 in
-let anf#18 : int -> 'erased = case@Data data#8 of
-  DataConstr pair#10 -> \x#11 : int -> let anf#17 : 'erased = case@Pair pair#10 of
-    Pair tag#12 fields#13 -> constr 0 tag#12 fields#13 in
-  constr 0 pair#10 anf#17 x#11 in
-let anf#19 : 'erased = anf#18 7 in
-let anf#20 : pair int (list Data) = case@Data data#8 of
-  DataConstr second#14 -> second#14 in
-constr 0 data#8 anf#19 anf#20
+let pair#10 : pair int (list Data) = unConstrData data#8 in
+let anf#17 : 'erased = case@Pair pair#10 of
+  Pair tag#12 fields#13 -> constr 0 tag#12 fields#13 in
+let anf#19 : 'erased = constr 0 pair#10 anf#17 7 in
+let second#14 : pair int (list Data) = unConstrData data#8 in
+constr 0 data#8 anf#19 second#14
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_26
-    [(lam builtin_28
-      [(lam anf_1
-        [(lam anf_2
-          [(lam data_3
-            [(lam anf_21
-              [(lam anf_22
-                [(lam anf_24 (constr 0 data_3 anf_22 anf_24))
-                  [(lam generated_25
-                    (force
-                      [[[[[[builtin_26 generated_25]
-                        (delay [(lam second_23 second_23) [(builtin unConstrData) generated_25]])]
-                        (delay (error))]
-                        (delay (error))]
-                        (delay (error))]
-                        (delay (error))]))
-                    data_3]])
-                [anf_21 (con integer 7)]])
-              [(lam generated_27
-                (force
-                  [[[[[[builtin_26 generated_27]
-                    (delay
-                      [(lam pair_4
-                        (lam x_5
-                          [(lam anf_9 (constr 0 pair_4 anf_9 x_5))
-                            (case pair_4 (lam tag_6 (lam fields_7 (constr 0 tag_6 fields_7))))]))
-                        [(builtin unConstrData) generated_27]])]
-                    (delay (error))]
-                    (delay (error))]
-                    (delay (error))]
-                    (delay (error))]))
-                data_3]])
-            [[(builtin constrData) anf_1] anf_2]])
-          (force [[builtin_28 (con string "fields")] (delay (con (list data) [(I 42)]))])])
-        (force [[builtin_28 (con string "tag")] (delay (con integer 59))])])
-      (force (builtin trace))])
-    (force (builtin chooseData))])
+  [(lam builtin_12
+    [(lam anf_1
+      [(lam anf_2
+        [(lam data_3
+          [(lam pair_4
+            [(lam anf_7
+              [(lam anf_9
+                [(lam second_11 (constr 0 data_3 anf_9 second_11))
+                  [(builtin unConstrData) data_3]])
+                (constr 0 pair_4 anf_7 (con integer 7))])
+              (case pair_4 (lam tag_5 (lam fields_6 (constr 0 tag_5 fields_6))))])
+            [(builtin unConstrData) data_3]])
+          [[(builtin constrData) anf_1] anf_2]])
+        (force [[builtin_12 (con string "fields")] (delay (con (list data) [(I 42)]))])])
+      (force [[builtin_12 (con string "tag")] (delay (con integer 59))])])
+    (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input
 let anf#8 : int = trace "tag" in 59 in

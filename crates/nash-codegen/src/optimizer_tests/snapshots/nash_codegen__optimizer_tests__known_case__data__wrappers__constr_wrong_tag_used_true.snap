@@ -37,34 +37,23 @@ let anf#4 : bool = trace "tag" in true in
 let anf#5 : list Data = trace "fields" in (con (list data) [(I 42)]) in
 let data#1 : Data = constrData anf#4 anf#5 in
 let effect#2 : int = trace "between" in 0 in
-case@Data data#1 of
-  DataConstr pair#3 -> trace "selected" in fstPair pair#3
+let pair#3 : pair int (list Data) = unConstrData data#1 in
+trace "selected" in fstPair pair#3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_12
-    [(lam builtin_13
-      [(lam builtin_14
-        [(lam anf_6
-          [(lam anf_7
-            [(lam data_8
-              [(lam effect_9
-                [(lam generated_11
-                  (force
-                    [[[[[[builtin_14 generated_11]
-                      (delay
-                        [(lam pair_10
-                          (force [[builtin_13 (con string "selected")] (delay [builtin_12 pair_10])]))
-                          [(builtin unConstrData) generated_11]])]
-                      (delay (error))]
-                      (delay (error))]
-                      (delay (error))]
-                      (delay (error))]))
-                  data_8])
-                (force [[builtin_13 (con string "between")] (delay (con integer 0))])])
-              [[(builtin constrData) anf_6] anf_7]])
-            (force [[builtin_13 (con string "fields")] (delay (con (list data) [(I 42)]))])])
-          (force [[builtin_13 (con string "tag")] (delay (con bool True))])])
-        (force (builtin chooseData))])
+  [(lam builtin_11
+    [(lam builtin_12
+      [(lam anf_6
+        [(lam anf_7
+          [(lam data_8
+            [(lam effect_9
+              [(lam pair_10
+                (force [[builtin_12 (con string "selected")] (delay [builtin_11 pair_10])]))
+                [(builtin unConstrData) data_8]])
+              (force [[builtin_12 (con string "between")] (delay (con integer 0))])])
+            [[(builtin constrData) anf_6] anf_7]])
+          (force [[builtin_12 (con string "fields")] (delay (con (list data) [(I 42)]))])])
+        (force [[builtin_12 (con string "tag")] (delay (con bool True))])])
       (force (builtin trace))])
     (force (force (builtin fstPair)))])
 --- isolated pass

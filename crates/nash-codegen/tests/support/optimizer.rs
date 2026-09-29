@@ -27,7 +27,7 @@ pub(crate) fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core
     anf::validate(normalized).unwrap();
     hygiene::validate(normalized, &[]).unwrap();
     let propagated = nash_ir::small_inline::simplify(b, normalized);
-    let propagated = nash_ir::known_case::simplify_data_wrappers(b, propagated);
+    let propagated = nash_ir::known_case::simplify_constr_data(b, propagated);
     hygiene::validate(propagated, &[]).unwrap();
     anf::validate(propagated).unwrap();
     assert_eq!(core.ty, propagated.ty);

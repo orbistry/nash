@@ -19,8 +19,7 @@ unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 
 is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
 but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
-accepted, as is IData/BData/ListData/MapData producer case folding. ConstrData
-producer folding remains;
+accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 other Chunk 7 case/field simplification work remains. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
 Chunks 9, 10 and 11. Normal build defaults remain O0 pending
@@ -1534,7 +1533,7 @@ and the explicit performance check pass. Nextest stalled at discovery; the fresh
 built library binaries passed directly. The temporary collection switch and trial
 entry points are removed.
 
-**ConstrData producer shape folding (28 September 2026), trial awaiting keep.**
+**ConstrData producer shape folding (28 September 2026), accepted.**
 `reduce_constr_data` recognizes exactly saturated, let-bound `ConstrData` producers
 and aliases in hygienic ANF. It validates the full Data branch table, selects
 `DataConstr`, and uses the original default or error when that arm is absent.
@@ -1547,8 +1546,9 @@ that `DataConstr` binds. Therefore this step removes `chooseData` dispatch but
 retains `UnConstrData(scrutinee)` at the original case site when the selected
 payload is used. Unused payloads and defaults need no extraction, matching ordinary
 lowering. This does not substitute tag/fields directly or change pair representation.
-`simplify_constr_data` composes the trial with accepted cleanup without another
-ANF pass. Accepted snapshot/performance pipelines remain unchanged pending keep.
+`simplify_constr_data` composes the rule with accepted cleanup without another
+ANF pass. Both shared snapshot and performance pipelines now use this entry point.
+Normal build assembly remains O0 pending Chunk 11 configuration decisions.
 
 Across 215 accepted-versus-trial comparisons, results and logs match; 193 improve
 CPU, memory and size and 22 are unchanged, with no regressions. The 192 targeted
@@ -1569,6 +1569,13 @@ partial/overapplied/traced producers and malformed tables. Scope, type-view, ANF
 semantic/log equivalence and idempotence checks follow executable snapshots.
 Formatting, strict workspace/temporary-runner Clippy and the separate accepted
 performance baseline check pass. Full-workspace tests were not rerun for this trial.
+
+Adoption validation: all 589 codegen/IR/vesting tests pass in fresh binaries
+following a nextest discovery stall. The 34 updated snapshots retain identical
+unoptimized Core/UPLC and isolated-pass evidence. The reviewed performance baseline
+incorporates only the `decoding` improvement above; all source inputs, O0 metrics,
+results and logs are unchanged. Formatting, strict workspace/runner Clippy and
+the explicit baseline check pass.
 
 The evaluator currently panics for negative tags and tags above `u64::MAX`.
 Those two fixtures render before/after Core and UPLC and independently check retained
