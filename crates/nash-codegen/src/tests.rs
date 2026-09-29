@@ -64,6 +64,31 @@ pub fn compile_tests_matching<'a>(
     path: &Path,
     version: nash_config::PlutusVersion,
     trace: TraceConfig,
+    include: impl FnMut(&nash_ast::Test<'a>) -> bool,
+) -> Result<Vec<TestProgram>, Error<'a>> {
+    compile_tests_matching_optimized(
+        arena,
+        build,
+        module,
+        source,
+        path,
+        version,
+        trace,
+        nash_config::OptimizationLevel::O0,
+        include,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn compile_tests_matching_optimized<'a>(
+    arena: &'a Arena,
+    build: &Build<'a, '_>,
+    module: ModuleName<'a>,
+    source: &str,
+    path: &Path,
+    version: nash_config::PlutusVersion,
+    trace: TraceConfig,
+    optimize: nash_config::OptimizationLevel,
     mut include: impl FnMut(&nash_ast::Test<'a>) -> bool,
 ) -> Result<Vec<TestProgram>, Error<'a>> {
     let input = build
@@ -81,12 +106,12 @@ pub fn compile_tests_matching<'a>(
         let programs = if test.binders.is_empty() {
             let root = engine.expr(test.body, &ctx)?;
             Programs::Unit {
-                run: encode(&mut engine, root, version)?,
+                run: encode(&mut engine, root, version, optimize)?,
             }
         } else {
             let prepare = engine.property(test, &ctx)?;
             Programs::Prop {
-                prepare: encode(&mut engine, prepare, version)?,
+                prepare: encode(&mut engine, prepare, version, optimize)?,
             }
         };
         result.push(TestProgram {
@@ -114,6 +139,7 @@ fn encode<'a>(
     engine: &mut Engine<'a, '_, '_>,
     root: &'a Core<'a>,
     version: nash_config::PlutusVersion,
+    optimize: nash_config::OptimizationLevel,
 ) -> Result<Vec<u8>, Error<'a>> {
     let core = engine.finish_root(root)?;
     let version = match version {
@@ -121,7 +147,8 @@ fn encode<'a>(
         nash_config::PlutusVersion::V2 => nash_plutus::machine::PlutusVersion::V2,
         nash_config::PlutusVersion::V3 => nash_plutus::machine::PlutusVersion::V3,
     };
-    let program = crate::program::assemble_core_for_version(engine.ir.arena, core, version)?;
+    let program =
+        crate::program::assemble_core_with_options(engine.ir.arena, core, version, optimize)?;
     flat::encode(program.program).map_err(|e| Error::Encoding(e.to_string()))
 }
 

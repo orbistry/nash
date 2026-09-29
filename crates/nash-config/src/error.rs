@@ -98,8 +98,8 @@ pub enum ConfigError {
         expected: &'static str,
     },
 
-    #[error("'{path}' at {pos}: 'optimize' is unavailable; optimizer support is not implemented")]
-    OptimizerUnavailable { path: PathBuf, pos: Position },
+    #[error("'{path}' at {pos}: 'optimize' must be the integer 0 or 1")]
+    InvalidOptimization { path: PathBuf, pos: Position },
 
     #[error(
         "'{path}' at {pos}: '{field}' must be set in workspace members, not the workspace config"

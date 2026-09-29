@@ -345,6 +345,7 @@ dependencies = [
  "nash-region",
  "nash-solve",
  "nash-test",
+ "stacker",
  "thiserror",
 ]
 

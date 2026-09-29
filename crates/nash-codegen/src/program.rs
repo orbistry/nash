@@ -57,8 +57,6 @@ pub fn assemble<'a>(arena: &'a Arena, module: &Module<'a>) -> Result<Compiled<'a
 }
 
 /// Assemble an already wrapped Core root through the O0 pipeline.
-/// Plan 08 Chunk 11 reserves build-mode wiring; accepted IR passes currently
-/// run through the candidate and explicit performance pipelines.
 pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compiled<'a>, Error<'a>> {
     assemble_core_for_version(arena, core, PlutusVersion::V3)
 }
@@ -69,12 +67,48 @@ pub fn assemble_core_for_version<'a>(
     core: &'a Core<'a>,
     version: PlutusVersion,
 ) -> Result<Compiled<'a>, Error<'a>> {
+    assemble_core_with_options(arena, core, version, nash_config::OptimizationLevel::O0)
+}
+
+/// Assemble at the selected optimization level without changing trace policy.
+pub fn assemble_core_with_options<'a>(
+    arena: &'a Arena,
+    core: &'a Core<'a>,
+    version: PlutusVersion,
+    optimize: nash_config::OptimizationLevel,
+) -> Result<Compiled<'a>, Error<'a>> {
+    match optimize {
+        nash_config::OptimizationLevel::O0 => assemble_selected(arena, core, version, optimize),
+        // ANF can produce deep binding chains. Compiler passes are recursive;
+        // do not depend on the caller thread stack for the full O1 pipeline.
+        nash_config::OptimizationLevel::O1 => stacker::grow(32 * 1024 * 1024, || {
+            assemble_selected(arena, core, version, optimize)
+        }),
+    }
+}
+
+fn assemble_selected<'a>(
+    arena: &'a Arena,
+    core: &'a Core<'a>,
+    version: PlutusVersion,
+    optimize: nash_config::OptimizationLevel,
+) -> Result<Compiled<'a>, Error<'a>> {
     if let Some(name) = free_variables(core).first() {
         return Err(Error::NotClosed(*name));
     }
+    let core = match optimize {
+        nash_config::OptimizationLevel::O0 => core,
+        nash_config::OptimizationLevel::O1 => crate::optimizer::optimize(arena, core),
+    };
     let build = Builder::new(arena);
     let core = crate::recursion::rewrite(&build, core)?;
-    let named = crate::lower::lower(arena, core)?;
+    let named = match optimize {
+        nash_config::OptimizationLevel::O0 => crate::lower::lower(arena, core)?,
+        nash_config::OptimizationLevel::O1 => {
+            let core = nash_ir::hygiene::freshen(&build, core);
+            crate::lower::lower_with_constant_sharing(arena, core)?
+        }
+    };
     let term = debruijn::to_debruijn(arena, named).map_err(Error::DeBruijn)?;
     let uplc_version = Version::plutus_v3(arena);
     let program = Program::new(arena, uplc_version, term);

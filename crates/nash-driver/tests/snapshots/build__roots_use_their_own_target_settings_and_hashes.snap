@@ -3,16 +3,8 @@ source: crates/nash-driver/tests/build.rs
 description: "validator module First exposing (main)\nmain : 'a -> unit\nmain _ = ()\n\nvalidator module Second exposing (main)\nmain : 'a -> unit\nmain _ = ()\n"
 ---
 First
-(program 1.1.0
-  [(lam fromUnit_3
-    [(lam main_1 main_1)
-      (lam arg_2 [(lam match_4 [fromUnit_3 (con unit ())]) arg_2])])
-    (lam value_5 value_5)])
-hash: 4b49f99338dd1b89803563083e44b028db2f0ff616a422a6c391d6a8
+(program 1.1.0 (lam arg_1 (con unit ())))
+hash: 5224b11324c206181841f0dba49fffc3cb24ad95f9c4180dcdda89b3
 Second
-(program 1.1.0
-  [(lam fromUnit_3
-    [(lam main_1 main_1)
-      (lam arg_2 [(lam match_4 [fromUnit_3 (con unit ())]) arg_2])])
-    (lam value_5 value_5)])
-hash: 8bb518b53c5d1bbc8c352c36a71bc423e1dbe7307db5f984939c158b
+(program 1.1.0 (lam arg_1 (con unit ())))
+hash: 186e32faa80a26810392fda6d559c7ed4721a65ce1c9d4ef3e1c87b4

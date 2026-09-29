@@ -16,6 +16,7 @@ pub mod decision_tree;
 pub mod evidence;
 
 pub mod comptime;
+pub mod optimizer;
 pub mod program;
 
 mod assertion;

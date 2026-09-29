@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use nash_ast::{PackageName, QualifiedName, primitives};
 use nash_can::{CanResult, Interface};
+use nash_codegen::optimizer;
 use nash_codegen::{
     build::{Build, Input, TraceConfig},
     lower, program, recursion,

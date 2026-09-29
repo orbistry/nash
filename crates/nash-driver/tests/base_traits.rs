@@ -133,3 +133,81 @@ base_snapshot!(cardano_helpers, "fixtures/base-traits/Cardano.nash");
 base_snapshot!(integer_math, "fixtures/base-traits/IntegerMath.nash");
 base_snapshot!(rational_math, "fixtures/base-traits/Rational.nash");
 base_snapshot!(crypto_helpers, "fixtures/base-traits/Crypto.nash");
+
+#[tokio::test]
+async fn optimization_levels_preserve_test_and_property_traces() {
+    let memory = InMemorySource::new();
+    let mut modules = bundled_base::modules();
+    let mut roots = Vec::new();
+    for name in ["Baseline", "Optimized"] {
+        let uri = Url::parse(&format!("file:///app/src/{name}.nash")).unwrap();
+        memory.insert(
+            uri.clone(),
+            format!(
+                r#"module {name} exposing (..)
+import Prop exposing (constant)
+coldFailure : unit -> bool
+coldFailure _ = fail
+tests
+    test "pass" = do
+        trace "before" ()
+        assert (True || coldFailure ())
+    test "failure" fail = do
+        trace "before failure" ()
+        assert False
+    prop "property" =
+        let
+            x via trace "generator" (constant 7)
+        in
+        do
+            trace "body" ()
+            assert (x == 7)
+"#
+            ),
+        );
+        modules.insert(uri.clone(), None);
+        roots.push(uri);
+    }
+    let db = Arc::new(Mutex::new(Database::new(memory)));
+    let graph = build_graph_with_tests(
+        db.clone(),
+        &modules.keys().cloned().collect::<Vec<_>>(),
+        &roots,
+    )
+    .await
+    .unwrap();
+    let (report, programs) = test_with(db, &graph, &modules, move |solved| {
+        nash_driver::build::compile_tests_with(solved, |uri| {
+            roots.contains(uri).then_some(nash_config::Build {
+                optimize: if uri.path().ends_with("Baseline.nash") {
+                    nash_config::OptimizationLevel::O0
+                } else {
+                    nash_config::OptimizationLevel::O1
+                },
+                trace_level: nash_config::TraceLevel::Verbose,
+                trace_level_explicit: true,
+                ..Default::default()
+            })
+        })
+    })
+    .await;
+    assert!(report.is_success(), "{report:?}");
+    let results = nash_test::run_all(programs.unwrap().unwrap(), &nash_test::Config::default());
+    let render = |module: &str| {
+        results
+            .iter()
+            .filter(|o| o.test.module == module)
+            .map(|o| {
+                format!(
+                    "{}: {:?}; traces: {:?}; counterexample: {:?}",
+                    o.test.name, o.status, o.traces, o.counterexample
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let before = render("Baseline");
+    let after = render("Optimized");
+    insta::assert_snapshot!(format!("--- O0\n{before}\n--- O1\n{after}"));
+    assert_eq!(before, after);
+}

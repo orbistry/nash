@@ -11,14 +11,11 @@ unIData (iData (trace "before" in 42))
       (force
         [[(force (builtin trace)) (con string "before")] (delay (con integer 42))])]])
 --- optimized Core
-let anf#1 : int = trace "before" in 42 in
-let anf#2 : Data = iData anf#1 in
-unIData anf#2
+trace "before" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam anf_3 [(lam anf_4 [(builtin unIData) anf_4]) [(builtin iData) anf_3]])
-      (force [[builtin_5 (con string "before")] (delay (con integer 42))])])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "before")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- isolated pass
 --- core before

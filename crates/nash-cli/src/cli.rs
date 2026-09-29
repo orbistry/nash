@@ -47,6 +47,23 @@ mod tests {
     use clap::CommandFactory;
 
     #[test]
+    fn optimization_flags() {
+        for command in ["build", "test"] {
+            for flag in ["-O0", "-O1"] {
+                let cli = Cli::try_parse_from(["nash", command, flag]).unwrap();
+                let level = match cli.cmd {
+                    crate::cmd::Cmd::Build(args) => args.optimize,
+                    crate::cmd::Cmd::Test(args) => args.optimize,
+                    _ => unreachable!(),
+                };
+                assert_eq!(u8::from(level.unwrap()), flag.as_bytes()[2] - b'0');
+            }
+            assert!(Cli::try_parse_from(["nash", command, "--optimize", "1"]).is_ok());
+            assert!(Cli::try_parse_from(["nash", command, "-O2"]).is_err());
+        }
+    }
+
+    #[test]
     fn command_schema_is_consistent() {
         Cli::command().debug_assert();
     }

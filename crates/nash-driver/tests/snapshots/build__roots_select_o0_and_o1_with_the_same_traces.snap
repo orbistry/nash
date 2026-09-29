@@ -1,0 +1,34 @@
+---
+source: crates/nash-driver/tests/build.rs
+expression: rendered
+---
+--- Baseline
+(program 1.1.0
+  [(lam message_10
+    [(lam identity_3
+      [(lam fromUnit_4
+        [(lam fromString_5
+          [(lam main_1 main_1)
+            (lam arg_2
+              [(lam match_6
+                (force
+                  [[(force (builtin trace)) [fromString_5 message_10]]
+                    (delay [identity_3 [fromUnit_4 (con unit ())]])]))
+                arg_2])])
+          (lam value_9 value_9)])
+        (lam value_8 value_8)])
+      (lam x_7 x_7)])
+    (con string "before")])
+--- outcome
+Ok("(con unit ())")
+--- logs
+["before"]
+--- Optimized
+(program 1.1.0
+  [(lam builtin_2
+    (lam arg_1 (force [[builtin_2 (con string "before")] (delay (con unit ()))])))
+    (force (builtin trace))])
+--- outcome
+Ok("(con unit ())")
+--- logs
+["before"]

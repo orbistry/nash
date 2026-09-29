@@ -5,6 +5,9 @@ use tokio::sync::Mutex;
 
 #[derive(clap::Args)]
 pub struct Args {
+    /// Optimization level: 0 (baseline) or 1 (preserves enabled traces).
+    #[arg(short = 'O', long)]
+    pub optimize: Option<nash_config::OptimizationLevel>,
     /// Path to the project.
     #[arg(default_value = ".")]
     pub path: PathBuf,
@@ -84,6 +87,9 @@ impl Args {
                         PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
                         PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
                     };
+                }
+                if let Some(level) = self.optimize {
+                    config.optimize = level;
                 }
                 if let Some(level) = self.trace_level {
                     config.trace_level = match level {

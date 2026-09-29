@@ -2,10 +2,4 @@
 source: crates/nash-driver/tests/build.rs
 description: "module Helper exposing (identity)\nidentity x = x\n\nvalidator module Main exposing (main)\nimport Helper\nmain : Data -> unit\nmain _ = Helper.identity ()\n"
 ---
-(program 1.1.0
-  [(lam identity_3
-    [(lam fromUnit_4
-      [(lam main_1 main_1)
-        (lam arg_2 [(lam match_5 [identity_3 [fromUnit_4 (con unit ())]]) arg_2])])
-      (lam value_7 value_7)])
-    (lam x_6 x_6)])
+(program 1.1.0 (lam arg_1 (con unit ())))

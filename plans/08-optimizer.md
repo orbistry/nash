@@ -23,12 +23,10 @@ accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
 as well. The retained Chunk 7 scope is complete. Continue
 with the remaining Chunk 8 rules after Chunk 7, then proceed to
-Chunks 9, 10 and 11. Normal build defaults remain O0 pending
-Chunk 11 configuration decisions.
+Chunks 9, 10 and 11. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
 `nash-codegen/src/program.rs`
-rewrites recursion and lowers directly; normal assembly does not yet call the
-accepted `nash-ir` passes.
+selects O0 or the shared accepted O1 pipeline, then rewrites recursion and lowers.
 Reuse its existing Core, Builder, traversal and free-variable facilities.
 
 Prior experiment executables were removed on 28 September 2026 at the user's
@@ -1678,7 +1676,7 @@ cases still match. Adoption validation also passed all 519 tests without snapsho
 changes, strict Clippy and formatting. The 23 baseline rows remain identical;
 only pipeline settings and revision metadata changed.
 
-**Direct integer inverse trial (29 September 2026), not yet adopted.**
+**Direct integer inverse cancellation (29 September 2026), accepted in O1.**
 `inverse::reduce` cancels a directly nested `unIData (iData x)` when successful
 evaluation of `x` is structurally known to produce a native integer: an integer
 literal, a saturated `unIData`, or traces around those expressions. It keeps
@@ -1687,9 +1685,8 @@ Type annotations alone are not proof: unknown variables, forged annotations,
 wrong-kind values, partial applications and the reverse direction remain intact.
 The retained `unIData` can still fail; cancellation does not remove its check.
 
-The first trial deliberately handles adjacent calls before ANF only. It is not
-in the accepted cleanup pipeline; let-bound producers and broader integer-result
-proofs remain subsequent work. Snapshots cover successful/failed decoding,
+The rule handles adjacent calls before ANF in O1; let-bound producers and broader
+integer-result proofs remain subsequent work. Snapshots cover successful/failed decoding,
 traces, nested pairs, cold branches, unknown arguments, forged metadata,
 partial applications and both reverse-direction outcomes. The temporary
 16-case isolated benchmark used negative/zero/positive/large integer values,
@@ -1755,6 +1752,21 @@ rule. No assumption that projection wins, and no per-program tuning engine.
 **Done when:** keep or discard is decided from measurements; O0 stays unchanged.
 
 ## Chunk 11 — Composition, convergence and final configuration
+
+**O1 integration (29 September 2026), accepted scope.**
+Production `nash-codegen::optimizer` owns the accepted Core pipeline; snapshots
+and performance measurements reuse it. Build/test accept `-O0`/`-O1` and
+`--optimize 0|1`; application/package config accepts integer `optimize: 0|1`.
+The build/test default is O1. Workspace members own these settings, as with trace/target
+settings. CLI overrides each owning project's level. No O2 is defined.
+O1 preserves enabled traces and their order; trace generation remains independent.
+It includes accepted direct integer inverse cancellation before the single ANF.
+Post-recursion work is freshening and optimized lowering with builtin/constant
+sharing, never a second normalization. Explicit comptime execution remains O0.
+Remaining Chunk 8–10 work and final convergence review stay open.
+Default-O1 validation exposed deep-tree stack overflows; assembly now uses a
+larger stack and UPLC term printing is iterative. Remaining depth risks and
+follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
 
 Compose only the accepted passes. Establish their actual order from interactions:
 inlining exposes dead code and known cases, sharing can conflict with inlining,

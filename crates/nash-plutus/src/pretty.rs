@@ -70,63 +70,112 @@ pub fn program<V: PrettyVar>(program: &Program<'_, V>) -> String {
     )
 }
 pub fn term<V: PrettyVar>(term: &Term<'_, V>) -> String {
-    print_term(term, &mut Vec::new())
-}
-fn print_term<V: PrettyVar>(
-    term: &Term<'_, V>,
-    scope: &mut Vec<(Option<usize>, String)>,
-) -> String {
-    match term {
-        Term::Var(v) => {
-            if let Some(index) = v.index() {
-                return if index > 0 && index <= scope.len() {
-                    scope[scope.len() - index].1.clone()
-                } else {
-                    format!("free_i{index}")
-                };
+    enum Frame<'a, 't, V> {
+        Visit(&'t Term<'a, V>),
+        Form {
+            head: String,
+            start: usize,
+            apply: bool,
+        },
+        EndLambda {
+            name: String,
+            start: usize,
+        },
+    }
+    let mut pending = vec![Frame::Visit(term)];
+    let mut scope: Vec<(Option<usize>, String)> = Vec::new();
+    let mut rendered = Vec::new();
+    while let Some(frame) = pending.pop() {
+        match frame {
+            Frame::Form { head, start, apply } => {
+                let children = rendered.split_off(start);
+                rendered.push(form(&head, children, apply));
             }
-            if let Some(unique) = v.unique()
-                && let Some((_, label)) = scope.iter().rev().find(|(id, _)| *id == Some(unique))
-            {
-                return label.clone();
+            Frame::EndLambda { name, start } => {
+                scope.pop();
+                let children = rendered.split_off(start);
+                rendered.push(form(&format!("lam {name}"), children, false));
             }
-            let mut name = String::new();
-            v.write(&mut name);
-            name
-        }
-        Term::Lambda { parameter, body } => {
-            let mut name = String::new();
-            if parameter.index().is_some() {
-                write!(name, "i{}", scope.len()).unwrap();
-            } else {
-                parameter.write(&mut name);
-            }
-            scope.push((parameter.unique(), name.clone()));
-            let body = print_term(body, scope);
-            scope.pop();
-            form(&format!("lam {name}"), vec![body], false)
-        }
-        Term::Apply { function, argument } => form(
-            "",
-            vec![print_term(function, scope), print_term(argument, scope)],
-            true,
-        ),
-        Term::Delay(t) => form("delay", vec![print_term(t, scope)], false),
-        Term::Force(t) => form("force", vec![print_term(t, scope)], false),
-        Term::Constant(c) => constant(c),
-        Term::Builtin(f) => format!("(builtin {})", builtin(**f)),
-        Term::Error => "(error)".into(),
-        Term::Constr { tag, fields } => form(
-            &format!("constr {tag}"),
-            fields.iter().map(|t| print_term(t, scope)).collect(),
-            false,
-        ),
-        Term::Case { constr, branches } => {
-            let mut children = vec![print_term(constr, scope)];
-            children.extend(branches.iter().map(|t| print_term(t, scope)));
-            form("case", children, false)
+            Frame::Visit(term) => match term {
+                Term::Var(v) => {
+                    let name = if let Some(index) = v.index() {
+                        if index > 0 && index <= scope.len() {
+                            scope[scope.len() - index].1.clone()
+                        } else {
+                            format!("free_i{index}")
+                        }
+                    } else if let Some(unique) = v.unique()
+                        && let Some((_, label)) =
+                            scope.iter().rev().find(|(id, _)| *id == Some(unique))
+                    {
+                        label.clone()
+                    } else {
+                        let mut name = String::new();
+                        v.write(&mut name);
+                        name
+                    };
+                    rendered.push(name);
+                }
+                Term::Lambda { parameter, body } => {
+                    let mut name = String::new();
+                    if parameter.index().is_some() {
+                        write!(name, "i{}", scope.len()).unwrap();
+                    } else {
+                        parameter.write(&mut name);
+                    }
+                    scope.push((parameter.unique(), name.clone()));
+                    pending.push(Frame::EndLambda {
+                        name,
+                        start: rendered.len(),
+                    });
+                    pending.push(Frame::Visit(body));
+                }
+                Term::Apply { function, argument } => {
+                    pending.push(Frame::Form {
+                        head: String::new(),
+                        start: rendered.len(),
+                        apply: true,
+                    });
+                    pending.push(Frame::Visit(argument));
+                    pending.push(Frame::Visit(function));
+                }
+                Term::Delay(t) | Term::Force(t) => {
+                    let head = if matches!(term, Term::Delay(_)) {
+                        "delay"
+                    } else {
+                        "force"
+                    };
+                    pending.push(Frame::Form {
+                        head: head.into(),
+                        start: rendered.len(),
+                        apply: false,
+                    });
+                    pending.push(Frame::Visit(t));
+                }
+                Term::Constant(c) => rendered.push(constant(c)),
+                Term::Builtin(f) => rendered.push(format!("(builtin {})", builtin(**f))),
+                Term::Error => rendered.push("(error)".into()),
+                Term::Constr { tag, fields } => {
+                    pending.push(Frame::Form {
+                        head: format!("constr {tag}"),
+                        start: rendered.len(),
+                        apply: false,
+                    });
+                    pending.extend(fields.iter().rev().map(|t| Frame::Visit(t)));
+                }
+                Term::Case { constr, branches } => {
+                    pending.push(Frame::Form {
+                        head: "case".into(),
+                        start: rendered.len(),
+                        apply: false,
+                    });
+                    pending.extend(branches.iter().rev().map(|t| Frame::Visit(t)));
+                    pending.push(Frame::Visit(constr));
+                }
+            },
         }
     }
+    rendered.pop().unwrap()
 }
 fn form(head: &str, children: Vec<String>, apply: bool) -> String {
     let (open, close) = if apply { ('[', ']') } else { ('(', ')') };
@@ -407,5 +456,33 @@ pub fn builtin(function: DefaultFunction) -> &'static str {
         DefaultFunction::ValueData => "valueData",
         DefaultFunction::UnValueData => "unValueData",
         DefaultFunction::ScaleValue => "scaleValue",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deep_terms_print_on_a_small_stack() {
+        std::thread::Builder::new()
+            .stack_size(128 * 1024)
+            .spawn(|| {
+                let arena = Arena::new();
+                let depth = 1024;
+                let mut root = Term::<DeBruijn>::error(&arena);
+                for _ in 0..depth {
+                    root = root.delay(&arena);
+                }
+                let printed = term(root);
+                // Check the traversal preserves every node without parsing the
+                // deep output through another recursive consumer.
+                assert_eq!(printed.matches("(delay").count(), depth);
+                assert_eq!(printed.matches("(error)").count(), 1);
+                assert_eq!(printed.matches(')').count(), depth + 1);
+            })
+            .unwrap()
+            .join()
+            .unwrap();
     }
 }

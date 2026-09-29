@@ -36,19 +36,23 @@ Global flags, accepted before the subcommand:
 
 | Flag | Default | Effect |
 |---|---|---|
+| `-O0` / `-O1`, `--optimize 0\|1` | config `optimize`, else `1` | Select baseline or trace-preserving optimization. |
 | `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the protocol 11 baseline. |
 | `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
 | `--compiler-traces[=true\|false]` | config `compilerTraces`, else false | Independently control compiler traces; the bare flag enables them. |
 | `--out DIR` | `build` | Output directory. |
 
-CLI options override the owning project's configuration. Builds are unoptimized;
-`--optimize` and the `optimize` config field are rejected while Plan 08 is deferred.
+CLI options override the owning project's configuration. `-O0` / `--optimize 0`
+keeps baseline lowering. `-O1` / `--optimize 1` enables accepted
+optimizations (the default) while preserving enabled user/compiler traces and their order.
+Both `build` and `test` accept this option. O1 does not enable or disable traces.
 See [target compatibility](validators.md#target-compatibility).
 
 `nash test`:
 
 | Flag | Default | Effect |
 |---|---|---|
+| `-O0` / `-O1`, `--optimize 0\|1` | config `optimize`, else `1` | Same pipeline as `build`. |
 | `--seed N` | random `u32` | Seed for property tests. Printed in the summary so a run can be replayed. |
 | `--max-success N` | `100` | Iterations per property. |
 | `--match PATTERN` | all | Run only tests whose `Module.Name` or name contains `PATTERN`. Repeatable. `--match "Vesting.{claim}"` selects a test by name inside a module. |
@@ -138,6 +142,7 @@ Three optional build settings are accepted on `application` and `package` config
     "type": "application",
     "sourceDirectories": ["src"],
     "plutusVersion": "v3",       // "v1" | "v2" | "v3"; default "v3"
+    "optimize": 1,              // 0 or 1 (default); independent of trace settings
     "traceLevel": "compact",     // "silent" | "compact" | "verbose"; default "silent"
     "compilerTraces": false,     // boolean; default false
     "dependencies": { }
@@ -147,6 +152,7 @@ Three optional build settings are accepted on `application` and `package` config
 | Field | Used by | Meaning |
 |---|---|---|
 | `plutusVersion` | `build` | Ledger language target and permitted generated features at the supported protocol baseline. |
+| `optimize` | `build`, `test` | Default for `-O` / `--optimize`; 0 or 1. |
 | `traceLevel` | `build` | Default for `--trace-level`. |
 | `compilerTraces` | `build` | Default for `--compiler-traces`; independent of user traces. |
 

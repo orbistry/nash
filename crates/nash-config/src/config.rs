@@ -38,10 +38,53 @@ pub enum TraceLevel {
     Verbose,
 }
 
+/// Optimization is independent of user and compiler trace settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(try_from = "u8", into = "u8")]
+pub enum OptimizationLevel {
+    O0,
+    #[default]
+    O1,
+}
+impl TryFrom<u8> for OptimizationLevel {
+    type Error = &'static str;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::O0),
+            1 => Ok(Self::O1),
+            _ => Err("expected optimization level 0 or 1"),
+        }
+    }
+}
+impl From<OptimizationLevel> for u8 {
+    fn from(value: OptimizationLevel) -> Self {
+        match value {
+            OptimizationLevel::O0 => 0,
+            OptimizationLevel::O1 => 1,
+        }
+    }
+}
+impl std::str::FromStr for OptimizationLevel {
+    type Err = &'static str;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "0" => Ok(Self::O0),
+            "1" => Ok(Self::O1),
+            _ => Err("expected optimization level 0 or 1"),
+        }
+    }
+}
+impl OptimizationLevel {
+    fn is_default(&self) -> bool {
+        *self == Self::O1
+    }
+}
+
 /// Project build settings, stored at the top level of `nash.jsonc`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(from = "BuildFields", into = "BuildFields")]
 pub struct Build {
+    pub optimize: OptimizationLevel,
     pub plutus_version: PlutusVersion,
     pub trace_level: TraceLevel,
     /// Distinguishes an explicit silent setting from the command-specific default.
@@ -52,6 +95,8 @@ pub struct Build {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BuildFields {
+    #[serde(default, skip_serializing_if = "OptimizationLevel::is_default")]
+    optimize: OptimizationLevel,
     #[serde(default)]
     plutus_version: PlutusVersion,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -63,6 +108,7 @@ struct BuildFields {
 impl From<BuildFields> for Build {
     fn from(fields: BuildFields) -> Self {
         Self {
+            optimize: fields.optimize,
             plutus_version: fields.plutus_version,
             trace_level: fields.trace_level.unwrap_or_default(),
             trace_level_explicit: fields.trace_level.is_some(),
@@ -74,6 +120,7 @@ impl From<BuildFields> for Build {
 impl From<Build> for BuildFields {
     fn from(build: Build) -> Self {
         Self {
+            optimize: build.optimize,
             plutus_version: build.plutus_version,
             trace_level: (build.trace_level_explicit || build.trace_level != TraceLevel::Silent)
                 .then_some(build.trace_level),

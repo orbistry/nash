@@ -493,3 +493,52 @@ fn assemble_selected_ledger_language() {
         assert!(assemble_core_for_version(&a, newer, version).is_ok());
     }
 }
+
+#[test]
+fn o1_assembly_matches_snapshot_pipeline_and_preserves_traces() {
+    use nash_config::OptimizationLevel;
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let int = Ty::Const(&ConstTy::Int);
+    let data = Ty::Big(&BigTy::Data);
+    for fails in [false, true] {
+        let value = b.builtin(F::UnIData, &[b.builtin(F::IData, &[b.int(42)], data)], int);
+        let root = b.trace(
+            b.lit(Constant::string(&arena, "before")),
+            if fails { b.error(int) } else { value },
+        );
+        let prepared = crate::snapshot_optimizer::prepare(&arena, root);
+        let o1 = assemble_core_with_options(&arena, root, PlutusVersion::V3, OptimizationLevel::O1)
+            .unwrap();
+        let before = prepared.before.program.eval(&arena);
+        let after = o1.program.eval(&arena);
+        insta::assert_snapshot!(
+            format!("o1_traces_failure_{fails}"),
+            format!(
+                "{}\n--- O0 outcome\n{:?}\n--- O0 logs\n{:?}\n--- O1 outcome\n{:?}\n--- O1 logs\n{:?}",
+                prepared.snapshot(),
+                before.term.as_ref().map(|t| pretty::term(t)),
+                before.info.logs,
+                after.term.as_ref().map(|t| pretty::term(t)),
+                after.info.logs
+            )
+        );
+        assert_eq!(
+            nash_plutus::flat::encode(prepared.after.program).unwrap(),
+            nash_plutus::flat::encode(o1.program).unwrap()
+        );
+        assert_eq!(
+            before
+                .term
+                .as_ref()
+                .map(|t| pretty::term(t))
+                .map_err(|e| format!("{e:?}")),
+            after
+                .term
+                .as_ref()
+                .map(|t| pretty::term(t))
+                .map_err(|e| format!("{e:?}"))
+        );
+        assert_eq!(before.info.logs, after.info.logs);
+    }
+}

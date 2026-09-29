@@ -48,13 +48,6 @@ pub fn parse(contents: &str, path: impl AsRef<Path>) -> Result<Config, ConfigErr
 }
 
 fn parse_config(contents: &str, path: &Path, obj: &Object) -> Result<Config, ConfigError> {
-    if let Some(prop) = find_property(obj, "optimize") {
-        return Err(ConfigError::OptimizerUnavailable {
-            path: path.into(),
-            pos: position_of(contents, prop.name.range()),
-        });
-    }
-
     let type_prop = find_property(obj, "type").ok_or_else(|| {
         ConfigError::missing_field(path, "type", position_of(contents, obj.range))
     })?;
@@ -153,7 +146,19 @@ fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, Confi
                 .value
         }
     };
+    let optimize = match find_property(obj, "optimize") {
+        None => crate::OptimizationLevel::O1,
+        Some(prop) => prop
+            .value
+            .as_number_lit()
+            .and_then(|n| n.value.parse().ok())
+            .ok_or_else(|| ConfigError::InvalidOptimization {
+                path: path.into(),
+                pos: position_of(contents, prop.value.range()),
+            })?,
+    };
     Ok(Build {
+        optimize,
         plutus_version,
         trace_level,
         trace_level_explicit: find_property(obj, "traceLevel").is_some(),
@@ -210,7 +215,7 @@ fn parse_package(contents: &str, path: &Path, obj: &Object) -> Result<Package, C
 }
 
 fn parse_workspace(contents: &str, path: &Path, obj: &Object) -> Result<Workspace, ConfigError> {
-    for field in ["plutusVersion", "traceLevel", "compilerTraces"] {
+    for field in ["plutusVersion", "traceLevel", "compilerTraces", "optimize"] {
         if let Some(prop) = find_property(obj, field) {
             return Err(ConfigError::WorkspaceBuildSetting {
                 path: path.into(),
@@ -850,6 +855,19 @@ mod build_tests {
     use crate::{Build, PlutusVersion, TraceLevel};
 
     #[test]
+    fn optimization_levels_roundtrip() {
+        for level in [0, 1] {
+            let source = format!(
+                r#"{{"type":"application","optimize":{level},"traceLevel":"verbose","compilerTraces":true}}"#
+            );
+            let config = parse(&source, "nash.jsonc").unwrap();
+            assert_config_roundtrip_snapshot!(&source, config.clone());
+            assert_eq!(serde_json::from_str::<Config>(&source).unwrap(), config);
+            assert_eq!(u8::from(config.build().optimize), level);
+        }
+    }
+
+    #[test]
     fn build_defaults() {
         for source in [
             r#"{"type":"application"}"#,
@@ -885,6 +903,7 @@ mod build_tests {
                     assert_eq!(
                         config.build(),
                         Build {
+                            optimize: crate::OptimizationLevel::O1,
                             plutus_version: expected_version,
                             trace_level: expected_trace,
                             trace_level_explicit: true,
@@ -904,6 +923,7 @@ mod build_tests {
         assert_eq!(
             config.build(),
             Build {
+                optimize: crate::OptimizationLevel::O1,
                 plutus_version: PlutusVersion::V1,
                 trace_level: TraceLevel::Verbose,
                 trace_level_explicit: true,
@@ -951,16 +971,13 @@ mod build_tests {
         compiler_traces_wrong_type,
         r#"{"type":"application","compilerTraces":"true"}"#
     );
+    config_error_snapshot!(invalid_optimizer, r#"{"type":"application","optimize":2}"#);
     config_error_snapshot!(
-        optimizer_unavailable,
-        r#"{"type":"application","optimize":0}"#
-    );
-    config_error_snapshot!(
-        workspace_optimizer_unavailable,
+        workspace_invalid_optimizer,
         r#"{"type":"workspace","members":[],"optimize":2}"#
     );
     config_error_snapshot!(
-        package_optimizer_unavailable,
-        r#"{"type":"package","optimize":null}"#
+        package_invalid_optimizer,
+        r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[],"optimize":null}"#
     );
 }

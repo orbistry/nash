@@ -1,5 +1,5 @@
 //! Shared accepted optimizer pipeline for unit and integration snapshots.
-//! Test-only: production assembly remains O0.
+//! Rendering helpers reuse the production O1 Core pipeline.
 use crate::{lower, program, recursion};
 use nash_ir::{anf, build::Builder, core::Core, hygiene, pretty::pretty};
 use nash_plutus::{
@@ -9,29 +9,17 @@ use nash_plutus::{
 };
 
 /// Normalize once before optimization, then rewrite recursion and lower nested
-/// Core directly. Used only by tests, never production assembly.
+/// Core directly. Reuses the production O1 optimizer.
 pub fn optimize<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     optimize_with(&Builder::new(arena), core)
 }
 
 pub(crate) fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
-    let fresh = hygiene::freshen(b, core);
-    hygiene::validate(fresh, &[]).unwrap();
-    let lifted = nash_ir::static_lift::lift(b, fresh);
-    hygiene::validate(lifted, &[]).unwrap();
-    let shortened = nash_ir::unused_params::reduce(b, lifted);
-    hygiene::validate(shortened, &[]).unwrap();
-    let folded = nash_ir::known_case::reduce_constr(b, shortened);
-    hygiene::validate(folded, &[]).unwrap();
-    let normalized = anf::normalize(b, folded);
-    anf::validate(normalized).unwrap();
-    hygiene::validate(normalized, &[]).unwrap();
-    let propagated = nash_ir::small_inline::simplify(b, normalized);
-    let propagated = nash_ir::known_case::simplify_constr_data(b, propagated);
-    hygiene::validate(propagated, &[]).unwrap();
-    anf::validate(propagated).unwrap();
-    assert_eq!(core.ty, propagated.ty);
-    propagated
+    let optimized = crate::optimizer::optimize_with(b, core);
+    hygiene::validate(optimized, &[]).unwrap();
+    anf::validate(optimized).unwrap();
+    assert_eq!(core.ty, optimized.ty);
+    optimized
 }
 
 /// Prepared once; rendering and evaluation share these exact programs.

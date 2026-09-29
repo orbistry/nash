@@ -69,8 +69,9 @@ pass's layer. All codegen snapshots that generate executable Core group unoptimi
 unoptimized UPLC, followed by optimized Core then optimized UPLC. The unoptimized
 side uses original compiled or hand-built Core and ordinary lowering, with only required
 recursion encoding: no optimization passes or builtin/constant sharing.
-Use the shared test-only accepted pipeline in `crates/nash-codegen/tests/support/optimizer.rs`
-so each accepted optimization updates the whole fixture corpus. Pass tests retain
+Use the shared production O1 pipeline in `crates/nash-codegen/src/optimizer.rs`,
+rendered by `crates/nash-codegen/tests/support/optimizer.rs`, so each accepted
+optimization updates the whole fixture corpus. Pass tests retain
 isolated-pass evidence after that comparison. Diagnostic/metadata snapshots stay
 focused; invalid Core records lowering errors, open Core is closed explicitly for
 pipeline rendering, and deliberate divergence is rendered without evaluation.

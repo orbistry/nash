@@ -18,6 +18,7 @@ nash-plutus = { path = "../nash-plutus", version = "0.3.3" }
 nash-test = { path = "../nash-test", version = "0.4.2" }
 nash-config = { path = "../nash-config", version = "0.5.0" }
 thiserror.workspace = true
+stacker = "0.1.25"
 
 [dev-dependencies]
 nash-driver = { path = "../nash-driver" }

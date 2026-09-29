@@ -30,7 +30,7 @@ validator bytes exclude those arguments. Ordinary expression fixtures include
 their inputs in the measured program.
 
 The `before` pipeline is O0 (recursion rewrite and lowering). The `after` pipeline
-is the accepted static lifting, pre-ANF unused-parameter removal and direct native-constructor folding, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, force/delay, known-Boolean/integer/bytes, bound-constructor, known-constructor field, known-list, literal-Data and IData/BData/ListData/MapData/ConstrData producer cleanup,
+is the accepted static lifting, pre-ANF unused-parameter removal, direct native-constructor folding and integer inverse cancellation, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, force/delay, known-Boolean/integer/bytes, bound-constructor, known-constructor field, known-list, literal-Data and IData/BData/ListData/MapData/ConstrData producer cleanup,
 then recursion rewrite, binder freshening and lowering with both Chunk 5 sharing steps. No second normalization
 or ANF-dependent cleanup runs after recursion rewriting. Rule 3 was accepted on 27 September 2026. These figures record current behavior, including overhead
 from ANF; they are not a claim that the incomplete optimizer beats O0 everywhere.
@@ -101,3 +101,6 @@ Their measured findings and keep/defer decisions remain in `plans/08-optimizer.m
 accepted behavior retains semantic snapshots and the explicit budget baseline.
 Use the temporary experiment runner above for future trials, then remove trial
 source once its decision is recorded.
+
+The Core pipeline is shared with production O1 in `nash-codegen::optimizer`.
+Builds and tests default to O1; these measurements still compare explicit O0 and O1.

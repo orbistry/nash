@@ -1,0 +1,23 @@
+---
+source: crates/nash-codegen/src/program/tests.rs
+expression: "format!(\"{}\\n--- O0 outcome\\n{:?}\\n--- O0 logs\\n{:?}\\n--- O1 outcome\\n{:?}\\n--- O1 logs\\n{:?}\",\nprepared.snapshot(), before.term.as_ref().map(|t| pretty::term(t)),\nbefore.info.logs, after.term.as_ref().map(|t| pretty::term(t)),\nafter.info.logs)"
+---
+--- unoptimized Core
+trace "before" in error
+--- unoptimized UPLC
+(program 1.1.0
+  (force [[(force (builtin trace)) (con string "before")] (delay (error))]))
+--- optimized Core
+trace "before" in error
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1 (force [[builtin_1 (con string "before")] (delay (error))]))
+    (force (builtin trace))])
+--- O0 outcome
+Err(ExplicitErrorTerm)
+--- O0 logs
+["before"]
+--- O1 outcome
+Err(ExplicitErrorTerm)
+--- O1 logs
+["before"]

@@ -14,6 +14,9 @@ pub enum Coverage {
 
 #[derive(clap::Args)]
 pub struct Args {
+    /// Optimization level: 0 (baseline) or 1 (preserves enabled traces).
+    #[arg(short = 'O', long)]
+    pub optimize: Option<nash_config::OptimizationLevel>,
     #[arg(default_value = ".")]
     pub path: PathBuf,
     #[arg(long)]
@@ -105,6 +108,9 @@ impl Args {
                     .filter(|(directory, _)| path.starts_with(directory))
                     .max_by_key(|(directory, _)| directory.components().count())
                     .map_or_else(|| project.config.build().for_tests(), |(_, config)| *config);
+                if let Some(level) = self.optimize {
+                    config.optimize = level;
+                }
                 if let Some(level) = self.trace_level {
                     config.trace_level_explicit = true;
                     config.trace_level = match level {

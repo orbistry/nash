@@ -343,3 +343,52 @@ async fn case_alias_outputs_and_renames_preserve_existing_artifacts() {
     assert!(write_outputs(&directory.0, &[]).await.is_err());
     assert_eq!(directory_contents(&directory.0), before);
 }
+
+#[tokio::test]
+async fn roots_select_o0_and_o1_with_the_same_traces() {
+    let bodies: Vec<_> = ["Baseline", "Optimized"].into_iter().map(|name| format!(
+        "validator module {name} exposing (main)\nidentity x = x\nmain : Data -> unit\nmain _ = trace \"before\" (identity ())\n"
+    )).collect();
+    let files = [
+        ("Baseline", bodies[0].as_str()),
+        ("Optimized", bodies[1].as_str()),
+    ];
+    let outputs = outputs_with(&files, |uri| nash_config::Build {
+        optimize: if uri.path().ends_with("Optimized.nash") {
+            nash_config::OptimizationLevel::O1
+        } else {
+            nash_config::OptimizationLevel::O0
+        },
+        trace_level: nash_config::TraceLevel::Verbose,
+        ..Default::default()
+    })
+    .await;
+    let arena = Arena::new();
+    let mut observations = Vec::new();
+    let mut rendered = String::new();
+    for output in &outputs {
+        let program = syn::parse_program(&arena, &output.uplc).unwrap();
+        let result = program
+            .apply(
+                &arena,
+                nash_plutus::term::Term::data(
+                    &arena,
+                    nash_plutus::data::PlutusData::integer_from(&arena, 0),
+                ),
+            )
+            .eval(&arena);
+        let outcome = result
+            .term
+            .as_ref()
+            .map(|t| nash_plutus::pretty::term(t))
+            .map_err(|e| format!("{e:?}"));
+        rendered.push_str(&format!(
+            "--- {}\n{}\n--- outcome\n{outcome:?}\n--- logs\n{:?}\n",
+            output.module, output.uplc, result.info.logs
+        ));
+        observations.push((outcome, result.info.logs));
+    }
+    insta::assert_snapshot!(rendered);
+    assert_eq!(observations[0], observations[1]);
+    assert_ne!(outputs[0].flat, outputs[1].flat);
+}

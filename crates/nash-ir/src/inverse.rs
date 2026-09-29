@@ -19,7 +19,7 @@ fn integer(core: &Core<'_>) -> bool {
     }
 }
 
-/// Trial: cancel a direct `unIData (iData x)` only with integer-shape evidence.
+/// Cancel a direct `unIData (iData x)` only with integer-shape evidence.
 /// No reverse conversion, alias reconstruction, or assumption from `Core::ty`.
 pub fn reduce<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     core.map(b, &mut |node| {

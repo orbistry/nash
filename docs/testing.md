@@ -520,7 +520,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - `prepare` returns a `constr` term: `Some` is `constr 0 [constr 0 [prng, body, show]]`,
   `None` is `constr 1 []`. The stdlib declares `type option 'a = Some 'a |
   None` in that order; the runner depends on the tags.
-- Test programs use the same unoptimized Core passes as validator builds.
+- Test programs use the same selected O0/O1 pipeline as validator builds. Optimization does not change user/compiler trace settings or test protocol logs.
   Compiler traces are enabled; user traces default to verbose unless the owning
   project explicitly configures a level or the CLI overrides it. Plan 08 remains
   deferred. Property result tuples/options use native constructors and cases,

@@ -100,8 +100,13 @@ pub fn build_validators_matching_with(
                 trace,
             )
             .map_err(|e| error(e.to_string()))?;
-        let compiled = nash_codegen::program::assemble_core_for_version(&arena, core.core, version)
-            .map_err(|e| error(e.to_string()))?;
+        let compiled = nash_codegen::program::assemble_core_with_options(
+            &arena,
+            core.core,
+            version,
+            config.optimize,
+        )
+        .map_err(|e| error(e.to_string()))?;
         let uplc = pretty::program(Program::new(
             &arena,
             compiled.program.version,
@@ -313,7 +318,7 @@ pub fn compile_tests_matching_with(
             .uri
             .to_file_path()
             .unwrap_or_else(|_| module.uri.path().into());
-        let programs = nash_codegen::tests::compile_tests_matching(
+        let programs = nash_codegen::tests::compile_tests_matching_optimized(
             &arena,
             &build,
             module.module.name,
@@ -321,6 +326,7 @@ pub fn compile_tests_matching_with(
             &path,
             config.plutus_version,
             trace,
+            config.optimize,
             |test| include(module.module.name.name, test.name.value),
         )
         .map_err(|error| BuildError {
