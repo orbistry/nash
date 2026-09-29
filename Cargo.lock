@@ -1818,7 +1818,6 @@ dependencies = [
  "nash-solve",
  "nash-test",
  "serde_json",
- "stacker",
  "thiserror 2.0.21",
  "url",
 ]

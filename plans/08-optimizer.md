@@ -1764,8 +1764,8 @@ It includes accepted direct integer inverse cancellation before the single ANF.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
 Remaining Chunk 8–10 work and final convergence review stay open.
-Default-O1 validation exposed deep-tree stack overflows; assembly now uses a
-larger stack and UPLC term printing is iterative. Remaining depth risks and
+Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
+heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
 follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
 
 Compose only the accepted passes. Establish their actual order from interactions:

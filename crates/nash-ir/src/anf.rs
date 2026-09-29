@@ -131,7 +131,6 @@ impl<'a> Normalizer<'_, 'a> {
         }
     }
     fn atom(&mut self, value: &'a Core<'a>, prefix: &mut Vec<Prefix<'a>>) -> &'a Core<'a> {
-        let value = self.term(value);
         let value = self.peel(value, prefix);
         if is_atom(value) {
             return value;
@@ -166,120 +165,109 @@ impl<'a> Normalizer<'_, 'a> {
         }
     }
     fn term(&mut self, core: &'a Core<'a>) -> &'a Core<'a> {
+        struct State<'a> {
+            core: &'a Core<'a>,
+            inputs: Vec<&'a Core<'a>>,
+            index: usize,
+            values: Vec<&'a Core<'a>>,
+            prefix: Vec<Prefix<'a>>,
+        }
+        enum Task<'a> {
+            Visit(&'a Core<'a>),
+            Step(State<'a>),
+            Resume(State<'a>, bool),
+        }
         let b = self.build;
-        let mut prefix = Vec::new();
-        let kind = match core.kind {
-            CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => return core,
-            CoreKind::Lam { params, body } => {
-                let body = self.term(body);
-                if params.is_empty() {
-                    return b.with_type(body, core.ty);
-                }
-                CoreKind::Lam { params, body }
-            }
-            CoreKind::Delay(body) => CoreKind::Delay(self.term(body)),
-            CoreKind::Force(body) => CoreKind::Force(self.atom(body, &mut prefix)),
-            CoreKind::App { func, args } => {
-                if args.is_empty() {
-                    return b.with_type(self.term(func), core.ty);
-                }
-                let mut func = self.atom(func, &mut prefix);
-                let mut pending: Vec<&'a Core<'a>> = Vec::new();
-                for arg in args {
-                    // Applying the prefix may fail, trace or diverge. It must
-                    // run before evaluating the next non-value argument.
-                    if !is_atom(arg) && !pending.is_empty() {
-                        let mut ty = func.ty;
-                        for previous in &pending {
-                            ty = self.applied_type(ty, previous);
-                        }
-                        func = self.atom(b.app(func, &pending, ty), &mut prefix);
-                        pending.clear();
+        let mut pending = vec![Task::Visit(core)];
+        let mut results = Vec::new();
+        while let Some(task) = pending.pop() {
+            match task {
+                Task::Visit(core) => {
+                    if matches!(
+                        core.kind,
+                        CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error
+                    ) {
+                        results.push(core);
+                        continue;
                     }
-                    pending.push(self.atom(arg, &mut prefix));
+                    let mut inputs = Vec::new();
+                    core.push_children_reversed(&mut inputs);
+                    inputs.reverse();
+                    pending.push(Task::Step(State {
+                        core,
+                        inputs,
+                        index: 0,
+                        values: Vec::new(),
+                        prefix: Vec::new(),
+                    }));
                 }
-                return self.finish(prefix, b.app(func, &pending, core.ty));
-            }
-            CoreKind::Let {
-                binder,
-                value,
-                body,
-            } => {
-                let value = self.term(value);
-                let value = self.peel(value, &mut prefix);
-                prefix.push(Prefix::Let(binder, value));
-                let body = b.with_type(self.term(body), core.ty);
-                return self.finish(prefix, body);
-            }
-            CoreKind::LetRec { binders, body } => {
-                let binders: Vec<_> = binders
-                    .iter()
-                    .map(|rec| RecBinder {
-                        body: self.term(rec.body),
-                        ..*rec
-                    })
-                    .collect();
-                CoreKind::LetRec {
-                    binders: b.arena.alloc_slice_copy(&binders),
-                    body: self.term(body),
+                Task::Resume(mut state, atom) => {
+                    let mut value = results.pop().unwrap();
+                    if atom {
+                        value = self.atom(value, &mut state.prefix);
+                    }
+                    if let CoreKind::Let { binder, .. } = state.core.kind
+                        && state.index == 0
+                    {
+                        value = self.peel(value, &mut state.prefix);
+                        state.prefix.push(Prefix::Let(binder, value));
+                    }
+                    state.values.push(value);
+                    state.index += 1;
+                    pending.push(Task::Step(state));
                 }
-            }
-            CoreKind::Builtin { func, args } => {
-                // A known builtin cannot execute until saturation. Earlier
-                // applications only collect arguments, so operands can be named
-                // left-to-right without introducing partial builtin bindings.
-                let args: Vec<_> = args.iter().map(|arg| self.atom(arg, &mut prefix)).collect();
-                CoreKind::Builtin {
-                    func,
-                    args: b.arena.alloc_slice_copy(&args),
-                }
-            }
-            CoreKind::Constr { tag, fields } => {
-                let fields: Vec<_> = fields
-                    .iter()
-                    .map(|field| self.atom(field, &mut prefix))
-                    .collect();
-                CoreKind::Constr {
-                    tag,
-                    fields: b.arena.alloc_slice_copy(&fields),
-                }
-            }
-            CoreKind::Field {
-                record,
-                index,
-                arity,
-            } => CoreKind::Field {
-                record: self.atom(record, &mut prefix),
-                index,
-                arity,
-            },
-            CoreKind::Case {
-                kind,
-                scrutinee,
-                branches,
-                default,
-            } => {
-                let scrutinee = self.atom(scrutinee, &mut prefix);
-                let branches: Vec<_> = branches
-                    .iter()
-                    .map(|branch| Branch {
-                        body: self.term(branch.body),
-                        ..*branch
-                    })
-                    .collect();
-                CoreKind::Case {
-                    kind,
-                    scrutinee,
-                    branches: b.arena.alloc_slice_copy(&branches),
-                    default: default.map(|body| self.term(body)),
+                Task::Step(mut state) => {
+                    if let Some(&input) = state.inputs.get(state.index) {
+                        let atom = match state.core.kind {
+                            CoreKind::App { args, .. } => !args.is_empty(),
+                            CoreKind::Builtin { .. }
+                            | CoreKind::Constr { .. }
+                            | CoreKind::Field { .. }
+                            | CoreKind::Force(_) => true,
+                            CoreKind::Case { .. } | CoreKind::Trace { .. } => state.index == 0,
+                            _ => false,
+                        };
+                        if matches!(state.core.kind, CoreKind::App { .. })
+                            && state.index > 1
+                            && !is_atom(input)
+                            && state.values.len() > 1
+                        {
+                            let mut ty = state.values[0].ty;
+                            for arg in &state.values[1..] {
+                                ty = self.applied_type(ty, arg);
+                            }
+                            let func = self.atom(
+                                b.app(state.values[0], &state.values[1..], ty),
+                                &mut state.prefix,
+                            );
+                            state.values.clear();
+                            state.values.push(func);
+                        }
+                        pending.push(Task::Resume(state, atom));
+                        pending.push(Task::Visit(input));
+                    } else {
+                        let core = state.core;
+                        let result = match core.kind {
+                            CoreKind::Lam { params: [], .. } | CoreKind::App { args: [], .. } => {
+                                b.with_type(state.values[0], core.ty)
+                            }
+                            CoreKind::App { .. } => {
+                                b.app(state.values[0], &state.values[1..], core.ty)
+                            }
+                            CoreKind::Let { .. } => b.with_type(state.values[1], core.ty),
+                            _ => crate::traverse::rebuild(
+                                b,
+                                core,
+                                &mut state.values.into_iter(),
+                                &mut |_| None,
+                            ),
+                        };
+                        results.push(self.finish(state.prefix, result));
+                    }
                 }
             }
-            CoreKind::Trace { message, body } => CoreKind::Trace {
-                message: self.atom(message, &mut prefix),
-                body: self.term(body),
-            },
-        };
-        self.finish(prefix, b.alloc(core.ty, kind))
+        }
+        results.pop().unwrap()
     }
 }
 

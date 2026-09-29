@@ -13,50 +13,81 @@ pub fn to_debruijn<'a>(
     arena: &'a Arena,
     term: &'a Term<'a, Name<'a>>,
 ) -> Result<&'a Term<'a, DeBruijn>, FreeVariable<'a>> {
-    convert(arena, &mut Vec::new(), term)
-}
-
-fn convert<'a>(
-    arena: &'a Arena,
-    scope: &mut Vec<usize>,
-    term: &'a Term<'a, Name<'a>>,
-) -> Result<&'a Term<'a, DeBruijn>, FreeVariable<'a>> {
-    Ok(match term {
-        Term::Var(name) => {
-            let position = scope
-                .iter()
-                .rposition(|unique| *unique == name.unique())
-                .ok_or(FreeVariable(name))?;
-            Term::var(arena, DeBruijn::new(arena, scope.len() - position))
+    enum Task<'a> {
+        Visit(&'a Term<'a, Name<'a>>),
+        Finish(&'a Term<'a, Name<'a>>, usize),
+    }
+    let mut pending = vec![Task::Visit(term)];
+    let mut scope = Vec::new();
+    let mut results: Vec<&'a Term<'a, DeBruijn>> = Vec::new();
+    while let Some(task) = pending.pop() {
+        match task {
+            Task::Visit(term) => {
+                pending.push(Task::Finish(term, results.len()));
+                match term {
+                    Term::Lambda { parameter, body } => {
+                        scope.push(parameter.unique());
+                        pending.push(Task::Visit(body));
+                    }
+                    Term::Apply { function, argument } => {
+                        pending.push(Task::Visit(argument));
+                        pending.push(Task::Visit(function));
+                    }
+                    Term::Delay(body) | Term::Force(body) => pending.push(Task::Visit(body)),
+                    Term::Constr { fields, .. } => {
+                        pending.extend(fields.iter().rev().map(|t| Task::Visit(t)))
+                    }
+                    Term::Case { constr, branches } => {
+                        pending.extend(branches.iter().rev().map(|t| Task::Visit(t)));
+                        pending.push(Task::Visit(constr));
+                    }
+                    _ => {}
+                }
+            }
+            Task::Finish(term, start) => {
+                let mut children = results.drain(start..);
+                let result = match term {
+                    Term::Var(name) => {
+                        let position = scope
+                            .iter()
+                            .rposition(|id| *id == name.unique())
+                            .ok_or(FreeVariable(name))?;
+                        Term::var(arena, DeBruijn::new(arena, scope.len() - position))
+                    }
+                    Term::Lambda { .. } => {
+                        scope.pop();
+                        children
+                            .next()
+                            .unwrap()
+                            .lambda(arena, DeBruijn::zero(arena))
+                    }
+                    Term::Apply { .. } => children
+                        .next()
+                        .unwrap()
+                        .apply(arena, children.next().unwrap()),
+                    Term::Delay(_) => children.next().unwrap().delay(arena),
+                    Term::Force(_) => children.next().unwrap().force(arena),
+                    Term::Constant(c) => Term::constant(arena, c),
+                    Term::Builtin(f) => Term::builtin(arena, f),
+                    Term::Error => Term::error(arena),
+                    Term::Constr { tag, .. } => Term::constr(
+                        arena,
+                        *tag,
+                        arena.alloc_slice_copy(&children.by_ref().collect::<Vec<_>>()),
+                    ),
+                    Term::Case { .. } => {
+                        let constr = children.next().unwrap();
+                        Term::case(
+                            arena,
+                            constr,
+                            arena.alloc_slice_copy(&children.by_ref().collect::<Vec<_>>()),
+                        )
+                    }
+                };
+                drop(children);
+                results.push(result);
+            }
         }
-        Term::Lambda { parameter, body } => {
-            scope.push(parameter.unique());
-            let result = convert(arena, scope, body);
-            scope.pop();
-            result?.lambda(arena, DeBruijn::zero(arena))
-        }
-        Term::Apply { function, argument } => {
-            convert(arena, scope, function)?.apply(arena, convert(arena, scope, argument)?)
-        }
-        Term::Delay(t) => convert(arena, scope, t)?.delay(arena),
-        Term::Force(t) => convert(arena, scope, t)?.force(arena),
-        Term::Constant(c) => Term::constant(arena, c),
-        Term::Builtin(f) => Term::builtin(arena, f),
-        Term::Error => Term::error(arena),
-        Term::Constr { tag, fields } => {
-            let fields = fields
-                .iter()
-                .map(|f| convert(arena, scope, f))
-                .collect::<Result<Vec<_>, _>>()?;
-            Term::constr(arena, *tag, arena.alloc_slice_copy(&fields))
-        }
-        Term::Case { constr, branches } => {
-            let constr = convert(arena, scope, constr)?;
-            let branches = branches
-                .iter()
-                .map(|b| convert(arena, scope, b))
-                .collect::<Result<Vec<_>, _>>()?;
-            Term::case(arena, constr, arena.alloc_slice_copy(&branches))
-        }
-    })
+    }
+    Ok(results.pop().unwrap())
 }

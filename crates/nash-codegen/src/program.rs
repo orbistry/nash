@@ -77,22 +77,6 @@ pub fn assemble_core_with_options<'a>(
     version: PlutusVersion,
     optimize: nash_config::OptimizationLevel,
 ) -> Result<Compiled<'a>, Error<'a>> {
-    match optimize {
-        nash_config::OptimizationLevel::O0 => assemble_selected(arena, core, version, optimize),
-        // ANF can produce deep binding chains. Compiler passes are recursive;
-        // do not depend on the caller thread stack for the full O1 pipeline.
-        nash_config::OptimizationLevel::O1 => stacker::grow(32 * 1024 * 1024, || {
-            assemble_selected(arena, core, version, optimize)
-        }),
-    }
-}
-
-fn assemble_selected<'a>(
-    arena: &'a Arena,
-    core: &'a Core<'a>,
-    version: PlutusVersion,
-    optimize: nash_config::OptimizationLevel,
-) -> Result<Compiled<'a>, Error<'a>> {
     if let Some(name) = free_variables(core).first() {
         return Err(Error::NotClosed(*name));
     }

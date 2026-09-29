@@ -205,6 +205,22 @@ fn malformed_core_cases_are_rejected() {
         Ty::Const(&ConstTy::Int),
     );
     assert!(matches!(lower(&arena, sparse), Err(Error::InvalidCase(_))));
+    let overapplied = b.alloc(
+        Ty::Const(&ConstTy::Int),
+        CoreKind::Builtin {
+            func: DefaultFunction::AddInteger,
+            args: arena.alloc_slice_copy(&[b.int(1), b.int(2), b.int(3)]),
+        },
+    );
+    // Recursion rewriting must preserve malformed shapes for lowering to
+    // diagnose; checked builder constructors would panic before that point.
+    for core in [malformed, sparse, overapplied] {
+        let rewritten = crate::recursion::rewrite(&b, core).unwrap();
+        assert_eq!(
+            lower(&arena, core).unwrap_err(),
+            lower(&arena, rewritten).unwrap_err()
+        );
+    }
 }
 
 #[test]

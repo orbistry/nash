@@ -137,27 +137,31 @@ impl<'a> Core<'a> {
     /// arguments, binding values then continuation, scrutinee then branches
     /// then default. Shared subtrees are visited once per occurrence.
     pub fn walk<'tree>(&'tree self, f: &mut impl FnMut(&'tree Core<'a>)) {
-        f(self);
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            f(node);
+            node.push_children_reversed(&mut pending);
+        }
+    }
+
+    /// Schedule children for a LIFO work list in the same order as `walk`.
+    pub fn push_children_reversed<'tree>(&'tree self, pending: &mut Vec<&'tree Core<'a>>) {
         match &self.kind {
             CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => {}
             CoreKind::Lam { body, .. } | CoreKind::Delay(body) | CoreKind::Force(body) => {
-                body.walk(f)
+                pending.push(body)
             }
             CoreKind::App { func, args } => {
-                func.walk(f);
-                for arg in *args {
-                    arg.walk(f);
-                }
+                pending.extend(args.iter().rev().copied());
+                pending.push(func);
             }
             CoreKind::Let { value, body, .. } => {
-                value.walk(f);
-                body.walk(f);
+                pending.push(body);
+                pending.push(value);
             }
             CoreKind::LetRec { binders, body } => {
-                for binder in *binders {
-                    binder.body.walk(f);
-                }
-                body.walk(f);
+                pending.push(body);
+                pending.extend(binders.iter().rev().map(|b| b.body));
             }
             CoreKind::Case {
                 scrutinee,
@@ -165,28 +169,16 @@ impl<'a> Core<'a> {
                 default,
                 ..
             } => {
-                scrutinee.walk(f);
-                for branch in *branches {
-                    branch.body.walk(f);
-                }
-                if let Some(body) = default {
-                    body.walk(f);
-                }
+                pending.extend(*default);
+                pending.extend(branches.iter().rev().map(|b| b.body));
+                pending.push(scrutinee);
             }
-            CoreKind::Constr { fields, .. } => {
-                for field in *fields {
-                    field.walk(f);
-                }
-            }
-            CoreKind::Builtin { args, .. } => {
-                for arg in *args {
-                    arg.walk(f);
-                }
-            }
-            CoreKind::Field { record, .. } => record.walk(f),
+            CoreKind::Constr { fields, .. } => pending.extend(fields.iter().rev().copied()),
+            CoreKind::Builtin { args, .. } => pending.extend(args.iter().rev().copied()),
+            CoreKind::Field { record, .. } => pending.push(record),
             CoreKind::Trace { message, body } => {
-                message.walk(f);
-                body.walk(f);
+                pending.push(body);
+                pending.push(message);
             }
         }
     }

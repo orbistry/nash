@@ -164,271 +164,382 @@ impl<'a> Lower<'a> {
     }
 
     fn term(&mut self, core: &'a Core<'a>) -> Result<Uplc<'a>, Error> {
-        Ok(match &core.kind {
-            CoreKind::Var(n) => Term::var(self.arena, self.name(*n)),
-            CoreKind::Lit(c) => Term::constant(self.arena, c),
-            CoreKind::Lam { params, body } => {
-                let body = self.term(body)?;
-                self.lambda(params, body)
-            }
-            CoreKind::App { func, args } => {
-                let mut term = self.term(func)?;
-                for arg in *args {
-                    term = term.apply(self.arena, self.term(arg)?);
-                }
-                term
-            }
-            CoreKind::Let {
-                binder,
-                value,
-                body,
-            } => {
-                let unit_sequence = binder.ty
-                    == nash_ir::ty::Ty::Const(&nash_ir::ty::ConstTy::Unit)
-                    && !crate::build::names(body).contains(&binder.name.unique);
-                let body = self.term(body)?;
-                let value = self.term(value)?;
-                if unit_sequence {
-                    Term::case(self.arena, value, self.arena.alloc_slice_copy(&[body]))
-                } else {
-                    body.lambda(self.arena, self.name(binder.name))
-                        .apply(self.arena, value)
-                }
-            }
-            CoreKind::Builtin { func, args } => {
-                if args.len() > func.arity() {
-                    return Err(Error::BuiltinArity);
-                }
-                let args = args
-                    .iter()
-                    .map(|arg| self.term(arg))
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.builtin(*func, &args)?
-            }
-            CoreKind::Case {
-                kind,
-                scrutinee,
-                branches,
-                default,
-            } => self.case(*kind, scrutinee, branches, *default)?,
-            CoreKind::Constr { tag, fields } => {
-                let fields = fields
-                    .iter()
-                    .map(|f| self.term(f))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Term::constr(
-                    self.arena,
-                    *tag as usize,
-                    self.arena.alloc_slice_copy(&fields),
-                )
-            }
-            CoreKind::Field {
-                record,
-                index,
-                arity,
-            } => {
-                if index >= arity {
-                    return Err(Error::InvalidField {
-                        index: *index,
-                        arity: *arity,
-                    });
-                }
-                let params = (0..*arity)
-                    .map(|_| self.fresh())
-                    .collect::<Result<Vec<_>, _>>()?;
-                let mut selector = Term::var(self.arena, params[*index as usize]);
-                for param in params.into_iter().rev() {
-                    selector = selector.lambda(self.arena, param);
-                }
-                Term::case(
-                    self.arena,
-                    self.term(record)?,
-                    self.arena.alloc_slice_copy(&[selector]),
-                )
-            }
-            CoreKind::Trace { message, body } => {
-                let message = self.term(message)?;
-                let body = self.term(body)?;
-                self.builtin(DefaultFunction::Trace, &[message, body.delay(self.arena)])?
-                    .force(self.arena)
-            }
-            CoreKind::Error => Term::error(self.arena),
-            CoreKind::Delay(t) => self.term(t)?.delay(self.arena),
-            CoreKind::Force(t) => self.term(t)?.force(self.arena),
-            CoreKind::LetRec { .. } => return Err(Error::Unlowered("recursion")),
-        })
-    }
-
-    fn case(
-        &mut self,
-        kind: CaseKind,
-        scrutinee: &'a Core<'a>,
-        branches: &'a [Branch<'a>],
-        default: Option<&'a Core<'a>>,
-    ) -> Result<Uplc<'a>, Error> {
-        let scrutinee = self.term(scrutinee)?;
-        let fallback = match default {
-            Some(c) => self.term(c)?,
-            None => Term::error(self.arena),
-        };
-        Ok(match kind {
-            CaseKind::Pair => {
-                let [branch] = branches else {
-                    return Err(Error::InvalidCase("pair case requires one branch"));
-                };
-                if branch.test != Test::Pair || branch.binders.len() != 2 || default.is_some() {
-                    return Err(Error::InvalidCase("pair branch must bind its two fields"));
-                }
-                let body = self.term(branch.body)?;
-                Term::case(
-                    self.arena,
-                    scrutinee,
-                    self.arena
-                        .alloc_slice_copy(&[self.lambda(branch.binders, body)]),
-                )
-            }
-            CaseKind::Bool => {
-                let mut yes = None;
-                let mut no = None;
-                for b in branches {
-                    if !b.binders.is_empty() {
-                        return Err(Error::InvalidCase("boolean branches bind no fields"));
-                    }
-                    let slot = match b.test {
-                        Test::True => &mut yes,
-                        Test::False => &mut no,
-                        _ => return Err(Error::InvalidCase("non-boolean test")),
-                    };
-                    if slot.is_some() {
-                        return Err(Error::InvalidCase("duplicate boolean branch"));
-                    }
-                    *slot = Some(self.term(b.body)?);
-                }
-                self.branch(scrutinee, yes.unwrap_or(fallback), no.unwrap_or(fallback))
-            }
-            CaseKind::Int | CaseKind::Bytes => {
-                let name = self.fresh()?;
-                let value = Term::var(self.arena, name);
-                let mut rest = fallback;
-                let mut seen = Vec::new();
-                for b in branches.iter().rev() {
-                    if !b.binders.is_empty() || seen.contains(&b.test) {
-                        return Err(Error::InvalidCase("invalid literal branch"));
-                    }
-                    seen.push(b.test);
-                    let (func, literal) = match (kind, b.test) {
-                        (CaseKind::Int, Test::Int(i)) => {
-                            (DefaultFunction::EqualsInteger, Term::integer(self.arena, i))
+        struct CaseState<'a> {
+            kind: CaseKind,
+            scrutinee: Uplc<'a>,
+            fallback: Uplc<'a>,
+            branches: Vec<&'a Branch<'a>>,
+            index: usize,
+            name: Option<&'a Name<'a>>,
+            arms: Vec<Option<Uplc<'a>>>,
+            seen: Vec<Test<'a>>,
+        }
+        enum Task<'a> {
+            Visit(&'a Core<'a>),
+            Finish(&'a Core<'a>, usize, bool),
+            Field(Uplc<'a>),
+            CaseStart(CaseKind, &'a [Branch<'a>], bool),
+            CaseNext(CaseState<'a>),
+            CaseBody(
+                CaseState<'a>,
+                usize,
+                Option<DefaultFunction>,
+                Option<Uplc<'a>>,
+            ),
+        }
+        let mut pending = vec![Task::Visit(core)];
+        let mut results: Vec<Uplc<'a>> = Vec::new();
+        while let Some(task) = pending.pop() {
+            match task {
+                Task::Visit(core) => {
+                    let start = results.len();
+                    match core.kind {
+                        CoreKind::Var(n) => results.push(Term::var(self.arena, self.name(n))),
+                        CoreKind::Lit(c) => results.push(Term::constant(self.arena, c)),
+                        CoreKind::Error => results.push(Term::error(self.arena)),
+                        CoreKind::LetRec { .. } => return Err(Error::Unlowered("recursion")),
+                        CoreKind::Field {
+                            record,
+                            index,
+                            arity,
+                        } => {
+                            if index >= arity {
+                                return Err(Error::InvalidField { index, arity });
+                            }
+                            let params = (0..arity)
+                                .map(|_| self.fresh())
+                                .collect::<Result<Vec<_>, _>>()?;
+                            let mut selector = Term::var(self.arena, params[index as usize]);
+                            for param in params.into_iter().rev() {
+                                selector = selector.lambda(self.arena, param);
+                            }
+                            pending.push(Task::Field(selector));
+                            pending.push(Task::Visit(record));
                         }
-                        (CaseKind::Bytes, Test::Bytes(bytes)) => (
-                            DefaultFunction::EqualsByteString,
-                            Term::byte_string(self.arena, bytes),
-                        ),
-                        _ => return Err(Error::InvalidCase("literal test has wrong kind")),
-                    };
-                    let condition = self.builtin(func, &[value, literal])?;
-                    let body = self.term(b.body)?;
-                    rest = self.branch(condition, body, rest);
-                }
-                rest.lambda(self.arena, name).apply(self.arena, scrutinee)
-            }
-            CaseKind::List => {
-                let mut nil = None;
-                let mut cons = None;
-                for b in branches {
-                    match b.test {
-                        Test::Nil if nil.is_none() && b.binders.is_empty() => {
-                            nil = Some(self.term(b.body)?)
+                        CoreKind::Case {
+                            kind,
+                            scrutinee,
+                            branches,
+                            default,
+                        } => {
+                            pending.push(Task::CaseStart(kind, branches, default.is_some()));
+                            if let Some(body) = default {
+                                pending.push(Task::Visit(body));
+                            }
+                            pending.push(Task::Visit(scrutinee));
                         }
-                        Test::Cons if cons.is_none() && b.binders.len() == 2 => {
-                            let body = self.term(b.body)?;
-                            cons = Some(self.lambda(b.binders, body));
+                        CoreKind::Let {
+                            binder,
+                            value,
+                            body,
+                        } => {
+                            let unit = binder.ty
+                                == nash_ir::ty::Ty::Const(&nash_ir::ty::ConstTy::Unit)
+                                && !crate::build::names(body).contains(&binder.name.unique);
+                            pending.push(Task::Finish(core, start, unit));
+                            pending.push(Task::Visit(value));
+                            pending.push(Task::Visit(body));
                         }
-                        _ => return Err(Error::InvalidCase("invalid list branch")),
+                        _ => {
+                            if let CoreKind::Builtin { func, args } = core.kind
+                                && args.len() > func.arity()
+                            {
+                                return Err(Error::BuiltinArity);
+                            }
+                            pending.push(Task::Finish(core, start, false));
+                            let mut children = Vec::new();
+                            core.push_children_reversed(&mut children);
+                            pending.extend(children.into_iter().map(Task::Visit));
+                        }
                     }
                 }
-                let cons = match cons {
-                    Some(cons) => cons,
-                    None => fallback
-                        .lambda(self.arena, self.fresh()?)
-                        .lambda(self.arena, self.fresh()?),
-                };
-                let nil = nil.unwrap_or(fallback);
-                Term::case(
-                    self.arena,
-                    scrutinee,
-                    self.arena.alloc_slice_copy(&[cons, nil]),
-                )
-            }
-            CaseKind::Data => {
-                let name = self.fresh()?;
-                let value = Term::var(self.arena, name);
-                let mut arms = [None; 5];
-                for b in branches {
-                    let (index, unwrap) = match b.test {
-                        Test::DataConstr => (0, DefaultFunction::UnConstrData),
-                        Test::DataMap => (1, DefaultFunction::UnMapData),
-                        Test::DataList => (2, DefaultFunction::UnListData),
-                        Test::DataI => (3, DefaultFunction::UnIData),
-                        Test::DataB => (4, DefaultFunction::UnBData),
-                        _ => return Err(Error::InvalidCase("non-Data test")),
-                    };
-                    if arms[index].is_some() || b.binders.len() != 1 {
-                        return Err(Error::InvalidCase("invalid Data branch"));
-                    }
-                    let body = self.term(b.body)?;
-                    arms[index] = Some(
-                        if crate::build::names(b.body).contains(&b.binders[0].name.unique) {
-                            let function = self.lambda(b.binders, body);
-                            let unwrapped = self.builtin(unwrap, &[value])?;
-                            function.apply(self.arena, unwrapped)
-                        } else {
-                            body
-                        },
-                    );
-                }
-                let [constr, map, list, int, bytes] =
-                    arms.map(|arm| arm.unwrap_or(fallback).delay(self.arena));
-                self.builtin(
-                    DefaultFunction::ChooseData,
-                    &[value, constr, map, list, int, bytes],
-                )?
-                .force(self.arena)
-                .lambda(self.arena, name)
-                .apply(self.arena, scrutinee)
-            }
-            CaseKind::Tag => {
-                if default.is_some() {
-                    return Err(Error::InvalidCase(
-                        "tag defaults must be expanded using constructor arities",
+                Task::Field(selector) => {
+                    let record = results.pop().unwrap();
+                    results.push(Term::case(
+                        self.arena,
+                        record,
+                        self.arena.alloc_slice_copy(&[selector]),
                     ));
                 }
-                let mut ordered = branches.iter().collect::<Vec<_>>();
-                ordered.sort_by_key(|b| {
-                    if let Test::Tag(tag) = b.test {
-                        tag
+                Task::Finish(core, start, unit) => {
+                    let mut children = results.drain(start..);
+                    let result = match core.kind {
+                        CoreKind::Lam { params, .. } => {
+                            self.lambda(params, children.next().unwrap())
+                        }
+                        CoreKind::App { .. } => {
+                            let mut func = children.next().unwrap();
+                            for arg in children.by_ref() {
+                                func = func.apply(self.arena, arg);
+                            }
+                            func
+                        }
+                        CoreKind::Let { binder, .. } => {
+                            let body = children.next().unwrap();
+                            let value = children.next().unwrap();
+                            if unit {
+                                Term::case(self.arena, value, self.arena.alloc_slice_copy(&[body]))
+                            } else {
+                                body.lambda(self.arena, self.name(binder.name))
+                                    .apply(self.arena, value)
+                            }
+                        }
+                        CoreKind::Builtin { func, .. } => {
+                            self.builtin(func, &children.by_ref().collect::<Vec<_>>())?
+                        }
+                        CoreKind::Constr { tag, .. } => Term::constr(
+                            self.arena,
+                            tag as usize,
+                            self.arena
+                                .alloc_slice_copy(&children.by_ref().collect::<Vec<_>>()),
+                        ),
+                        CoreKind::Trace { .. } => {
+                            let message = children.next().unwrap();
+                            let body = children.next().unwrap();
+                            self.builtin(
+                                DefaultFunction::Trace,
+                                &[message, body.delay(self.arena)],
+                            )?
+                            .force(self.arena)
+                        }
+                        CoreKind::Delay(_) => children.next().unwrap().delay(self.arena),
+                        CoreKind::Force(_) => children.next().unwrap().force(self.arena),
+                        _ => unreachable!(),
+                    };
+                    drop(children);
+                    results.push(result);
+                }
+                Task::CaseStart(kind, branches, has_default) => {
+                    let fallback = if has_default {
+                        results.pop().unwrap()
                     } else {
-                        u16::MAX
+                        Term::error(self.arena)
+                    };
+                    let scrutinee = results.pop().unwrap();
+                    if kind == CaseKind::Pair {
+                        let [branch] = branches else {
+                            return Err(Error::InvalidCase("pair case requires one branch"));
+                        };
+                        if branch.test != Test::Pair || branch.binders.len() != 2 || has_default {
+                            return Err(Error::InvalidCase("pair branch must bind its two fields"));
+                        }
                     }
-                });
-                let mut arms = Vec::new();
-                for (i, b) in ordered.into_iter().enumerate() {
-                    if b.test
-                        != Test::Tag(
-                            u16::try_from(i)
-                                .map_err(|_| Error::InvalidCase("too many constructors"))?,
-                        )
-                    {
+                    if kind == CaseKind::Tag && has_default {
                         return Err(Error::InvalidCase(
-                            "tag branches must cover consecutive unique tags",
+                            "tag defaults must be expanded using constructor arities",
                         ));
                     }
-                    let body = self.term(b.body)?;
-                    arms.push(self.lambda(b.binders, body));
+                    let mut branches: Vec<_> = branches.iter().collect();
+                    let name = match kind {
+                        CaseKind::Int | CaseKind::Bytes => {
+                            branches.reverse();
+                            Some(self.fresh()?)
+                        }
+                        CaseKind::Data => Some(self.fresh()?),
+                        CaseKind::Tag => {
+                            branches.sort_by_key(|b| {
+                                if let Test::Tag(tag) = b.test {
+                                    tag
+                                } else {
+                                    u16::MAX
+                                }
+                            });
+                            None
+                        }
+                        _ => None,
+                    };
+                    let count = match kind {
+                        CaseKind::Bool | CaseKind::List => 2,
+                        CaseKind::Data => 5,
+                        _ => branches.len(),
+                    };
+                    pending.push(Task::CaseNext(CaseState {
+                        kind,
+                        scrutinee,
+                        fallback,
+                        branches,
+                        index: 0,
+                        name,
+                        arms: vec![None; count],
+                        seen: Vec::new(),
+                    }));
                 }
-                Term::case(self.arena, scrutinee, self.arena.alloc_slice_copy(&arms))
+                Task::CaseNext(state) => {
+                    if let Some(branch) = state.branches.get(state.index) {
+                        let mut unwrap = None;
+                        let mut condition = None;
+                        let slot = match state.kind {
+                            CaseKind::Pair => 0,
+                            CaseKind::Bool => {
+                                if !branch.binders.is_empty() {
+                                    return Err(Error::InvalidCase(
+                                        "boolean branches bind no fields",
+                                    ));
+                                }
+                                let slot = match branch.test {
+                                    Test::False => 0,
+                                    Test::True => 1,
+                                    _ => return Err(Error::InvalidCase("non-boolean test")),
+                                };
+                                if state.arms[slot].is_some() {
+                                    return Err(Error::InvalidCase("duplicate boolean branch"));
+                                }
+                                slot
+                            }
+                            CaseKind::Int | CaseKind::Bytes => {
+                                if !branch.binders.is_empty() || state.seen.contains(&branch.test) {
+                                    return Err(Error::InvalidCase("invalid literal branch"));
+                                }
+                                let (func, literal) = match (state.kind, branch.test) {
+                                    (CaseKind::Int, Test::Int(i)) => (
+                                        DefaultFunction::EqualsInteger,
+                                        Term::integer(self.arena, i),
+                                    ),
+                                    (CaseKind::Bytes, Test::Bytes(bytes)) => (
+                                        DefaultFunction::EqualsByteString,
+                                        Term::byte_string(self.arena, bytes),
+                                    ),
+                                    _ => {
+                                        return Err(Error::InvalidCase(
+                                            "literal test has wrong kind",
+                                        ));
+                                    }
+                                };
+                                condition = Some(self.builtin(
+                                    func,
+                                    &[Term::var(self.arena, state.name.unwrap()), literal],
+                                )?);
+                                state.index
+                            }
+                            CaseKind::List => match branch.test {
+                                Test::Nil
+                                    if state.arms[1].is_none() && branch.binders.is_empty() =>
+                                {
+                                    1
+                                }
+                                Test::Cons
+                                    if state.arms[0].is_none() && branch.binders.len() == 2 =>
+                                {
+                                    0
+                                }
+                                _ => return Err(Error::InvalidCase("invalid list branch")),
+                            },
+                            CaseKind::Data => {
+                                let (slot, func) = match branch.test {
+                                    Test::DataConstr => (0, DefaultFunction::UnConstrData),
+                                    Test::DataMap => (1, DefaultFunction::UnMapData),
+                                    Test::DataList => (2, DefaultFunction::UnListData),
+                                    Test::DataI => (3, DefaultFunction::UnIData),
+                                    Test::DataB => (4, DefaultFunction::UnBData),
+                                    _ => return Err(Error::InvalidCase("non-Data test")),
+                                };
+                                if state.arms[slot].is_some() || branch.binders.len() != 1 {
+                                    return Err(Error::InvalidCase("invalid Data branch"));
+                                }
+                                unwrap = Some(func);
+                                slot
+                            }
+                            CaseKind::Tag => {
+                                if branch.test
+                                    != Test::Tag(
+                                        u16::try_from(state.index).map_err(|_| {
+                                            Error::InvalidCase("too many constructors")
+                                        })?,
+                                    )
+                                {
+                                    return Err(Error::InvalidCase(
+                                        "tag branches must cover consecutive unique tags",
+                                    ));
+                                }
+                                state.index
+                            }
+                        };
+                        let body = branch.body;
+                        pending.push(Task::CaseBody(state, slot, unwrap, condition));
+                        pending.push(Task::Visit(body));
+                    } else {
+                        let result =
+                            match state.kind {
+                                CaseKind::Pair | CaseKind::Tag => Term::case(
+                                    self.arena,
+                                    state.scrutinee,
+                                    self.arena.alloc_slice_copy(
+                                        &state
+                                            .arms
+                                            .into_iter()
+                                            .map(Option::unwrap)
+                                            .collect::<Vec<_>>(),
+                                    ),
+                                ),
+                                CaseKind::Bool => self.branch(
+                                    state.scrutinee,
+                                    state.arms[1].unwrap_or(state.fallback),
+                                    state.arms[0].unwrap_or(state.fallback),
+                                ),
+                                CaseKind::Int | CaseKind::Bytes => state
+                                    .fallback
+                                    .lambda(self.arena, state.name.unwrap())
+                                    .apply(self.arena, state.scrutinee),
+                                CaseKind::List => {
+                                    let cons = match state.arms[0] {
+                                        Some(cons) => cons,
+                                        None => state
+                                            .fallback
+                                            .lambda(self.arena, self.fresh()?)
+                                            .lambda(self.arena, self.fresh()?),
+                                    };
+                                    Term::case(
+                                        self.arena,
+                                        state.scrutinee,
+                                        self.arena.alloc_slice_copy(&[
+                                            cons,
+                                            state.arms[1].unwrap_or(state.fallback),
+                                        ]),
+                                    )
+                                }
+                                CaseKind::Data => {
+                                    let value = Term::var(self.arena, state.name.unwrap());
+                                    let mut args = vec![value];
+                                    args.extend(state.arms.into_iter().map(|arm| {
+                                        arm.unwrap_or(state.fallback).delay(self.arena)
+                                    }));
+                                    self.builtin(DefaultFunction::ChooseData, &args)?
+                                        .force(self.arena)
+                                        .lambda(self.arena, state.name.unwrap())
+                                        .apply(self.arena, state.scrutinee)
+                                }
+                            };
+                        results.push(result);
+                    }
+                }
+                Task::CaseBody(mut state, slot, unwrap, condition) => {
+                    let body = results.pop().unwrap();
+                    let branch = state.branches[state.index];
+                    if let Some(condition) = condition {
+                        state.fallback = self.branch(condition, body, state.fallback);
+                        state.seen.push(branch.test);
+                    } else {
+                        state.arms[slot] = Some(if let Some(unwrap) = unwrap {
+                            if crate::build::names(branch.body)
+                                .contains(&branch.binders[0].name.unique)
+                            {
+                                let value = Term::var(self.arena, state.name.unwrap());
+                                let unwrapped = self.builtin(unwrap, &[value])?;
+                                self.lambda(branch.binders, body)
+                                    .apply(self.arena, unwrapped)
+                            } else {
+                                body
+                            }
+                        } else {
+                            self.lambda(branch.binders, body)
+                        });
+                    }
+                    state.index += 1;
+                    pending.push(Task::CaseNext(state));
+                }
             }
-        })
+        }
+        Ok(results.pop().unwrap())
     }
 }
 

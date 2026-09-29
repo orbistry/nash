@@ -78,6 +78,29 @@ struct Rewriter<'b, 'a> {
     used: HashSet<u32>,
 }
 
+// Continuations retain unfinished work on the heap, including nested groups.
+enum Task<'a> {
+    Visit(&'a Core<'a>, Environment<'a>),
+    Finish(Continuation<'a>),
+}
+type Continuation<'a> = Box<
+    dyn FnOnce(
+            &mut Rewriter<'_, 'a>,
+            &mut Vec<Task<'a>>,
+            &mut Vec<&'a Core<'a>>,
+        ) -> Result<Option<&'a Core<'a>>, Error>
+        + 'a,
+>;
+struct Mutual<'a> {
+    binders: &'a [RecBinder<'a>],
+    outer: Environment<'a>,
+    continuation: &'a Core<'a>,
+    arms: &'a [DispatchArm<'a>],
+    dispatcher: Binder<'a>,
+    request: Binder<'a>,
+    branches: Vec<Branch<'a>>,
+}
+
 impl<'a> Rewriter<'_, 'a> {
     fn fresh(&mut self, text: &'a str, ty: Ty<'a>) -> Binder<'a> {
         loop {
@@ -102,23 +125,58 @@ impl<'a> Rewriter<'_, 'a> {
         self.build.lam(&params, self.build.app(func, &args, result))
     }
     fn term(&mut self, core: &'a Core<'a>, env: &Environment<'a>) -> Result<&'a Core<'a>, Error> {
+        let mut tasks = vec![Task::Visit(core, env.clone())];
+        let mut results = Vec::new();
+        while let Some(task) = tasks.pop() {
+            match task {
+                Task::Visit(core, env) => self.schedule(core, env, &mut tasks, &mut results)?,
+                Task::Finish(finish) => {
+                    if let Some(result) = finish(self, &mut tasks, &mut results)? {
+                        results.push(result);
+                    }
+                }
+            }
+        }
+        Ok(results.pop().unwrap())
+    }
+
+    fn schedule(
+        &mut self,
+        core: &'a Core<'a>,
+        env: Environment<'a>,
+        tasks: &mut Vec<Task<'a>>,
+        results: &mut Vec<&'a Core<'a>>,
+    ) -> Result<(), Error> {
         let b = self.build;
-        let result = match &core.kind {
-            CoreKind::Var(n) => env.get(n).map_or(core, |r| r.value),
-            CoreKind::Lit(_) | CoreKind::Error => core,
-            CoreKind::Lam { params, body } => b.lam(
-                params,
-                self.term(body, &without(env, params.iter().map(|p| p.name)))?,
-            ),
-            CoreKind::App { func, args } => {
-                if let CoreKind::Var(n) = &func.kind
-                    && let Some((dispatcher, tag, arms)) = env.get(n).and_then(|r| r.packet)
-                    && args.len() >= arms[usize::from(tag)].params.len()
-                {
-                    let args = args
-                        .iter()
-                        .map(|arg| self.term(arg, env))
-                        .collect::<Result<Vec<_>, _>>()?;
+        match core.kind {
+            CoreKind::Var(n) => {
+                results.push(b.with_type(env.get(&n).map_or(core, |r| r.value), core.ty));
+                return Ok(());
+            }
+            CoreKind::Lit(_) | CoreKind::Error => {
+                results.push(core);
+                return Ok(());
+            }
+            CoreKind::LetRec { binders, body } => {
+                return self.group(core.ty, binders, body, env, tasks);
+            }
+            _ => {}
+        }
+        let start = results.len();
+        if let CoreKind::App {
+            func: Core {
+                kind: CoreKind::Var(n),
+                ..
+            },
+            args,
+        } = core.kind
+        {
+            if let Some((dispatcher, tag, arms)) = env.get(n).and_then(|r| r.packet)
+                && args.len() >= arms[usize::from(tag)].params.len()
+            {
+                tasks.push(Task::Finish(Box::new(move |this, _, results| {
+                    let b = this.build;
+                    let args: Vec<_> = results.drain(start..).collect();
                     let arm = &arms[usize::from(tag)];
                     let arity = arm.params.len();
                     let mut fields = vec![b.var(dispatcher.name, dispatcher.ty)];
@@ -129,117 +187,154 @@ impl<'a> Rewriter<'_, 'a> {
                         &[b.constr(tag, &fields, packet_ty)],
                         arm.result,
                     );
-                    if args.len() == arity {
+                    let result = if args.len() == arity {
                         call
                     } else {
                         b.app(call, &args[arity..], core.ty)
-                    }
-                } else if let CoreKind::Var(n) = &func.kind
-                    && let Some(Replacement {
-                        direct: Some((target, excluded)),
-                        ..
-                    }) = env.get(n)
-                {
-                    let args = args
-                        .iter()
-                        .enumerate()
-                        .filter(|(i, _)| !excluded.iter().any(|x| usize::from(*x) == *i))
-                        .map(|(_, arg)| self.term(arg, env))
-                        .collect::<Result<Vec<_>, _>>()?;
-                    b.app(target, &args, core.ty)
-                } else {
-                    let func = self.term(func, env)?;
-                    let args = args
-                        .iter()
-                        .map(|arg| self.term(arg, env))
-                        .collect::<Result<Vec<_>, _>>()?;
-                    b.app(func, &args, core.ty)
-                }
+                    };
+                    Ok(Some(b.with_type(result, core.ty)))
+                })));
+                tasks.extend(args.iter().rev().map(|arg| Task::Visit(arg, env.clone())));
+                return Ok(());
             }
+            if let Some(Replacement {
+                direct: Some((target, excluded)),
+                ..
+            }) = env.get(n)
+            {
+                let target = *target;
+                tasks.push(Task::Finish(Box::new(move |this, _, results| {
+                    let args: Vec<_> = results.drain(start..).collect();
+                    Ok(Some(this.build.app(target, &args, core.ty)))
+                })));
+                tasks.extend(
+                    args.iter()
+                        .enumerate()
+                        .rev()
+                        .filter(|(i, _)| !excluded.iter().any(|x| usize::from(*x) == *i))
+                        .map(|(_, arg)| Task::Visit(arg, env.clone())),
+                );
+                return Ok(());
+            }
+        }
+        tasks.push(Task::Finish(Box::new(move |this, _, results| {
+            let b = this.build;
+            let mut children = results.drain(start..);
+            let result = match core.kind {
+                CoreKind::Lam { params, .. } => b.lam(params, children.next().unwrap()),
+                CoreKind::App { .. } => {
+                    let func = children.next().unwrap();
+                    b.app(func, &children.by_ref().collect::<Vec<_>>(), core.ty)
+                }
+                CoreKind::Let { binder, .. } => {
+                    b.let_(binder, children.next().unwrap(), children.next().unwrap())
+                }
+                CoreKind::Case {
+                    kind,
+                    branches,
+                    default,
+                    ..
+                } => {
+                    let scrutinee = children.next().unwrap();
+                    let branches: Vec<_> = branches
+                        .iter()
+                        .map(|branch| Branch {
+                            body: children.next().unwrap(),
+                            ..*branch
+                        })
+                        .collect();
+                    let default = default.map(|_| children.next().unwrap());
+                    b.case(kind, scrutinee, &branches, default, core.ty)
+                }
+                CoreKind::Constr { tag, .. } => {
+                    b.constr(tag, &children.by_ref().collect::<Vec<_>>(), core.ty)
+                }
+                CoreKind::Field { index, arity, .. } => b.alloc(
+                    core.ty,
+                    CoreKind::Field {
+                        record: children.next().unwrap(),
+                        index,
+                        arity,
+                    },
+                ),
+                CoreKind::Builtin { func, .. } => b.alloc(
+                    core.ty,
+                    CoreKind::Builtin {
+                        func,
+                        args: b
+                            .arena
+                            .alloc_slice_copy(&children.by_ref().collect::<Vec<_>>()),
+                    },
+                ),
+                CoreKind::Trace { .. } => {
+                    b.trace(children.next().unwrap(), children.next().unwrap())
+                }
+                CoreKind::Delay(_) => b.delay(children.next().unwrap()),
+                CoreKind::Force(_) => b.force(children.next().unwrap(), core.ty),
+                _ => unreachable!(),
+            };
+            Ok(Some(b.with_type(result, core.ty)))
+        })));
+        match core.kind {
+            CoreKind::Lam { params, body } => tasks.push(Task::Visit(
+                body,
+                without(&env, params.iter().map(|p| p.name)),
+            )),
             CoreKind::Let {
                 binder,
                 value,
                 body,
-            } => b.let_(
-                *binder,
-                self.term(value, env)?,
-                self.term(body, &without(env, [binder.name]))?,
-            ),
-            CoreKind::LetRec { binders, body } => self.group(binders, body, env)?,
+            } => {
+                tasks.push(Task::Visit(body, without(&env, [binder.name])));
+                tasks.push(Task::Visit(value, env));
+            }
             CoreKind::Case {
-                kind,
                 scrutinee,
                 branches,
                 default,
+                ..
             } => {
-                let scrutinee = self.term(scrutinee, env)?;
-                let branches = branches
-                    .iter()
-                    .map(|branch| {
-                        Ok(Branch {
-                            body: self.term(
-                                branch.body,
-                                &without(env, branch.binders.iter().map(|p| p.name)),
-                            )?,
-                            ..*branch
-                        })
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?;
-                let default = default.map(|d| self.term(d, env)).transpose()?;
-                b.case(*kind, scrutinee, &branches, default, core.ty)
+                if let Some(body) = default {
+                    tasks.push(Task::Visit(body, env.clone()));
+                }
+                tasks.extend(branches.iter().rev().map(|branch| {
+                    Task::Visit(
+                        branch.body,
+                        without(&env, branch.binders.iter().map(|p| p.name)),
+                    )
+                }));
+                tasks.push(Task::Visit(scrutinee, env));
             }
-            CoreKind::Constr { tag, fields } => {
-                let fields = fields
-                    .iter()
-                    .map(|f| self.term(f, env))
-                    .collect::<Result<Vec<_>, _>>()?;
-                b.constr(*tag, &fields, core.ty)
+            _ => {
+                let mut children = Vec::new();
+                core.push_children_reversed(&mut children);
+                tasks.extend(
+                    children
+                        .into_iter()
+                        .map(|child| Task::Visit(child, env.clone())),
+                );
             }
-            CoreKind::Field {
-                record,
-                index,
-                arity,
-            } => b.alloc(
-                core.ty,
-                CoreKind::Field {
-                    record: self.term(record, env)?,
-                    index: *index,
-                    arity: *arity,
-                },
-            ),
-            CoreKind::Builtin { func, args } => {
-                let args = args
-                    .iter()
-                    .map(|a| self.term(a, env))
-                    .collect::<Result<Vec<_>, _>>()?;
-                b.alloc(
-                    core.ty,
-                    CoreKind::Builtin {
-                        func: *func,
-                        args: b.arena.alloc_slice_copy(&args),
-                    },
-                )
-            }
-            CoreKind::Trace { message, body } => {
-                b.trace(self.term(message, env)?, self.term(body, env)?)
-            }
-            CoreKind::Delay(body) => b.delay(self.term(body, env)?),
-            CoreKind::Force(body) => b.force(self.term(body, env)?, core.ty),
-        };
-        Ok(b.with_type(result, core.ty))
+        }
+        Ok(())
     }
+
     fn group(
         &mut self,
+        ty: Ty<'a>,
         binders: &'a [RecBinder<'a>],
         body: &'a Core<'a>,
-        env: &Environment<'a>,
-    ) -> Result<&'a Core<'a>, Error> {
+        env: Environment<'a>,
+        tasks: &mut Vec<Task<'a>>,
+    ) -> Result<(), Error> {
         let b = self.build;
+        // Retain the original type view even for empty groups.
+        tasks.push(Task::Finish(Box::new(move |this, _, results| {
+            Ok(Some(this.build.with_type(results.pop().unwrap(), ty)))
+        })));
         if binders.is_empty() {
-            return self.term(body, env);
+            tasks.push(Task::Visit(body, env));
+            return Ok(());
         }
-        // A fully static worker is an explicit delayed recursive value. Knot
-        // creation returns the delay; each original call still forces its body.
         if let [single] = binders
             && single.params.is_empty()
             && matches!(single.body.kind, CoreKind::Delay(_))
@@ -260,24 +355,50 @@ impl<'a> Rewriter<'_, 'a> {
                     direct: None,
                 },
             );
-            let inner_body = self.term(single.body, &inner_env)?;
-            let inner = b.with_type(b.lam(&[self_arg], inner_body), self_ty);
-            let knot = b.app(b.lam(&[self_arg], raw), &[inner], single.binder.ty);
-            let continuation = self.term(body, &without(env, [single.binder.name]))?;
-            return Ok(b.let_(single.binder, knot, continuation));
+            tasks.push(Task::Finish(Box::new(move |this, tasks, results| {
+                let b = this.build;
+                let inner_body = results.pop().unwrap();
+                let inner = b.with_type(b.lam(&[self_arg], inner_body), self_ty);
+                let knot = b.app(b.lam(&[self_arg], raw), &[inner], single.binder.ty);
+                tasks.push(Task::Finish(Box::new(move |this, _, results| {
+                    Ok(Some(this.build.let_(
+                        single.binder,
+                        knot,
+                        results.pop().unwrap(),
+                    )))
+                })));
+                tasks.push(Task::Visit(body, without(&env, [single.binder.name])));
+                Ok(None)
+            })));
+            tasks.push(Task::Visit(single.body, inner_env));
+            return Ok(());
         }
         if binders.iter().any(|r| r.params.is_empty()) {
             return Err(Error::RecursiveValue);
         }
-        let names = binders
-            .iter()
-            .map(|r| r.binder.name)
-            .collect::<HashSet<_>>();
+        let names: HashSet<_> = binders.iter().map(|r| r.binder.name).collect();
         if names.len() != binders.len() {
             return Err(Error::DuplicateBinder);
         }
-        let outer = without(env, names.iter().copied());
-        let continuation = self.term(body, &outer)?;
+        let outer = without(&env, names);
+        let outer_body = outer.clone();
+        tasks.push(Task::Finish(Box::new(move |this, tasks, results| {
+            let continuation = results.pop().unwrap();
+            this.group_after_continuation(binders, outer, continuation, tasks)?;
+            Ok(None)
+        })));
+        tasks.push(Task::Visit(body, outer_body));
+        Ok(())
+    }
+
+    fn group_after_continuation(
+        &mut self,
+        binders: &'a [RecBinder<'a>],
+        outer: Environment<'a>,
+        continuation: &'a Core<'a>,
+        tasks: &mut Vec<Task<'a>>,
+    ) -> Result<(), Error> {
+        let b = self.build;
         if let [single] = binders {
             // Recheck metadata: a stale static annotation must never discard work.
             let proven = static_params(single.binder.name, single.params, single.body);
@@ -330,41 +451,47 @@ impl<'a> Rewriter<'_, 'a> {
                     direct: Some((self_call, statics.clone())),
                 },
             );
-            let inner_body = self.term(single.body, &inner_env)?;
-            let mut inner_params = vec![self_arg];
-            inner_params.extend_from_slice(&dynamic);
-            // If every parameter is static, delay the worker to keep knot creation lazy.
-            let inner = b.lam(
-                &inner_params,
-                if dynamic.is_empty() {
-                    b.delay(inner_body)
+            tasks.push(Task::Finish(Box::new(move |this, _, results| {
+                let b = this.build;
+                let inner_body = results.pop().unwrap();
+
+                let mut inner_params = vec![self_arg];
+                inner_params.extend_from_slice(&dynamic);
+                // If every parameter is static, delay the worker to keep knot creation lazy.
+                let inner = b.lam(
+                    &inner_params,
+                    if dynamic.is_empty() {
+                        b.delay(inner_body)
+                    } else {
+                        inner_body
+                    },
+                );
+                let inner = b.with_type(inner, self_ty);
+                let knot = b.app(b.lam(&[self_arg], raw_self_call), &[inner], worker_ty);
+                let definition = if statics.is_empty() {
+                    knot
                 } else {
-                    inner_body
-                },
-            );
-            let inner = b.with_type(inner, self_ty);
-            let knot = b.app(b.lam(&[self_arg], raw_self_call), &[inner], worker_ty);
-            let definition = if statics.is_empty() {
-                knot
-            } else {
-                let applied = if dynamic.is_empty() {
-                    b.force(knot, result_ty)
-                } else {
-                    b.app(
-                        knot,
-                        &dynamic
-                            .iter()
-                            .map(|p| b.var(p.name, p.ty))
-                            .collect::<Vec<_>>(),
-                        result_ty,
-                    )
+                    let applied = if dynamic.is_empty() {
+                        b.force(knot, result_ty)
+                    } else {
+                        b.app(
+                            knot,
+                            &dynamic
+                                .iter()
+                                .map(|p| b.var(p.name, p.ty))
+                                .collect::<Vec<_>>(),
+                            result_ty,
+                        )
+                    };
+                    b.lam(single.params, applied)
                 };
-                b.lam(single.params, applied)
-            };
-            // Recursive calls into a fully static worker must force its delayed body.
-            // Such calls cannot terminate by changing an argument, but can occur in
-            // dead branches; represent them correctly without evaluating them early.
-            return Ok(b.let_(single.binder, definition, continuation));
+                // Recursive calls into a fully static worker must force its delayed body.
+                // Such calls cannot terminate by changing an argument, but can occur in
+                // dead branches; represent them correctly without evaluating them early.
+                Ok(Some(b.let_(single.binder, definition, continuation)))
+            })));
+            tasks.push(Task::Visit(single.body, inner_env));
+            return Ok(());
         }
         if binders.len() > usize::from(u16::MAX) + 1 {
             return Err(Error::TooManyFunctions);
@@ -382,53 +509,75 @@ impl<'a> Rewriter<'_, 'a> {
         let arms = b.arena.alloc_slice_copy(&arms);
         let dispatcher_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Dispatcher(arms)));
         let request_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Request(arms)));
-        let results_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Results(arms)));
         let dispatcher = self.fresh("dispatch", dispatcher_ty);
         let request = self.fresh("request", request_ty);
-        let mut branches = Vec::new();
-        for (index, rb) in binders.iter().enumerate() {
-            let self_arg = self.fresh("self", dispatcher_ty);
-            let mut recursive_env = outer.clone();
-            for (target, callee) in binders.iter().enumerate() {
-                let alias = self.packet_alias(self_arg, target as u16, callee.params, arms);
+        self.mutual(
+            Mutual {
+                binders,
+                outer,
+                continuation,
+                arms,
+                dispatcher,
+                request,
+                branches: Vec::new(),
+            },
+            tasks,
+        )
+    }
+
+    fn mutual(&mut self, mut state: Mutual<'a>, tasks: &mut Vec<Task<'a>>) -> Result<(), Error> {
+        let b = self.build;
+        let index = state.branches.len();
+        if let Some(rb) = state.binders.get(index) {
+            let self_arg = self.fresh("self", state.dispatcher.ty);
+            let mut recursive_env = state.outer.clone();
+            for (target, callee) in state.binders.iter().enumerate() {
+                let alias = self.packet_alias(self_arg, target as u16, callee.params, state.arms);
                 recursive_env.insert(
                     callee.binder.name,
                     Replacement {
                         value: alias,
-                        packet: Some((self_arg, target as u16, arms)),
+                        packet: Some((self_arg, target as u16, state.arms)),
                         direct: None,
                     },
                 );
             }
-            let body = self.term(
-                rb.body,
-                &without(&recursive_env, rb.params.iter().map(|p| p.name)),
-            )?;
-            let mut params = vec![self_arg];
-            params.extend_from_slice(rb.params);
-            branches.push(Branch {
-                test: Test::Tag(index as u16),
-                binders: b.arena.alloc_slice_copy(&params),
-                body,
-            });
+            let env = without(&recursive_env, rb.params.iter().map(|p| p.name));
+            tasks.push(Task::Finish(Box::new(move |this, tasks, results| {
+                let mut params = vec![self_arg];
+                params.extend_from_slice(rb.params);
+                state.branches.push(Branch {
+                    test: Test::Tag(index as u16),
+                    binders: this.build.arena.alloc_slice_copy(&params),
+                    body: results.pop().unwrap(),
+                });
+                this.mutual(state, tasks)?;
+                Ok(None)
+            })));
+            tasks.push(Task::Visit(rb.body, env));
+        } else {
+            let results_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Results(state.arms)));
+            let dispatch = b.lam(
+                &[state.request],
+                b.case(
+                    CaseKind::Tag,
+                    b.var(state.request.name, state.request.ty),
+                    &state.branches,
+                    None,
+                    results_ty,
+                ),
+            );
+            let dispatch = b.with_type(dispatch, state.dispatcher.ty);
+            let mut result = state.continuation;
+            for (index, rb) in state.binders.iter().enumerate().rev() {
+                let alias =
+                    self.packet_alias(state.dispatcher, index as u16, rb.params, state.arms);
+                result = b.let_(rb.binder, alias, result);
+            }
+            let result = b.let_(state.dispatcher, dispatch, result);
+            tasks.push(Task::Finish(Box::new(move |_, _, _| Ok(Some(result)))));
         }
-        let dispatch = b.lam(
-            &[request],
-            b.case(
-                CaseKind::Tag,
-                b.var(request.name, request.ty),
-                &branches,
-                None,
-                results_ty,
-            ),
-        );
-        let dispatch = b.with_type(dispatch, dispatcher_ty);
-        let mut result = continuation;
-        for (index, rb) in binders.iter().enumerate().rev() {
-            let alias = self.packet_alias(dispatcher, index as u16, rb.params, arms);
-            result = b.let_(rb.binder, alias, result);
-        }
-        Ok(b.let_(dispatcher, dispatch, result))
+        Ok(())
     }
 
     fn packet_alias(
@@ -477,69 +626,59 @@ fn visit<'a>(
     scope: &HashSet<Name<'a>>,
     f: &mut impl FnMut(&Core<'a>, &HashSet<Name<'a>>),
 ) {
-    f(core, scope);
-    let extended = |names: Vec<Name<'a>>| {
-        let mut s = scope.clone();
-        s.extend(names);
-        s
-    };
-    match &core.kind {
-        CoreKind::Lam { params, body } => {
-            visit(body, &extended(params.iter().map(|p| p.name).collect()), f)
-        }
-        CoreKind::App { func, args } => {
-            visit(func, scope, f);
-            for arg in *args {
-                visit(arg, scope, f);
+    let mut pending = vec![(core, scope.clone())];
+    let mut children = Vec::new();
+    while let Some((core, scope)) = pending.pop() {
+        f(core, &scope);
+        let extended = |names: Vec<Name<'a>>| {
+            let mut inner = scope.clone();
+            inner.extend(names);
+            inner
+        };
+        match core.kind {
+            CoreKind::Lam { params, body } => {
+                pending.push((body, extended(params.iter().map(|p| p.name).collect())))
+            }
+            CoreKind::Let {
+                binder,
+                value,
+                body,
+            } => {
+                pending.push((body, extended(vec![binder.name])));
+                pending.push((value, scope));
+            }
+            CoreKind::LetRec { binders, body } => {
+                let group = extended(binders.iter().map(|r| r.binder.name).collect());
+                pending.push((body, group.clone()));
+                for rb in binders.iter().rev() {
+                    let mut inner = group.clone();
+                    inner.extend(rb.params.iter().map(|p| p.name));
+                    pending.push((rb.body, inner));
+                }
+            }
+            CoreKind::Case {
+                scrutinee,
+                branches,
+                default,
+                ..
+            } => {
+                if let Some(body) = default {
+                    pending.push((body, scope.clone()));
+                }
+                pending.extend(branches.iter().rev().map(|branch| {
+                    (
+                        branch.body,
+                        extended(branch.binders.iter().map(|p| p.name).collect()),
+                    )
+                }));
+                pending.push((scrutinee, scope));
+            }
+            _ => {
+                children.clear();
+                core.push_children_reversed(&mut children);
+                pending.extend(children.iter().map(|child| (*child, scope.clone())));
             }
         }
-        CoreKind::Let {
-            binder,
-            value,
-            body,
-        } => {
-            visit(value, scope, f);
-            visit(body, &extended(vec![binder.name]), f);
-        }
-        CoreKind::LetRec { binders, body } => {
-            let group = extended(binders.iter().map(|b| b.binder.name).collect());
-            for rb in *binders {
-                let mut inner = group.clone();
-                inner.extend(rb.params.iter().map(|p| p.name));
-                visit(rb.body, &inner, f);
-            }
-            visit(body, &group, f);
-        }
-        CoreKind::Case {
-            scrutinee,
-            branches,
-            default,
-            ..
-        } => {
-            visit(scrutinee, scope, f);
-            for b in *branches {
-                visit(
-                    b.body,
-                    &extended(b.binders.iter().map(|p| p.name).collect()),
-                    f,
-                );
-            }
-            if let Some(d) = default {
-                visit(d, scope, f);
-            }
-        }
-        CoreKind::Constr { fields: args, .. } | CoreKind::Builtin { args, .. } => {
-            for arg in *args {
-                visit(arg, scope, f);
-            }
-        }
-        CoreKind::Field { record, .. } => visit(record, scope, f),
-        CoreKind::Trace { message, body } => {
-            visit(message, scope, f);
-            visit(body, scope, f);
-        }
-        CoreKind::Delay(body) | CoreKind::Force(body) => visit(body, scope, f),
-        CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => {}
     }
 }
 
