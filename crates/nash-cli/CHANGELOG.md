@@ -1,5 +1,12 @@
 # nash-cli
 
+## 0.7.1 — 2026-09-30
+
+### Patch changes
+
+- [30d3aa83](https://github.com/orbistry/nash/commit/30d3aa838fc67d4056b7bc539f1a48197c58362c) Run property tests on Tokio's blocking pool so the Rayon runner does not stall an executor worker. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.5.0, nash-docs@0.2.1, nash-driver@0.12.1, nash-language-server@0.4.7
+
 ## 0.7.0 — 2026-09-27
 
 ### Minor changes

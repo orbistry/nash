@@ -1,5 +1,23 @@
 # nash-codegen
 
+## 0.5.0 — 2026-09-30
+
+### Minor changes
+
+- [74ad7b08](https://github.com/orbistry/nash/commit/74ad7b0828ac31bb2a05ca65b687fbd4bb4cf220) Share repeated literal builtin prefixes in the accepted optimizer pipeline. — Thanks @MicroProofs!
+- [cfecc38e](https://github.com/orbistry/nash/commit/cfecc38eae60ae0b92c1fa9b849888a491e50a54) Require result types on every Core node and retain source and compiler-generated
+  runtime metadata through codegen and recursion rewriting. Core operation variants
+  move to CoreKind; builder APIs require result types where they cannot be derived. — Thanks @MicroProofs!
+- [336bbec6](https://github.com/orbistry/nash/commit/336bbec6dfb73585a64b4d373474cccb1f0b9130) Add lowering with outermost sharing of forced builtin references for the optimizer pipeline. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [1741eb00](https://github.com/orbistry/nash/commit/1741eb0038091c949f7756e61812afb90bc29c58) Add static-parameter lifting, typed A-normalization and structural invariant
+  checks for Core. Preserve application staging and branch, lambda, delay and trace
+  execution boundaries. Support explicitly delayed recursive workers after lifting
+  all static parameters. — Thanks @MicroProofs!
+- Updated dependencies: nash-ir@0.4.0
+
 ## 0.4.3 — 2026-09-27
 
 ### Patch changes
