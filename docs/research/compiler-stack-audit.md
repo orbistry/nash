@@ -22,13 +22,17 @@ compiler depth bound.
   preserving child order and lexical scope. A small-stack regression exercises
   1,024 nested delays. Constant/type/data printing is still recursive.
 
+Core term printing was also converted to an explicit work list on 30 September.
+A 20,000-level term renders on a 128 KiB stack; existing formatting snapshots
+remain the compatibility check. Binder type and constant payload printing are
+still covered by the nested-type/constant follow-ups below.
+
 ## Remaining candidates, not reproduced
 
 | Area | Recursive path | Why the parser limit does not settle it |
 | --- | --- | --- |
 | Flat source chains | `nash-can/src/expression.rs` field access and `build_tree_rec`; `nash-solve/src/solve/expressions.rs` | Parser nesting limit 64 does not limit flat operator/access chains. Equal-precedence operator construction also repeatedly scans the remaining chain. |
 | IR type metadata | Derived type equality and `Builder::plutus_type` | Deeply nested types are independent of term-tree depth. |
-| Core diagnostics | `nash-ir/src/pretty.rs` | Snapshot and diagnostic rendering recurse independently of assembly. |
 | Nested constants | Flat `encode_type` / `type_from_tags`, constant equality and pretty printing | Iterative Flat term traversal does not cover nested constant types or data. |
 | Module graph | `nash-driver/src/graph.rs` cycle reporting | Import graph depth is independent of source expression nesting. |
 | Type unification | `nash-solve/src/unify.rs` structural traversal | Compiler-generated types can be deeper than source types. Lower confidence until a valid input reproduces it. |
@@ -43,8 +47,8 @@ is not evidence that it ran on an async executor thread.
 1. Compile long flat operator and field-access chains through canonicalization
    and solving, not just parsing. Run overflow probes in subprocesses because
    a stack overflow can abort the process.
-2. Exercise Core rendering and deeply nested type metadata. Prefer explicit
-   work stacks for straightforward traversals.
+2. Exercise deeply nested type metadata, including its diagnostic rendering.
+   Prefer explicit work stacks for straightforward traversals.
 3. Probe deeply nested constant types and long import cycles independently.
 4. Use valid generated programs to investigate type-unification depth.
 
