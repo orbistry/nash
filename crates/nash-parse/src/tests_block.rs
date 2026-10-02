@@ -1,63 +1,79 @@
 use bumpalo::collections::Vec as BumpVec;
 use nash_region::{Located, Position, Region};
-use nash_source::{Block, Budget, Expect, Test, TestBody, Tests, ViaBinder};
+use nash_source::{
+    Block, Budget, Expect, Proof, ProofBinder, ProofBody, Proofs, Test, TestBody, Tests, ViaBinder,
+};
 
 use crate::Parser;
 use crate::error::{self, Test as TestErr, Tests as TestsErr};
 
 impl<'a> Parser<'a> {
     pub(crate) fn tests_block(&mut self) -> Result<&'a Tests<'a>, error::Module<'a>> {
+        let (imports, tests) = self.specification_block(false, Self::test_item)?;
+        Ok(self.alloc(Tests { imports, tests }))
+    }
+
+    pub(crate) fn proofs_block(&mut self) -> Result<&'a Proofs<'a>, error::Module<'a>> {
+        let (imports, proofs) = self.specification_block(true, Self::proof_item)?;
+        Ok(self.alloc(Proofs { imports, proofs }))
+    }
+
+    fn specification_block<T: 'a>(
+        &mut self,
+        proof: bool,
+        parse_item: fn(&mut Self) -> Result<&'a Located<T>, TestErr<'a>>,
+    ) -> Result<(&'a [&'a nash_source::Import<'a>], &'a [&'a Located<T>]), error::Module<'a>> {
         self.in_context(
             |bump, error, row, col| error::Module::Tests(bump.alloc(error), row, col),
-            |parser| parser.keyword_tests(error::Module::BadEnd),
             |parser| {
-                let tests_end = parser.get_position();
+                if proof {
+                    parser.keyword_proof(error::Module::BadEnd)
+                } else {
+                    parser.keyword_tests(error::Module::BadEnd)
+                }
+            },
+            |parser| {
+                let block_end = parser.get_position();
                 parser.chomp(TestsErr::Space)?;
                 if parser.is_eof() || parser.col() == 1 {
-                    return Ok(parser.alloc(Tests {
-                        imports: &[],
-                        tests: &[],
-                    }));
+                    return Ok((&[][..], &[][..]));
                 }
-                parser.check_indent(tests_end.line, tests_end.column, TestsErr::IndentStart)?;
+                parser.check_indent(block_end.line, block_end.column, TestsErr::IndentStart)?;
                 parser.with_indent(|parser| {
                     let imports = parser.specialize(
                         |bump, error, row, col| TestsErr::Import(bump.alloc(error), row, col),
                         |parser| parser.imports(),
                     )?;
-                    let mut tests = BumpVec::new_in(parser.bump);
-
+                    let mut items = BumpVec::new_in(parser.bump);
                     loop {
                         if parser.is_eof() || parser.col() < parser.indent() {
                             break;
                         }
                         parser.check_aligned(TestsErr::Alignment)?;
-                        let test = parser.specialize(
+                        let item = parser.specialize(
                             |bump, error, row, col| TestsErr::Test(bump.alloc(error), row, col),
-                            |parser| parser.test_item(),
+                            parse_item,
                         )?;
-                        tests.push(test);
+                        items.push(item);
                     }
-
-                    Ok(parser.alloc(Tests {
-                        imports,
-                        tests: tests.into_bump_slice(),
-                    }))
+                    Ok((imports, items.into_bump_slice()))
                 })
             },
         )
     }
 
-    fn test_item(&mut self) -> Result<&'a Located<Test<'a>>, TestErr<'a>> {
+    fn specification_header(
+        &mut self,
+    ) -> Result<(Position, bool, &'a Located<&'a str>, Expect), TestErr<'a>> {
         let start = self.get_position();
         let is_prop = self.one_of(
             TestErr::NameStart,
             vec![
-                Box::new(|parser: &mut Parser<'a>| {
+                Box::new(|parser: &mut Self| {
                     parser.keyword_test(TestErr::NameStart)?;
                     Ok(false)
                 }),
-                Box::new(|parser: &mut Parser<'a>| {
+                Box::new(|parser: &mut Self| {
                     parser.keyword_prop(TestErr::NameStart)?;
                     Ok(true)
                 }),
@@ -69,11 +85,18 @@ impl<'a> Parser<'a> {
         let name = self.add_end(name_start, name_str);
         self.chomp_and_check_indent(TestErr::Space, TestErr::IndentEquals)?;
         let expect = self.test_expect(is_prop)?;
+        Ok((start, is_prop, name, expect))
+    }
+
+    fn test_item(&mut self) -> Result<&'a Located<Test<'a>>, TestErr<'a>> {
+        let (start, is_prop, name, expect) = self.specification_header()?;
         let budget = self.test_budget()?;
         self.word1(b'=', TestErr::Equals)?;
         self.chomp_and_check_indent(TestErr::Space, TestErr::IndentBody)?;
         let (body, end) = if is_prop {
-            self.prop_body()?
+            let (binders, body, end) =
+                self.property_body(|pattern, generator| ViaBinder { pattern, generator })?;
+            (TestBody::Prop { binders, body }, end)
         } else {
             let (block, end) = self.test_block()?;
             (TestBody::Unit(block), end)
@@ -87,6 +110,29 @@ impl<'a> Parser<'a> {
                 budget,
                 body,
             },
+        )))
+    }
+
+    fn proof_item(&mut self) -> Result<&'a Located<Proof<'a>>, TestErr<'a>> {
+        let (start, is_prop, name, expect) = self.specification_header()?;
+        if self.next_is_keyword(b"within") {
+            let (row, col) = self.position();
+            return Err(TestErr::ProofBudget(row, col));
+        }
+        self.word1(b'=', TestErr::Equals)?;
+        self.chomp_and_check_indent(TestErr::Space, TestErr::IndentBody)?;
+        let (body, end) = if is_prop {
+            let (binders, body, end) =
+                self.property_body(|pattern, domain| ProofBinder { pattern, domain })?;
+            (ProofBody::Prop { binders, body }, end)
+        } else {
+            let (block, end) = self.test_block()?;
+            (ProofBody::Unit(block), end)
+        };
+        self.chomp(TestErr::Space)?;
+        Ok(self.alloc(Located::at(
+            Region::new(start, end),
+            Proof { name, expect, body },
         )))
     }
 
@@ -187,13 +233,16 @@ impl<'a> Parser<'a> {
         Ok(constructor(number))
     }
 
-    fn prop_body(&mut self) -> Result<(TestBody<'a>, Position), TestErr<'a>> {
+    fn property_body<T: 'a>(
+        &mut self,
+        make: fn(&'a Located<nash_source::Pattern<'a>>, &'a Located<nash_source::Expr<'a>>) -> T,
+    ) -> Result<(&'a [&'a Located<T>], &'a Block<'a>, Position), TestErr<'a>> {
         self.keyword_let(TestErr::Let)?;
         let (binders, binders_end) = self.with_backset_indent(3, |parser| {
             parser.chomp_and_check_indent(TestErr::Space, TestErr::IndentBinder)?;
             parser.with_indent(|parser| {
                 let mut binders = BumpVec::new_in(parser.bump);
-                let (first, mut end) = parser.via_binder()?;
+                let (first, mut end) = parser.via_binder(make)?;
                 binders.push(first);
 
                 loop {
@@ -201,7 +250,7 @@ impl<'a> Parser<'a> {
                         break;
                     }
                     parser.check_aligned(TestErr::BinderAlignment)?;
-                    let (binder, binder_end) = parser.via_binder()?;
+                    let (binder, binder_end) = parser.via_binder(make)?;
                     binders.push(binder);
                     end = binder_end;
                 }
@@ -212,10 +261,13 @@ impl<'a> Parser<'a> {
         self.keyword_in(TestErr::In)?;
         self.chomp_and_check_indent(TestErr::Space, TestErr::IndentBody)?;
         let (body, end) = self.test_block()?;
-        Ok((TestBody::Prop { binders, body }, end))
+        Ok((binders, body, end))
     }
 
-    fn via_binder(&mut self) -> Result<(&'a Located<ViaBinder<'a>>, Position), TestErr<'a>> {
+    fn via_binder<T: 'a>(
+        &mut self,
+        make: fn(&'a Located<nash_source::Pattern<'a>>, &'a Located<nash_source::Expr<'a>>) -> T,
+    ) -> Result<(&'a Located<T>, Position), TestErr<'a>> {
         let start = self.get_position();
         let pattern = self.specialize(
             |bump, error, row, col| TestErr::Pattern(bump.alloc(error), row, col),
@@ -231,7 +283,7 @@ impl<'a> Parser<'a> {
         Ok((
             self.alloc(Located::at(
                 Region::new(start, end),
-                ViaBinder { pattern, generator },
+                make(pattern, generator),
             )),
             end,
         ))
@@ -562,5 +614,42 @@ mod tests {
                         assert (x / 0 == 0)
         "#
         );
+    }
+}
+
+#[cfg(test)]
+mod proof_tests {
+    #[test]
+    fn tests_and_proofs_are_separate_and_either_order_parses() {
+        for source in [
+            "module Main exposing (..)\ntests\n    test \"t\" = do\n        assert True\nproof\n    prop \"p\" = let x via Proof.int in do\n        assert (x == x)\n",
+            "module Main exposing (..)\nproof\n    test \"p\" = do\n        assert True\ntests\n    test \"t\" = do\n        assert True\n",
+        ] {
+            let bump = bumpalo::Bump::new();
+            let module = crate::Parser::new(&bump, source).module().unwrap();
+            assert_eq!(module.tests.unwrap().tests.len(), 1);
+            assert_eq!(module.proofs.unwrap().proofs.len(), 1);
+        }
+    }
+    #[test]
+    fn duplicate_proof_blocks_are_rejected() {
+        let bump = bumpalo::Bump::new();
+        assert!(
+            crate::Parser::new(&bump, "module Main exposing (..)\nproof\nproof\n")
+                .module()
+                .is_err()
+        );
+    }
+    #[test]
+    fn proof_budget_is_rejected_during_parsing() {
+        let bump = bumpalo::Bump::new();
+        let error = crate::Parser::new(&bump, "module Main exposing (..)\nproof\n    test \"p\" within (cpu 100) = do\n        assert True\n").module().unwrap_err();
+        let crate::error::Module::Tests(error, ..) = error else {
+            panic!("{error:?}");
+        };
+        let crate::error::Tests::Test(error, ..) = error else {
+            panic!("{error:?}");
+        };
+        assert!(matches!(error, crate::error::Test::ProofBudget(..)));
     }
 }

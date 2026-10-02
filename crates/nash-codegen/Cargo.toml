@@ -8,6 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+nash-proof = { path = "../nash-proof", version = "0.1.0" }
 nash-ast = { path = "../nash-ast", version = "0.12.0" }
 nash-region = { path = "../nash-region", version = "0.3.0" }
 nash-can = { path = "../nash-can", version = "0.13.0" }

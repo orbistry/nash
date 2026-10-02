@@ -1783,6 +1783,7 @@ dependencies = [
  "nash-fmt",
  "nash-language-server",
  "nash-plutus",
+ "nash-proof",
  "nash-region",
  "nash-report",
  "nash-test",
@@ -1814,6 +1815,7 @@ dependencies = [
  "nash-nitpick",
  "nash-parse",
  "nash-plutus",
+ "nash-proof",
  "nash-region",
  "nash-solve",
  "nash-test",
@@ -1889,6 +1891,7 @@ dependencies = [
  "nash-nitpick",
  "nash-parse",
  "nash-plutus",
+ "nash-proof",
  "nash-region",
  "nash-report",
  "nash-solve",
@@ -1979,6 +1982,19 @@ dependencies = [
  "once_cell",
  "pretty_assertions",
  "secp256k1",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "nash-proof"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "libc",
+ "nash-config",
+ "nash-source",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 

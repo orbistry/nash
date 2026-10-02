@@ -106,9 +106,17 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
     state
 }
 
+#[derive(Clone, Copy, Default)]
+enum SpecificationScope {
+    #[default]
+    Production,
+    Test,
+    Proof,
+}
+
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
-    test_scope: bool,
+    test_scope: SpecificationScope,
     region: nash_region::Region,
     context: type_::FieldContext<'a>,
     record: Variable,
@@ -118,7 +126,7 @@ struct DeferredField<'a> {
 struct Solver<'a, 'tables> {
     bump: &'a Bump,
     tables: &'tables nash_can::environment::Tables<'a>,
-    test_scope: bool,
+    test_scope: SpecificationScope,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
@@ -180,7 +188,7 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         }
     }
 
@@ -412,10 +420,10 @@ impl<'a> Solver<'a, '_> {
                     };
                 }
                 Content::Structure(FlatType::App1(home, name, args)) => {
-                    let visible = if field.test_scope {
-                        &self.tables.test_fields
-                    } else {
-                        &self.tables.fields
+                    let visible = match field.test_scope {
+                        SpecificationScope::Production => &self.tables.fields,
+                        SpecificationScope::Test => &self.tables.test_fields,
+                        SpecificationScope::Proof => &self.tables.proof_fields,
                     };
                     let Some(union) = visible
                         .get(&nash_ast::QualifiedName { home, name })
@@ -3087,7 +3095,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let mut uf = UnionFind::new();
         let name = bump.alloc(Located::at_zero("value"));
@@ -3180,7 +3188,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3252,7 +3260,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3326,7 +3334,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3413,7 +3421,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3550,7 +3558,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let result = solver.infer_module(
             &mut uf,
@@ -3721,7 +3729,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -3808,7 +3816,7 @@ mod copy_tests {
             kind_contracts: Vec::new(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
+            test_scope: SpecificationScope::Production,
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

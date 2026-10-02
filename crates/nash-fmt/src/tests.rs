@@ -518,3 +518,15 @@ fn multiline_exposing() {
     "#
     );
 }
+
+#[test]
+fn proof_blocks_preserve_semantics_and_private_imports() {
+    for source in [
+        "module Main exposing (..)\nproof\n    import Proof as P exposing (returns)\n    prop \"p\" = let x via P.int in do\n        returns x (\\result -> result == x)\ntests\n    test \"t\" within (cpu 100) = do\n        assert True\n",
+        "module Main exposing (..)\ntests\n    test \"t\" = do\n        assert True\nproof\n    import Proof\n    test \"closed\" fail = do\n        assert False\n    prop \"p\" = let x via Proof.int in do\n        assert (x == x)\n",
+    ] {
+        let formatted = super::format(source).unwrap();
+        assert_eq!(formatted, super::format(&formatted).unwrap());
+        assert_eq!(semantic::tree(source), semantic::tree(&formatted));
+    }
+}

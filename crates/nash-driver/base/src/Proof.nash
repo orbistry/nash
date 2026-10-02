@@ -1,0 +1,97 @@
+module Proof exposing
+    ( returns
+    , int
+    , integer
+    , bool
+    , bytes
+    , byteString
+    , string
+    , data
+    , spendingV1
+    , spendingV2
+    , spendingV3
+    , mintingV1
+    , mintingV2
+    , mintingV3
+    )
+
+
+{-| Symbolic input domains for Lean-blaster verification. -}
+
+
+import Builtin
+import Primitive
+
+
+{-| All native integers. -}
+int : int
+int = 0
+
+
+{-| All Data-represented integers. -}
+integer : Int
+integer = Builtin.iData 0
+
+
+{-| All native Booleans. -}
+bool : bool
+bool = Primitive.False
+
+
+{-| All native bytestrings in the PlutusCore model. -}
+bytes : bytes
+bytes = #""
+
+
+{-| All Data-represented bytestrings in the PlutusCore model. -}
+byteString : Bytes
+byteString = Builtin.bData #""
+
+
+{-| All native strings. -}
+string : string
+string = ""
+
+
+{-| All Plutus Data values, including malformed application encodings. -}
+data : Data
+data = Primitive.coerce (Builtin.iData 0)
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V1 spending validity predicate. -}
+spendingV1 : Data
+spendingV1 = data
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V2 spending validity predicate. -}
+spendingV2 : Data
+spendingV2 = data
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V3 spending validity predicate. -}
+spendingV3 : Data
+spendingV3 = data
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V1 minting validity predicate. -}
+mintingV1 : Data
+mintingV1 = data
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V2 minting validity predicate. -}
+mintingV2 : Data
+mintingV2 = data
+
+
+{-| Contexts satisfying the CardanoLedgerApi Plutus V3 minting validity predicate. -}
+mintingV3 : Data
+mintingV3 = data
+
+
+{-| Partial correctness: if the computation successfully returns, its result must
+satisfy the condition. Use as the sole expression of a passing proof body.
+The proof backend compiles the computation and condition separately.
+In ordinary Nash execution this checks the condition with an assertion.
+-}
+returns : 'a -> ('a -> bool) -> unit
+returns value condition = assert (condition value)

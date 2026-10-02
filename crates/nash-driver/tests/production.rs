@@ -249,3 +249,28 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
         nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V1, &outputs[0].cbor)
     );
 }
+
+#[tokio::test]
+async fn production_excludes_proof_imports_and_bodies() {
+    let uri = Url::parse("file:///project/src/Main.nash").unwrap();
+    let source = "validator module Main exposing (main)\nmain : Data -> unit\nmain _ = ()\nproof\n    import MissingProofBackend\n    test \"unreachable proof\" = do\n        assert undefinedProofName\n";
+    let memory = InMemorySource::new();
+    memory.insert(uri.clone(), source.into());
+    let mut origins = BTreeMap::from([(uri.clone(), None)]);
+    origins.extend(nash_driver::bundled_base::modules());
+    let db = Arc::new(Mutex::new(Database::new(memory)));
+    let graph = nash_driver::build_graph_production(
+        db.clone(),
+        &origins.keys().cloned().collect::<Vec<_>>(),
+    )
+    .await
+    .unwrap();
+    let (report, outputs) = build_with(db, &graph, &origins, move |solved| {
+        let main = solved.modules.iter().find(|m| m.uri == uri).unwrap();
+        assert!(main.module.proofs.is_empty());
+        build::build_validators(solved, nash_config::Build::default())
+    })
+    .await;
+    assert!(report.is_success(), "{report:#?}");
+    assert_eq!(outputs.unwrap().unwrap().len(), 1);
+}

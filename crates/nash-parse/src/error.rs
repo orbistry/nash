@@ -69,6 +69,7 @@ pub enum Test<'a> {
     Name(StringError, Row, Col),
     NameStart(Row, Col),
     OnceOnUnitTest(Row, Col),
+    ProofBudget(Row, Col),
     WithinOpen(Row, Col),
     WithinKind(Row, Col),
     WithinNumber(Number, Row, Col),

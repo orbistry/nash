@@ -4,10 +4,10 @@ case!(
     module Main exposing (..)
     import Primitive exposing (..)
     import Builtin exposing (..)
-    type alias proof = { piA : bls_g1, piB : bls_g2 }
-    encode : proof -> Data
+    type alias blsProof = { piA : bls_g1, piB : bls_g2 }
+    encode : blsProof -> Data
     encode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
-    pk : proof
+    pk : blsProof
     pk =
         { piA = (bls12_381_g1_uncompress #"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce")
         , piB = (bls12_381_g2_uncompress #"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423")
@@ -23,10 +23,10 @@ case!(
     module Main exposing (..)
     import Primitive exposing (..)
     import Builtin exposing (..)
-    type alias proof = { piA : bls_g1, piB : bls_g2 }
-    encode : proof -> Data
+    type alias blsProof = { piA : bls_g1, piB : bls_g2 }
+    encode : blsProof -> Data
     encode p = Builtin.constrData 0 [B (bls12_381_g1_compress p.piA), B (bls12_381_g2_compress p.piB)]
-    pk : proof
+    pk : blsProof
     pk =
         { piA = (bls12_381_g1_uncompress #"b28cb29bc282be68df977b35eb9d8e98b3a0a3fc7c372990bddc50419ca86693e491755338fed4fb42231a7c081252ce")
         , piB = (bls12_381_g2_uncompress #"b9215e5bc481ba6552384c89c23d45bd650b69462868248bfbb83aee7060579404dba41c781dec7c2bec5fccec06842e0e66ad6d86c7c76c468a32c9c0080eea0219d0953b44b1c4f5605afb1e5a3193264ff730222e94f55207628235f3b423")

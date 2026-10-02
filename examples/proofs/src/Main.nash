@@ -1,0 +1,43 @@
+module Main exposing ( addZero )
+
+
+addZero : int -> int
+addZero x = x + 0
+
+
+tests
+    test "concrete identity" =
+        do
+            assert (addZero 42 == 42)
+
+
+proof
+    import Proof
+
+    prop "integer identity" =
+        let
+            x via Proof.int
+        in
+            do
+                assert (addZero x == x)
+
+    prop "division by zero always fails" fail =
+        let
+            x via Proof.int
+        in
+            do
+                assert (x / 0 == 0)
+
+    prop "find a negative integer" fail once =
+        let
+            x via Proof.int
+        in
+            do
+                assert (x >= 0)
+
+    prop "function result satisfies its postcondition" =
+        let
+            value via Proof.int
+        in
+            do
+                Proof.returns (addZero value) (\result -> result == value)

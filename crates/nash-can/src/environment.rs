@@ -60,6 +60,8 @@ pub struct Tables<'a> {
     pub fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
     /// Additional constructor visibility granted only by tests-block imports.
     pub test_fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
+    /// Constructor visibility granted only by proof-block imports.
+    pub proof_fields: BTreeMap<nash_ast::QualifiedName<'a>, LabeledUnion<'a>>,
     pub kinds: crate::kinds::KindEnv<'a>,
     pub traits: BTreeMap<nash_ast::QualifiedName<'a>, &'a TraitInfo<'a>>,
     pub impls: ImplTable<'a>,

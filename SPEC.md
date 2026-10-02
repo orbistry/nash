@@ -98,3 +98,13 @@ cargo fmt --all
 cargo clippy --all-targets --all-features -- -D warnings
 cargo insta test
 ```
+
+## Optional Lean-blaster proof backend
+
+- [x] Private proof blocks with typed symbolic primitive and ledger domains
+- [x] Compile property bodies through the standard UPLC backend
+- [x] Portable pinned Lean project export and structured result protocol
+- [x] Execution-limit rejection semantics and existential rejection witnesses
+- [ ] Generic symbolic list/product/custom ADT domains
+- [ ] Decode and replay SMT counterexamples in Nash
+- [ ] Kernel-checkable reconstructed proofs

@@ -715,3 +715,12 @@ in
 
 Pair destructuring lowers to native UPLC `case`, including wildcard fields.
 It does not implicitly construct a pair or convert a tuple to a pair.
+
+## Proof blocks
+
+After ordinary declarations, a module may contain at most one `tests` block and
+one `proof` block, in either order. A proof block uses the tests-block declaration
+and sequencing grammar (`test`, `prop`, `fail`, `fail once`, and `let ... via ...
+in do ...`). Its `via` expressions must resolve to bundled `Proof` domains;
+execution budgets are rejected. Imports are private to the corresponding block.
+See [proofs.md](proofs.md) for the domain and result semantics.

@@ -68,9 +68,51 @@ pub struct ViaBinder<'a> {
     pub generator: &'a Located<Expr<'a>>,
 }
 
+/// A canonical proof never carries randomized generators or measured budgets.
 #[derive(Debug)]
+pub struct Proof<'a> {
+    pub region: Region,
+    pub name: &'a Located<&'a str>,
+    pub binders: &'a [ProofBinder<'a>],
+    pub obligation: ProofObligation<'a>,
+}
+
+#[derive(Debug)]
+pub struct ProofBinder<'a> {
+    pub pattern: &'a Located<Pattern<'a>>,
+    pub domain: &'a Located<Expr<'a>>,
+}
+
+#[derive(Debug)]
+pub enum ProofObligation<'a> {
+    Execution {
+        expect: Expect,
+        body: &'a Located<Expr<'a>>,
+    },
+    /// Successful returns must satisfy this Boolean postcondition. Failure
+    /// modifiers cannot be represented on a partial-correctness obligation.
+    Returns {
+        computation: &'a Located<Expr<'a>>,
+        postcondition: &'a Located<Expr<'a>>,
+    },
+}
+
+impl<'a> ProofObligation<'a> {
+    pub fn expressions(&self) -> impl Iterator<Item = &'a Located<Expr<'a>>> {
+        let expressions = match *self {
+            Self::Execution { body, .. } => [Some(body), None],
+            Self::Returns {
+                computation,
+                postcondition,
+            } => [Some(computation), Some(postcondition)],
+        };
+        expressions.into_iter().flatten()
+    }
+}
+
 pub struct Module<'a> {
     pub tests: &'a [Test<'a>],
+    pub proofs: &'a [Proof<'a>],
     pub traits: &'a [&'a Located<Trait<'a>>],
     pub impls: &'a [&'a Located<Impl<'a>>],
     pub kind: ModuleKind,
@@ -921,5 +963,26 @@ mod record_tests {
             ..alias
         };
         assert!(transparent.record_fields().is_none());
+    }
+}
+
+impl std::fmt::Debug for Module<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("Module");
+        debug.field("tests", &self.tests);
+        if !self.proofs.is_empty() {
+            debug.field("proofs", &self.proofs);
+        }
+        debug.field("traits", &self.traits);
+        debug.field("impls", &self.impls);
+        debug.field("kind", &self.kind);
+        debug.field("name", &self.name);
+        debug.field("exports", &self.exports);
+        debug.field("docs", &self.docs);
+        debug.field("decls", &self.decls);
+        debug.field("unions", &self.unions);
+        debug.field("aliases", &self.aliases);
+        debug.field("binops", &self.binops);
+        debug.finish()
     }
 }

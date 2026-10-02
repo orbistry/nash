@@ -1,6 +1,5 @@
 use nash_region::{Located, Region};
 
-#[derive(Debug)]
 pub struct Module<'a> {
     pub kind: ModuleKind,
     pub name: Option<&'a Located<&'a str>>,
@@ -15,6 +14,7 @@ pub struct Module<'a> {
     pub traits: &'a [&'a Located<Trait<'a>>],
     pub impls: &'a [&'a Located<Impl<'a>>],
     pub tests: Option<&'a Tests<'a>>,
+    pub proofs: Option<&'a Proofs<'a>>,
     pub binops: &'a [&'a Located<Infix<'a>>],
 }
 
@@ -85,6 +85,35 @@ pub struct Test<'a> {
     pub expect: Expect,
     pub budget: Option<Budget>,
     pub body: TestBody<'a>,
+}
+
+/// A proof block has its own declarations and private imports.
+#[derive(Debug)]
+pub struct Proofs<'a> {
+    pub imports: &'a [&'a Import<'a>],
+    pub proofs: &'a [&'a Located<Proof<'a>>],
+}
+
+#[derive(Debug)]
+pub struct Proof<'a> {
+    pub name: &'a Located<&'a str>,
+    pub expect: Expect,
+    pub body: ProofBody<'a>,
+}
+
+#[derive(Debug)]
+pub enum ProofBody<'a> {
+    Unit(&'a Block<'a>),
+    Prop {
+        binders: &'a [&'a Located<ProofBinder<'a>>],
+        body: &'a Block<'a>,
+    },
+}
+
+#[derive(Debug)]
+pub struct ProofBinder<'a> {
+    pub pattern: &'a Located<Pattern<'a>>,
+    pub domain: &'a Located<Expr<'a>>,
 }
 
 #[derive(Debug)]
@@ -508,4 +537,27 @@ pub enum Exposed<'a> {
 pub enum Privacy {
     Public(Region),
     Private,
+}
+
+impl std::fmt::Debug for Module<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("Module");
+        debug.field("kind", &self.kind);
+        debug.field("name", &self.name);
+        debug.field("exports", &self.exports);
+        debug.field("docs", &self.docs);
+        debug.field("comments", &self.comments);
+        debug.field("imports", &self.imports);
+        debug.field("values", &self.values);
+        debug.field("unions", &self.unions);
+        debug.field("aliases", &self.aliases);
+        debug.field("traits", &self.traits);
+        debug.field("impls", &self.impls);
+        debug.field("tests", &self.tests);
+        if self.proofs.is_some() {
+            debug.field("proofs", &self.proofs);
+        }
+        debug.field("binops", &self.binops);
+        debug.finish()
+    }
 }

@@ -40,6 +40,19 @@ pub fn check<'a>(bump: &'a Bump, module: &Module<'a>) -> Result<(), Vec<Error<'a
         }
         checker.expr(test.body);
     }
+    for proof in module.proofs {
+        for binder in proof.binders {
+            checker.patterns(
+                binder.pattern.region,
+                Context::BadDestruct,
+                &[binder.pattern],
+            );
+            checker.expr(binder.domain);
+        }
+        for expression in proof.obligation.expressions() {
+            checker.expr(expression);
+        }
+    }
     if checker.errors.is_empty() {
         Ok(())
     } else {
