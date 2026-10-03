@@ -1,0 +1,34 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+(\unknown#20 : string -> decodeUtf8 (encodeUtf8 unknown#20)) false
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam unknown_20 [(builtin decodeUtf8) [(builtin encodeUtf8) unknown_20]])
+    (con bool False)])
+--- optimized Core
+let anf#2 : bytes = encodeUtf8 false in
+decodeUtf8 anf#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_1 [(builtin decodeUtf8) anf_1])
+    [(builtin encodeUtf8) (con bool False)]])
+--- isolated pass
+--- core before
+(\unknown#20 : string -> decodeUtf8 (encodeUtf8 unknown#20)) false
+--- uplc before
+(program 1.1.0
+  [(lam unknown_20 [(builtin decodeUtf8) [(builtin encodeUtf8) unknown_20]])
+    (con bool False)])
+--- core after
+(\unknown#20 : string -> decodeUtf8 (encodeUtf8 unknown#20)) false
+--- uplc after
+(program 1.1.0
+  [(lam unknown_20 [(builtin decodeUtf8) [(builtin encodeUtf8) unknown_20]])
+    (con bool False)])
+--- result
+error: Runtime(TypeMismatch(String, Boolean(false)))
+--- logs
+[]

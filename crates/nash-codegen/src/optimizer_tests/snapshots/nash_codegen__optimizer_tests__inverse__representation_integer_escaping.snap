@@ -1,0 +1,58 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let x#1 : int = trace "once" in 7 in
+let encoded#2 : Data = iData x#1 in
+let alias#3 : Data = encoded#2 in
+constr 0 encoded#2 (unIData alias#3) (unIData alias#3)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2
+      [(lam alias_3
+        (constr 0 encoded_2 [(builtin unIData) alias_3] [(builtin unIData) alias_3]))
+        encoded_2])
+      [(builtin iData) x_1]])
+    (force [[(force (builtin trace)) (con string "once")] (delay (con integer 7))])])
+--- optimized Core
+let x#4 : int = trace "once" in 7 in
+let encoded#5 : Data = iData x#4 in
+constr 0 encoded#5 x#4 x#4
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam x_1 [(lam encoded_2 (constr 0 encoded_2 x_1 x_1)) [(builtin iData) x_1]])
+      (force [[builtin_3 (con string "once")] (delay (con integer 7))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let x#1 : int = trace "once" in 7 in
+let encoded#2 : Data = iData x#1 in
+let alias#3 : Data = encoded#2 in
+constr 0 encoded#2 (unIData alias#3) (unIData alias#3)
+--- uplc before
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2
+      [(lam alias_3
+        (constr 0 encoded_2 [(builtin unIData) alias_3] [(builtin unIData) alias_3]))
+        encoded_2])
+      [(builtin iData) x_1]])
+    (force [[(force (builtin trace)) (con string "once")] (delay (con integer 7))])])
+--- core after
+let x#1 : int = trace "once" in 7 in
+let encoded#2 : Data = iData x#1 in
+let alias#3 : Data = encoded#2 in
+constr 0 encoded#2 x#1 x#1
+--- uplc after
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2 [(lam alias_3 (constr 0 encoded_2 x_1 x_1)) encoded_2])
+      [(builtin iData) x_1]])
+    (force [[(force (builtin trace)) (con string "once")] (delay (con integer 7))])])
+--- result
+(constr 0 (con data (I 7)) (con integer 7) (con integer 7))
+--- logs
+["once"]

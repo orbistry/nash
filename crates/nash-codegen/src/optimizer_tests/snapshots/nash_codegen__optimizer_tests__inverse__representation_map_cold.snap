@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 7), (I 7))])
+  False -> unMapData (mapData (trace "cold" in (con (list (pair data data)) [((I 7), (I 7))])))
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin unMapData)
+      [(builtin mapData)
+        (force
+          [[(force (builtin trace)) (con string "cold")]
+            (delay (con (list (pair data data)) [((I 7), (I 7))]))])]]
+    (con (list (pair data data)) [((I 7), (I 7))])))
+--- optimized Core
+(con (list (pair data data)) [((I 7), (I 7))])
+--- optimized UPLC
+(program 1.1.0 (con (list (pair data data)) [((I 7), (I 7))]))
+--- isolated pass
+--- core before
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 7), (I 7))])
+  False -> unMapData (mapData (trace "cold" in (con (list (pair data data)) [((I 7), (I 7))])))
+--- uplc before
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin unMapData)
+      [(builtin mapData)
+        (force
+          [[(force (builtin trace)) (con string "cold")]
+            (delay (con (list (pair data data)) [((I 7), (I 7))]))])]]
+    (con (list (pair data data)) [((I 7), (I 7))])))
+--- core after
+case@Bool true of
+  True -> (con (list (pair data data)) [((I 7), (I 7))])
+  False -> trace "cold" in (con (list (pair data data)) [((I 7), (I 7))])
+--- uplc after
+(program 1.1.0
+  (case
+    (con bool True)
+    (force
+      [[(force (builtin trace)) (con string "cold")]
+        (delay (con (list (pair data data)) [((I 7), (I 7))]))])
+    (con (list (pair data data)) [((I 7), (I 7))])))
+--- result
+(con (list (pair data data)) [((I 7), (I 7))])
+--- logs
+[]

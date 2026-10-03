@@ -37,24 +37,21 @@ let anf#5 : bool = trace "fields" in true in
 let data#1 : Data = constrData anf#4 anf#5 in
 let effect#2 : int = trace "between" in 0 in
 let pair#3 : pair int (list Data) = unConstrData data#1 in
-trace "selected" in fstPair pair#3
+trace "selected" in anf#4
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_11
-    [(lam builtin_12
-      [(lam anf_6
-        [(lam anf_7
-          [(lam data_8
-            [(lam effect_9
-              [(lam pair_10
-                (force [[builtin_12 (con string "selected")] (delay [builtin_11 pair_10])]))
-                [(builtin unConstrData) data_8]])
-              (force [[builtin_12 (con string "between")] (delay (con integer 0))])])
-            [[(builtin constrData) anf_6] anf_7]])
-          (force [[builtin_12 (con string "fields")] (delay (con bool True))])])
-        (force [[builtin_12 (con string "tag")] (delay (con integer 59))])])
-      (force (builtin trace))])
-    (force (force (builtin fstPair)))])
+    [(lam anf_6
+      [(lam anf_7
+        [(lam data_8
+          [(lam effect_9
+            [(lam pair_10 (force [[builtin_11 (con string "selected")] (delay anf_6)]))
+              [(builtin unConstrData) data_8]])
+            (force [[builtin_11 (con string "between")] (delay (con integer 0))])])
+          [[(builtin constrData) anf_6] anf_7]])
+        (force [[builtin_11 (con string "fields")] (delay (con bool True))])])
+      (force [[builtin_11 (con string "tag")] (delay (con integer 59))])])
+    (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input
 let anf#49 : int = trace "tag" in 59 in
@@ -76,7 +73,7 @@ let anf#50 : bool = trace "fields" in true in
 let data#46 : Data = constrData anf#49 anf#50 in
 let effect#47 : int = trace "between" in 0 in
 let pair#48 : pair int (list Data) = unConstrData data#46 in
-trace "selected" in fstPair pair#48
+trace "selected" in anf#49
 --- isolated UPLC before
 (program 1.1.0
   [(lam anf_49
@@ -110,9 +107,7 @@ trace "selected" in fstPair pair#48
       [(lam data_46
         [(lam effect_47
           [(lam pair_48
-            (force
-              [[(force (builtin trace)) (con string "selected")]
-                (delay [(force (force (builtin fstPair))) pair_48])]))
+            (force [[(force (builtin trace)) (con string "selected")] (delay anf_49)]))
             [(builtin unConstrData) data_46]])
           (force
             [[(force (builtin trace)) (con string "between")] (delay (con integer 0))])])

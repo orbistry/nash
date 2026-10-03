@@ -1,0 +1,28 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unMapData (mapData (con (list data) []))
+--- unoptimized UPLC
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con (list data) [])]])
+--- optimized Core
+let anf#1 : 'erased = mapData (con (list data) []) in
+unMapData anf#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 [(builtin unMapData) anf_2])
+    [(builtin mapData) (con (list data) [])]])
+--- isolated pass
+--- core before
+unMapData (mapData (con (list data) []))
+--- uplc before
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con (list data) [])]])
+--- core after
+unMapData (mapData (con (list data) []))
+--- uplc after
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con (list data) [])]])
+--- result
+error: Runtime(TypeMismatch(List(Pair(Data, Data)), ProtoList(Data, [])))
+--- logs
+[]

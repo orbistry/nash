@@ -1,0 +1,75 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let x#13 : list (pair Data Data) = trace "once" in (con (list (pair data data)) [((I 7), (I 7))]) in
+let encoded#14 : Data = mapData x#13 in
+let alias#15 : Data = encoded#14 in
+constr 0 encoded#14 (unMapData alias#15) (unMapData alias#15)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14
+      [(lam alias_15
+        (constr 0
+          encoded_14
+          [(builtin unMapData) alias_15]
+          [(builtin unMapData) alias_15]))
+        encoded_14])
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "once")]
+        (delay (con (list (pair data data)) [((I 7), (I 7))]))])])
+--- optimized Core
+let x#1 : list (pair Data Data) = trace "once" in (con (list (pair data data)) [((I 7), (I 7))]) in
+let encoded#2 : Data = mapData x#1 in
+constr 0 encoded#2 x#1 x#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam x_3 [(lam encoded_4 (constr 0 encoded_4 x_3 x_3)) [(builtin mapData) x_3]])
+      (force
+        [[builtin_5 (con string "once")]
+          (delay (con (list (pair data data)) [((I 7), (I 7))]))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let x#13 : list (pair Data Data) = trace "once" in (con (list (pair data data)) [((I 7), (I 7))]) in
+let encoded#14 : Data = mapData x#13 in
+let alias#15 : Data = encoded#14 in
+constr 0 encoded#14 (unMapData alias#15) (unMapData alias#15)
+--- uplc before
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14
+      [(lam alias_15
+        (constr 0
+          encoded_14
+          [(builtin unMapData) alias_15]
+          [(builtin unMapData) alias_15]))
+        encoded_14])
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "once")]
+        (delay (con (list (pair data data)) [((I 7), (I 7))]))])])
+--- core after
+let x#13 : list (pair Data Data) = trace "once" in (con (list (pair data data)) [((I 7), (I 7))]) in
+let encoded#14 : Data = mapData x#13 in
+let alias#15 : Data = encoded#14 in
+constr 0 encoded#14 x#13 x#13
+--- uplc after
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14 [(lam alias_15 (constr 0 encoded_14 x_13 x_13)) encoded_14])
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "once")]
+        (delay (con (list (pair data data)) [((I 7), (I 7))]))])])
+--- result
+(constr 0
+  (con data (Map [(I 7, I 7)]))
+  (con (list (pair data data)) [((I 7), (I 7))])
+  (con (list (pair data data)) [((I 7), (I 7))]))
+--- logs
+["once"]

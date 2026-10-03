@@ -1,4 +1,6 @@
 //! Explicit-only performance checks. This binary is not a Cargo test target.
+#[path = "../../../crates/nash-codegen/tests/support/inverse.rs"]
+mod inverse_input;
 mod source;
 
 #[path = "../../../crates/nash-codegen/tests/support/vesting.rs"]
@@ -23,7 +25,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/known-constr/direct-integer-inverse/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata-cleanup/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/known-constr/representation-inverse/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata-cleanup/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -109,6 +111,10 @@ fn run() -> Result<()> {
         sources.insert(
             "VestingContextInput".into(),
             include_str!("../../../crates/nash-codegen/tests/support/vesting.rs").into(),
+        );
+        sources.insert(
+            "InverseInputs".into(),
+            include_str!("../../../crates/nash-codegen/tests/support/inverse.rs").into(),
         );
         suite()?
     };
@@ -365,6 +371,16 @@ fn suite() -> Result<Vec<Row>> {
                 }),
             )?);
         }
+    }
+    let arena = Arena::new();
+    for (name, core, _) in inverse_input::cases(&Builder::new(&arena)) {
+        rows.push(compare(
+            &arena,
+            format!("representation cancellation: {name}"),
+            core,
+            &[],
+            None,
+        )?);
     }
     Ok(rows)
 }

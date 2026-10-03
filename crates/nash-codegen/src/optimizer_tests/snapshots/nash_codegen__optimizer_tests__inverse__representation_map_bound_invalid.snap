@@ -1,0 +1,66 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let x#13 : list (pair Data Data) = trace "operand" in false in
+let encoded#14 : Data = mapData x#13 in
+trace "must not run" in unMapData encoded#14
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unMapData) encoded_14])]))
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- optimized Core
+let x#1 : list (pair Data Data) = trace "operand" in false in
+let encoded#2 : Data = mapData x#1 in
+trace "must not run" in unMapData encoded#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam x_3
+      [(lam encoded_4
+        (force
+          [[builtin_5 (con string "must not run")]
+            (delay [(builtin unMapData) encoded_4])]))
+        [(builtin mapData) x_3]])
+      (force [[builtin_5 (con string "operand")] (delay (con bool False))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let x#13 : list (pair Data Data) = trace "operand" in false in
+let encoded#14 : Data = mapData x#13 in
+trace "must not run" in unMapData encoded#14
+--- uplc before
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unMapData) encoded_14])]))
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- core after
+let x#13 : list (pair Data Data) = trace "operand" in false in
+let encoded#14 : Data = mapData x#13 in
+trace "must not run" in unMapData encoded#14
+--- uplc after
+(program 1.1.0
+  [(lam x_13
+    [(lam encoded_14
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unMapData) encoded_14])]))
+      [(builtin mapData) x_13]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- result
+error: Runtime(ExpectedList(Boolean(false)))
+--- logs
+["operand"]

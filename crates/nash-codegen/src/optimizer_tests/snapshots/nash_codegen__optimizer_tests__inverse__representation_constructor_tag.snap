@@ -1,0 +1,65 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let tag#22 : int = 0 in
+let fields#21 : list Data = (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+let payload#24 : 'erased = unConstrData constructor#23 in
+fstPair payload#24
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(lam payload_24 [(force (force (builtin fstPair))) payload_24])
+          [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (con (list data) [(I 7)])])
+    (con integer 0)])
+--- optimized Core
+let constructor#3 : Data = constrData 0 (con (list data) [(I 7)]) in
+let payload#4 : 'erased = unConstrData constructor#3 in
+0
+--- optimized UPLC
+(program 1.1.0
+  [(lam constructor_1
+    [(lam payload_2 (con integer 0)) [(builtin unConstrData) constructor_1]])
+    [[(builtin constrData) (con integer 0)] (con (list data) [(I 7)])]])
+--- isolated pass
+--- core before
+let tag#22 : int = 0 in
+let fields#21 : list Data = (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+let payload#24 : 'erased = unConstrData constructor#23 in
+fstPair payload#24
+--- uplc before
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(lam payload_24 [(force (force (builtin fstPair))) payload_24])
+          [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (con (list data) [(I 7)])])
+    (con integer 0)])
+--- core after
+let tag#22 : int = 0 in
+let fields#21 : list Data = (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+let payload#24 : 'erased = unConstrData constructor#23 in
+tag#22
+--- uplc after
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(lam payload_24 tag_22) [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (con (list data) [(I 7)])])
+    (con integer 0)])
+--- result
+(con integer 0)
+--- logs
+[]

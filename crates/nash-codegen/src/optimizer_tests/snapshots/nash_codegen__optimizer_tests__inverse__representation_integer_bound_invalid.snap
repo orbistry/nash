@@ -1,0 +1,65 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let x#1 : int = trace "operand" in false in
+let encoded#2 : Data = iData x#1 in
+trace "must not run" in unIData encoded#2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unIData) encoded_2])]))
+      [(builtin iData) x_1]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- optimized Core
+let x#3 : int = trace "operand" in false in
+let encoded#4 : Data = iData x#3 in
+trace "must not run" in unIData encoded#4
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_3
+    [(lam x_1
+      [(lam encoded_2
+        (force
+          [[builtin_3 (con string "must not run")] (delay [(builtin unIData) encoded_2])]))
+        [(builtin iData) x_1]])
+      (force [[builtin_3 (con string "operand")] (delay (con bool False))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let x#1 : int = trace "operand" in false in
+let encoded#2 : Data = iData x#1 in
+trace "must not run" in unIData encoded#2
+--- uplc before
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unIData) encoded_2])]))
+      [(builtin iData) x_1]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- core after
+let x#1 : int = trace "operand" in false in
+let encoded#2 : Data = iData x#1 in
+trace "must not run" in unIData encoded#2
+--- uplc after
+(program 1.1.0
+  [(lam x_1
+    [(lam encoded_2
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unIData) encoded_2])]))
+      [(builtin iData) x_1]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- result
+error: Runtime(TypeMismatch(Integer, Boolean(false)))
+--- logs
+["operand"]

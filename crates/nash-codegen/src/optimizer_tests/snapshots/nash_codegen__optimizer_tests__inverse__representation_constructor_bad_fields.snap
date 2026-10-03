@@ -1,0 +1,58 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let tag#22 : int = 0 in
+let fields#21 : list Data = false in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+sndPair (unConstrData constructor#23)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(force (force (builtin sndPair))) [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (con bool False)])
+    (con integer 0)])
+--- optimized Core
+let fields#2 : list Data = false in
+let constructor#3 : Data = constrData 0 fields#2 in
+fields#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam fields_1
+    [(lam constructor_4 fields_1) [[(builtin constrData) (con integer 0)] fields_1]])
+    (con bool False)])
+--- isolated pass
+--- core before
+let tag#22 : int = 0 in
+let fields#21 : list Data = false in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+sndPair (unConstrData constructor#23)
+--- uplc before
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(force (force (builtin sndPair))) [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (con bool False)])
+    (con integer 0)])
+--- core after
+let tag#22 : int = 0 in
+let fields#21 : list Data = false in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+fields#21
+--- uplc after
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23 fields_21) [[(builtin constrData) tag_22] fields_21]])
+      (con bool False)])
+    (con integer 0)])
+--- result
+error: Runtime(ExpectedList(Boolean(false)))
+--- logs
+[]

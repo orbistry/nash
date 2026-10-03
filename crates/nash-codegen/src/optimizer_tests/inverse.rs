@@ -1,4 +1,4 @@
-//! Integer representation cancellation: isolated trial evidence.
+//! Representation cancellation: isolated and complete O1 semantic evidence.
 use nash_ir::{
     build::Builder,
     core::*,
@@ -14,15 +14,16 @@ fn trace<'a>(b: &Builder<'a>, s: &'a str, x: &'a Core<'a>) -> &'a Core<'a> {
 fn check(name: &str, b: &Builder<'_>, before: &Core<'_>, fails: bool) {
     let after = inverse::reduce(b, before);
 
-    let left = crate::harness::eval_core_raw(b.arena, before);
+    let fixture = crate::harness::prepare_fixture(b.arena, before);
+    let left = &fixture.evaluated;
     let right = crate::harness::eval_core_raw(b.arena, after);
 
     assert_eq!(right.result.starts_with("error:"), fails);
     insta::assert_snapshot!(
         name,
-        crate::harness::pass_snapshot(
-            b.arena,
-            before,
+        format!(
+            "{}\n--- isolated pass\n{}",
+            fixture.code_snapshot(),
             format!(
                 "--- core before\n{}\n--- uplc before\n{}\n--- core after\n{}\n--- uplc after\n{}\n--- result\n{}\n--- logs\n{:?}",
                 pretty(before),
@@ -34,6 +35,7 @@ fn check(name: &str, b: &Builder<'_>, before: &Core<'_>, fails: bool) {
             )
         )
     );
+    fixture.assert_equivalent(b.arena);
     hygiene::validate(after, &[]).unwrap();
     // Properties independent of the expected snapshot.
     assert_eq!(before.ty, after.ty);
@@ -131,4 +133,16 @@ fn direct_integer_roundtrips() {
         ),
         false,
     );
+}
+
+#[path = "../../tests/support/inverse.rs"]
+mod inputs;
+
+#[test]
+fn representation_roundtrips() {
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    for (name, core, fails) in inputs::cases(&b) {
+        check(&format!("representation_{name}"), &b, core, fails);
+    }
 }

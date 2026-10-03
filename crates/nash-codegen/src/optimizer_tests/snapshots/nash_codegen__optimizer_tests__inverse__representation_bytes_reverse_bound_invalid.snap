@@ -1,0 +1,58 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let encoded#6 : Data = 0 in
+let x#5 : bytes = unBData encoded#6 in
+trace "must not run" in bData x#5
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam encoded_6
+    [(lam x_5
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin bData) x_5])]))
+      [(builtin unBData) encoded_6]])
+    (con integer 0)])
+--- optimized Core
+let x#2 : bytes = unBData 0 in
+trace "must not run" in bData x#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam x_1
+      (force [[builtin_2 (con string "must not run")] (delay [(builtin bData) x_1])]))
+      [(builtin unBData) (con integer 0)]])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let encoded#6 : Data = 0 in
+let x#5 : bytes = unBData encoded#6 in
+trace "must not run" in bData x#5
+--- uplc before
+(program 1.1.0
+  [(lam encoded_6
+    [(lam x_5
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin bData) x_5])]))
+      [(builtin unBData) encoded_6]])
+    (con integer 0)])
+--- core after
+let encoded#6 : Data = 0 in
+let x#5 : bytes = unBData encoded#6 in
+trace "must not run" in bData x#5
+--- uplc after
+(program 1.1.0
+  [(lam encoded_6
+    [(lam x_5
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin bData) x_5])]))
+      [(builtin unBData) encoded_6]])
+    (con integer 0)])
+--- result
+error: Runtime(NotData(Integer(0)))
+--- logs
+[]

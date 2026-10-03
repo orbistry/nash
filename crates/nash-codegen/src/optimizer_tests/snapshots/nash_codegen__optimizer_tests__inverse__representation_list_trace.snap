@@ -1,0 +1,41 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unListData (listData (trace "operand" in (con (list data) [(I 7)])))
+--- unoptimized UPLC
+(program 1.1.0
+  [(builtin unListData)
+    [(builtin listData)
+      (force
+        [[(force (builtin trace)) (con string "operand")]
+          (delay (con (list data) [(I 7)]))])]])
+--- optimized Core
+trace "operand" in (con (list data) [(I 7)])
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    (force [[builtin_1 (con string "operand")] (delay (con (list data) [(I 7)]))]))
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+unListData (listData (trace "operand" in (con (list data) [(I 7)])))
+--- uplc before
+(program 1.1.0
+  [(builtin unListData)
+    [(builtin listData)
+      (force
+        [[(force (builtin trace)) (con string "operand")]
+          (delay (con (list data) [(I 7)]))])]])
+--- core after
+trace "operand" in (con (list data) [(I 7)])
+--- uplc after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "operand")]
+      (delay (con (list data) [(I 7)]))]))
+--- result
+(con (list data) [(I 7)])
+--- logs
+["operand"]

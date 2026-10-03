@@ -1,0 +1,50 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+case@Bool true of
+  True -> "héllo"
+  False -> decodeUtf8 (encodeUtf8 (trace "cold" in "héllo"))
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin decodeUtf8)
+      [(builtin encodeUtf8)
+        (force
+          [[(force (builtin trace)) (con string "cold")] (delay (con string "héllo"))])]]
+    (con string "héllo")))
+--- optimized Core
+"héllo"
+--- optimized UPLC
+(program 1.1.0 (con string "héllo"))
+--- isolated pass
+--- core before
+case@Bool true of
+  True -> "héllo"
+  False -> decodeUtf8 (encodeUtf8 (trace "cold" in "héllo"))
+--- uplc before
+(program 1.1.0
+  (case
+    (con bool True)
+    [(builtin decodeUtf8)
+      [(builtin encodeUtf8)
+        (force
+          [[(force (builtin trace)) (con string "cold")] (delay (con string "héllo"))])]]
+    (con string "héllo")))
+--- core after
+case@Bool true of
+  True -> "héllo"
+  False -> trace "cold" in "héllo"
+--- uplc after
+(program 1.1.0
+  (case
+    (con bool True)
+    (force
+      [[(force (builtin trace)) (con string "cold")] (delay (con string "héllo"))])
+    (con string "héllo")))
+--- result
+(con string "héllo")
+--- logs
+[]

@@ -1,0 +1,27 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unMapData (mapData false)
+--- unoptimized UPLC
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con bool False)]])
+--- optimized Core
+let anf#1 : Data = mapData false in
+unMapData anf#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 [(builtin unMapData) anf_2]) [(builtin mapData) (con bool False)]])
+--- isolated pass
+--- core before
+unMapData (mapData false)
+--- uplc before
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con bool False)]])
+--- core after
+unMapData (mapData false)
+--- uplc after
+(program 1.1.0 [(builtin unMapData) [(builtin mapData) (con bool False)]])
+--- result
+error: Runtime(ExpectedList(Boolean(false)))
+--- logs
+[]

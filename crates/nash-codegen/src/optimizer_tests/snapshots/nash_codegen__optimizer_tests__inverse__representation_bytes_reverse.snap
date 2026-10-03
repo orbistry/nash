@@ -1,0 +1,25 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+bData (unBData (con data (B #68656c6c6f)))
+--- unoptimized UPLC
+(program 1.1.0 [(builtin bData) [(builtin unBData) (con data (B #68656c6c6f))]])
+--- optimized Core
+(con data (B #68656c6c6f))
+--- optimized UPLC
+(program 1.1.0 (con data (B #68656c6c6f)))
+--- isolated pass
+--- core before
+bData (unBData (con data (B #68656c6c6f)))
+--- uplc before
+(program 1.1.0 [(builtin bData) [(builtin unBData) (con data (B #68656c6c6f))]])
+--- core after
+(con data (B #68656c6c6f))
+--- uplc after
+(program 1.1.0 (con data (B #68656c6c6f)))
+--- result
+(con data (B #68656c6c6f))
+--- logs
+[]

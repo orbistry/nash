@@ -1,0 +1,59 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let encoded#18 : bytes = 0 in
+let x#17 : string = decodeUtf8 encoded#18 in
+trace "must not run" in encodeUtf8 x#17
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam encoded_18
+    [(lam x_17
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin encodeUtf8) x_17])]))
+      [(builtin decodeUtf8) encoded_18]])
+    (con integer 0)])
+--- optimized Core
+let x#2 : string = decodeUtf8 0 in
+trace "must not run" in encodeUtf8 x#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam x_1
+      (force
+        [[builtin_2 (con string "must not run")] (delay [(builtin encodeUtf8) x_1])]))
+      [(builtin decodeUtf8) (con integer 0)]])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let encoded#18 : bytes = 0 in
+let x#17 : string = decodeUtf8 encoded#18 in
+trace "must not run" in encodeUtf8 x#17
+--- uplc before
+(program 1.1.0
+  [(lam encoded_18
+    [(lam x_17
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin encodeUtf8) x_17])]))
+      [(builtin decodeUtf8) encoded_18]])
+    (con integer 0)])
+--- core after
+let encoded#18 : bytes = 0 in
+let x#17 : string = decodeUtf8 encoded#18 in
+trace "must not run" in encodeUtf8 x#17
+--- uplc after
+(program 1.1.0
+  [(lam encoded_18
+    [(lam x_17
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin encodeUtf8) x_17])]))
+      [(builtin decodeUtf8) encoded_18]])
+    (con integer 0)])
+--- result
+error: Runtime(TypeMismatch(ByteString, Integer(0)))
+--- logs
+[]

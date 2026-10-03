@@ -1,0 +1,33 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+(\unknown#8 : bytes -> unBData (bData unknown#8)) false
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam unknown_8 [(builtin unBData) [(builtin bData) unknown_8]])
+    (con bool False)])
+--- optimized Core
+let anf#2 : Data = bData false in
+unBData anf#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_1 [(builtin unBData) anf_1]) [(builtin bData) (con bool False)]])
+--- isolated pass
+--- core before
+(\unknown#8 : bytes -> unBData (bData unknown#8)) false
+--- uplc before
+(program 1.1.0
+  [(lam unknown_8 [(builtin unBData) [(builtin bData) unknown_8]])
+    (con bool False)])
+--- core after
+(\unknown#8 : bytes -> unBData (bData unknown#8)) false
+--- uplc after
+(program 1.1.0
+  [(lam unknown_8 [(builtin unBData) [(builtin bData) unknown_8]])
+    (con bool False)])
+--- result
+error: Runtime(TypeMismatch(ByteString, Boolean(false)))
+--- logs
+[]

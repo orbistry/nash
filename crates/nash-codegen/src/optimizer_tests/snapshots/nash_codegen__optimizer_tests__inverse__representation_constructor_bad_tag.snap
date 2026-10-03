@@ -1,0 +1,70 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let tag#22 : int = false in
+let fields#21 : list Data = trace "fields evaluated" in (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+fstPair (unConstrData constructor#23)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(force (force (builtin fstPair))) [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (force
+        [[(force (builtin trace)) (con string "fields evaluated")]
+          (delay (con (list data) [(I 7)]))])])
+    (con bool False)])
+--- optimized Core
+let tag#1 : int = false in
+let fields#2 : list Data = trace "fields evaluated" in (con (list data) [(I 7)]) in
+let constructor#3 : Data = constrData tag#1 fields#2 in
+tag#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_7
+    [(lam tag_4
+      [(lam fields_5
+        [(lam constructor_6 tag_4) [[(builtin constrData) tag_4] fields_5]])
+        (force
+          [[builtin_7 (con string "fields evaluated")] (delay (con (list data) [(I 7)]))])])
+      (con bool False)])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let tag#22 : int = false in
+let fields#21 : list Data = trace "fields evaluated" in (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+fstPair (unConstrData constructor#23)
+--- uplc before
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23
+        [(force (force (builtin fstPair))) [(builtin unConstrData) constructor_23]])
+        [[(builtin constrData) tag_22] fields_21]])
+      (force
+        [[(force (builtin trace)) (con string "fields evaluated")]
+          (delay (con (list data) [(I 7)]))])])
+    (con bool False)])
+--- core after
+let tag#22 : int = false in
+let fields#21 : list Data = trace "fields evaluated" in (con (list data) [(I 7)]) in
+let constructor#23 : Data = constrData tag#22 fields#21 in
+tag#22
+--- uplc after
+(program 1.1.0
+  [(lam tag_22
+    [(lam fields_21
+      [(lam constructor_23 tag_22) [[(builtin constrData) tag_22] fields_21]])
+      (force
+        [[(force (builtin trace)) (con string "fields evaluated")]
+          (delay (con (list data) [(I 7)]))])])
+    (con bool False)])
+--- result
+error: Runtime(TypeMismatch(Integer, Boolean(false)))
+--- logs
+["fields evaluated"]

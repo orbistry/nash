@@ -1,0 +1,64 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let constructor#23 : Data = (con data (Constr 3 [I 7])) in
+let payload#24 : 'erased = unConstrData constructor#23 in
+trace "after decoding" in constrData (fstPair payload#24) (sndPair payload#24)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam constructor_23
+    [(lam payload_24
+      (force
+        [[(force (builtin trace)) (con string "after decoding")]
+          (delay
+            [[(builtin constrData) [(force (force (builtin fstPair))) payload_24]]
+              [(force (force (builtin sndPair))) payload_24]])]))
+      [(builtin unConstrData) constructor_23]])
+    (con data (Constr 3 [I 7]))])
+--- optimized Core
+let constructor#1 : Data = (con data (Constr 3 [I 7])) in
+let payload#2 : 'erased = unConstrData constructor#1 in
+trace "after decoding" in constructor#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam constructor_3
+      [(lam payload_4
+        (force [[builtin_5 (con string "after decoding")] (delay constructor_3)]))
+        [(builtin unConstrData) constructor_3]])
+      (con data (Constr 3 [I 7]))])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let constructor#23 : Data = (con data (Constr 3 [I 7])) in
+let payload#24 : 'erased = unConstrData constructor#23 in
+trace "after decoding" in constrData (fstPair payload#24) (sndPair payload#24)
+--- uplc before
+(program 1.1.0
+  [(lam constructor_23
+    [(lam payload_24
+      (force
+        [[(force (builtin trace)) (con string "after decoding")]
+          (delay
+            [[(builtin constrData) [(force (force (builtin fstPair))) payload_24]]
+              [(force (force (builtin sndPair))) payload_24]])]))
+      [(builtin unConstrData) constructor_23]])
+    (con data (Constr 3 [I 7]))])
+--- core after
+let constructor#23 : Data = (con data (Constr 3 [I 7])) in
+let payload#24 : 'erased = unConstrData constructor#23 in
+trace "after decoding" in constructor#23
+--- uplc after
+(program 1.1.0
+  [(lam constructor_23
+    [(lam payload_24
+      (force
+        [[(force (builtin trace)) (con string "after decoding")] (delay constructor_23)]))
+      [(builtin unConstrData) constructor_23]])
+    (con data (Constr 3 [I 7]))])
+--- result
+(con data (Constr 3 [I 7]))
+--- logs
+["after decoding"]

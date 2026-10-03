@@ -1,0 +1,66 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+let x#9 : list Data = trace "operand" in false in
+let encoded#10 : Data = listData x#9 in
+trace "must not run" in unListData encoded#10
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam x_9
+    [(lam encoded_10
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unListData) encoded_10])]))
+      [(builtin listData) x_9]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- optimized Core
+let x#1 : list Data = trace "operand" in false in
+let encoded#2 : Data = listData x#1 in
+trace "must not run" in unListData encoded#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam x_3
+      [(lam encoded_4
+        (force
+          [[builtin_5 (con string "must not run")]
+            (delay [(builtin unListData) encoded_4])]))
+        [(builtin listData) x_3]])
+      (force [[builtin_5 (con string "operand")] (delay (con bool False))])])
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+let x#9 : list Data = trace "operand" in false in
+let encoded#10 : Data = listData x#9 in
+trace "must not run" in unListData encoded#10
+--- uplc before
+(program 1.1.0
+  [(lam x_9
+    [(lam encoded_10
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unListData) encoded_10])]))
+      [(builtin listData) x_9]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- core after
+let x#9 : list Data = trace "operand" in false in
+let encoded#10 : Data = listData x#9 in
+trace "must not run" in unListData encoded#10
+--- uplc after
+(program 1.1.0
+  [(lam x_9
+    [(lam encoded_10
+      (force
+        [[(force (builtin trace)) (con string "must not run")]
+          (delay [(builtin unListData) encoded_10])]))
+      [(builtin listData) x_9]])
+    (force
+      [[(force (builtin trace)) (con string "operand")] (delay (con bool False))])])
+--- result
+error: Runtime(ExpectedList(Boolean(false)))
+--- logs
+["operand"]

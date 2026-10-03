@@ -1,0 +1,38 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+decodeUtf8 (encodeUtf8 (trace "operand" in "héllo"))
+--- unoptimized UPLC
+(program 1.1.0
+  [(builtin decodeUtf8)
+    [(builtin encodeUtf8)
+      (force
+        [[(force (builtin trace)) (con string "operand")] (delay (con string "héllo"))])]])
+--- optimized Core
+trace "operand" in "héllo"
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    (force [[builtin_1 (con string "operand")] (delay (con string "héllo"))]))
+    (force (builtin trace))])
+--- isolated pass
+--- core before
+decodeUtf8 (encodeUtf8 (trace "operand" in "héllo"))
+--- uplc before
+(program 1.1.0
+  [(builtin decodeUtf8)
+    [(builtin encodeUtf8)
+      (force
+        [[(force (builtin trace)) (con string "operand")] (delay (con string "héllo"))])]])
+--- core after
+trace "operand" in "héllo"
+--- uplc after
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "operand")] (delay (con string "héllo"))]))
+--- result
+(con string "héllo")
+--- logs
+["operand"]

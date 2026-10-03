@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unListData (listData (con (list data) [(I 7)])) 1
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin unListData) [(builtin listData) (con (list data) [(I 7)])]]
+    (con integer 1)])
+--- optimized Core
+(con (list data) [(I 7)]) 1
+--- optimized UPLC
+(program 1.1.0 [(con (list data) [(I 7)]) (con integer 1)])
+--- isolated pass
+--- core before
+unListData (listData (con (list data) [(I 7)])) 1
+--- uplc before
+(program 1.1.0
+  [[(builtin unListData) [(builtin listData) (con (list data) [(I 7)])]]
+    (con integer 1)])
+--- core after
+(con (list data) [(I 7)]) 1
+--- uplc after
+(program 1.1.0 [(con (list data) [(I 7)]) (con integer 1)])
+--- result
+error: NonFunctionApplication(Con(Integer(1)), Con(ProtoList(Data, [Data(Integer(7))])))
+--- logs
+[]

@@ -22,8 +22,9 @@ native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
 as well. The retained Chunk 7 scope is complete. Continue
-with the remaining Chunk 8 rules after Chunk 7, then proceed to
-Chunks 9, 10 and 11. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
+with Chunks 9, 10 and 11. The retained Chunk 8 representation cancellations
+are accepted, including integer/byte/list/map Data round trips, UTF-8 round trips
+and bound constructor Data projections/reconstruction. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
 `nash-codegen/src/program.rs`
 selects O0 or the shared accepted O1 pipeline, then rewrites recursion and lowers.
@@ -1693,6 +1694,59 @@ partial applications and both reverse-direction outcomes. The temporary
 literal/decoded operands and traced/untraced paths. Every case saved 100,043 CPU,
 464 memory and 3–4 Flat bytes with identical results/logs. The runner was removed.
 
+**Representation cancellation expansion (3 October 2026), accepted under the user's zero-regression condition.**
+`inverse::reduce` now handles `unBData(bData x)`, `unListData(listData x)`,
+`unMapData(mapData x)` and `decodeUtf8(encodeUtf8 x)`, alongside the integer rule.
+The corresponding reverse rules require the exact Data variant or valid UTF-8.
+Evidence comes from actual constants, saturated known producers, traces and
+lexical let bindings, never Core type annotations. List/map constants must have
+both the correct runtime tags and valid element/pair payloads. Failures inside
+retained operands still occur at the original evaluation point.
+
+Let-bound cancellation reuses operand variables and retains the original strict
+producer binding. It does not duplicate literals or computations, or introduce
+bindings. Unary bound cancellation still requires shape evidence: the broader
+check-preserving rule was semantically valid but grew five malformed-input
+fixtures by one Flat byte, so that rule was narrowed before acceptance.
+
+Constructor Data has two operands and is handled separately. Projection through
+a bound `constrData tag fields` returns the existing tag/fields variable while
+retaining the validating construction. Reconstruction from `fstPair p` and
+`sndPair p` reuses the Data variable only when both refer to the same bound
+`unConstrData` result. It retains the decoder binding. Tag-range, field-shape,
+variant checks and evaluation of unused fields remain in place. Arbitrary direct
+constructor round trips and unknown-shape unary conversions remain unchanged.
+
+The pass runs before ANF and within the existing `small_inline::simplify` cleanup
+loop, before beta cleanup. The latter catches bindings exposed by ANF/inlining;
+ANF is not repeated. The pass requires globally unique, well-scoped binders.
+
+Comparison against previous O1 at `5eaa7564e6b21b4815be93dd3c4c53aebb66edf7`
+used the explicit runner with Plutus V3/PV11, UPLC 1.1.0 and the bundled V3 cost
+model. All 108 rows preserve results/logs: 47 improve, 61 are unchanged, and none
+increase CPU, memory or raw Flat bytes. The original 23 baseline rows are exactly
+unchanged; 85 representation fixtures now form permanent explicit regressions.
+Representative savings relative to previous O1:
+
+| Fixture | CPU saved | Memory saved | Flat bytes saved |
+| --- | ---: | ---: | ---: |
+| Direct byte round trip | 143,325 | 764 | 6 |
+| Direct Data-list round trip | 171,785 | 764 | 6 |
+| Direct Data-map round trip | 204,869 | 764 | 6 |
+| Direct UTF-8 round trip | 247,879 | 712 | 6 |
+| Bound constructor reconstruction | 539,887 | 1,664 | 12 |
+| Reconstruction of known constructor Data | 642,038 | 2,196 | 18 |
+
+Semantic coverage includes both directions, traces, failures, cold branches,
+aliased/captured/escaping bindings, partial/extra application, wrong runtime tags,
+forged metadata and malformed constructor inputs. Inconsistent raw list/map
+payloads receive noninterference checks without executing runtime panic paths.
+Validation: all 3,827 workspace nextest tests pass; the final cancellation
+fixtures also compare the complete O1 pipeline against O0. Root and isolated
+performance-workspace strict Clippy, formatting and the explicit 108-row baseline
+check pass. The retained Chunk 8 scope is complete; further shape inference or
+conversion families require their own evidence and measurements.
+
 Cancel `force (delay x)` and valid inverse builtin pairs such as
 `unIData (iData x)`. Establish preconditions per direction and representation;
 `iData (unIData d)` is not an unconditional replacement for arbitrary Data.
@@ -1763,7 +1817,7 @@ O1 preserves enabled traces and their order; trace generation remains independen
 It includes accepted direct integer inverse cancellation before the single ANF.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
-Remaining Chunk 8–10 work and final convergence review stay open.
+Chunks 9–10 and final convergence review stay open.
 Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
 heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
 follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).

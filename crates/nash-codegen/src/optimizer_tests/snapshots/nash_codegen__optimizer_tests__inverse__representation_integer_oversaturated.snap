@@ -1,0 +1,27 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+unIData (iData 7) 1
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin unIData) [(builtin iData) (con integer 7)]] (con integer 1)])
+--- optimized Core
+7 1
+--- optimized UPLC
+(program 1.1.0 [(con integer 7) (con integer 1)])
+--- isolated pass
+--- core before
+unIData (iData 7) 1
+--- uplc before
+(program 1.1.0
+  [[(builtin unIData) [(builtin iData) (con integer 7)]] (con integer 1)])
+--- core after
+7 1
+--- uplc after
+(program 1.1.0 [(con integer 7) (con integer 1)])
+--- result
+error: NonFunctionApplication(Con(Integer(1)), Con(Integer(7)))
+--- logs
+[]

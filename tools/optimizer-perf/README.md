@@ -19,10 +19,11 @@ mismatch, a compilation failure or an exhausted budget. `measure` prints JSON
 without changing any baseline. Debug/release profiles produce the same ledger
 budgets: these are CEK costs, not Rust wall-clock benchmarks.
 
-The 23 rows include the original 20 covering list traversal, static recursion, Data matching and
+The 108 rows include the original 20 covering list traversal, static recursion, Data matching and
 misses, field decoding, validation success/failure, the real base Logic helpers,
 and six ledger scenarios each for the existing Vesting and VestingParam source
-fixtures, plus constant-prefix two-use, cold and loop regressions. Validators receive one V3 ScriptContext containing TxInfo, redeemer and spending
+fixtures, plus constant-prefix two-use, cold and loop regressions and 85 representation
+cancellation cases shared with semantic tests. Validators receive one V3 ScriptContext containing TxInfo, redeemer and spending
 datum; the optional minimum-lock parameter is applied off-chain first. Times are
 POSIX milliseconds from the validity-range lower bound. Validator CPU/memory
 include parameter and context application;
@@ -30,7 +31,7 @@ validator bytes exclude those arguments. Ordinary expression fixtures include
 their inputs in the measured program.
 
 The `before` pipeline is O0 (recursion rewrite and lowering). The `after` pipeline
-is the accepted static lifting, pre-ANF unused-parameter removal, direct native-constructor folding and integer inverse cancellation, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, force/delay, known-Boolean/integer/bytes, bound-constructor, known-constructor field, known-list, literal-Data and IData/BData/ListData/MapData/ConstrData producer cleanup,
+is the accepted static lifting, pre-ANF unused-parameter removal, direct native-constructor folding and representation inverse cancellation, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, representation cancellation, force/delay, known-Boolean/integer/bytes, bound-constructor, known-constructor field, known-list, literal-Data and IData/BData/ListData/MapData/ConstrData producer cleanup,
 then recursion rewrite, binder freshening and lowering with both Chunk 5 sharing steps. No second normalization
 or ANF-dependent cleanup runs after recursion rewriting. Rule 3 was accepted on 27 September 2026. These figures record current behavior, including overhead
 from ANF; they are not a claim that the incomplete optimizer beats O0 everywhere.

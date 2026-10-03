@@ -1,0 +1,31 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/inverse.rs
+expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+---
+--- unoptimized Core
+encodeUtf8 (decodeUtf8 (con bytestring #ff))
+--- unoptimized UPLC
+(program 1.1.0
+  [(builtin encodeUtf8) [(builtin decodeUtf8) (con bytestring #ff)]])
+--- optimized Core
+let anf#1 : string = decodeUtf8 (con bytestring #ff) in
+encodeUtf8 anf#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 [(builtin encodeUtf8) anf_2])
+    [(builtin decodeUtf8) (con bytestring #ff)]])
+--- isolated pass
+--- core before
+encodeUtf8 (decodeUtf8 (con bytestring #ff))
+--- uplc before
+(program 1.1.0
+  [(builtin encodeUtf8) [(builtin decodeUtf8) (con bytestring #ff)]])
+--- core after
+encodeUtf8 (decodeUtf8 (con bytestring #ff))
+--- uplc after
+(program 1.1.0
+  [(builtin encodeUtf8) [(builtin decodeUtf8) (con bytestring #ff)]])
+--- result
+error: Runtime(DecodeUtf8(Utf8Error { valid_up_to: 0, error_len: Some(1) }))
+--- logs
+[]
