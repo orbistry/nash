@@ -1,0 +1,211 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#19 : int -> int -> int [static []] = \x#21 : int n#22 : int -> case@Bool equalsInteger n#22 0 of
+    True -> 42
+    False -> g#20 (trace "retained" in subtractInteger n#22 1) (trace "discarded" in 7)
+  g#20 : int -> int -> int [static []] = \m#23 : int y#24 : int -> case@Bool equalsInteger m#23 0 of
+    True -> 42
+    False -> f#19 (trace "discarded" in 7) (trace "retained" in subtractInteger m#23 1)
+in
+f#19 7 3
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_1
+    [(lam f_19
+      [(lam g_20 [[f_19 (con integer 7)] (con integer 3)])
+        (lam m_13 (lam y_14 [dispatch_1 (constr 1 dispatch_1 m_13 y_14)]))])
+      (lam x_15 (lam n_16 [dispatch_1 (constr 0 dispatch_1 x_15 n_16)]))])
+    (lam request_2
+      (case
+        request_2
+        (lam self_3
+          (lam x_21
+            (lam n_22
+              (case
+                [[(builtin equalsInteger) n_22] (con integer 0)]
+                [self_3
+                  (constr 1
+                    self_3
+                    (force
+                      [[(force (builtin trace)) (con string "retained")]
+                        (delay [[(builtin subtractInteger) n_22] (con integer 1)])])
+                    (force
+                      [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))]))]
+                (con integer 42)))))
+        (lam self_8
+          (lam m_23
+            (lam y_24
+              (case
+                [[(builtin equalsInteger) m_23] (con integer 0)]
+                [self_8
+                  (constr 0
+                    self_8
+                    (force
+                      [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))])
+                    (force
+                      [[(force (builtin trace)) (con string "retained")]
+                        (delay [[(builtin subtractInteger) m_23] (con integer 1)])]))]
+                (con integer 42)))))))])
+--- optimized Core
+letrec
+  f#1 : int -> int [static []] = \n#4 : int -> let anf#11 : bool = equalsInteger n#4 0 in
+  case@Bool anf#11 of
+    True -> 42
+    False -> let arg#7 : int = trace "retained" in subtractInteger n#4 1 in
+    let arg#8 : int = trace "discarded" in 7 in
+    g#2 arg#7
+  g#2 : int -> int [static []] = \m#5 : int -> let anf#12 : bool = equalsInteger m#5 0 in
+  case@Bool anf#12 of
+    True -> 42
+    False -> let arg#9 : int = trace "discarded" in 7 in
+    let arg#10 : int = trace "retained" in subtractInteger m#5 1 in
+    f#1 arg#10
+in
+f#1 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_37
+    [(lam partial_38
+      [(lam partial_39
+        [(lam dispatch_32
+          [(lam f_34
+            [(lam g_36 [f_34 (con integer 3)])
+              (lam m_35 [dispatch_32 (constr 1 dispatch_32 m_35)])])
+            (lam n_33 [dispatch_32 (constr 0 dispatch_32 n_33)])])
+          (lam request_21
+            (case
+              request_21
+              (lam self_22
+                (lam n_23
+                  [(lam anf_24
+                    (case
+                      anf_24
+                      [(lam arg_25
+                        [(lam arg_26 [self_22 (constr 1 self_22 arg_25)])
+                          (force [partial_38 (delay (con integer 7))])])
+                        (force [partial_39 (delay [[(builtin subtractInteger) n_23] (con integer 1)])])]
+                      (con integer 42)))
+                    [[(builtin equalsInteger) n_23] (con integer 0)]]))
+              (lam self_27
+                (lam m_28
+                  [(lam anf_29
+                    (case
+                      anf_29
+                      [(lam arg_30
+                        [(lam arg_31 [self_27 (constr 0 self_27 arg_31)])
+                          (force [partial_39 (delay [[(builtin subtractInteger) m_28] (con integer 1)])])])
+                        (force [partial_38 (delay (con integer 7))])]
+                      (con integer 42)))
+                    [[(builtin equalsInteger) m_28] (con integer 0)]]))))])
+        [builtin_37 (con string "retained")]])
+      [builtin_37 (con string "discarded")]])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#19 : int -> int -> int [static []] = \x#21 : int n#22 : int -> case@Bool equalsInteger n#22 0 of
+    True -> 42
+    False -> g#20 (trace "retained" in subtractInteger n#22 1) (trace "discarded" in 7)
+  g#20 : int -> int -> int [static []] = \m#23 : int y#24 : int -> case@Bool equalsInteger m#23 0 of
+    True -> 42
+    False -> f#19 (trace "discarded" in 7) (trace "retained" in subtractInteger m#23 1)
+in
+f#19 7 3
+--- isolated Core after
+letrec
+  f#19 : int -> int [static []] = \n#22 : int -> case@Bool equalsInteger n#22 0 of
+    True -> 42
+    False -> let arg#1 : int = trace "retained" in subtractInteger n#22 1 in
+    let arg#2 : int = trace "discarded" in 7 in
+    g#20 arg#1
+  g#20 : int -> int [static []] = \m#23 : int -> case@Bool equalsInteger m#23 0 of
+    True -> 42
+    False -> let arg#3 : int = trace "discarded" in 7 in
+    let arg#4 : int = trace "retained" in subtractInteger m#23 1 in
+    f#19 arg#4
+in
+f#19 3
+--- isolated UPLC before
+(program 1.1.0
+  [(lam dispatch_144
+    [(lam f_19
+      [(lam g_20 [[f_19 (con integer 7)] (con integer 3)])
+        (lam m_156 (lam y_157 [dispatch_144 (constr 1 dispatch_144 m_156 y_157)]))])
+      (lam x_158 (lam n_159 [dispatch_144 (constr 0 dispatch_144 x_158 n_159)]))])
+    (lam request_145
+      (case
+        request_145
+        (lam self_146
+          (lam x_21
+            (lam n_22
+              (case
+                [[(builtin equalsInteger) n_22] (con integer 0)]
+                [self_146
+                  (constr 1
+                    self_146
+                    (force
+                      [[(force (builtin trace)) (con string "retained")]
+                        (delay [[(builtin subtractInteger) n_22] (con integer 1)])])
+                    (force
+                      [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))]))]
+                (con integer 42)))))
+        (lam self_151
+          (lam m_23
+            (lam y_24
+              (case
+                [[(builtin equalsInteger) m_23] (con integer 0)]
+                [self_151
+                  (constr 0
+                    self_151
+                    (force
+                      [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))])
+                    (force
+                      [[(force (builtin trace)) (con string "retained")]
+                        (delay [[(builtin subtractInteger) m_23] (con integer 1)])]))]
+                (con integer 42)))))))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam dispatch_160
+    [(lam f_19
+      [(lam g_20 [f_19 (con integer 3)])
+        (lam m_168 [dispatch_160 (constr 1 dispatch_160 m_168)])])
+      (lam n_169 [dispatch_160 (constr 0 dispatch_160 n_169)])])
+    (lam request_161
+      (case
+        request_161
+        (lam self_162
+          (lam n_22
+            [(lam anf_5
+              (case
+                anf_5
+                [(lam arg_1
+                  [(lam arg_2 [self_162 (constr 1 self_162 arg_1)])
+                    (force
+                      [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))])])
+                  (force
+                    [[(force (builtin trace)) (con string "retained")]
+                      (delay [[(builtin subtractInteger) n_22] (con integer 1)])])]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_22] (con integer 0)]]))
+        (lam self_165
+          (lam m_23
+            [(lam anf_6
+              (case
+                anf_6
+                [(lam arg_3
+                  [(lam arg_4 [self_165 (constr 0 self_165 arg_4)])
+                    (force
+                      [[(force (builtin trace)) (con string "retained")]
+                        (delay [[(builtin subtractInteger) m_23] (con integer 1)])])])
+                  (force
+                    [[(force (builtin trace)) (con string "discarded")] (delay (con integer 7))])]
+                (con integer 42)))
+              [[(builtin equalsInteger) m_23] (con integer 0)]]))))])
+--- result
+(con integer 42)
+--- logs
+["retained", "discarded", "discarded", "retained", "retained", "discarded"]

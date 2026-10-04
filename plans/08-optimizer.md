@@ -25,13 +25,12 @@ sharing during optimized lowering. Step 2 is accepted with a two-occurrence mini
 for one leading literal; the retained Chunk 5 scope is complete. Chunk 6 safe
 unused-binding removal, recursive-member reachability and pre-ANF nonrecursive
 unused-parameter removal are accepted. Direct force/delay cancellation in Chunk 8
-is also accepted. Recursive unused-parameter removal is approved Chunk 6 scope
-but remains unimplemented. Known Boolean, direct/bound native-constructor and
+is also accepted. Recursive unused-parameter removal completes the approved Chunk 6 scope. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
 as well. The retained Chunk 7 scope is complete. Chunks 9 and 10 are now
-integrated; recursive unused-parameter removal and Chunk 11 remain. The retained Chunk 8 representation cancellations
+integrated; Chunk 11 remains. The retained Chunk 8 representation cancellations
 are accepted, including integer/byte/list/map Data round trips, UTF-8 round trips
 and bound constructor Data projections/reconstruction. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
@@ -1149,28 +1148,27 @@ validation passed all 513 IR/codegen tests with no snapshot changes, root and
 isolated strict Clippy, and formatting. All 23 performance rows remain identical;
 only baseline pipeline settings and revision metadata were refreshed.
 
-**Fourth rule, required scope (27 September 2026): recursive unused parameters.**
-This belongs in Chunk 6. Its scope is approved, but it is not implemented or
-validated yet. The user subsequently directed starting the Chunk 7 Boolean-case
-trial; this authorization does not mark recursive parameter removal implemented. Cover self-recursive and mutually recursive helpers,
-including parameters only forwarded through recursive calls rather than consumed.
-Specify how parameter-use dependencies reach a fixed point across the group;
-a recursive forwarding occurrence alone is not proof that a value is needed.
+**Fourth rule, integrated (5 October 2026): recursive unused parameters.**
+The existing pre-ANF pass now handles self-recursive and mutual groups after
+static lifting. Parameter liveness starts at real uses and propagates backward
+through direct, bare-variable forwarding dependencies until stable. Forwarding
+alone does not keep a parameter live. Compound argument evaluation remains strict,
+so its parameter references are consumers even when the receiving slot is unused.
+All entry and recursive calls retain non-atomic arguments in source order.
 
-Design and trial this on complete calls before ANF, with an explicit ordering
-relative to static lifting. Preserve strict evaluation and source order for both
-retained and discarded arguments at entry calls and recursive calls. Keep worker
-captures, type views and static-parameter metadata consistent with any changed
-signature. All-unused recursive workers must preserve delayed entry, repeated
-execution and divergence. State conservative behavior for partial, escaping and
-oversaturated uses; do not recover ANF call chains to enable the rule.
+Any partial, escaping, oversaturated or unsupported type view leaves the group
+unchanged. Retained static indices are remapped and each direct call keeps its
+own result type view. All-unused workers become delayed recursive values;
+recursion lowering and dead-member cleanup support mutual groups containing such
+workers. Captures, cold entry, repeated execution and divergence are preserved.
+No second ANF pass or general unused-signature fixed point was added.
 
-Start with a concrete self-recursive example and proposed algorithm, then cover
-mutual forwarding dependencies. Add paired Core/UPLC semantic snapshots and
-explicit-only measurements before the keep decision. Required cases include
-real parameter consumption, forwarding-only cycles, strict traces/failures in
-dropped arguments, all-unused workers, partial/escaping uses and static lifting
-interaction. Chunk 6 remains open until this rule has a reviewed outcome.
+Semantic snapshots cover self/mutual forwarding, permuted slots, real consumers,
+compound arguments, traces/failures, all-unused/mixed workers, partial/escaping/
+oversaturated calls, static indices, type views, captured returned closures and
+unevaluated divergence. Source fixtures cover static-lift interaction and mutual
+recursion. Explicit measurements and validation are recorded in
+[the recursive parameter report](../docs/research/recursive-parameters.md).
 
 Remove unused bindings only when their evaluation is safe to discard. Remove
 unreachable recursive members by continuation reachability. Remove unused

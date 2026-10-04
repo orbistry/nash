@@ -1,0 +1,49 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#62 : int -> int -> int -> int [static []] = \x#64 : int n#65 : int -> \z#68 : int -> z#68
+in
+f#62 0 0 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_62 [[[f_62 (con integer 0)] (con integer 0)] (con integer 42)])
+    [(lam self_1 [self_1 self_1])
+      (lam self_1 (lam x_64 (lam n_65 (lam z_68 z_68))))]])
+--- optimized Core
+letrec
+  f#1 : int -> int -> int -> int [static []] = \x#2 : int n#3 : int -> \z#4 : int -> z#4
+in
+f#1 0 0 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam f_13 [[[f_13 (con integer 0)] (con integer 0)] (con integer 42)])
+    [(lam self_8 [self_8 self_8])
+      (lam self_9 (lam x_10 (lam n_11 (lam z_12 z_12))))]])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#62 : int -> int -> int -> int [static []] = \x#64 : int n#65 : int -> \z#68 : int -> z#68
+in
+f#62 0 0 42
+--- isolated Core after
+letrec
+  f#62 : int -> int -> int -> int [static []] = \x#64 : int n#65 : int -> \z#68 : int -> z#68
+in
+f#62 0 0 42
+--- isolated UPLC before
+(program 1.1.0
+  [(lam f_62 [[[f_62 (con integer 0)] (con integer 0)] (con integer 42)])
+    [(lam self_244 [self_244 self_244])
+      (lam self_244 (lam x_64 (lam n_65 (lam z_68 z_68))))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam f_62 [[[f_62 (con integer 0)] (con integer 0)] (con integer 42)])
+    [(lam self_247 [self_247 self_247])
+      (lam self_247 (lam x_64 (lam n_65 (lam z_68 z_68))))]])
+--- result
+(con integer 42)
+--- logs
+[]

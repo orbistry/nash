@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/dead_code.rs
-assertion_line: 68
 expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -17,16 +16,16 @@ f#1 42
           (force [[(force (builtin trace)) (con string "failure")] (delay (error))])))]])
 --- optimized Core
 letrec
-  f#3 : int -> int [static []] = \x#4 : int -> trace "failure" in error
+  f#3 : @delay int [static []] = \ -> delay (trace "failure" in error)
 in
-f#3 42
+force f#3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_9
-    [(lam f_8 [f_8 (con integer 42)])
-      [(lam self_5 [self_5 self_5])
-        (lam self_6
-          (lam x_7 (force [[builtin_9 (con string "failure")] (delay (error))])))]])
+  [(lam builtin_6
+    [(lam f_5 (force f_5))
+      [(lam self_2 [self_2 self_2])
+        (lam self_4
+          (delay (force [[builtin_6 (con string "failure")] (delay (error))])))]])
     (force (builtin trace))])
 --- isolated pass
 --- core before

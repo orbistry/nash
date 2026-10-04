@@ -82,3 +82,26 @@ prefixLoop n =
 
 constantPrefixLoop : int
 constantPrefixLoop = prefixLoop 8
+
+unusedSelf : int -> int -> int
+unusedSelf unused n =
+    if Builtin.equalsInteger n 0 then
+        42
+    else
+        unusedSelf unused (Builtin.subtractInteger n 1)
+
+recursiveUnusedSelf : int
+recursiveUnusedSelf = unusedSelf (Builtin.trace "entry" 7) 3
+
+unusedFirst : int -> int -> int
+unusedFirst unused n =
+    if Builtin.equalsInteger n 0 then
+        42
+    else
+        unusedSecond (Builtin.subtractInteger n 1) unused
+
+unusedSecond : int -> int -> int
+unusedSecond n unused = unusedFirst unused n
+
+recursiveUnusedMutual : int
+recursiveUnusedMutual = unusedFirst (Builtin.trace "entry" 7) 3

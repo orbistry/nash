@@ -59,7 +59,7 @@ fn mark(
 
 /// Input must have globally unique, well-scoped binders. Every reference counts,
 /// including partial applications, escaping values and suspended captures.
-/// Function bodies are deferred; the supported singleton delayed worker is too.
+/// Function bodies are deferred; delayed workers are too.
 /// No call-shape analysis, static-parameter inference or parameter removal occurs.
 pub fn prune_recursive<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     core.map(b, &mut |node| {
@@ -68,8 +68,9 @@ pub fn prune_recursive<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> 
         };
         // Other zero-parameter groups are unsupported recursive values, not
         // suspended function definitions. Preserve their lowering error.
-        if binders.iter().any(|r| r.params.is_empty())
-            && !(binders.len() == 1 && matches!(binders[0].body.kind, CoreKind::Delay(_)))
+        if binders
+            .iter()
+            .any(|r| r.params.is_empty() && !matches!(r.body.kind, CoreKind::Delay(_)))
         {
             return None;
         }

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/unused_params.rs
-assertion_line: 261
 expression: "crate::harness::pass_snapshot(b.arena, root,\nformat!(\"--- core before\\n{}\\n--- core after\\n{}\", pretty(root),\npretty(after)))"
 ---
 --- unoptimized Core
@@ -36,7 +35,7 @@ loop#4 0)
 --- core after
 let helper#2 : @delay int = delay 42 in
 let arg#5 : int = letrec
-  loop#4 : int -> int [static []] = \n#3 : int -> loop#4 n#3
+  loop#4 : @delay int [static []] = \ -> delay (force loop#4)
 in
-loop#4 0 in
+force loop#4 in
 force helper#2

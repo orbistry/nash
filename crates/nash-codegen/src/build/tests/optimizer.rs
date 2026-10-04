@@ -99,3 +99,38 @@ boolean_case_snapshot!(
     main = Builtin.headList (fields (Builtin.unConstrData (Builtin.constrData 0 [I 42])))
 "#
 );
+
+boolean_case_snapshot!(
+    recursive_forwarded_parameter,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    loop : int -> int -> int
+    loop unused n =
+        if Builtin.equalsInteger n 0 then
+            42
+        else
+            loop unused (Builtin.subtractInteger n 1)
+    main : int
+    main = loop (Builtin.trace "entry" 7) 3
+"#
+);
+boolean_case_snapshot!(
+    mutually_forwarded_parameter,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    first : int -> int -> int
+    first unused n =
+        if Builtin.equalsInteger n 0 then
+            42
+        else
+            second (Builtin.subtractInteger n 1) unused
+    second : int -> int -> int
+    second n unused = first unused n
+    main : int
+    main = first (Builtin.trace "entry" 7) 3
+"#
+);

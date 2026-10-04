@@ -1,0 +1,60 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- reduced mixed group\\n{}\\n--- pruned group\\n{}\\n--- lowered\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(reduced), pretty(after), result.uplc, result.result, result.logs))"
+---
+--- unoptimized Core
+letrec
+  delayed#1 : int -> int [static []] = \x#3 : int -> trace "body" in 42
+  unusedFunction#2 : int -> int [static []] = \y#4 : int -> y#4
+in
+delayed#1 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_5
+    [(lam delayed_1
+      [(lam unusedFunction_2 [delayed_1 (con integer 0)])
+        (lam y_13 [dispatch_5 (constr 1 dispatch_5 y_13)])])
+      (lam x_14 [dispatch_5 (constr 0 dispatch_5 x_14)])])
+    (lam request_6
+      (case
+        request_6
+        (lam self_7
+          (lam x_3
+            (force [[(force (builtin trace)) (con string "body")] (delay (con integer 42))])))
+        (lam self_10 (lam y_4 y_4))))])
+--- optimized Core
+letrec
+  delayed#5 : @delay int [static []] = \ -> delay (trace "body" in 42)
+in
+force delayed#5
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam delayed_4 (force delayed_4))
+      [(lam self_2 [self_2 self_2])
+        (lam self_3
+          (delay (force [[builtin_5 (con string "body")] (delay (con integer 42))])))]])
+    (force (builtin trace))])
+--- isolated pass
+--- reduced mixed group
+letrec
+  delayed#1 : @delay int [static []] = \ -> delay (trace "body" in 42)
+  unusedFunction#2 : int -> int [static []] = \y#4 : int -> y#4
+in
+force delayed#1
+--- pruned group
+letrec
+  delayed#1 : @delay int [static []] = \ -> delay (trace "body" in 42)
+in
+force delayed#1
+--- lowered
+(program 1.1.0
+  [(lam delayed_1 (force delayed_1))
+    [(lam self_15 [self_15 self_15])
+      (lam self_15
+        (delay
+          (force [[(force (builtin trace)) (con string "body")] (delay (con integer 42))])))]])
+--- result
+(con integer 42)
+--- logs
+["body"]

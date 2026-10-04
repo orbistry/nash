@@ -1,0 +1,110 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#31 : int -> int [static []] = \x#33 : int -> case@Bool true of
+    True -> trace "body" in 21
+    False -> f#31 x#33
+in
+addInteger (f#31 (trace "entry1" in 0)) (f#31 (trace "entry2" in 1))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_31
+    [[(builtin addInteger)
+      [f_31
+        (force
+          [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])]]
+      [f_31
+        (force
+          [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])]])
+    [(lam self_1 [self_1 self_1])
+      (lam self_1
+        (lam x_33
+          (case
+            (con bool True)
+            [[self_1 self_1] x_33]
+            (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))))]])
+--- optimized Core
+let f#1 : @delay int = delay (letrec
+  worker#3 : @delay int [static []] = \ -> delay (trace "body" in 21)
+in
+force worker#3) in
+let arg#4 : int = trace "entry1" in 0 in
+let anf#6 : int = force f#1 in
+let arg#5 : int = trace "entry2" in 1 in
+let anf#7 : int = force f#1 in
+addInteger anf#6 anf#7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_16
+    [(lam f_11
+      [(lam arg_12
+        [(lam anf_13
+          [(lam arg_14 [(lam anf_15 [[(builtin addInteger) anf_13] anf_15]) (force f_11)])
+            (force [[builtin_16 (con string "entry2")] (delay (con integer 1))])])
+          (force f_11)])
+        (force [[builtin_16 (con string "entry1")] (delay (con integer 0))])])
+      (delay
+        [(lam worker_10 (force worker_10))
+          [(lam self_8 [self_8 self_8])
+            (lam self_9
+              (delay (force [[builtin_16 (con string "body")] (delay (con integer 21))])))]])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#31 : int -> int [static []] = \x#33 : int -> case@Bool true of
+    True -> trace "body" in 21
+    False -> f#31 x#33
+in
+addInteger (f#31 (trace "entry1" in 0)) (f#31 (trace "entry2" in 1))
+--- isolated Core after
+letrec
+  f#31 : @delay int [static []] = \ -> delay (case@Bool true of
+    True -> trace "body" in 21
+    False -> force f#31)
+in
+addInteger (let arg#1 : int = trace "entry1" in 0 in
+force f#31) (let arg#2 : int = trace "entry2" in 1 in
+force f#31)
+--- isolated UPLC before
+(program 1.1.0
+  [(lam f_31
+    [[(builtin addInteger)
+      [f_31
+        (force
+          [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])]]
+      [f_31
+        (force
+          [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])]])
+    [(lam self_196 [self_196 self_196])
+      (lam self_196
+        (lam x_33
+          (case
+            (con bool True)
+            [[self_196 self_196] x_33]
+            (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam f_31
+    [(lam arg_1
+      [(lam anf_3
+        [(lam arg_2 [(lam anf_4 [[(builtin addInteger) anf_3] anf_4]) (force f_31)])
+          (force
+            [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])])
+        (force f_31)])
+      (force
+        [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])])
+    [(lam self_198 [self_198 self_198])
+      (lam self_198
+        (delay
+          (case
+            (con bool True)
+            (force [self_198 self_198])
+            (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))))]])
+--- result
+(con integer 42)
+--- logs
+["entry1", "body", "entry2", "body"]

@@ -1,0 +1,484 @@
+{
+  "comparison": "Previous O1 versus recursive unused-parameter removal; unchanged cost model and limits",
+  "previous_revision": "db358b8c",
+  "settings": "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "unchanged_original_cases": 178,
+  "rows": [
+    {
+      "input": "Workloads.recursiveUnusedSelf (fixtures/Workloads.nash)",
+      "o0": {
+        "cpu": 2540554,
+        "memory": 12442,
+        "bytes": 75,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 2156554,
+        "memory": 10042,
+        "bytes": 56,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 2156554,
+        "memory": 10042,
+        "bytes": 56,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      }
+    },
+    {
+      "input": "Workloads.recursiveUnusedMutual (fixtures/Workloads.nash)",
+      "o0": {
+        "cpu": 3436554,
+        "memory": 18042,
+        "bytes": 104,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 3196554,
+        "memory": 16542,
+        "bytes": 93,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 2876554,
+        "memory": 14542,
+        "bytes": 81,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: self_forwarding",
+      "o0": {
+        "cpu": 1777056,
+        "memory": 8010,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 1921056,
+        "memory": 8910,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 1921056,
+        "memory": 8910,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: mutual_forwarding",
+      "o0": {
+        "cpu": 2049056,
+        "memory": 9710,
+        "bytes": 83,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 2529056,
+        "memory": 12710,
+        "bytes": 101,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 2209056,
+        "memory": 10710,
+        "bytes": 82,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: mutual_consumed",
+      "o0": {
+        "cpu": 2049056,
+        "memory": 9710,
+        "bytes": 82,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 2529056,
+        "memory": 12710,
+        "bytes": 99,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 2529056,
+        "memory": 12710,
+        "bytes": 99,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: recursive_trace_order",
+      "o0": {
+        "cpu": 3078044,
+        "memory": 14102,
+        "bytes": 149,
+        "result": "(con integer 42)",
+        "logs": [
+          "retained",
+          "discarded",
+          "discarded",
+          "retained",
+          "retained",
+          "discarded"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 3926044,
+        "memory": 19402,
+        "bytes": 160,
+        "result": "(con integer 42)",
+        "logs": [
+          "retained",
+          "discarded",
+          "discarded",
+          "retained",
+          "retained",
+          "discarded"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 3318044,
+        "memory": 15602,
+        "bytes": 134,
+        "result": "(con integer 42)",
+        "logs": [
+          "retained",
+          "discarded",
+          "discarded",
+          "retained",
+          "retained",
+          "discarded"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: recursive_failure_order",
+      "o0": {
+        "cpu": 272637,
+        "memory": 167,
+        "bytes": 145,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "retained",
+          "discarded"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 272637,
+        "memory": 167,
+        "bytes": 156,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "retained",
+          "discarded"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 272637,
+        "memory": 167,
+        "bytes": 130,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "retained",
+          "discarded"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: all_unused_self",
+      "o0": {
+        "cpu": 1171300,
+        "memory": 5430,
+        "bytes": 70,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 1523300,
+        "memory": 7630,
+        "bytes": 75,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 1523300,
+        "memory": 7630,
+        "bytes": 75,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: all_unused_mutual",
+      "o0": {
+        "cpu": 1603300,
+        "memory": 8130,
+        "bytes": 95,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 1731300,
+        "memory": 8930,
+        "bytes": 97,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 1635300,
+        "memory": 8330,
+        "bytes": 89,
+        "result": "(con integer 42)",
+        "logs": [
+          "entry1",
+          "body",
+          "entry2",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: all_unused_cold",
+      "o0": {
+        "cpu": 192100,
+        "memory": 1300,
+        "bytes": 100,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: entry_failure",
+      "o0": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 63,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "first"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 70,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "first"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 70,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "first"
+        ]
+      }
+    },
+    {
+      "input": "recursive parameters: partial",
+      "o0": {
+        "cpu": 1319515,
+        "memory": 6107,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 1415515,
+        "memory": 6707,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 1415515,
+        "memory": 6707,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: escaping",
+      "o0": {
+        "cpu": 1367515,
+        "memory": 6407,
+        "bytes": 41,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 1415515,
+        "memory": 6707,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 1415515,
+        "memory": 6707,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: oversaturated",
+      "o0": {
+        "cpu": 304100,
+        "memory": 2000,
+        "bytes": 22,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 304100,
+        "memory": 2000,
+        "bytes": 22,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 304100,
+        "memory": 2000,
+        "bytes": 22,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: compound_dependency",
+      "o0": {
+        "cpu": 1649931,
+        "memory": 6911,
+        "bytes": 44,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "previous_o1": {
+        "cpu": 2081931,
+        "memory": 9611,
+        "bytes": 54,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "recursive_o1": {
+        "cpu": 2081931,
+        "memory": 9611,
+        "bytes": 54,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "recursive parameters: mixed_delayed",
+      "o0": {
+        "cpu": 3471636,
+        "memory": 16348,
+        "bytes": 95,
+        "result": "(con integer 84)",
+        "logs": [
+          "delayed"
+        ]
+      },
+      "previous_o1": {
+        "cpu": 4671636,
+        "memory": 23848,
+        "bytes": 115,
+        "result": "(con integer 84)",
+        "logs": [
+          "delayed"
+        ]
+      },
+      "recursive_o1": {
+        "cpu": 3727636,
+        "memory": 17948,
+        "bytes": 89,
+        "result": "(con integer 84)",
+        "logs": [
+          "delayed"
+        ]
+      }
+    }
+  ],
+  "sources": {
+    "Core fixtures": "//! Recursive parameter fixtures shared with the explicit performance workspace.\nuse nash_ir::{\n    build::Builder,\n    core::*,\n    ty::{ConstTy, TermTy, Ty},\n};\nuse nash_plutus::{builtin::DefaultFunction as F, constant::Constant};\n\npub fn cases<'a>(b: &Builder<'a>) -> Vec<(&'static str, &'a Core<'a>, bool)> {\n    let a = b.arena;\n    let int = b.int(0).ty;\n    let bool_ = Ty::Const(&ConstTy::Bool);\n    let fun = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[int, int]), int)));\n    let bind = |text, ty| Binder {\n        name: b.fresh(text),\n        ty,\n    };\n    let trace = |text, value| b.trace(b.lit(Constant::string(a, text)), value);\n    let mut cases = Vec::new();\n    for (name, mutual, consumed, effects, failure) in [\n        (\"self_forwarding\", false, false, false, false),\n        (\"mutual_forwarding\", true, false, false, false),\n        (\"mutual_consumed\", true, true, false, false),\n        (\"recursive_trace_order\", true, false, true, false),\n        (\"recursive_failure_order\", true, false, true, true),\n    ] {\n        let f = bind(\"f\", fun);\n        let g = bind(\"g\", fun);\n        let x = bind(\"x\", int);\n        let n = bind(\"n\", int);\n        let m = bind(\"m\", int);\n        let y = bind(\"y\", int);\n        let step = |target: Binder<'a>, unused: Binder<'a>, count: Binder<'a>, swapped: bool| {\n            let next = b.builtin(F::SubtractInteger, &[b.var(count.name, int), b.int(1)], int);\n            let discarded = if failure {\n                trace(\"discarded\", b.error(int))\n            } else if effects {\n                trace(\"discarded\", b.int(7))\n            } else {\n                b.var(unused.name, int)\n            };\n            let next = if effects {\n                trace(\"retained\", next)\n            } else {\n                next\n            };\n            let args = if swapped {\n                [next, discarded]\n            } else {\n                [discarded, next]\n            };\n            b.if_(\n                b.builtin(F::EqualsInteger, &[b.var(count.name, int), b.int(0)], bool_),\n                if consumed {\n                    b.var(unused.name, int)\n                } else {\n                    b.int(42)\n                },\n                b.app(b.var(target.name, fun), &args, int),\n            )\n        };\n        let mut group = vec![RecBinder {\n            binder: f,\n            params: a.alloc_slice_copy(&[x, n]),\n            static_params: &[],\n            body: step(if mutual { g } else { f }, x, n, mutual),\n        }];\n        if mutual {\n            group.push(RecBinder {\n                binder: g,\n                params: a.alloc_slice_copy(&[m, y]),\n                static_params: &[],\n                body: step(f, y, m, false),\n            });\n        }\n        cases.push((\n            name,\n            b.let_rec(\n                &group,\n                b.app(b.var(f.name, fun), &[b.int(7), b.int(3)], int),\n            ),\n            failure,\n        ));\n    }\n    // Removing every parameter must keep definitions cold and execute each call.\n    for (name, mutual, cold) in [\n        (\"all_unused_self\", false, false),\n        (\"all_unused_mutual\", true, false),\n        (\"all_unused_cold\", true, true),\n    ] {\n        let unary = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[int]), int)));\n        let f = bind(\"f\", unary);\n        let g = bind(\"g\", unary);\n        let x = bind(\"x\", int);\n        let y = bind(\"y\", int);\n        let invoke = |target: Binder<'a>, arg| b.app(b.var(target.name, unary), &[arg], int);\n        let body = b.if_(\n            b.lit(Constant::bool(a, true)),\n            trace(\"body\", b.int(21)),\n            invoke(if mutual { g } else { f }, b.var(x.name, int)),\n        );\n        let mut group = vec![RecBinder {\n            binder: f,\n            params: a.alloc_slice_copy(&[x]),\n            static_params: &[],\n            body,\n        }];\n        if mutual {\n            group.push(RecBinder {\n                binder: g,\n                params: a.alloc_slice_copy(&[y]),\n                static_params: &[],\n                body: invoke(f, b.var(y.name, int)),\n            });\n        }\n        let calls = b.builtin(\n            F::AddInteger,\n            &[\n                invoke(f, trace(\"entry1\", b.int(0))),\n                invoke(if mutual { g } else { f }, trace(\"entry2\", b.int(1))),\n            ],\n            int,\n        );\n        let calls = if cold {\n            b.if_(b.lit(Constant::bool(a, true)), b.int(42), calls)\n        } else {\n            calls\n        };\n        cases.push((name, b.let_rec(&group, calls), false));\n    }\n\n    for name in [\n        \"entry_failure\",\n        \"partial\",\n        \"escaping\",\n        \"oversaturated\",\n        \"compound_dependency\",\n        \"mixed_delayed\",\n    ] {\n        let f = bind(\"f\", fun);\n        let g = bind(\"g\", fun);\n        let x = bind(\"x\", int);\n        let n = bind(\"n\", int);\n        let y = bind(\"y\", int);\n        let m = bind(\"m\", int);\n        let unary = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[int]), int)));\n        let next = b.builtin(F::SubtractInteger, &[b.var(n.name, int), b.int(1)], int);\n        let forwarded = if name == \"compound_dependency\" {\n            b.builtin(F::AddInteger, &[b.var(x.name, int), b.int(1)], int)\n        } else {\n            b.var(x.name, int)\n        };\n        let body = b.if_(\n            b.builtin(F::EqualsInteger, &[b.var(n.name, int), b.int(0)], bool_),\n            b.int(42),\n            b.app(b.var(f.name, fun), &[forwarded, next], int),\n        );\n        let mut group = vec![RecBinder {\n            binder: f,\n            params: a.alloc_slice_copy(&[x, n]),\n            static_params: &[],\n            body,\n        }];\n        let invoke = b.app(b.var(f.name, fun), &[b.int(7), b.int(2)], int);\n        let entry = match name {\n            \"entry_failure\" => b.app(\n                b.var(f.name, fun),\n                &[trace(\"first\", b.error(int)), trace(\"later\", b.int(2))],\n                int,\n            ),\n            \"partial\" => b.app(\n                b.app(b.var(f.name, fun), &[b.int(7)], unary),\n                &[b.int(2)],\n                int,\n            ),\n            \"escaping\" => {\n                let alias = bind(\"alias\", fun);\n                b.let_(\n                    alias,\n                    b.var(f.name, fun),\n                    b.app(b.var(alias.name, fun), &[b.int(7), b.int(2)], int),\n                )\n            }\n            \"oversaturated\" => {\n                let z = bind(\"z\", int);\n                let ty = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[int, int]), unary)));\n                group[0].binder.ty = ty;\n                group[0].body = b.lam(&[z], b.var(z.name, int));\n                b.app(b.var(f.name, ty), &[b.int(0), b.int(0), b.int(42)], int)\n            }\n            \"mixed_delayed\" => {\n                group.push(RecBinder {\n                    binder: g,\n                    params: a.alloc_slice_copy(&[y, m]),\n                    static_params: &[],\n                    body: trace(\n                        \"delayed\",\n                        b.app(b.var(f.name, fun), &[b.int(7), b.int(2)], int),\n                    ),\n                });\n                b.builtin(\n                    F::AddInteger,\n                    &[\n                        invoke,\n                        b.app(b.var(g.name, fun), &[b.int(0), b.int(0)], int),\n                    ],\n                    int,\n                )\n            }\n            _ => invoke,\n        };\n        cases.push((name, b.let_rec(&group, entry), name == \"entry_failure\"));\n    }\n    cases\n}\n",
+    "Workloads": "module Workloads exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Logic exposing (..)\n\nsum : list int -> int\nsum xs =\n    case xs of\n        [] -> 0\n        x :: rest -> Builtin.addInteger x (sum rest)\n\nlistTraversal : int\nlistTraversal = sum [1, 2, 3, 4, 5, 6, 7, 8]\n\ncountdown : int -> int -> int\ncountdown n result =\n    if Builtin.equalsInteger n 0 then\n        result\n    else\n        countdown (Builtin.subtractInteger n 1) result\n\nstaticRecursion : int\nstaticRecursion = countdown 8 42\n\nmatchData : Data -> int\nmatchData value =\n    case value of\n        I n -> n\n        _ -> 0\n\ndataMatch : int\ndataMatch = matchData (I 42)\n\ndataMiss : int\ndataMiss = matchData (B #\"ab\")\n\ndecode : Data -> int\ndecode value =\n    case value of\n        Constr pair(_, [I n, _]) -> n\n        _ -> 0\n\ndecoding : int\ndecoding = decode (Builtin.constrData 0 [I 42, I 7])\n\nvalidate : Data -> unit\nvalidate value =\n    case value of\n        I n -> assert (Builtin.lessThanInteger 0 n)\n        _ -> fail\n\nvalidationPass : unit\nvalidationPass = validate (I 42)\n\nvalidationFail : unit\nvalidationFail = validate (I 0)\n\nbooleanHelpers : bool\nbooleanHelpers = (True && False) || (True && True)\n\nconstantPrefixTwice : int\nconstantPrefixTwice =\n    Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nconstantPrefixCold : int\nconstantPrefixCold =\n    if True then\n        42\n    else\n        Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nprefixLoop : int -> int\nprefixLoop n =\n    if Builtin.equalsInteger n 0 then\n        0\n    else\n        Builtin.addInteger\n            (Builtin.addInteger (Builtin.subtractInteger 100 n) (Builtin.subtractInteger 100 n))\n            (prefixLoop (Builtin.subtractInteger n 1))\n\nconstantPrefixLoop : int\nconstantPrefixLoop = prefixLoop 8\n\nunusedSelf : int -> int -> int\nunusedSelf unused n =\n    if Builtin.equalsInteger n 0 then\n        42\n    else\n        unusedSelf unused (Builtin.subtractInteger n 1)\n\nrecursiveUnusedSelf : int\nrecursiveUnusedSelf = unusedSelf (Builtin.trace \"entry\" 7) 3\n\nunusedFirst : int -> int -> int\nunusedFirst unused n =\n    if Builtin.equalsInteger n 0 then\n        42\n    else\n        unusedSecond (Builtin.subtractInteger n 1) unused\n\nunusedSecond : int -> int -> int\nunusedSecond n unused = unusedFirst unused n\n\nrecursiveUnusedMutual : int\nrecursiveUnusedMutual = unusedFirst (Builtin.trace \"entry\" 7) 3\n",
+    "previous unused_params": "//! Shorten nonrecursive helper signatures before ANF, with exact direct calls only.\nuse crate::{\n    analysis, anf,\n    build::Builder,\n    core::{Binder, Core, CoreKind},\n    ty::{RuntimeTy, TermTy, Ty},\n};\nuse std::collections::HashSet;\n\nfn signature<'a>(b: &Builder<'a>, ty: Ty<'a>, keep: &[bool]) -> Option<Ty<'a>> {\n    let Ty::Term(TermTy::Fun(params, result)) = ty else {\n        return None;\n    };\n    if params.len() != keep.len() {\n        return None;\n    }\n    let params: Vec<_> = params\n        .iter()\n        .zip(keep)\n        .filter_map(|(p, keep)| keep.then_some(*p))\n        .collect();\n    Some(if params.is_empty() {\n        Ty::Runtime(b.arena.alloc(RuntimeTy::Delay(*result)))\n    } else {\n        Ty::Term(\n            b.arena\n                .alloc(TermTy::Fun(b.arena.alloc_slice_copy(&params), *result)),\n        )\n    })\n}\n\n/// Requires typed Core and globally unique, well-scoped binders. Every use must\n/// be a direct application with exactly the original arity. Partial, escaping,\n/// oversaturated or unsupported signature views leave the helper unchanged.\n/// Every non-atomic argument gets a strict binding in source order before the\n/// shortened call, including discarded arguments. Exact calls to a known lambda\n/// cannot run its body during partial application. Atoms are safe to discard.\n/// Bindings stay call-local; this pass does not remove them or change LetRec\n/// parameters. All-unused helpers become delays, forced separately at each call.\n/// Use the enclosing program Builder when optimizing a subtree for reinsertion.\npub fn reduce<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {\n    let report = analysis::occurrences(core);\n    let mut occupied: HashSet<_> = report\n        .bindings\n        .iter()\n        .map(|x| x.name.unique)\n        .chain(report.uses.iter().map(|x| x.name.unique))\n        .collect();\n    core.map(b, &mut |node| {\n        let CoreKind::Let {\n            binder,\n            value,\n            body,\n        } = node.kind\n        else {\n            return None;\n        };\n        let CoreKind::Lam {\n            params,\n            body: lambda_body,\n        } = value.kind\n        else {\n            return None;\n        };\n        let mut used = HashSet::new();\n        lambda_body.walk(&mut |node| {\n            if let CoreKind::Var(name) = node.kind {\n                used.insert(name.unique);\n            }\n        });\n        let keep: Vec<_> = params\n            .iter()\n            .map(|p| used.contains(&p.name.unique))\n            .collect();\n        if keep.iter().all(|keep| *keep) {\n            return None;\n        }\n        let (mut uses, mut calls) = (0usize, 0usize);\n        body.walk(&mut |node| match node.kind {\n            CoreKind::Var(name) if name.unique == binder.name.unique => uses += 1,\n            CoreKind::App { func, args }\n                if matches!(func.kind, CoreKind::Var(name) if name.unique == binder.name.unique)\n                    && args.len() == params.len()\n                    && matches!(func.ty, Ty::Term(TermTy::Fun(types, _)) if types.len() == keep.len()) =>\n            {\n                calls += 1\n            }\n            _ => {}\n        });\n        if calls == 0 || calls != uses {\n            return None;\n        }\n        let binder_ty = signature(b, binder.ty, &keep)?;\n        let value_ty = signature(b, value.ty, &keep)?;\n        let params: Vec<_> = params\n            .iter()\n            .zip(&keep)\n            .filter_map(|(p, keep)| keep.then_some(*p))\n            .collect();\n        let value = b.with_type(\n            if params.is_empty() {\n                b.delay(lambda_body)\n            } else {\n                b.lam(&params, lambda_body)\n            },\n            value_ty,\n        );\n        let body = body.map(b, &mut |call| {\n            let CoreKind::App { func, args } = call.kind else {\n                return None;\n            };\n            let CoreKind::Var(name) = func.kind else {\n                return None;\n            };\n            if name.unique != binder.name.unique {\n                return None;\n            }\n            let func = b.var(\n                name,\n                signature(b, func.ty, &keep).expect(\"prechecked signature\"),\n            );\n            let mut prefix = Vec::new();\n            let mut retained = Vec::new();\n            for (arg, keep) in args.iter().zip(&keep) {\n                let argument = if anf::is_atom(arg) {\n                    *arg\n                } else {\n                    let name = loop {\n                        let name = b.fresh(\"arg\");\n                        if occupied.insert(name.unique) { break name; }\n                    };\n                    let binder = Binder { name, ty: arg.ty };\n                    prefix.push((binder, *arg));\n                    b.var(name, arg.ty)\n                };\n                if *keep { retained.push(argument); }\n            }\n            let mut result = if retained.is_empty() {\n                b.force(func, call.ty)\n            } else {\n                b.app(func, &retained, call.ty)\n            };\n            for (binder, value) in prefix.into_iter().rev() {\n                result = b.let_(binder, value, result);\n            }\n            Some(result)\n        });\n        Some(b.with_type(\n            b.let_(\n                Binder {\n                    ty: binder_ty,\n                    ..binder\n                },\n                value,\n                body,\n            ),\n            node.ty,\n        ))\n    })\n}\n",
+    "unused_params": "//! Shorten helper signatures before ANF, with exact direct calls only.\nuse crate::{\n    analysis, anf,\n    build::Builder,\n    core::{Binder, Core, CoreKind, RecBinder},\n    ty::{RuntimeTy, TermTy, Ty},\n};\nuse std::collections::{HashMap, HashSet};\n\nfn signature<'a>(b: &Builder<'a>, ty: Ty<'a>, keep: &[bool]) -> Option<Ty<'a>> {\n    let Ty::Term(TermTy::Fun(params, result)) = ty else {\n        return None;\n    };\n    if params.len() != keep.len() {\n        return None;\n    }\n    let params: Vec<_> = params\n        .iter()\n        .zip(keep)\n        .filter_map(|(p, keep)| keep.then_some(*p))\n        .collect();\n    Some(if params.is_empty() {\n        Ty::Runtime(b.arena.alloc(RuntimeTy::Delay(*result)))\n    } else {\n        Ty::Term(\n            b.arena\n                .alloc(TermTy::Fun(b.arena.alloc_slice_copy(&params), *result)),\n        )\n    })\n}\n\n/// Requires typed Core and globally unique, well-scoped binders. Every use must\n/// be a direct application with exactly the original arity. Partial, escaping,\n/// oversaturated or unsupported signature views leave the helper unchanged.\n/// Every non-atomic argument gets a strict binding in source order before the\n/// shortened call, including discarded arguments. Exact calls to a known lambda\n/// cannot run its body during partial application. Atoms are safe to discard.\n/// Bindings stay call-local. Recursive parameter liveness follows bare-variable\n/// forwarding dependencies to a fixed point; compound arguments stay strict.\n/// All-unused helpers become delays, forced separately at each call.\n/// Use the enclosing program Builder when optimizing a subtree for reinsertion.\npub fn reduce<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {\n    let report = analysis::occurrences(core);\n    let mut occupied: HashSet<_> = report\n        .bindings\n        .iter()\n        .map(|x| x.name.unique)\n        .chain(report.uses.iter().map(|x| x.name.unique))\n        .collect();\n    core.map(b, &mut |node| {\n        if let CoreKind::LetRec { binders, body } = node.kind {\n            return recursive(b, node, binders, body, &mut occupied);\n        }\n        let CoreKind::Let {\n            binder,\n            value,\n            body,\n        } = node.kind\n        else {\n            return None;\n        };\n        let CoreKind::Lam {\n            params,\n            body: lambda_body,\n        } = value.kind\n        else {\n            return None;\n        };\n        let mut used = HashSet::new();\n        lambda_body.walk(&mut |node| {\n            if let CoreKind::Var(name) = node.kind {\n                used.insert(name.unique);\n            }\n        });\n        let keep: Vec<_> = params\n            .iter()\n            .map(|p| used.contains(&p.name.unique))\n            .collect();\n        if keep.iter().all(|keep| *keep) {\n            return None;\n        }\n        let (mut uses, mut calls) = (0usize, 0usize);\n        body.walk(&mut |node| match node.kind {\n            CoreKind::Var(name) if name.unique == binder.name.unique => uses += 1,\n            CoreKind::App { func, args }\n                if matches!(func.kind, CoreKind::Var(name) if name.unique == binder.name.unique)\n                    && args.len() == params.len()\n                    && matches!(func.ty, Ty::Term(TermTy::Fun(types, _)) if types.len() == keep.len()) =>\n            {\n                calls += 1\n            }\n            _ => {}\n        });\n        if calls == 0 || calls != uses {\n            return None;\n        }\n        let binder_ty = signature(b, binder.ty, &keep)?;\n        let value_ty = signature(b, value.ty, &keep)?;\n        let params: Vec<_> = params\n            .iter()\n            .zip(&keep)\n            .filter_map(|(p, keep)| keep.then_some(*p))\n            .collect();\n        let value = b.with_type(\n            if params.is_empty() {\n                b.delay(lambda_body)\n            } else {\n                b.lam(&params, lambda_body)\n            },\n            value_ty,\n        );\n        let body = body.map(b, &mut |call| {\n            let CoreKind::App { func, args } = call.kind else {\n                return None;\n            };\n            let CoreKind::Var(name) = func.kind else {\n                return None;\n            };\n            if name.unique != binder.name.unique {\n                return None;\n            }\n            Some(shorten_call(b, call, func, args, &keep, &mut occupied))\n        });\n        Some(b.with_type(\n            b.let_(\n                Binder {\n                    ty: binder_ty,\n                    ..binder\n                },\n                value,\n                body,\n            ),\n            node.ty,\n        ))\n    })\n}\n\nfn shorten_call<'a>(\n    b: &Builder<'a>,\n    call: &'a Core<'a>,\n    func: &'a Core<'a>,\n    args: &[&'a Core<'a>],\n    keep: &[bool],\n    occupied: &mut HashSet<u32>,\n) -> &'a Core<'a> {\n    let CoreKind::Var(name) = func.kind else {\n        unreachable!(\"prechecked direct call\")\n    };\n    let func = b.var(\n        name,\n        signature(b, func.ty, keep).expect(\"prechecked signature\"),\n    );\n    let mut prefix = Vec::new();\n    let mut retained = Vec::new();\n    for (arg, keep) in args.iter().zip(keep) {\n        let argument = if anf::is_atom(arg) {\n            *arg\n        } else {\n            let name = loop {\n                let name = b.fresh(\"arg\");\n                if occupied.insert(name.unique) {\n                    break name;\n                }\n            };\n            let binder = Binder { name, ty: arg.ty };\n            prefix.push((binder, *arg));\n            b.var(name, arg.ty)\n        };\n        if *keep {\n            retained.push(argument);\n        }\n    }\n    let mut result = if retained.is_empty() {\n        b.force(func, call.ty)\n    } else {\n        b.app(func, &retained, call.ty)\n    };\n    for (binder, value) in prefix.into_iter().rev() {\n        result = b.let_(binder, value, result);\n    }\n    result\n}\n\nfn recursive<'a>(\n    b: &Builder<'a>,\n    node: &'a Core<'a>,\n    binders: &'a [RecBinder<'a>],\n    body: &'a Core<'a>,\n    occupied: &mut HashSet<u32>,\n) -> Option<&'a Core<'a>> {\n    // Existing delayed workers and unsupported views are left alone. This also\n    // makes a group containing a newly delayed worker stable on a second pass.\n    if binders.is_empty()\n        || binders.iter().any(|r| {\n            r.params.is_empty()\n                || !matches!(r.binder.ty, Ty::Term(TermTy::Fun(ps,_)) if ps.len() == r.params.len())\n        })\n    {\n        return None;\n    }\n    let members: HashMap<_, _> = binders\n        .iter()\n        .enumerate()\n        .map(|(i, r)| (r.binder.name.unique, i))\n        .collect();\n    let mut offsets = Vec::new();\n    let mut slots = HashMap::new();\n    for r in binders {\n        offsets.push(slots.len());\n        for p in r.params {\n            slots.insert(p.name.unique, slots.len());\n        }\n    }\n    let mut live = vec![false; slots.len()];\n    let mut dependencies = vec![Vec::new(); slots.len()];\n    let mut uses = vec![0; binders.len()];\n    let mut calls = vec![0; binders.len()];\n    // A bare variable argument is the only evaluation we can remove outright.\n    // Every variable inside other arguments remains live because their strict\n    // evaluation is retained, even when the receiving parameter is removed.\n    let mut pending: Vec<_> = binders.iter().map(|r| r.body).chain([body]).collect();\n    while let Some(term) = pending.pop() {\n        match term.kind {\n            CoreKind::Var(name) => {\n                if let Some(&i) = members.get(&name.unique) {\n                    uses[i] += 1;\n                }\n                if let Some(&i) = slots.get(&name.unique) {\n                    live[i] = true;\n                }\n            }\n            CoreKind::App { func, args } if matches!(func.kind,CoreKind::Var(name) if members.contains_key(&name.unique)) =>\n            {\n                let CoreKind::Var(name) = func.kind else {\n                    unreachable!()\n                };\n                let i = members[&name.unique];\n                uses[i] += 1;\n                if args.len() != binders[i].params.len()\n                    || !matches!(func.ty,Ty::Term(TermTy::Fun(ps,_)) if ps.len()==args.len())\n                {\n                    return None;\n                }\n                calls[i] += 1;\n                for (slot, arg) in args.iter().enumerate() {\n                    if let CoreKind::Var(name) = arg.kind\n                        && let Some(&source) = slots.get(&name.unique)\n                    {\n                        dependencies[offsets[i] + slot].push(source);\n                        continue;\n                    }\n                    pending.push(arg);\n                }\n            }\n            _ => term.push_children_reversed(&mut pending),\n        }\n    }\n    if uses != calls || calls.iter().all(|n| *n == 0) {\n        return None;\n    }\n    let mut pending: Vec<_> = live\n        .iter()\n        .enumerate()\n        .filter_map(|(i, v)| v.then_some(i))\n        .collect();\n    while let Some(target) = pending.pop() {\n        for &source in &dependencies[target] {\n            if !live[source] {\n                live[source] = true;\n                pending.push(source);\n            }\n        }\n    }\n    if live.iter().all(|v| *v) {\n        return None;\n    }\n    let masks: Vec<_> = binders\n        .iter()\n        .enumerate()\n        .map(|(i, r)| &live[offsets[i]..offsets[i] + r.params.len()])\n        .collect();\n    let mut rewrite = |core: &'a Core<'a>| {\n        core.map(b, &mut |call| {\n            let CoreKind::App { func, args } = call.kind else {\n                return None;\n            };\n            let CoreKind::Var(name) = func.kind else {\n                return None;\n            };\n            let &i = members.get(&name.unique)?;\n            let keep = masks[i];\n            if keep.iter().all(|v| *v) {\n                return None;\n            }\n            Some(shorten_call(b, call, func, args, keep, occupied))\n        })\n    };\n    let mut group = Vec::new();\n    for (i, r) in binders.iter().enumerate() {\n        let keep = masks[i];\n        let params: Vec<_> = r\n            .params\n            .iter()\n            .zip(keep)\n            .filter_map(|(p, k)| k.then_some(*p))\n            .collect();\n        let statics: Vec<_> = r\n            .static_params\n            .iter()\n            .filter_map(|&old| {\n                let old = usize::from(old);\n                keep.get(old)\n                    .copied()\n                    .unwrap_or(false)\n                    .then(|| u16::try_from(keep[..old].iter().filter(|v| **v).count()).ok())\n                    .flatten()\n            })\n            .collect();\n        let body = rewrite(r.body);\n        group.push(RecBinder {\n            binder: Binder {\n                ty: signature(b, r.binder.ty, keep)?,\n                ..r.binder\n            },\n            params: b.arena.alloc_slice_copy(&params),\n            static_params: b.arena.alloc_slice_copy(&statics),\n            body: if params.is_empty() {\n                b.delay(body)\n            } else {\n                body\n            },\n        });\n    }\n    let body = rewrite(body);\n    Some(b.with_type(b.let_rec(&group, body), node.ty))\n}\n",
+    "recursion lowering diff": "diff --git a/crates/nash-codegen/src/recursion.rs b/crates/nash-codegen/src/recursion.rs\nindex a7363579..704e1b54 100644\n--- a/crates/nash-codegen/src/recursion.rs\n+++ b/crates/nash-codegen/src/recursion.rs\n@@ -373,7 +373,10 @@ impl<'a> Rewriter<'_, 'a> {\n             tasks.push(Task::Visit(single.body, inner_env));\n             return Ok(());\n         }\n-        if binders.iter().any(|r| r.params.is_empty()) {\n+        if binders\n+            .iter()\n+            .any(|r| r.params.is_empty() && !matches!(r.body.kind, CoreKind::Delay(_)))\n+        {\n             return Err(Error::RecursiveValue);\n         }\n         let names: HashSet<_> = binders.iter().map(|r| r.binder.name).collect();\n@@ -502,7 +505,11 @@ impl<'a> Rewriter<'_, 'a> {\n                 let params = rb.params.iter().map(|p| p.ty).collect::<Vec<_>>();\n                 DispatchArm {\n                     params: b.arena.alloc_slice_copy(&params),\n-                    result: rb.body.ty,\n+                    result: if let ([], CoreKind::Delay(body)) = (rb.params, rb.body.kind) {\n+                        body.ty\n+                    } else {\n+                        rb.body.ty\n+                    },\n                 }\n             })\n             .collect::<Vec<_>>();\n@@ -554,7 +561,12 @@ impl<'a> Rewriter<'_, 'a> {\n                 this.mutual(state, tasks)?;\n                 Ok(None)\n             })));\n-            tasks.push(Task::Visit(rb.body, env));\n+            let body = if let ([], CoreKind::Delay(body)) = (rb.params, rb.body.kind) {\n+                body\n+            } else {\n+                rb.body\n+            };\n+            tasks.push(Task::Visit(body, env));\n         } else {\n             let results_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Results(state.arms)));\n             let dispatch = b.lam(\n@@ -598,14 +610,16 @@ impl<'a> Rewriter<'_, 'a> {\n         let mut fields = vec![b.var(dispatcher.name, dispatcher.ty)];\n         fields.extend(params.iter().map(|p| b.var(p.name, p.ty)));\n         let packet_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Packet { arms, tag }));\n-        b.lam(\n-            &params,\n-            b.app(\n-                b.var(dispatcher.name, dispatcher.ty),\n-                &[b.constr(tag, &fields, packet_ty)],\n-                arms[usize::from(tag)].result,\n-            ),\n-        )\n+        let call = b.app(\n+            b.var(dispatcher.name, dispatcher.ty),\n+            &[b.constr(tag, &fields, packet_ty)],\n+            arms[usize::from(tag)].result,\n+        );\n+        if params.is_empty() {\n+            b.delay(call)\n+        } else {\n+            b.lam(&params, call)\n+        }\n     }\n }\n fn without<'a>(\n"
+  }
+}

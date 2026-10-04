@@ -1,0 +1,150 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#75 : int -> int -> int [static []] = \x#77 : int n#78 : int -> case@Bool equalsInteger n#78 0 of
+    True -> 42
+    False -> f#75 x#77 (subtractInteger n#78 1)
+  g#76 : int -> int -> int [static []] = \y#79 : int m#80 : int -> trace "delayed" in f#75 7 2
+in
+addInteger (f#75 7 2) (g#76 0 0)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_1
+    [(lam f_75
+      [(lam g_76
+        [[(builtin addInteger) [[f_75 (con integer 7)] (con integer 2)]]
+          [[g_76 (con integer 0)] (con integer 0)]])
+        (lam y_13 (lam m_14 [dispatch_1 (constr 1 dispatch_1 y_13 m_14)]))])
+      (lam x_15 (lam n_16 [dispatch_1 (constr 0 dispatch_1 x_15 n_16)]))])
+    (lam request_2
+      (case
+        request_2
+        (lam self_3
+          (lam x_77
+            (lam n_78
+              (case
+                [[(builtin equalsInteger) n_78] (con integer 0)]
+                [self_3
+                  (constr 0 self_3 x_77 [[(builtin subtractInteger) n_78] (con integer 1)])]
+                (con integer 42)))))
+        (lam self_8
+          (lam y_79
+            (lam m_80
+              (force
+                [[(force (builtin trace)) (con string "delayed")]
+                  (delay [self_8 (constr 0 self_8 (con integer 7) (con integer 2))])]))))))])
+--- optimized Core
+letrec
+  f#1 : int -> int [static []] = \n#4 : int -> let anf#8 : bool = equalsInteger n#4 0 in
+  case@Bool anf#8 of
+    True -> 42
+    False -> let arg#7 : int = subtractInteger n#4 1 in
+    f#1 arg#7
+  g#2 : @delay int [static []] = \ -> delay (trace "delayed" in f#1 2)
+in
+let anf#9 : int = f#1 2 in
+let anf#10 : int = force g#2 in
+addInteger anf#9 anf#10
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_27
+    [(lam dispatch_21
+      [(lam f_23
+        [(lam g_24
+          [(lam anf_25 [(lam anf_26 [[(builtin addInteger) anf_25] anf_26]) (force g_24)])
+            [f_23 (con integer 2)]])
+          (delay [dispatch_21 (constr 1 dispatch_21)])])
+        (lam n_22 [dispatch_21 (constr 0 dispatch_21 n_22)])])
+      (lam request_15
+        (case
+          request_15
+          (lam self_16
+            (lam n_17
+              [(lam anf_18
+                (case
+                  anf_18
+                  [(lam arg_19 [self_16 (constr 0 self_16 arg_19)])
+                    [[(builtin subtractInteger) n_17] (con integer 1)]]
+                  (con integer 42)))
+                [[(builtin equalsInteger) n_17] (con integer 0)]]))
+          (lam self_20
+            (force
+              [[builtin_27 (con string "delayed")]
+                (delay [self_20 (constr 0 self_20 (con integer 2))])]))))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#75 : int -> int -> int [static []] = \x#77 : int n#78 : int -> case@Bool equalsInteger n#78 0 of
+    True -> 42
+    False -> f#75 x#77 (subtractInteger n#78 1)
+  g#76 : int -> int -> int [static []] = \y#79 : int m#80 : int -> trace "delayed" in f#75 7 2
+in
+addInteger (f#75 7 2) (g#76 0 0)
+--- isolated Core after
+letrec
+  f#75 : int -> int [static []] = \n#78 : int -> case@Bool equalsInteger n#78 0 of
+    True -> 42
+    False -> let arg#1 : int = subtractInteger n#78 1 in
+    f#75 arg#1
+  g#76 : @delay int [static []] = \ -> delay (trace "delayed" in f#75 2)
+in
+addInteger (f#75 2) (force g#76)
+--- isolated UPLC before
+(program 1.1.0
+  [(lam dispatch_256
+    [(lam f_75
+      [(lam g_76
+        [[(builtin addInteger) [[f_75 (con integer 7)] (con integer 2)]]
+          [[g_76 (con integer 0)] (con integer 0)]])
+        (lam y_268 (lam m_269 [dispatch_256 (constr 1 dispatch_256 y_268 m_269)]))])
+      (lam x_270 (lam n_271 [dispatch_256 (constr 0 dispatch_256 x_270 n_271)]))])
+    (lam request_257
+      (case
+        request_257
+        (lam self_258
+          (lam x_77
+            (lam n_78
+              (case
+                [[(builtin equalsInteger) n_78] (con integer 0)]
+                [self_258
+                  (constr 0 self_258 x_77 [[(builtin subtractInteger) n_78] (con integer 1)])]
+                (con integer 42)))))
+        (lam self_263
+          (lam y_79
+            (lam m_80
+              (force
+                [[(force (builtin trace)) (con string "delayed")]
+                  (delay [self_263 (constr 0 self_263 (con integer 7) (con integer 2))])]))))))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam dispatch_272
+    [(lam f_75
+      [(lam g_76
+        [(lam anf_3 [(lam anf_4 [[(builtin addInteger) anf_3] anf_4]) (force g_76)])
+          [f_75 (con integer 2)]])
+        (delay [dispatch_272 (constr 1 dispatch_272)])])
+      (lam n_278 [dispatch_272 (constr 0 dispatch_272 n_278)])])
+    (lam request_273
+      (case
+        request_273
+        (lam self_274
+          (lam n_78
+            [(lam anf_2
+              (case
+                anf_2
+                [(lam arg_1 [self_274 (constr 0 self_274 arg_1)])
+                  [[(builtin subtractInteger) n_78] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_78] (con integer 0)]]))
+        (lam self_276
+          (force
+            [[(force (builtin trace)) (con string "delayed")]
+              (delay [self_276 (constr 0 self_276 (con integer 2))])]))))])
+--- result
+(con integer 84)
+--- logs
+["delayed"]

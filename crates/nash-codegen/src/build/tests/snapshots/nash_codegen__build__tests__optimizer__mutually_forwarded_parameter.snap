@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nfirst : int -> int -> int\nfirst unused n =\n    if Builtin.equalsInteger n 0 then\n        42\n    else\n        second (Builtin.subtractInteger n 1) unused\nsecond : int -> int -> int\nsecond n unused = first unused n\nmain : int\nmain = first (Builtin.trace \"entry\" 7) 3\n"
+---
+--- unoptimized Core
+let message#12 : string = "entry" in
+let fromInt#4 : int -> int = \value#9 : int -> value#9 in
+letrec
+  first#2 : int -> int -> int [static []] = \unused#5 : int n#6 : int -> case@Bool equalsInteger n#6 (fromInt#4 0) of
+    True -> fromInt#4 42
+    False -> second#7 (subtractInteger n#6 (fromInt#4 1)) unused#5
+  second#7 : int -> int -> int [static []] = \n#10 : int unused#11 : int -> first#2 unused#11 n#10
+in
+let fromString#3 : string -> string = \value#8 : string -> value#8 in
+let main#1 : int = first#2 (trace (fromString#3 message#12) (fromInt#4 7)) (fromInt#4 3) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam message_12
+    [(lam fromInt_4
+      [(lam dispatch_13
+        [(lam first_2
+          [(lam second_7
+            [(lam fromString_3
+              [(lam main_1 main_1)
+                [[first_2
+                  [[(force (builtin trace)) [fromString_3 message_12]]
+                    [fromInt_4 (con integer 7)]]]
+                  [fromInt_4 (con integer 3)]]])
+              (lam value_8 value_8)])
+            (lam n_25 (lam unused_26 [dispatch_13 (constr 1 dispatch_13 n_25 unused_26)]))])
+          (lam unused_27 (lam n_28 [dispatch_13 (constr 0 dispatch_13 unused_27 n_28)]))])
+        (lam request_14
+          (case
+            request_14
+            (lam self_15
+              (lam unused_5
+                (lam n_6
+                  (case
+                    [[(builtin equalsInteger) n_6] [fromInt_4 (con integer 0)]]
+                    [self_15
+                      (constr 1
+                        self_15
+                        [[(builtin subtractInteger) n_6] [fromInt_4 (con integer 1)]]
+                        unused_5)]
+                    [fromInt_4 (con integer 42)]))))
+            (lam self_20
+              (lam n_10 (lam unused_11 [self_20 (constr 0 self_20 unused_11 n_10)])))))])
+      (lam value_9 value_9)])
+    (con string "entry")])
+--- optimized Core
+letrec
+  first#16 : int -> int [static []] = \n#19 : int -> let anf#29 : bool = equalsInteger n#19 0 in
+  case@Bool anf#29 of
+    True -> 42
+    False -> let arg#25 : int = subtractInteger n#19 1 in
+    second#17 arg#25
+  second#17 : int -> int [static []] = \n#20 : int -> first#16 n#20
+in
+let arg#26 : int = trace "entry" 7 in
+first#16 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_40
+    [(lam dispatch_30
+      [(lam first_16
+        [(lam second_17
+          [(lam arg_26 [first_16 (con integer 3)])
+            [[builtin_40 (con string "entry")] (con integer 7)]])
+          (lam n_38 [dispatch_30 (constr 1 dispatch_30 n_38)])])
+        (lam n_39 [dispatch_30 (constr 0 dispatch_30 n_39)])])
+      (lam request_31
+        (case
+          request_31
+          (lam self_32
+            (lam n_19
+              [(lam anf_29
+                (case
+                  anf_29
+                  [(lam arg_25 [self_32 (constr 1 self_32 arg_25)])
+                    [[(builtin subtractInteger) n_19] (con integer 1)]]
+                  (con integer 42)))
+                [[(builtin equalsInteger) n_19] (con integer 0)]]))
+          (lam self_35 (lam n_20 [self_35 (constr 0 self_35 n_20)]))))])
+    (force (builtin trace))])
+--- result
+(con integer 42)
+--- logs
+["entry"]

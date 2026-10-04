@@ -1,0 +1,106 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#43 : int -> int -> int [static []] = \x#45 : int n#46 : int -> case@Bool equalsInteger n#46 0 of
+    True -> 42
+    False -> f#43 x#45 (subtractInteger n#46 1)
+in
+f#43 (trace "first" in error) (trace "later" in 2)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_43
+    [[f_43 (force [[(force (builtin trace)) (con string "first")] (delay (error))])]
+      (force [[(force (builtin trace)) (con string "later")] (delay (con integer 2))])])
+    [(lam self_1 [self_1 self_1])
+      (lam self_1
+        (lam x_45
+          (lam n_46
+            (case
+              [[(builtin equalsInteger) n_46] (con integer 0)]
+              [[[self_1 self_1] x_45] [[(builtin subtractInteger) n_46] (con integer 1)]]
+              (con integer 42)))))]])
+--- optimized Core
+let arg#6 : int = trace "first" in error in
+let arg#7 : int = trace "later" in 2 in
+letrec
+  worker#5 : int -> int [static []] = \n#4 : int -> let anf#8 : bool = equalsInteger n#4 0 in
+  case@Bool anf#8 of
+    True -> 42
+    False -> let anf#9 : int = subtractInteger n#4 1 in
+    worker#5 anf#9
+in
+worker#5 arg#7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_17
+    [(lam arg_3
+      [(lam arg_10
+        [(lam worker_16 [worker_16 arg_10])
+          [(lam self_11 [self_11 self_11])
+            (lam self_12
+              (lam n_13
+                [(lam anf_14
+                  (case
+                    anf_14
+                    [(lam anf_15 [[self_12 self_12] anf_15])
+                      [[(builtin subtractInteger) n_13] (con integer 1)]]
+                    (con integer 42)))
+                  [[(builtin equalsInteger) n_13] (con integer 0)]]))]])
+        (force [[builtin_17 (con string "later")] (delay (con integer 2))])])
+      (force [[builtin_17 (con string "first")] (delay (error))])])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#43 : int -> int -> int [static []] = \x#45 : int n#46 : int -> case@Bool equalsInteger n#46 0 of
+    True -> 42
+    False -> f#43 x#45 (subtractInteger n#46 1)
+in
+f#43 (trace "first" in error) (trace "later" in 2)
+--- isolated Core after
+letrec
+  f#43 : int -> int [static []] = \n#46 : int -> case@Bool equalsInteger n#46 0 of
+    True -> 42
+    False -> let arg#1 : int = subtractInteger n#46 1 in
+    f#43 arg#1
+in
+let arg#2 : int = trace "first" in error in
+let arg#3 : int = trace "later" in 2 in
+f#43 arg#3
+--- isolated UPLC before
+(program 1.1.0
+  [(lam f_43
+    [[f_43 (force [[(force (builtin trace)) (con string "first")] (delay (error))])]
+      (force [[(force (builtin trace)) (con string "later")] (delay (con integer 2))])])
+    [(lam self_227 [self_227 self_227])
+      (lam self_227
+        (lam x_45
+          (lam n_46
+            (case
+              [[(builtin equalsInteger) n_46] (con integer 0)]
+              [[[self_227 self_227] x_45] [[(builtin subtractInteger) n_46] (con integer 1)]]
+              (con integer 42)))))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam f_43
+    [(lam arg_2
+      [(lam arg_3 [f_43 arg_3])
+        (force [[(force (builtin trace)) (con string "later")] (delay (con integer 2))])])
+      (force [[(force (builtin trace)) (con string "first")] (delay (error))])])
+    [(lam self_230 [self_230 self_230])
+      (lam self_230
+        (lam n_46
+          [(lam anf_4
+            (case
+              anf_4
+              [(lam arg_1 [[self_230 self_230] arg_1])
+                [[(builtin subtractInteger) n_46] (con integer 1)]]
+              (con integer 42)))
+            [[(builtin equalsInteger) n_46] (con integer 0)]]))]])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["first"]

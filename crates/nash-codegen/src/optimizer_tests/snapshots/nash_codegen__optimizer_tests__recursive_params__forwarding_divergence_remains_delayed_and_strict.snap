@@ -1,0 +1,53 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\npretty(before), pretty(after)))"
+---
+--- unoptimized Core
+letrec
+  f#1 : int -> int [static []] = \x#3 : int -> g#2 x#3
+  g#2 : int -> int [static []] = \y#4 : int -> f#1 y#4
+in
+f#1 (addInteger 1 2)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_5
+    [(lam f_1
+      [(lam g_2 [f_1 [[(builtin addInteger) (con integer 1)] (con integer 2)]])
+        (lam y_13 [dispatch_5 (constr 1 dispatch_5 y_13)])])
+      (lam x_14 [dispatch_5 (constr 0 dispatch_5 x_14)])])
+    (lam request_6
+      (case
+        request_6
+        (lam self_7 (lam x_3 [self_7 (constr 1 self_7 x_3)]))
+        (lam self_10 (lam y_4 [self_10 (constr 0 self_10 y_4)]))))])
+--- optimized Core
+letrec
+  f#5 : @delay int [static []] = \ -> delay (force g#6)
+  g#6 : @delay int [static []] = \ -> delay (force f#5)
+in
+force f#5
+--- optimized UPLC
+(program 1.1.0
+  [(lam dispatch_10
+    [(lam f_11
+      [(lam g_12 (force f_11)) (delay [dispatch_10 (constr 1 dispatch_10)])])
+      (delay [dispatch_10 (constr 0 dispatch_10)])])
+    (lam request_7
+      (case
+        request_7
+        (lam self_8 (force (delay [self_8 (constr 1 self_8)])))
+        (lam self_9 (force (delay [self_9 (constr 0 self_9)])))))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#1 : int -> int [static []] = \x#3 : int -> g#2 x#3
+  g#2 : int -> int [static []] = \y#4 : int -> f#1 y#4
+in
+f#1 (addInteger 1 2)
+--- isolated Core after
+letrec
+  f#1 : @delay int [static []] = \ -> delay (force g#2)
+  g#2 : @delay int [static []] = \ -> delay (force f#1)
+in
+let arg#5 : int = addInteger 1 2 in
+force f#1

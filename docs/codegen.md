@@ -907,12 +907,12 @@ rooted in continuation references and their transitive member dependencies. It
 retains source order and existing metadata. Repeating cleanup releases newly
 unused safe captures while preserving effectful initializers. The accepted pre-ANF
 `unused_params::reduce` pass removes unused parameters from nonrecursive
-let-bound lambdas only when all uses are exact direct calls. It preserves strict
+let-bound lambdas and recursive groups only when all uses are exact direct calls. It preserves strict
 argument evaluation before or after ANF: each non-atomic argument gets a
 call-local strict binding in source order, including discarded arguments. It
 uses Delay/Force when every parameter is unused. The pass runs after static
 lifting and before the single ANF normalization, followed by accepted cleanup.
-Partial/staged/escaping/oversaturated uses and recursive signatures are unchanged;
+Partial/staged/escaping/oversaturated uses retain the whole recursive group;
 these accepted passes run in production O1.
 
 
@@ -924,10 +924,20 @@ lets without another ANF pass. Cancellation runs in the accepted fixed-point
 loop before beta cleanup.
 
 
-Plan 08 Chunk 6 also requires recursive unused-parameter removal. This is pending
-design and implementation, including self/mutual forwarding dependencies, strict
-argument evaluation and consistent worker/static-parameter metadata. The current
-accepted nonrecursive pass does not implement that scope.
+Recursive parameter liveness reaches a fixed point across the group. A bare
+parameter passed to another member creates a dependency from the receiving slot
+to the sending slot; all other uses consume the parameter. Thus a forwarding-only
+cycle is removable, but a use inside a strict compound argument is retained.
+Signatures, direct-call type views and retained static-parameter indices change
+together. Captures retain their original unique IDs. Existing delayed workers
+are conservatively left unchanged by signature reduction.
+
+All-unused workers have no parameters, a delayed binder type and an explicit
+`Delay` body. Self-application and the mutual dispatcher both keep this body cold
+until `Force`; repeated entry repeats execution rather than memoizing it.
+Mutual groups can mix delayed workers and functions. Reachability cleanup handles
+both. This remains one traversal after static lifting and before ANF, not a new
+whole-program fixed point. See [measurements](research/recursive-parameters.md).
 
 
 Chunk 7 includes accepted `known_case::reduce_bool` cleanup. A literal Boolean subject

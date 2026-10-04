@@ -1,0 +1,163 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#7 : int -> int -> int [static []] = \x#9 : int n#10 : int -> case@Bool equalsInteger n#10 0 of
+    True -> 42
+    False -> g#8 (subtractInteger n#10 1) x#9
+  g#8 : int -> int -> int [static []] = \m#11 : int y#12 : int -> case@Bool equalsInteger m#11 0 of
+    True -> 42
+    False -> f#7 y#12 (subtractInteger m#11 1)
+in
+f#7 7 3
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_1
+    [(lam f_7
+      [(lam g_8 [[f_7 (con integer 7)] (con integer 3)])
+        (lam m_19 (lam y_20 [dispatch_1 (constr 1 dispatch_1 m_19 y_20)]))])
+      (lam x_21 (lam n_22 [dispatch_1 (constr 0 dispatch_1 x_21 n_22)]))])
+    (lam request_2
+      (case
+        request_2
+        (lam self_3
+          (lam x_9
+            (lam n_10
+              (case
+                [[(builtin equalsInteger) n_10] (con integer 0)]
+                [self_3
+                  (constr 1 self_3 [[(builtin subtractInteger) n_10] (con integer 1)] x_9)]
+                (con integer 42)))))
+        (lam self_14
+          (lam m_11
+            (lam y_12
+              (case
+                [[(builtin equalsInteger) m_11] (con integer 0)]
+                [self_14
+                  (constr 0 self_14 y_12 [[(builtin subtractInteger) m_11] (con integer 1)])]
+                (con integer 42)))))))])
+--- optimized Core
+letrec
+  f#1 : int -> int [static []] = \n#4 : int -> let anf#9 : bool = equalsInteger n#4 0 in
+  case@Bool anf#9 of
+    True -> 42
+    False -> let arg#7 : int = subtractInteger n#4 1 in
+    g#2 arg#7
+  g#2 : int -> int [static []] = \m#5 : int -> let anf#10 : bool = equalsInteger m#5 0 in
+  case@Bool anf#10 of
+    True -> 42
+    False -> let arg#8 : int = subtractInteger m#5 1 in
+    f#1 arg#8
+in
+f#1 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam dispatch_28
+    [(lam f_30
+      [(lam g_32 [f_30 (con integer 3)])
+        (lam m_31 [dispatch_28 (constr 1 dispatch_28 m_31)])])
+      (lam n_29 [dispatch_28 (constr 0 dispatch_28 n_29)])])
+    (lam request_19
+      (case
+        request_19
+        (lam self_20
+          (lam n_21
+            [(lam anf_22
+              (case
+                anf_22
+                [(lam arg_23 [self_20 (constr 1 self_20 arg_23)])
+                  [[(builtin subtractInteger) n_21] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_21] (con integer 0)]]))
+        (lam self_24
+          (lam m_25
+            [(lam anf_26
+              (case
+                anf_26
+                [(lam arg_27 [self_24 (constr 0 self_24 arg_27)])
+                  [[(builtin subtractInteger) m_25] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) m_25] (con integer 0)]]))))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#7 : int -> int -> int [static []] = \x#9 : int n#10 : int -> case@Bool equalsInteger n#10 0 of
+    True -> 42
+    False -> g#8 (subtractInteger n#10 1) x#9
+  g#8 : int -> int -> int [static []] = \m#11 : int y#12 : int -> case@Bool equalsInteger m#11 0 of
+    True -> 42
+    False -> f#7 y#12 (subtractInteger m#11 1)
+in
+f#7 7 3
+--- isolated Core after
+letrec
+  f#7 : int -> int [static []] = \n#10 : int -> case@Bool equalsInteger n#10 0 of
+    True -> 42
+    False -> let arg#1 : int = subtractInteger n#10 1 in
+    g#8 arg#1
+  g#8 : int -> int [static []] = \m#11 : int -> case@Bool equalsInteger m#11 0 of
+    True -> 42
+    False -> let arg#2 : int = subtractInteger m#11 1 in
+    f#7 arg#2
+in
+f#7 3
+--- isolated UPLC before
+(program 1.1.0
+  [(lam dispatch_86
+    [(lam f_7
+      [(lam g_8 [[f_7 (con integer 7)] (con integer 3)])
+        (lam m_98 (lam y_99 [dispatch_86 (constr 1 dispatch_86 m_98 y_99)]))])
+      (lam x_100 (lam n_101 [dispatch_86 (constr 0 dispatch_86 x_100 n_101)]))])
+    (lam request_87
+      (case
+        request_87
+        (lam self_88
+          (lam x_9
+            (lam n_10
+              (case
+                [[(builtin equalsInteger) n_10] (con integer 0)]
+                [self_88
+                  (constr 1 self_88 [[(builtin subtractInteger) n_10] (con integer 1)] x_9)]
+                (con integer 42)))))
+        (lam self_93
+          (lam m_11
+            (lam y_12
+              (case
+                [[(builtin equalsInteger) m_11] (con integer 0)]
+                [self_93
+                  (constr 0 self_93 y_12 [[(builtin subtractInteger) m_11] (con integer 1)])]
+                (con integer 42)))))))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam dispatch_102
+    [(lam f_7
+      [(lam g_8 [f_7 (con integer 3)])
+        (lam m_110 [dispatch_102 (constr 1 dispatch_102 m_110)])])
+      (lam n_111 [dispatch_102 (constr 0 dispatch_102 n_111)])])
+    (lam request_103
+      (case
+        request_103
+        (lam self_104
+          (lam n_10
+            [(lam anf_3
+              (case
+                anf_3
+                [(lam arg_1 [self_104 (constr 1 self_104 arg_1)])
+                  [[(builtin subtractInteger) n_10] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_10] (con integer 0)]]))
+        (lam self_107
+          (lam m_11
+            [(lam anf_4
+              (case
+                anf_4
+                [(lam arg_2 [self_107 (constr 0 self_107 arg_2)])
+                  [[(builtin subtractInteger) m_11] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) m_11] (con integer 0)]]))))])
+--- result
+(con integer 42)
+--- logs
+[]

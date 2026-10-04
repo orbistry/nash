@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#49 : int -> int -> int [static []] = \x#51 : int n#52 : int -> case@Bool equalsInteger n#52 0 of
+    True -> 42
+    False -> f#49 x#51 (subtractInteger n#52 1)
+in
+f#49 7 2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_49 [[f_49 (con integer 7)] (con integer 2)])
+    [(lam self_1 [self_1 self_1])
+      (lam self_1
+        (lam x_51
+          (lam n_52
+            (case
+              [[(builtin equalsInteger) n_52] (con integer 0)]
+              [[[self_1 self_1] x_51] [[(builtin subtractInteger) n_52] (con integer 1)]]
+              (con integer 42)))))]])
+--- optimized Core
+letrec
+  worker#5 : int -> int [static []] = \n#4 : int -> let anf#6 : bool = equalsInteger n#4 0 in
+  case@Bool anf#6 of
+    True -> 42
+    False -> let anf#7 : int = subtractInteger n#4 1 in
+    worker#5 anf#7
+in
+worker#5 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam worker_12 [worker_12 (con integer 2)])
+    [(lam self_3 [self_3 self_3])
+      (lam self_8
+        (lam n_9
+          [(lam anf_10
+            (case
+              anf_10
+              [(lam anf_11 [[self_8 self_8] anf_11])
+                [[(builtin subtractInteger) n_9] (con integer 1)]]
+              (con integer 42)))
+            [[(builtin equalsInteger) n_9] (con integer 0)]]))]])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#49 : int -> int -> int [static []] = \x#51 : int n#52 : int -> case@Bool equalsInteger n#52 0 of
+    True -> 42
+    False -> f#49 x#51 (subtractInteger n#52 1)
+in
+f#49 7 2
+--- isolated Core after
+letrec
+  f#49 : int -> int -> int [static []] = \x#51 : int n#52 : int -> case@Bool equalsInteger n#52 0 of
+    True -> 42
+    False -> f#49 x#51 (subtractInteger n#52 1)
+in
+f#49 7 2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam f_49 [[f_49 (con integer 7)] (con integer 2)])
+    [(lam self_232 [self_232 self_232])
+      (lam self_232
+        (lam x_51
+          (lam n_52
+            (case
+              [[(builtin equalsInteger) n_52] (con integer 0)]
+              [[[self_232 self_232] x_51] [[(builtin subtractInteger) n_52] (con integer 1)]]
+              (con integer 42)))))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam f_49 [(lam anf_4 [anf_4 (con integer 2)]) [f_49 (con integer 7)]])
+    [(lam self_235 [self_235 self_235])
+      (lam self_235
+        (lam x_51
+          (lam n_52
+            [(lam anf_1
+              (case
+                anf_1
+                [(lam anf_2
+                  [(lam anf_3 [anf_2 anf_3]) [[(builtin subtractInteger) n_52] (con integer 1)]])
+                  [[self_235 self_235] x_51]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_52] (con integer 0)]])))]])
+--- result
+(con integer 42)
+--- logs
+[]

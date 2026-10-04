@@ -373,7 +373,10 @@ impl<'a> Rewriter<'_, 'a> {
             tasks.push(Task::Visit(single.body, inner_env));
             return Ok(());
         }
-        if binders.iter().any(|r| r.params.is_empty()) {
+        if binders
+            .iter()
+            .any(|r| r.params.is_empty() && !matches!(r.body.kind, CoreKind::Delay(_)))
+        {
             return Err(Error::RecursiveValue);
         }
         let names: HashSet<_> = binders.iter().map(|r| r.binder.name).collect();
@@ -502,7 +505,11 @@ impl<'a> Rewriter<'_, 'a> {
                 let params = rb.params.iter().map(|p| p.ty).collect::<Vec<_>>();
                 DispatchArm {
                     params: b.arena.alloc_slice_copy(&params),
-                    result: rb.body.ty,
+                    result: if let ([], CoreKind::Delay(body)) = (rb.params, rb.body.kind) {
+                        body.ty
+                    } else {
+                        rb.body.ty
+                    },
                 }
             })
             .collect::<Vec<_>>();
@@ -554,7 +561,12 @@ impl<'a> Rewriter<'_, 'a> {
                 this.mutual(state, tasks)?;
                 Ok(None)
             })));
-            tasks.push(Task::Visit(rb.body, env));
+            let body = if let ([], CoreKind::Delay(body)) = (rb.params, rb.body.kind) {
+                body
+            } else {
+                rb.body
+            };
+            tasks.push(Task::Visit(body, env));
         } else {
             let results_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Results(state.arms)));
             let dispatch = b.lam(
@@ -598,14 +610,16 @@ impl<'a> Rewriter<'_, 'a> {
         let mut fields = vec![b.var(dispatcher.name, dispatcher.ty)];
         fields.extend(params.iter().map(|p| b.var(p.name, p.ty)));
         let packet_ty = Ty::Runtime(b.arena.alloc(RuntimeTy::Packet { arms, tag }));
-        b.lam(
-            &params,
-            b.app(
-                b.var(dispatcher.name, dispatcher.ty),
-                &[b.constr(tag, &fields, packet_ty)],
-                arms[usize::from(tag)].result,
-            ),
-        )
+        let call = b.app(
+            b.var(dispatcher.name, dispatcher.ty),
+            &[b.constr(tag, &fields, packet_ty)],
+            arms[usize::from(tag)].result,
+        );
+        if params.is_empty() {
+            b.delay(call)
+        } else {
+            b.lam(&params, call)
+        }
     }
 }
 fn without<'a>(

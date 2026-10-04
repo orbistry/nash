@@ -13,13 +13,13 @@ helper#3 0 42
     [(lam self_4 [self_4 self_4]) (lam self_4 (lam unused_1 (lam used_2 used_2)))]])
 --- optimized Core
 letrec
-  helper#4 : int -> int -> int [static []] = \unused#5 : int used#6 : int -> used#6
+  helper#4 : int -> int [static []] = \used#6 : int -> used#6
 in
-helper#4 0 42
+helper#4 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam helper_11 [[helper_11 (con integer 0)] (con integer 42)])
-    [(lam self_7 [self_7 self_7]) (lam self_8 (lam unused_9 (lam used_10 used_10)))]])
+  [(lam helper_8 [helper_8 (con integer 42)])
+    [(lam self_3 [self_3 self_3]) (lam self_5 (lam used_7 used_7))]])
 --- isolated pass
 --- core before
 letrec
@@ -28,22 +28,22 @@ in
 helper#3 0 42
 --- core early
 letrec
-  helper#3 : int -> int -> int [static []] = \unused#1 : int used#2 : int -> used#2
+  helper#3 : int -> int [static []] = \used#2 : int -> used#2
 in
-helper#3 0 42
+helper#3 42
 --- core after ANF
 letrec
-  helper#3 : int -> int -> int [static []] = \unused#1 : int used#2 : int -> used#2
+  helper#3 : int -> int [static []] = \used#2 : int -> used#2
 in
-helper#3 0 42
+helper#3 42
 --- uplc before
 (program 1.1.0
   [(lam helper_3 [[helper_3 (con integer 0)] (con integer 42)])
     [(lam self_4 [self_4 self_4]) (lam self_4 (lam unused_1 (lam used_2 used_2)))]])
 --- uplc after
 (program 1.1.0
-  [(lam helper_3 [[helper_3 (con integer 0)] (con integer 42)])
-    [(lam self_7 [self_7 self_7]) (lam self_7 (lam unused_1 (lam used_2 used_2)))]])
+  [(lam helper_3 [helper_3 (con integer 42)])
+    [(lam self_7 [self_7 self_7]) (lam self_7 (lam used_2 used_2))]])
 --- result
 (con integer 42)
 --- logs

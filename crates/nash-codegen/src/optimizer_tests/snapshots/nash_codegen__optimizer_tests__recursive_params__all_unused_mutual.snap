@@ -1,0 +1,138 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#35 : int -> int [static []] = \x#37 : int -> case@Bool true of
+    True -> trace "body" in 21
+    False -> g#36 x#37
+  g#36 : int -> int [static []] = \y#38 : int -> f#35 y#38
+in
+addInteger (f#35 (trace "entry1" in 0)) (g#36 (trace "entry2" in 1))
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_1
+    [(lam f_35
+      [(lam g_36
+        [[(builtin addInteger)
+          [f_35
+            (force
+              [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])]]
+          [g_36
+            (force
+              [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])]])
+        (lam y_9 [dispatch_1 (constr 1 dispatch_1 y_9)])])
+      (lam x_10 [dispatch_1 (constr 0 dispatch_1 x_10)])])
+    (lam request_2
+      (case
+        request_2
+        (lam self_3
+          (lam x_37
+            (case
+              (con bool True)
+              [self_3 (constr 1 self_3 x_37)]
+              (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))))
+        (lam self_6 (lam y_38 [self_6 (constr 0 self_6 y_38)]))))])
+--- optimized Core
+letrec
+  f#1 : @delay int [static []] = \ -> delay (trace "body" in 21)
+  g#2 : @delay int [static []] = \ -> delay (force f#1)
+in
+let arg#5 : int = trace "entry1" in 0 in
+let anf#7 : int = force f#1 in
+let arg#6 : int = trace "entry2" in 1 in
+let anf#8 : int = force g#2 in
+addInteger anf#7 anf#8
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_21
+    [(lam dispatch_14
+      [(lam f_15
+        [(lam g_16
+          [(lam arg_17
+            [(lam anf_18
+              [(lam arg_19 [(lam anf_20 [[(builtin addInteger) anf_18] anf_20]) (force g_16)])
+                (force [[builtin_21 (con string "entry2")] (delay (con integer 1))])])
+              (force f_15)])
+            (force [[builtin_21 (con string "entry1")] (delay (con integer 0))])])
+          (delay [dispatch_14 (constr 1 dispatch_14)])])
+        (delay [dispatch_14 (constr 0 dispatch_14)])])
+      (lam request_11
+        (case
+          request_11
+          (lam self_12
+            (force [[builtin_21 (con string "body")] (delay (con integer 21))]))
+          (lam self_13 (force (delay [self_13 (constr 0 self_13)])))))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#35 : int -> int [static []] = \x#37 : int -> case@Bool true of
+    True -> trace "body" in 21
+    False -> g#36 x#37
+  g#36 : int -> int [static []] = \y#38 : int -> f#35 y#38
+in
+addInteger (f#35 (trace "entry1" in 0)) (g#36 (trace "entry2" in 1))
+--- isolated Core after
+letrec
+  f#35 : @delay int [static []] = \ -> delay (case@Bool true of
+    True -> trace "body" in 21
+    False -> force g#36)
+  g#36 : @delay int [static []] = \ -> delay (force f#35)
+in
+addInteger (let arg#1 : int = trace "entry1" in 0 in
+force f#35) (let arg#2 : int = trace "entry2" in 1 in
+force g#36)
+--- isolated UPLC before
+(program 1.1.0
+  [(lam dispatch_199
+    [(lam f_35
+      [(lam g_36
+        [[(builtin addInteger)
+          [f_35
+            (force
+              [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])]]
+          [g_36
+            (force
+              [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])]])
+        (lam y_207 [dispatch_199 (constr 1 dispatch_199 y_207)])])
+      (lam x_208 [dispatch_199 (constr 0 dispatch_199 x_208)])])
+    (lam request_200
+      (case
+        request_200
+        (lam self_201
+          (lam x_37
+            (case
+              (con bool True)
+              [self_201 (constr 1 self_201 x_37)]
+              (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))]))))
+        (lam self_204 (lam y_38 [self_204 (constr 0 self_204 y_38)]))))])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam dispatch_209
+    [(lam f_35
+      [(lam g_36
+        [(lam arg_1
+          [(lam anf_3
+            [(lam arg_2 [(lam anf_4 [[(builtin addInteger) anf_3] anf_4]) (force g_36)])
+              (force
+                [[(force (builtin trace)) (con string "entry2")] (delay (con integer 1))])])
+            (force f_35)])
+          (force
+            [[(force (builtin trace)) (con string "entry1")] (delay (con integer 0))])])
+        (delay [dispatch_209 (constr 1 dispatch_209)])])
+      (delay [dispatch_209 (constr 0 dispatch_209)])])
+    (lam request_210
+      (case
+        request_210
+        (lam self_211
+          (case
+            (con bool True)
+            (force (delay [self_211 (constr 1 self_211)]))
+            (force [[(force (builtin trace)) (con string "body")] (delay (con integer 21))])))
+        (lam self_212 (force (delay [self_212 (constr 0 self_212)])))))])
+--- result
+(con integer 42)
+--- logs
+["entry1", "body", "entry2", "body"]

@@ -120,3 +120,11 @@ Normal `measure`/`check` include the restricted pair rewrite in production O1 an
 all 30 pair fixtures. The general rewrite was rejected; the `pair-trial` command
 was removed. Historical comparisons remain in `trials/pair-projection.json` and
 [the report](../../docs/research/pair-projection-trial.md).
+
+## Recursive unused parameters
+
+Normal `measure`/`check` include 14 recursive Core fixtures and two source
+workloads, bringing the baseline to 194 cases. These cover forwarding cycles,
+consumers, strict effects, blocked call shapes, and delayed/mixed groups.
+Performance checks remain explicit and outside normal Cargo tests. See
+[the report](../../docs/research/recursive-parameters.md).

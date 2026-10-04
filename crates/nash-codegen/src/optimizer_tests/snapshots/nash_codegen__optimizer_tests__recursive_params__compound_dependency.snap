@@ -1,0 +1,100 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC before\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), original.uplc, result.uplc, result.result,\nresult.logs))"
+---
+--- unoptimized Core
+letrec
+  f#69 : int -> int -> int [static []] = \x#71 : int n#72 : int -> case@Bool equalsInteger n#72 0 of
+    True -> 42
+    False -> f#69 (addInteger x#71 1) (subtractInteger n#72 1)
+in
+f#69 7 2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_69 [[f_69 (con integer 7)] (con integer 2)])
+    [(lam self_1 [self_1 self_1])
+      (lam self_1
+        (lam x_71
+          (lam n_72
+            (case
+              [[(builtin equalsInteger) n_72] (con integer 0)]
+              [[[self_1 self_1] [[(builtin addInteger) x_71] (con integer 1)]]
+                [[(builtin subtractInteger) n_72] (con integer 1)]]
+              (con integer 42)))))]])
+--- optimized Core
+letrec
+  f#1 : int -> int -> int [static []] = \x#2 : int n#3 : int -> let anf#4 : bool = equalsInteger n#3 0 in
+  case@Bool anf#4 of
+    True -> 42
+    False -> let anf#5 : int = addInteger x#2 1 in
+    let anf#6 : int -> int = f#1 anf#5 in
+    let anf#7 : int = subtractInteger n#3 1 in
+    anf#6 anf#7
+in
+f#1 7 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam f_19 [[f_19 (con integer 7)] (con integer 2)])
+    [(lam self_11 [self_11 self_11])
+      (lam self_12
+        (lam x_13
+          (lam n_14
+            [(lam anf_15
+              (case
+                anf_15
+                [(lam anf_16
+                  [(lam anf_17
+                    [(lam anf_18 [anf_17 anf_18])
+                      [[(builtin subtractInteger) n_14] (con integer 1)]])
+                    [[self_12 self_12] anf_16]])
+                  [[(builtin addInteger) x_13] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_14] (con integer 0)]])))]])
+--- isolated pass
+--- isolated Core before
+letrec
+  f#69 : int -> int -> int [static []] = \x#71 : int n#72 : int -> case@Bool equalsInteger n#72 0 of
+    True -> 42
+    False -> f#69 (addInteger x#71 1) (subtractInteger n#72 1)
+in
+f#69 7 2
+--- isolated Core after
+letrec
+  f#69 : int -> int -> int [static []] = \x#71 : int n#72 : int -> case@Bool equalsInteger n#72 0 of
+    True -> 42
+    False -> f#69 (addInteger x#71 1) (subtractInteger n#72 1)
+in
+f#69 7 2
+--- isolated UPLC before
+(program 1.1.0
+  [(lam f_69 [[f_69 (con integer 7)] (con integer 2)])
+    [(lam self_250 [self_250 self_250])
+      (lam self_250
+        (lam x_71
+          (lam n_72
+            (case
+              [[(builtin equalsInteger) n_72] (con integer 0)]
+              [[[self_250 self_250] [[(builtin addInteger) x_71] (con integer 1)]]
+                [[(builtin subtractInteger) n_72] (con integer 1)]]
+              (con integer 42)))))]])
+--- isolated UPLC after
+(program 1.1.0
+  [(lam f_69 [[f_69 (con integer 7)] (con integer 2)])
+    [(lam self_253 [self_253 self_253])
+      (lam self_253
+        (lam x_71
+          (lam n_72
+            [(lam anf_1
+              (case
+                anf_1
+                [(lam anf_2
+                  [(lam anf_3
+                    [(lam anf_4 [anf_3 anf_4]) [[(builtin subtractInteger) n_72] (con integer 1)]])
+                    [[self_253 self_253] anf_2]])
+                  [[(builtin addInteger) x_71] (con integer 1)]]
+                (con integer 42)))
+              [[(builtin equalsInteger) n_72] (con integer 0)]])))]])
+--- result
+(con integer 42)
+--- logs
+[]

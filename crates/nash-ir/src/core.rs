@@ -76,7 +76,7 @@ pub enum CoreKind<'a> {
 #[derive(Clone, Copy, Debug)]
 pub struct RecBinder<'a> {
     pub binder: Binder<'a>,
-    /// Function parameters. A singleton internal delayed recursive value may
+    /// Function parameters. An internal delayed recursive value may
     /// use an empty slice with a `Delay` body and matching delayed binder type.
     pub params: &'a [Binder<'a>],
     /// Indices into `params` that every self call passes through unchanged.

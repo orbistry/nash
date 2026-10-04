@@ -271,7 +271,7 @@ fn explicit_function_views_keep_their_result_annotations() {
 }
 
 #[test]
-fn recursive_signatures_and_unsupported_views_are_unchanged() {
+fn recursive_signatures_reduce_but_unsupported_views_are_unchanged() {
     let a = Arena::new();
     let b = Builder::new(&a);
     let x = bind(&b, "unused", INT);
@@ -287,7 +287,7 @@ fn recursive_signatures_and_unsupported_views_are_unchanged() {
         }],
         call(&b, f, &[b.int(0), b.int(42)]),
     );
-    check("recursive_unchanged", &b, recursive, false, false);
+    check("recursive_signature_reduced", &b, recursive, true, false);
     let opaque = b.let_(
         f,
         value,
@@ -575,6 +575,8 @@ fn diverging_discarded_argument_is_still_a_strict_binding() {
     let CoreKind::Let { value, .. } = body.kind else {
         panic!("strict argument")
     };
-    assert!(std::ptr::eq(value, diverge));
+    // Recursive signature reduction can now rewrite the divergent argument.
+    // It must still be an unsafe-to-discard computation in the strict binding.
+    assert!(!nash_ir::analysis::safe_to_discard(value));
     hygiene::validate(after, &[]).unwrap();
 }

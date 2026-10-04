@@ -1,0 +1,89 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/recursive_params.rs
+expression: "crate::harness::pass_snapshot(&arena, before,\nformat!(\"--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\\n--- isolated UPLC after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), pretty(after), result.uplc, result.result, result.logs))"
+---
+--- unoptimized Core
+let captured#1 : int = 40 in
+letrec
+  f#2 : int -> int -> int [static []] = \x#4 : int -> \z#6 : int -> addInteger captured#1 z#6
+  g#3 : int -> int -> int [static []] = \y#5 : int -> trace "worker" in f#2 y#5
+in
+g#3 7 2
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam captured_1
+    [(lam dispatch_7
+      [(lam f_2
+        [(lam g_3 [[g_3 (con integer 7)] (con integer 2)])
+          (lam y_15 [dispatch_7 (constr 1 dispatch_7 y_15)])])
+        (lam x_16 [dispatch_7 (constr 0 dispatch_7 x_16)])])
+      (lam request_8
+        (case
+          request_8
+          (lam self_9 (lam x_4 (lam z_6 [[(builtin addInteger) captured_1] z_6])))
+          (lam self_12
+            (lam y_5
+              (force
+                [[(force (builtin trace)) (con string "worker")]
+                  (delay [self_12 (constr 0 self_12 y_5)])])))))])
+    (con integer 40)])
+--- optimized Core
+letrec
+  f#8 : @delay (int -> int) [static []] = \ -> delay (\z#11 : int -> addInteger 40 z#11)
+  g#9 : @delay (int -> int) [static []] = \ -> delay (trace "worker" in force f#8)
+in
+let anf#13 : int -> int = force g#9 in
+anf#13 2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_17
+    [(lam dispatch_12
+      [(lam f_14
+        [(lam g_15 [(lam anf_16 [anf_16 (con integer 2)]) (force g_15)])
+          (delay [dispatch_12 (constr 1 dispatch_12)])])
+        (delay [dispatch_12 (constr 0 dispatch_12)])])
+      (lam request_5
+        (case
+          request_5
+          (lam self_6 (lam z_7 [[(builtin addInteger) (con integer 40)] z_7]))
+          (lam self_10
+            (force
+              [[builtin_17 (con string "worker")]
+                (delay (force (delay [self_10 (constr 0 self_10)])))]))))])
+    (force (builtin trace))])
+--- isolated pass
+--- isolated Core before
+let captured#1 : int = 40 in
+letrec
+  f#2 : int -> int -> int [static []] = \x#4 : int -> \z#6 : int -> addInteger captured#1 z#6
+  g#3 : int -> int -> int [static []] = \y#5 : int -> trace "worker" in f#2 y#5
+in
+g#3 7 2
+--- isolated Core after
+let captured#1 : int = 40 in
+letrec
+  f#2 : @delay (int -> int) [static []] = \ -> delay (\z#6 : int -> addInteger captured#1 z#6)
+  g#3 : @delay (int -> int) [static []] = \ -> delay (trace "worker" in force f#2)
+in
+force g#3 2
+--- isolated UPLC after
+(program 1.1.0
+  [(lam captured_1
+    [(lam dispatch_17
+      [(lam f_2
+        [(lam g_3 [(force g_3) (con integer 2)])
+          (delay [dispatch_17 (constr 1 dispatch_17)])])
+        (delay [dispatch_17 (constr 0 dispatch_17)])])
+      (lam request_18
+        (case
+          request_18
+          (lam self_19 (lam z_6 [[(builtin addInteger) captured_1] z_6]))
+          (lam self_20
+            (force
+              [[(force (builtin trace)) (con string "worker")]
+                (delay (force (delay [self_20 (constr 0 self_20)])))]))))])
+    (con integer 40)])
+--- result
+(con integer 42)
+--- logs
+["worker"]

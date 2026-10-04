@@ -5,6 +5,8 @@ mod constant_input;
 mod inverse_input;
 #[path = "../../../crates/nash-codegen/tests/support/pair_projection.rs"]
 mod pair_input;
+#[path = "../../../crates/nash-codegen/tests/support/recursive_params.rs"]
+mod recursive_input;
 mod source;
 
 #[path = "../../../crates/nash-codegen/tests/support/vesting.rs"]
@@ -29,7 +31,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters(nonrecursive+recursive)/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -127,6 +129,10 @@ fn run() -> Result<()> {
         sources.insert(
             "PairInputs".into(),
             include_str!("../../../crates/nash-codegen/tests/support/pair_projection.rs").into(),
+        );
+        sources.insert(
+            "RecursiveParameterInputs".into(),
+            include_str!("../../../crates/nash-codegen/tests/support/recursive_params.rs").into(),
         );
         suite()?
     };
@@ -305,6 +311,8 @@ fn suite() -> Result<Vec<Row>> {
         "constantPrefixTwice",
         "constantPrefixCold",
         "constantPrefixLoop",
+        "recursiveUnusedSelf",
+        "recursiveUnusedMutual",
     ];
     let cores = source::compile(&arena, include_str!("../fixtures/Workloads.nash"), &names);
     let expected = [
@@ -319,6 +327,8 @@ fn suite() -> Result<Vec<Row>> {
         "(con integer 197)",
         "(con integer 42)",
         "(con integer 1528)",
+        "(con integer 42)",
+        "(con integer 42)",
     ];
     for ((name, core), expected) in names.into_iter().zip(cores).zip(expected) {
         rows.push(compare(
@@ -413,6 +423,16 @@ fn suite() -> Result<Vec<Row>> {
         rows.push(compare(
             &arena,
             format!("pair projection: {name}"),
+            core,
+            &[],
+            None,
+        )?);
+    }
+    let arena = Arena::new();
+    for (name, core, _) in recursive_input::cases(&Builder::new(&arena)) {
+        rows.push(compare(
+            &arena,
+            format!("recursive parameters: {name}"),
             core,
             &[],
             None,
