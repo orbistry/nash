@@ -25,7 +25,7 @@ pub(crate) fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core
 /// Prepared once; rendering and evaluation share these exact programs.
 pub struct Prepared<'a> {
     core: &'a Core<'a>,
-    optimized: &'a Core<'a>,
+    pub optimized: &'a Core<'a>,
     pub before: program::Compiled<'a>,
     pub after: program::Compiled<'a>,
 }

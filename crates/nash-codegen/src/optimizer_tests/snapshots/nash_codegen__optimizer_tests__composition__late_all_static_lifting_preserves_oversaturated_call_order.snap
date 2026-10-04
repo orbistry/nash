@@ -1,0 +1,67 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/composition.rs
+expression: semantic_snapshot(&fixture)
+---
+--- unoptimized Core
+letrec
+  loop#1 : int -> int -> int [static []] = \x#2 : int -> \n#3 : int -> case@Bool equalsInteger n#3 0 of
+    True -> x#2
+    False -> let next#4 : int = subtractInteger n#3 1 in
+    let result#5 : int = trace "recurse" in loop#1 (case@Bool true of
+      True -> x#2
+      False -> 0) next#4 in
+    addInteger result#5 1
+in
+loop#1 42 3
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam loop_1 [[loop_1 (con integer 42)] (con integer 3)])
+    [(lam self_6 [self_6 self_6])
+      (lam self_6
+        (lam x_2
+          (lam n_3
+            (case
+              [[(builtin equalsInteger) n_3] (con integer 0)]
+              [(lam next_4
+                [(lam result_5 [[(builtin addInteger) result_5] (con integer 1)])
+                  (force
+                    [[(force (builtin trace)) (con string "recurse")]
+                      (delay [[[self_6 self_6] (case (con bool True) (con integer 0) x_2)] next_4])])])
+                [[(builtin subtractInteger) n_3] (con integer 1)]]
+              x_2))))]])
+--- optimized Core
+letrec
+  worker#13 : @delay (int -> int) [static []] = \ -> delay (\n#8 : int -> let anf#11 : bool = equalsInteger n#8 0 in
+  case@Bool anf#11 of
+    True -> 42
+    False -> let next#9 : int = subtractInteger n#8 1 in
+    let result#10 : int = trace "recurse" in let forced#14 : int -> int = force worker#13 in
+    forced#14 next#9 in
+    addInteger result#10 1)
+in
+let beta#15 : int -> int = force worker#13 in
+beta#15 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_18
+    [(lam worker_16 [(lam beta_17 [beta_17 (con integer 3)]) (force worker_16)])
+      [(lam self_2 [self_2 self_2])
+        (lam self_3
+          (delay
+            (lam n_4
+              [(lam anf_5
+                (case
+                  anf_5
+                  [(lam next_6
+                    [(lam result_12 [[(builtin addInteger) result_12] (con integer 1)])
+                      (force
+                        [[builtin_18 (con string "recurse")]
+                          (delay [(lam forced_7 [forced_7 next_6]) (force [self_3 self_3])])])])
+                    [[(builtin subtractInteger) n_4] (con integer 1)]]
+                  (con integer 42)))
+                [[(builtin equalsInteger) n_4] (con integer 0)]])))]])
+    (force (builtin trace))])
+--- result
+(con integer 45)
+--- logs
+["recurse", "recurse", "recurse"]

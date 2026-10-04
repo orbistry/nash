@@ -1,6 +1,6 @@
 //! Lift unchanged self-call parameters while retaining explicit recursion.
 //!
-//! Run before ANF, with globally unique binders. Only singleton recursive groups
+//! Use globally unique binders. Only singleton recursive groups
 //! are lifted; mutual recursion retains its existing dispatcher treatment.
 use crate::{
     build::Builder,
@@ -33,6 +33,8 @@ pub fn static_params(f: Name<'_>, params: &[Binder<'_>], body: &Core<'_>) -> Vec
 /// Capture static parameters in an ordinary wrapper and introduce a recursive
 /// worker accepting only dynamic parameters. All-static workers are delayed
 /// recursive values, forced at each original call (never memoized).
+/// On ANF input, generated calls retain atomic operands. Cleanup must flatten
+/// binding prefixes introduced inside existing strict binding values.
 pub fn lift<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let report = crate::analysis::occurrences(core);
     let mut used: HashSet<_> = report
@@ -83,14 +85,15 @@ pub fn lift<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
             )
         };
         let worker = fresh("worker", worker_ty);
-        let call = |args: &[&'a Core<'a>], ty| {
+        let mut call = |args: &[&'a Core<'a>], ty| {
             let target = b.var(worker.name, worker.ty);
             if dynamic.is_empty() {
                 let forced = b.force(target, result);
                 if args.is_empty() {
                     b.with_type(forced, ty)
                 } else {
-                    b.app(forced, args, ty)
+                    let value = fresh("forced", result);
+                    b.let_(value, forced, b.app(b.var(value.name, result), args, ty))
                 }
             } else {
                 b.app(target, args, ty)

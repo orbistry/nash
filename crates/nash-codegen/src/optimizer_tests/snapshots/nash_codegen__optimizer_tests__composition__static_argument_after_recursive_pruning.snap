@@ -1,0 +1,58 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/composition.rs
+expression: semantic_snapshot(&fixture)
+---
+--- unoptimized Core
+letrec
+  loop#1 : int -> int -> int [static []] = \x#2 : int n#3 : int -> case@Bool equalsInteger n#3 0 of
+    True -> x#2
+    False -> let next#4 : int = subtractInteger n#3 1 in
+    loop#1 x#2 next#4
+  unused#5 : int -> int -> int [static []] = \a#6 : int c#7 : int -> a#6
+in
+loop#1 42 3
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam dispatch_8
+    [(lam loop_1
+      [(lam unused_5 [[loop_1 (con integer 42)] (con integer 3)])
+        (lam a_20 (lam c_21 [dispatch_8 (constr 1 dispatch_8 a_20 c_21)]))])
+      (lam x_22 (lam n_23 [dispatch_8 (constr 0 dispatch_8 x_22 n_23)]))])
+    (lam request_9
+      (case
+        request_9
+        (lam self_10
+          (lam x_2
+            (lam n_3
+              (case
+                [[(builtin equalsInteger) n_3] (con integer 0)]
+                [(lam next_4 [self_10 (constr 0 self_10 x_2 next_4)])
+                  [[(builtin subtractInteger) n_3] (con integer 1)]]
+                x_2))))
+        (lam self_15 (lam a_6 (lam c_7 a_6)))))])
+--- optimized Core
+letrec
+  worker#17 : int -> int [static []] = \n#16 : int -> let anf#15 : bool = equalsInteger n#16 0 in
+  case@Bool anf#15 of
+    True -> 42
+    False -> let next#12 : int = subtractInteger n#16 1 in
+    worker#17 next#12
+in
+worker#17 3
+--- optimized UPLC
+(program 1.1.0
+  [(lam worker_8 [worker_8 (con integer 3)])
+    [(lam self_3 [self_3 self_3])
+      (lam self_4
+        (lam n_5
+          [(lam anf_6
+            (case
+              anf_6
+              [(lam next_7 [[self_4 self_4] next_7])
+                [[(builtin subtractInteger) n_5] (con integer 1)]]
+              (con integer 42)))
+            [[(builtin equalsInteger) n_5] (con integer 0)]]))]])
+--- result
+(con integer 42)
+--- logs
+[]

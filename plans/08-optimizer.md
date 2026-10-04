@@ -1852,10 +1852,14 @@ signature removal, and a 130-call fixture that reaches a folding fixed point.
 Independent builders produce deterministic Core and closed UPLC. Accepted cleanup
 reaches an unchanged-pointer fixed point; no node-count stopping rule is used.
 
-Unused-parameter removal now repeats with constant folding and cleanup until all
+Static lifting and unused-parameter removal now repeat with constant folding and cleanup until all
 leave Core unchanged. There are no optimization iteration or resource cutoffs.
 The regression with a parameter used only in a constant dead branch now verifies
-equal closed output across two optimizer invocations. ANF still runs once.
+equal closed output across two optimizer invocations. Further regressions cover
+static parameters exposed by branch cleanup or recursive pruning and all-static
+oversaturated recursion. The shared executable fixture harness checks second-run
+closed-code equality after each semantic snapshot. ANF still runs once. See
+[the convergence follow-up](../docs/research/optimizer-convergence.md).
 The mode decision retains O0/O1, default O1, and the existing project/CLI precedence.
 
 Initial composition validation: all 3,857 workspace nextest tests pass; the five composition

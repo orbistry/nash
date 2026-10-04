@@ -6,7 +6,7 @@ pub fn optimize<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     optimize_with(&Builder::new(arena), core)
 }
 
-/// Normalize once, then remove unused parameters and simplify to a joint fixed point.
+/// Normalize once, then lift statics, remove unused parameters and simplify to a joint fixed point.
 pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let original_ty = core.ty;
     let core = hygiene::freshen(b, core);
@@ -27,7 +27,11 @@ pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     debug_assert!(anf::validate(core).is_ok());
     let mut core = core;
     loop {
-        let next = nash_ir::unused_params::reduce(b, core);
+        // Branch cleanup and recursive pruning can reveal new static parameters.
+        // Lifting keeps call operands atomic; the existing cleanup flattens any
+        // binding prefixes it introduces, without another normalization pass.
+        let next = nash_ir::static_lift::lift(b, core);
+        let next = nash_ir::unused_params::reduce(b, next);
         let next = crate::constant_fold::simplify(b, next);
         if std::ptr::eq(core, next) {
             break;

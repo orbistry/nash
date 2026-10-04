@@ -965,7 +965,7 @@ Chunk 8 for exact retained rules and the zero-regression measurements.
 ### Constant builtin evaluation
 
 Production O1 follows literal bindings and aliases and evaluates exactly saturated
-pure builtin calls. Successful, representable results become literals. Unused
+pure builtin calls. Successful, representable results become literals. Static lifting, unused
 parameter removal, constant folding and cleanup repeat until Core is unchanged.
 There are no attempt, CPU, memory, payload byte, node, depth or output-growth
 limits on folding. All pure builtins use the runtime's V3 semantics through a
@@ -997,7 +997,8 @@ No general case-to-projection rewrite is enabled and ANF still runs once.
 The final retained pipeline is binder freshening, static lifting, one traversal
 of nonrecursive/recursive unused-parameter removal, one ANF normalization, the
 accepted inlining/dead-code cleanup, constructor and representation cleanup, then
-constant folding and unused-parameter removal with cleanup to a joint fixed point. Recursion encoding follows optimization.
+static lifting, constant folding and unused-parameter removal with cleanup to a
+joint fixed point. Recursion encoding follows optimization.
 Only freshening and builtin/constant sharing in lowering follow recursion encoding;
 there is no second ANF pass and no optimizer loop around the entire program.
 
@@ -1011,10 +1012,15 @@ Composition tests check hygiene and root types after individual rewrites, ANF at
 valid cleanup boundaries, cleanup pointer idempotence, same-size progress and
 deterministic Core/closed UPLC from independent name supplies.
 
-Unused-parameter removal runs again after cleanup, so removing a constant branch
-can expose and remove a newly unused parameter in the same invocation. Tests cover
+Static lifting and unused-parameter removal run again after cleanup. Removing a
+constant branch can reveal an unchanged recursive argument or an unused parameter;
+pruning a recursive group can reveal a singleton eligible for lifting. These
+opportunities are consumed in the same invocation. All-static lifted workers bind
+their forced result before applying extra arguments, so call operands stay atomic.
+Cleanup flattens introduced binding prefixes without repeating ANF. Tests cover
 this joint fixed point, folding beyond 128 calls, large inputs and growing outputs,
 failed calls alongside successful folds, and semantic equivalence across invocations.
+Executable fixture checks compare the closed code after one and two O1 invocations.
 ANF is not repeated.
 
 The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,

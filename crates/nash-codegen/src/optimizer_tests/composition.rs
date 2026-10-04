@@ -1,4 +1,4 @@
-//! Composition contracts: deterministic progress, phase boundaries and bounded work.
+//! Composition contracts: deterministic progress, phase boundaries and fixed points.
 use nash_ir::{
     anf, beta,
     build::Builder,
@@ -301,4 +301,116 @@ fn folding_reaches_fixed_point_beyond_128_calls() {
         once,
         known_case::simplify_constr_data(&b, once)
     ));
+}
+
+#[test]
+fn cleanup_exposed_static_parameters_reach_a_fixed_point() {
+    for (name, hidden_argument, dead_peer) in [
+        ("static_argument_after_branch_cleanup", true, false),
+        ("static_argument_after_recursive_pruning", false, true),
+    ] {
+        let arena = Arena::new();
+        let b = Builder::new(&arena);
+        let int = b.int(0).ty;
+        let ty = Ty::Term(arena.alloc(TermTy::Fun(arena.alloc_slice_copy(&[int, int]), int)));
+        let f = bind(&b, "loop", ty);
+        let x = bind(&b, "x", int);
+        let n = bind(&b, "n", int);
+        let next = bind(&b, "next", int);
+        let condition = b.builtin(
+            F::EqualsInteger,
+            &[b.var(n.name, int), b.int(0)],
+            b.lit(C::bool(&arena, true)).ty,
+        );
+        let recursive_argument = if hidden_argument {
+            b.if_(b.lit(C::bool(&arena, true)), b.var(x.name, int), b.int(0))
+        } else {
+            b.var(x.name, int)
+        };
+        let body = b.if_(
+            condition,
+            b.var(x.name, int),
+            b.let_(
+                next,
+                b.builtin(F::SubtractInteger, &[b.var(n.name, int), b.int(1)], int),
+                b.app(
+                    b.var(f.name, ty),
+                    &[recursive_argument, b.var(next.name, int)],
+                    int,
+                ),
+            ),
+        );
+        let mut group = vec![RecBinder {
+            binder: f,
+            params: arena.alloc_slice_copy(&[x, n]),
+            static_params: &[],
+            body,
+        }];
+        if dead_peer {
+            let unused = bind(&b, "unused", ty);
+            let a = bind(&b, "a", int);
+            let c = bind(&b, "c", int);
+            group.push(RecBinder {
+                binder: unused,
+                params: arena.alloc_slice_copy(&[a, c]),
+                static_params: &[],
+                body: b.var(a.name, int),
+            });
+        }
+        let core = b.let_rec(
+            &group,
+            b.app(b.var(f.name, ty), &[b.int(42), b.int(3)], int),
+        );
+        let fixture = crate::harness::prepare_fixture(&arena, core);
+        insta::assert_snapshot!(name, semantic_snapshot(&fixture));
+        fixture.assert_equivalent(&arena);
+    }
+}
+
+#[test]
+fn late_all_static_lifting_preserves_oversaturated_call_order() {
+    let arena = Arena::new();
+    let b = Builder::new(&arena);
+    let int = b.int(0).ty;
+    let returned_ty = Ty::Term(arena.alloc(TermTy::Fun(arena.alloc_slice_copy(&[int]), int)));
+    let ty = Ty::Term(arena.alloc(TermTy::Fun(arena.alloc_slice_copy(&[int]), returned_ty)));
+    let f = bind(&b, "loop", ty);
+    let x = bind(&b, "x", int);
+    let n = bind(&b, "n", int);
+    let next = bind(&b, "next", int);
+    let result = bind(&b, "result", int);
+    let hidden = b.if_(b.lit(C::bool(&arena, true)), b.var(x.name, int), b.int(0));
+    let call = b.app(b.var(f.name, ty), &[hidden, b.var(next.name, int)], int);
+    let body = b.lam(
+        &[n],
+        b.if_(
+            b.builtin(
+                F::EqualsInteger,
+                &[b.var(n.name, int), b.int(0)],
+                b.lit(C::bool(&arena, true)).ty,
+            ),
+            b.var(x.name, int),
+            b.let_(
+                next,
+                b.builtin(F::SubtractInteger, &[b.var(n.name, int), b.int(1)], int),
+                b.let_(
+                    result,
+                    trace(&b, "recurse", call),
+                    b.builtin(F::AddInteger, &[b.var(result.name, int), b.int(1)], int),
+                ),
+            ),
+        ),
+    );
+    let core = b.let_rec(
+        &[RecBinder {
+            binder: f,
+            params: arena.alloc_slice_copy(&[x]),
+            static_params: &[],
+            body,
+        }],
+        b.app(b.var(f.name, ty), &[b.int(42), b.int(3)], int),
+    );
+    let fixture = crate::harness::prepare_fixture(&arena, core);
+    insta::assert_snapshot!(semantic_snapshot(&fixture));
+    fixture.assert_equivalent(&arena);
 }

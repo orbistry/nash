@@ -105,3 +105,16 @@ unusedSecond n unused = unusedFirst unused n
 
 recursiveUnusedMutual : int
 recursiveUnusedMutual = unusedFirst (Builtin.trace "entry" 7) 3
+
+hiddenStatic : int -> int -> int
+hiddenStatic x n =
+    if Builtin.equalsInteger n 0 then
+        x
+    else
+        let
+            next = Builtin.subtractInteger n 1
+        in
+        hiddenStatic (if True then x else 0) next
+
+cleanupExposesStatic : int
+cleanupExposesStatic = hiddenStatic 42 3

@@ -127,6 +127,14 @@ impl<'a> Fixture<'a> {
             self.evaluated.logs, optimized.logs,
             "candidate passes preserve trace order"
         );
+        let twice = crate::snapshot_optimizer::optimize(arena, self.prepared.optimized);
+        let once = crate::program::assemble_core(arena, self.prepared.optimized).unwrap();
+        let twice = crate::program::assemble_core(arena, twice).unwrap();
+        assert_eq!(
+            nash_plutus::flat::encode(once.program).unwrap(),
+            nash_plutus::flat::encode(twice.program).unwrap(),
+            "a second O1 invocation must not change the optimized program"
+        );
     }
 }
 
