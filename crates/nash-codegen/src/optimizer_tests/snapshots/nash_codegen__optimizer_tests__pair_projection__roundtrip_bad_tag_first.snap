@@ -1,0 +1,74 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+let tag#73 : int = unBData (trace "tag" in (con data (B #626164))) in
+let fields#74 : list Data = mkCons (trace "field" in (con data (I 7))) (con (list data) []) in
+let encoded#75 : Data = constrData tag#73 fields#74 in
+let decoded#76 : pair int (list Data) = unConstrData encoded#75 in
+case@Pair decoded#76 of
+  Pair x#77 y#78 -> x#77
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam tag_73
+    [(lam fields_74
+      [(lam encoded_75
+        [(lam decoded_76 (case decoded_76 (lam x_77 (lam y_78 x_77))))
+          [(builtin unConstrData) encoded_75]])
+        [[(builtin constrData) tag_73] fields_74]])
+      [[(force (builtin mkCons))
+        (force
+          [[(force (builtin trace)) (con string "field")] (delay (con data (I 7)))])]
+        (con (list data) [])]])
+    [(builtin unBData)
+      (force
+        [[(force (builtin trace)) (con string "tag")] (delay (con data (B #626164)))])]])
+--- optimized Core
+let anf#7 : Data = trace "tag" in (con data (B #626164)) in
+let tag#1 : int = unBData anf#7 in
+let anf#8 : Data = trace "field" in (con data (I 7)) in
+let fields#2 : list Data = mkCons anf#8 (con (list data) []) in
+let encoded#3 : Data = constrData tag#1 fields#2 in
+let decoded#4 : pair int (list Data) = unConstrData encoded#3 in
+tag#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_13
+    [(lam builtin_14
+      [(lam anf_5
+        [(lam tag_6
+          [(lam anf_9
+            [(lam fields_10
+              [(lam encoded_11 [(lam decoded_12 tag_6) [(builtin unConstrData) encoded_11]])
+                [[(builtin constrData) tag_6] fields_10]])
+              [[builtin_13 anf_9] (con (list data) [])]])
+            (force [[builtin_14 (con string "field")] (delay (con data (I 7)))])])
+          [(builtin unBData) anf_5]])
+        (force [[builtin_14 (con string "tag")] (delay (con data (B #626164)))])])
+      (force (builtin trace))])
+    (force (builtin mkCons))])
+--- result
+error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))
+--- logs
+["tag", "field"]
+--- budget
+cpu: 211600, memory: 228
+--- isolated Core before
+let anf#124 : Data = trace "tag" in (con data (B #626164)) in
+let tag#73 : int = unBData anf#124 in
+let anf#125 : Data = trace "field" in (con data (I 7)) in
+let fields#74 : list Data = mkCons anf#125 (con (list data) []) in
+let encoded#75 : Data = constrData tag#73 fields#74 in
+let decoded#76 : pair int (list Data) = unConstrData encoded#75 in
+case@Pair decoded#76 of
+  Pair x#77 y#78 -> x#77
+--- isolated Core after
+let anf#124 : Data = trace "tag" in (con data (B #626164)) in
+let tag#73 : int = unBData anf#124 in
+let anf#125 : Data = trace "field" in (con data (I 7)) in
+let fields#74 : list Data = mkCons anf#125 (con (list data) []) in
+let encoded#75 : Data = constrData tag#73 fields#74 in
+let decoded#76 : pair int (list Data) = unConstrData encoded#75 in
+let x#77 : int = fstPair decoded#76 in
+x#77

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1493
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype Record = Record { a : Int, b : Int, c : Int, d : Int }\nselect : Record -> int\nselect r =\n    case r of\n        Record { b } -> Builtin.addInteger (Builtin.unIData b) (Builtin.unIData r.c)\nmain = select (Record { a = 1, b = 2, c = 3, d = 4 })\n"
 ---
 --- unoptimized Core
@@ -76,16 +75,12 @@ let anf#44 : list Data = mkCons anf#48 anf#43 in
 let anf#45 : list Data = mkCons anf#46 anf#44 in
 let anf#53 : Main.Record = constrData 0 anf#45 in
 let projection#15 : pair int (list Data) = unConstrData anf#53 in
-case@Pair projection#15 of
-  Pair tag#17 fields#18 -> case@List fields#18 of
-    Cons ignored#26 fieldTail#27 -> case@List fieldTail#27 of
-      Cons field#28 fieldTail#29 -> let evaluated#31 : int = unIData field#28 in
-      case@List fieldTail#29 of
-        Cons head#32 tail#33 -> let anf#41 : int = unIData head#32 in
-        addInteger evaluated#31 anf#41
+let evaluated#31 : int = unIData anf#48 in
+let anf#41 : int = unIData anf#50 in
+addInteger evaluated#31 anf#41
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_25
+  [(lam builtin_14
     [(lam fromInt_1
       [(lam anf_2
         [(lam anf_3
@@ -97,35 +92,16 @@ case@Pair projection#15 of
                     [(lam anf_9
                       [(lam anf_10
                         [(lam projection_11
-                          (case
-                            projection_11
-                            (lam tag_12
-                              (lam fields_13
-                                (case
-                                  fields_13
-                                  (lam ignored_14
-                                    (lam fieldTail_16
-                                      (case
-                                        fieldTail_16
-                                        (lam field_19
-                                          (lam fieldTail_20
-                                            [(lam evaluated_21
-                                              (case
-                                                fieldTail_20
-                                                (lam head_22
-                                                  (lam tail_23
-                                                    [(lam anf_24 [[(builtin addInteger) evaluated_21] anf_24])
-                                                      [(builtin unIData) head_22]]))
-                                                (error)))
-                                              [(builtin unIData) field_19]]))
-                                        (error))))
-                                  (error))))))
+                          [(lam evaluated_12
+                            [(lam anf_13 [[(builtin addInteger) evaluated_12] anf_13])
+                              [(builtin unIData) anf_4]])
+                            [(builtin unIData) anf_3]])
                           [(builtin unConstrData) anf_10]])
                         [[(builtin constrData) (con integer 0)] anf_9]])
-                      [[builtin_25 anf_2] anf_8]])
-                    [[builtin_25 anf_3] anf_7]])
-                  [[builtin_25 anf_4] anf_6]])
-                [[builtin_25 anf_5] (con (list data) [])]])
+                      [[builtin_14 anf_2] anf_8]])
+                    [[builtin_14 anf_3] anf_7]])
+                  [[builtin_14 anf_4] anf_6]])
+                [[builtin_14 anf_5] (con (list data) [])]])
               [fromInt_1 (con integer 4)]])
             [fromInt_1 (con integer 3)]])
           [fromInt_1 (con integer 2)]])

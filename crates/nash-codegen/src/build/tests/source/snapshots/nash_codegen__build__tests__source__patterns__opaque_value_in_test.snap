@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 579
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lift, lower)\ntype Pair 'v = Pair Bytes 'v\ntype Dict 'v = Dict { inner : List (Pair 'v) }\ntype Value = Value { inner : Dict (Dict Int) }\ntype Dat = Dat { c : Int, a : Value }\ndat : Dat\ndat =\n    let\n        innerEntries : list (Pair Int)\n        innerEntries = [Pair #\"aa\" 4]\n        innerDict : Dict Int\n        innerDict = Dict { inner = (lift innerEntries) }\n        v = Value { inner = (Dict { inner = (lift [Pair #\"\" innerDict]) }) }\n    in\n    Dat { c = 0, a = v }\nmain =\n    let\n        val = dat.a\n        entries : list (Pair (Dict Int))\n        entries = lower val.inner.inner\n        finalEntries : list (Pair Int)\n        finalEntries = [Pair #\"AA\" 4]\n        finalAmount : Dict Int\n        finalAmount = Dict { inner = (lift finalEntries) }\n    in\n    case entries of\n        [Pair _ amount] -> eq finalAmount amount\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -204,39 +203,32 @@ let anf#130 : list Data = mkCons v#70 (con (list data) []) in
 let anf#131 : list Data = mkCons anf#132 anf#130 in
 let dat#73 : Main.Dat = constrData 0 anf#131 in
 let projection#74 : pair int (list Data) = unConstrData dat#73 in
-case@Pair projection#74 of
-  Pair tag#75 fields#76 -> case@List fields#76 of
-    Cons head#77 tail#78 -> case@List tail#78 of
-      Cons head#79 tail#80 -> let anf#135 : Bytes = fromBytes#10 (con bytestring #aa) in
-      let anf#137 : Int = fromInt#11 4 in
-      let anf#133 : list Data = mkCons anf#137 (con (list data) []) in
-      let anf#134 : list Data = mkCons anf#135 anf#133 in
-      let anf#138 : Main.Pair Int = constrData 0 anf#134 in
-      let finalEntries#84 : list (Main.Pair Int) = mkCons anf#138 (con (list data) []) in
-      let anf#140 : List (Main.Pair Int) = lift#9 finalEntries#84 in
-      let anf#139 : list Data = mkCons anf#140 (con (list data) []) in
-      let finalAmount#86 : Main.Dict Int = constrData 0 anf#139 in
-      let projection#87 : pair int (list Data) = unConstrData head#79 in
-      case@Pair projection#87 of
-        Pair tag#88 fields#89 -> case@List fields#89 of
-          Cons head#90 tail#91 -> let projection#92 : pair int (list Data) = unConstrData head#90 in
-          case@Pair projection#92 of
-            Pair tag#93 fields#94 -> case@List fields#94 of
-              Cons head#95 tail#96 -> let entries#97 : list (Main.Pair (Main.Dict Int)) = unListData head#95 in
-              let leaf#99 : @delay bool = delay error in
-              case@List entries#97 of
-                Nil -> force leaf#99
-                Cons field#100 field#101 -> let projection#102 : pair int (list Data) = unConstrData field#100 in
-                case@Pair projection#102 of
-                  Pair tag#103 fields#104 -> case@List fields#104 of
-                    Cons ignored#105 fieldTail#106 -> case@List fieldTail#106 of
-                      Cons field#107 fieldTail#108 -> case@List field#101 of
-                        Nil -> equalsData finalAmount#86 field#107
-                        Cons field#110 field#111 -> force leaf#99
+let anf#135 : Bytes = fromBytes#10 (con bytestring #aa) in
+let anf#137 : Int = fromInt#11 4 in
+let anf#133 : list Data = mkCons anf#137 (con (list data) []) in
+let anf#134 : list Data = mkCons anf#135 anf#133 in
+let anf#138 : Main.Pair Int = constrData 0 anf#134 in
+let finalEntries#84 : list (Main.Pair Int) = mkCons anf#138 (con (list data) []) in
+let anf#140 : List (Main.Pair Int) = lift#9 finalEntries#84 in
+let anf#139 : list Data = mkCons anf#140 (con (list data) []) in
+let finalAmount#86 : Main.Dict Int = constrData 0 anf#139 in
+let projection#87 : pair int (list Data) = unConstrData v#70 in
+let projection#92 : pair int (list Data) = unConstrData anf#129 in
+let entries#97 : list (Main.Pair (Main.Dict Int)) = unListData anf#128 in
+let leaf#99 : @delay bool = delay error in
+case@List entries#97 of
+  Nil -> force leaf#99
+  Cons field#100 field#101 -> let projection#102 : pair int (list Data) = unConstrData field#100 in
+  case@Pair projection#102 of
+    Pair tag#103 fields#104 -> case@List fields#104 of
+      Cons ignored#105 fieldTail#106 -> case@List fieldTail#106 of
+        Cons field#107 fieldTail#108 -> case@List field#101 of
+          Nil -> equalsData finalAmount#86 field#107
+          Cons field#110 field#111 -> force leaf#99
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_72
-    [(lam partial_73
+  [(lam builtin_57
+    [(lam partial_58
       [(lam lift_1
         [(lam fromBytes_2
           [(lam fromInt_3
@@ -264,111 +256,79 @@ case@Pair projection#74 of
                                                       [(lam anf_30
                                                         [(lam dat_31
                                                           [(lam projection_32
-                                                            (case
-                                                              projection_32
-                                                              (lam tag_33
-                                                                (lam fields_34
-                                                                  (case
-                                                                    fields_34
-                                                                    (lam head_35
-                                                                      (lam tail_36
-                                                                        (case
-                                                                          tail_36
-                                                                          (lam head_37
-                                                                            (lam tail_38
-                                                                              [(lam anf_39
-                                                                                [(lam anf_40
-                                                                                  [(lam anf_41
-                                                                                    [(lam anf_42
-                                                                                      [(lam anf_43
-                                                                                        [(lam finalEntries_44
-                                                                                          [(lam anf_45
-                                                                                            [(lam anf_46
-                                                                                              [(lam finalAmount_47
-                                                                                                [(lam projection_48
-                                                                                                  (case
-                                                                                                    projection_48
-                                                                                                    (lam tag_49
-                                                                                                      (lam fields_50
-                                                                                                        (case
-                                                                                                          fields_50
-                                                                                                          (lam head_51
-                                                                                                            (lam tail_52
-                                                                                                              [(lam projection_53
+                                                            [(lam anf_33
+                                                              [(lam anf_34
+                                                                [(lam anf_35
+                                                                  [(lam anf_36
+                                                                    [(lam anf_37
+                                                                      [(lam finalEntries_38
+                                                                        [(lam anf_39
+                                                                          [(lam anf_40
+                                                                            [(lam finalAmount_41
+                                                                              [(lam projection_42
+                                                                                [(lam projection_43
+                                                                                  [(lam entries_44
+                                                                                    [(lam leaf_45
+                                                                                      (case
+                                                                                        entries_44
+                                                                                        (lam field_46
+                                                                                          (lam field_47
+                                                                                            [(lam projection_48
+                                                                                              (case
+                                                                                                projection_48
+                                                                                                (lam tag_49
+                                                                                                  (lam fields_50
+                                                                                                    (case
+                                                                                                      fields_50
+                                                                                                      (lam ignored_51
+                                                                                                        (lam fieldTail_52
+                                                                                                          (case
+                                                                                                            fieldTail_52
+                                                                                                            (lam field_53
+                                                                                                              (lam fieldTail_54
                                                                                                                 (case
-                                                                                                                  projection_53
-                                                                                                                  (lam tag_54
-                                                                                                                    (lam fields_55
-                                                                                                                      (case
-                                                                                                                        fields_55
-                                                                                                                        (lam head_56
-                                                                                                                          (lam tail_57
-                                                                                                                            [(lam entries_58
-                                                                                                                              [(lam leaf_59
-                                                                                                                                (case
-                                                                                                                                  entries_58
-                                                                                                                                  (lam field_60
-                                                                                                                                    (lam field_61
-                                                                                                                                      [(lam projection_62
-                                                                                                                                        (case
-                                                                                                                                          projection_62
-                                                                                                                                          (lam tag_63
-                                                                                                                                            (lam fields_64
-                                                                                                                                              (case
-                                                                                                                                                fields_64
-                                                                                                                                                (lam ignored_65
-                                                                                                                                                  (lam fieldTail_66
-                                                                                                                                                    (case
-                                                                                                                                                      fieldTail_66
-                                                                                                                                                      (lam field_67
-                                                                                                                                                        (lam fieldTail_68
-                                                                                                                                                          (case
-                                                                                                                                                            field_61
-                                                                                                                                                            (lam field_69 (lam field_71 (force leaf_59)))
-                                                                                                                                                            [[(builtin equalsData) finalAmount_47] field_67])))
-                                                                                                                                                      (error))))
-                                                                                                                                                (error))))))
-                                                                                                                                        [(builtin unConstrData) field_60]]))
-                                                                                                                                  (force leaf_59)))
-                                                                                                                                (delay (error))])
-                                                                                                                              [(builtin unListData) head_56]]))
-                                                                                                                        (error))))))
-                                                                                                                [(builtin unConstrData) head_51]]))
-                                                                                                          (error))))))
-                                                                                                  [(builtin unConstrData) head_37]])
-                                                                                                [partial_73 anf_46]])
-                                                                                              [[builtin_72 anf_45] (con (list data) [])]])
-                                                                                            [lift_1 finalEntries_44]])
-                                                                                          [[builtin_72 anf_43] (con (list data) [])]])
-                                                                                        [partial_73 anf_42]])
-                                                                                      [[builtin_72 anf_39] anf_41]])
-                                                                                    [[builtin_72 anf_40] (con (list data) [])]])
-                                                                                  [fromInt_3 (con integer 4)]])
-                                                                                [fromBytes_2 (con bytestring #aa)]]))
-                                                                          (error))))
-                                                                    (error))))))
+                                                                                                                  field_47
+                                                                                                                  (lam field_55 (lam field_56 (force leaf_45)))
+                                                                                                                  [[(builtin equalsData) finalAmount_41] field_53])))
+                                                                                                            (error))))
+                                                                                                      (error))))))
+                                                                                              [(builtin unConstrData) field_46]]))
+                                                                                        (force leaf_45)))
+                                                                                      (delay (error))])
+                                                                                    [(builtin unListData) anf_23]])
+                                                                                  [(builtin unConstrData) anf_25]])
+                                                                                [(builtin unConstrData) v_27]])
+                                                                              [partial_58 anf_40]])
+                                                                            [[builtin_57 anf_39] (con (list data) [])]])
+                                                                          [lift_1 finalEntries_38]])
+                                                                        [[builtin_57 anf_37] (con (list data) [])]])
+                                                                      [partial_58 anf_36]])
+                                                                    [[builtin_57 anf_33] anf_35]])
+                                                                  [[builtin_57 anf_34] (con (list data) [])]])
+                                                                [fromInt_3 (con integer 4)]])
+                                                              [fromBytes_2 (con bytestring #aa)]])
                                                             [(builtin unConstrData) dat_31]])
-                                                          [partial_73 anf_30]])
-                                                        [[builtin_72 anf_28] anf_29]])
-                                                      [[builtin_72 v_27] (con (list data) [])]])
+                                                          [partial_58 anf_30]])
+                                                        [[builtin_57 anf_28] anf_29]])
+                                                      [[builtin_57 v_27] (con (list data) [])]])
                                                     [fromInt_3 (con integer 0)]])
-                                                  [partial_73 anf_26]])
-                                                [[builtin_72 anf_25] (con (list data) [])]])
-                                              [partial_73 anf_24]])
-                                            [[builtin_72 anf_23] (con (list data) [])]])
+                                                  [partial_58 anf_26]])
+                                                [[builtin_57 anf_25] (con (list data) [])]])
+                                              [partial_58 anf_24]])
+                                            [[builtin_57 anf_23] (con (list data) [])]])
                                           [lift_1 anf_22]])
-                                        [[builtin_72 anf_21] (con (list data) [])]])
-                                      [partial_73 anf_20]])
-                                    [[builtin_72 anf_18] anf_19]])
-                                  [[builtin_72 innerDict_17] (con (list data) [])]])
+                                        [[builtin_57 anf_21] (con (list data) [])]])
+                                      [partial_58 anf_20]])
+                                    [[builtin_57 anf_18] anf_19]])
+                                  [[builtin_57 innerDict_17] (con (list data) [])]])
                                 [fromBytes_2 (con bytestring #)]])
-                              [partial_73 anf_15]])
-                            [[builtin_72 anf_13] (con (list data) [])]])
+                              [partial_58 anf_15]])
+                            [[builtin_57 anf_13] (con (list data) [])]])
                           [lift_1 innerEntries_12]])
-                        [[builtin_72 anf_8] (con (list data) [])]])
-                      [partial_73 anf_7]])
-                    [[builtin_72 anf_4] anf_6]])
-                  [[builtin_72 anf_5] (con (list data) [])]])
+                        [[builtin_57 anf_8] (con (list data) [])]])
+                      [partial_58 anf_7]])
+                    [[builtin_57 anf_4] anf_6]])
+                  [[builtin_57 anf_5] (con (list data) [])]])
                 [fromInt_3 (con integer 4)]])
               [fromBytes_2 (con bytestring #aa)]])
             (builtin iData)])

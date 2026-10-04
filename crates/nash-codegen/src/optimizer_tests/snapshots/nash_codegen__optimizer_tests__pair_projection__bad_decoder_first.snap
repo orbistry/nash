@@ -1,0 +1,32 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+case@Pair unConstrData (con data (I 7)) of
+  Pair x#17 y#18 -> x#17
+--- unoptimized UPLC
+(program 1.1.0
+  (case [(builtin unConstrData) (con data (I 7))] (lam x_17 (lam y_18 x_17))))
+--- optimized Core
+let anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in
+case@Pair anf#3 of
+  Pair x#1 y#2 -> x#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_4 (case anf_4 (lam x_5 (lam y_6 x_5))))
+    [(builtin unConstrData) (con data (I 7))]])
+--- result
+error: Runtime(MalFormedData(Integer(7)))
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100
+--- isolated Core before
+let anf#91 : pair int (list Data) = unConstrData (con data (I 7)) in
+case@Pair anf#91 of
+  Pair x#17 y#18 -> x#17
+--- isolated Core after
+let anf#91 : pair int (list Data) = unConstrData (con data (I 7)) in
+case@Pair anf#91 of
+  Pair x#17 y#18 -> x#17

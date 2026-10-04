@@ -35,6 +35,7 @@ mod test_support {
     }
 }
 
+pub mod constant_fold;
 pub mod inverse;
 
-pub mod constant_fold;
+pub mod pair_projection;

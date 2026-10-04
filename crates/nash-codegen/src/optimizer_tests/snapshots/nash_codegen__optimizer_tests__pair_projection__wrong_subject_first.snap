@@ -1,0 +1,26 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+case@Pair 1 of
+  Pair x#25 y#26 -> x#25
+--- unoptimized UPLC
+(program 1.1.0 (case (con integer 1) (lam x_25 (lam y_26 x_25))))
+--- optimized Core
+case@Pair 1 of
+  Pair x#1 y#2 -> x#1
+--- optimized UPLC
+(program 1.1.0 (case (con integer 1) (lam x_3 (lam y_4 x_3))))
+--- result
+error: NonConstrScrutinized(Con(Integer(1)))
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100
+--- isolated Core before
+case@Pair 1 of
+  Pair x#25 y#26 -> x#25
+--- isolated Core after
+case@Pair 1 of
+  Pair x#25 y#26 -> x#25

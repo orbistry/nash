@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 715
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ntype Datum = Datum { a : Int, b : Int, c : Int, d : Int }\nmain : int\nmain = Builtin.unIData ((Datum { a = 10, b = 20, c = 30, d = 40 }).d)\n"
 ---
 --- unoptimized Core
@@ -54,14 +53,13 @@ let anf#29 : list Data = mkCons anf#33 anf#28 in
 let anf#30 : list Data = mkCons anf#31 anf#29 in
 let evaluated#19 : Main.Datum = constrData 0 anf#30 in
 let projection#20 : pair int (list Data) = unConstrData evaluated#19 in
-case@Pair projection#20 of
-  Pair tag#21 fields#22 -> let projection#23 : list Data = dropList 3 fields#22 in
-  case@List projection#23 of
-    Cons head#24 tail#25 -> unIData head#24
+let projection#23 : list Data = dropList 3 anf#30 in
+case@List projection#23 of
+  Cons head#24 tail#25 -> unIData head#24
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_18
-    [(lam builtin_19
+  [(lam builtin_16
+    [(lam builtin_17
       [(lam fromInt_1
         [(lam anf_2
           [(lam anf_3
@@ -73,22 +71,18 @@ case@Pair projection#20 of
                       [(lam anf_9
                         [(lam evaluated_10
                           [(lam projection_11
-                            (case
-                              projection_11
-                              (lam tag_12
-                                (lam fields_13
-                                  [(lam projection_15
-                                    (case
-                                      projection_15
-                                      (lam head_16 (lam tail_17 [(builtin unIData) head_16]))
-                                      (error)))
-                                    [[builtin_18 (con integer 3)] fields_13]]))))
+                            [(lam projection_12
+                              (case
+                                projection_12
+                                (lam head_13 (lam tail_15 [(builtin unIData) head_13]))
+                                (error)))
+                              [[builtin_16 (con integer 3)] anf_9]])
                             [(builtin unConstrData) evaluated_10]])
                           [[(builtin constrData) (con integer 0)] anf_9]])
-                        [[builtin_19 anf_2] anf_8]])
-                      [[builtin_19 anf_3] anf_7]])
-                    [[builtin_19 anf_4] anf_6]])
-                  [[builtin_19 anf_5] (con (list data) [])]])
+                        [[builtin_17 anf_2] anf_8]])
+                      [[builtin_17 anf_3] anf_7]])
+                    [[builtin_17 anf_4] anf_6]])
+                  [[builtin_17 anf_5] (con (list data) [])]])
                 [fromInt_1 (con integer 40)]])
               [fromInt_1 (con integer 30)]])
             [fromInt_1 (con integer 20)]])

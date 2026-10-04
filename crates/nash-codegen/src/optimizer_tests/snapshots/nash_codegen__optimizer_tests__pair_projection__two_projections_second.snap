@@ -1,0 +1,65 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+addInteger (case@Pair (trace "first" in (con (pair integer integer) (7, 8))) of
+  Pair x#50 y#51 -> y#51) (case@Pair (trace "second" in (con (pair integer integer) (7, 8))) of
+  Pair x#52 y#53 -> y#53)
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin addInteger)
+    (case
+      (force
+        [[(force (builtin trace)) (con string "first")]
+          (delay (con (pair integer integer) (7, 8)))])
+      (lam x_50 (lam y_51 y_51)))]
+    (case
+      (force
+        [[(force (builtin trace)) (con string "second")]
+          (delay (con (pair integer integer) (7, 8)))])
+      (lam x_52 (lam y_53 y_53)))])
+--- optimized Core
+let anf#5 : pair int int = trace "first" in (con (pair integer integer) (7, 8)) in
+let anf#6 : int = case@Pair anf#5 of
+  Pair x#1 y#2 -> y#2 in
+let anf#7 : pair int int = trace "second" in (con (pair integer integer) (7, 8)) in
+let anf#8 : int = case@Pair anf#7 of
+  Pair x#3 y#4 -> y#4 in
+addInteger anf#6 anf#8
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_17
+    [(lam anf_9
+      [(lam anf_12
+        [(lam anf_13
+          [(lam anf_16 [[(builtin addInteger) anf_12] anf_16])
+            (case anf_13 (lam x_14 (lam y_15 y_15)))])
+          (force
+            [[builtin_17 (con string "second")] (delay (con (pair integer integer) (7, 8)))])])
+        (case anf_9 (lam x_10 (lam y_11 y_11)))])
+      (force
+        [[builtin_17 (con string "first")] (delay (con (pair integer integer) (7, 8)))])])
+    (force (builtin trace))])
+--- result
+(con integer 16)
+--- logs
+["first", "second"]
+--- budget
+cpu: 652304, memory: 2866
+--- isolated Core before
+let anf#112 : pair int int = trace "first" in (con (pair integer integer) (7, 8)) in
+let anf#113 : int = case@Pair anf#112 of
+  Pair x#50 y#51 -> y#51 in
+let anf#114 : pair int int = trace "second" in (con (pair integer integer) (7, 8)) in
+let anf#115 : int = case@Pair anf#114 of
+  Pair x#52 y#53 -> y#53 in
+addInteger anf#113 anf#115
+--- isolated Core after
+let anf#112 : pair int int = trace "first" in (con (pair integer integer) (7, 8)) in
+let anf#113 : int = case@Pair anf#112 of
+  Pair x#50 y#51 -> y#51 in
+let anf#114 : pair int int = trace "second" in (con (pair integer integer) (7, 8)) in
+let anf#115 : int = case@Pair anf#114 of
+  Pair x#52 y#53 -> y#53 in
+addInteger anf#113 anf#115

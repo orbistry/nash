@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype alias Record = { owner : Bytes, count : Int }\ntype Datum = Datum { owner : Bytes, count : Int }\nrecord : Record\nrecord = { owner = #\"aa\", count = 1 }\ndatum : Datum\ndatum = Datum { owner = #\"bb\", count = 2 }\nmain = neq record.count datum.count\n"
 ---
 --- unoptimized Core
@@ -88,16 +87,13 @@ let projection#38 : list Data = unListData record#34 in
 case@List projection#38 of
   Cons head#39 tail#40 -> case@List tail#40 of
     Cons head#41 tail#42 -> let projection#43 : pair int (list Data) = unConstrData datum#37 in
-    case@Pair projection#43 of
-      Pair tag#44 fields#45 -> case@List fields#45 of
-        Cons head#46 tail#47 -> case@List tail#47 of
-          Cons head#48 tail#49 -> let anf#52 : bool = equalsData head#41 head#48 in
-          case@Bool anf#52 of
-            True -> false
-            False -> true
+    let anf#52 : bool = equalsData head#41 anf#61 in
+    case@Bool anf#52 of
+      True -> false
+      False -> true
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_26
+  [(lam builtin_20
     [(lam fromBytes_1
       [(lam fromInt_2
         [(lam anf_3
@@ -120,34 +116,20 @@ case@List projection#38 of
                                       (lam head_16
                                         (lam tail_17
                                           [(lam projection_18
-                                            (case
-                                              projection_18
-                                              (lam tag_19
-                                                (lam fields_20
-                                                  (case
-                                                    fields_20
-                                                    (lam head_21
-                                                      (lam tail_22
-                                                        (case
-                                                          tail_22
-                                                          (lam head_23
-                                                            (lam tail_24
-                                                              [(lam anf_25 (case anf_25 (con bool True) (con bool False)))
-                                                                [[(builtin equalsData) head_16] head_23]]))
-                                                          (error))))
-                                                    (error))))))
+                                            [(lam anf_19 (case anf_19 (con bool True) (con bool False)))
+                                              [[(builtin equalsData) head_16] anf_9]])
                                             [(builtin unConstrData) datum_12]]))
                                       (error))))
                                 (error)))
                               [(builtin unListData) record_7]])
                             [[(builtin constrData) (con integer 0)] anf_11]])
-                          [[builtin_26 anf_8] anf_10]])
-                        [[builtin_26 anf_9] (con (list data) [])]])
+                          [[builtin_20 anf_8] anf_10]])
+                        [[builtin_20 anf_9] (con (list data) [])]])
                       [fromInt_2 (con integer 2)]])
                     [fromBytes_1 (con bytestring #bb)]])
                   [(builtin listData) anf_6]])
-                [[builtin_26 anf_3] anf_5]])
-              [[builtin_26 anf_4] (con (list data) [])]])
+                [[builtin_20 anf_3] anf_5]])
+              [[builtin_20 anf_4] (con (list data) [])]])
             [fromInt_2 (con integer 1)]])
           [fromBytes_1 (con bytestring #aa)]])
         (builtin iData)])

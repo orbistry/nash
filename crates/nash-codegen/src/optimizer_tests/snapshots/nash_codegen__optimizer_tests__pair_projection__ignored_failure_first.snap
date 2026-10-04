@@ -1,0 +1,42 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+case@Pair mkPairData (con data (I 7)) (trace "unused field" in error) of
+  Pair x#21 y#22 -> x#21
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    [[(builtin mkPairData) (con data (I 7))]
+      (force [[(force (builtin trace)) (con string "unused field")] (delay (error))])]
+    (lam x_21 (lam y_22 x_21))))
+--- optimized Core
+let anf#3 : Data = trace "unused field" in error in
+let anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in
+case@Pair anf#4 of
+  Pair x#1 y#2 -> x#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_9
+    [(lam anf_5
+      [(lam anf_6 (case anf_6 (lam x_7 (lam y_8 x_7))))
+        [[(builtin mkPairData) (con data (I 7))] anf_5]])
+      (force [[builtin_9 (con string "unused field")] (delay (error))])])
+    (force (builtin trace))])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["unused field"]
+--- budget
+cpu: 59598, memory: 132
+--- isolated Core before
+let anf#93 : Data = trace "unused field" in error in
+let anf#94 : pair Data Data = mkPairData (con data (I 7)) anf#93 in
+case@Pair anf#94 of
+  Pair x#21 y#22 -> x#21
+--- isolated Core after
+let anf#93 : Data = trace "unused field" in error in
+let anf#94 : pair Data Data = mkPairData (con data (I 7)) anf#93 in
+case@Pair anf#94 of
+  Pair x#21 y#22 -> x#21

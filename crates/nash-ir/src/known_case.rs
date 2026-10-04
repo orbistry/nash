@@ -835,7 +835,8 @@ pub fn reduce_constr_data<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'
 /// ConstrData folding with accepted cleanup, without another ANF pass.
 pub fn simplify_constr_data<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
-        let next = simplify_data_wrappers(b, reduce_constr_data(b, core));
+        let projected = crate::pair_projection::reduce(b, core);
+        let next = simplify_data_wrappers(b, reduce_constr_data(b, projected));
         if std::ptr::eq(core, next) {
             return next;
         }

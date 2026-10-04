@@ -13,6 +13,7 @@ mod single_use;
 mod small_inline;
 mod unused_params;
 
+mod constant_fold;
 mod inverse;
 
-mod constant_fold;
+mod pair_projection;

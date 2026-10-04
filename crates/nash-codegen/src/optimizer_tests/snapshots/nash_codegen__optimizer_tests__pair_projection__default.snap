@@ -1,0 +1,16 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"--- isolated Core before\\n{}\\n--- UPLC before\\n{}\\n--- isolated Core after\\n{}\\n--- UPLC after\\n{}\",\npretty(before), lowered(before), pretty(after), lowered(after))"
+---
+--- isolated Core before
+case@Pair (con (pair integer integer) (7, 8)) of
+  Pair x#1 y#2 -> x#1
+  _ -> 0
+--- UPLC before
+error: invalid Core case: pair branch must bind its two fields
+--- isolated Core after
+case@Pair (con (pair integer integer) (7, 8)) of
+  Pair x#1 y#2 -> x#1
+  _ -> 0
+--- UPLC after
+error: invalid Core case: pair branch must bind its two fields

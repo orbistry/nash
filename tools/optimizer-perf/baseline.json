@@ -1,5 +1,5 @@
 {
-  "settings": "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing",
+  "settings": "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing",
   "sources": {
     "Cardano.Tx": "module Cardano.Tx exposing (validAfter, signedBy)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (Eq)\nimport Lift exposing (lower)\n\n-- V3 TxInfo field 7 is the validity interval. Require a finite lower bound.\n-- Times are POSIX milliseconds, not slots or the current wall-clock time.\nvalidAfter : Data -> int\nvalidAfter tx =\n    case tx of\n        Constr pair(0, [ _, _, _, _, _, _, _, Constr pair(0, [ Constr pair(0, [ Constr pair(1, [ I time ]), _ ]), _ ]), _, _, _, _, _, _, _, _ ]) -> time\n        _ -> fail\n\n-- V3 TxInfo field 8 contains every extra signatory.\nsignedBy : Data -> Bytes -> bool\nsignedBy tx owner =\n    case tx of\n        Constr pair(0, [ _, _, _, _, _, _, _, _, List signers, _, _, _, _, _, _, _ ]) -> hasSigner signers (lower owner)\n        _ -> fail\n\nhasSigner : list Data -> bytes -> bool\nhasSigner signers owner =\n    case signers of\n        [] -> False\n        B signer :: rest ->\n            if Builtin.equalsByteString signer owner then True\n            else hasSigner rest owner\n        _ -> fail\n",
     "ConstantInputs": "//! Shared inputs for the constant-evaluation trial and its explicit measurements.\nuse nash_ir::{\n    build::Builder,\n    core::{Binder, Core},\n    ty::Ty,\n};\nuse nash_plutus::{\n    builtin::DefaultFunction as F, constant::Constant as C, data::PlutusData as D, typ::Type,\n};\n\npub fn cases<'a>(b: &Builder<'a>) -> Vec<(&'static str, &'a Core<'a>, bool)> {\n    let a = b.arena;\n    let bytes = |s| b.lit(C::byte_string(a, s));\n    let string = |s| b.lit(C::string(a, s));\n    let int = b.int(7);\n    let data = b.lit(C::data(a, D::integer_from(a, 7)));\n    let list = b.lit(C::proto_list(\n        a,\n        &Type::Integer,\n        a.alloc([C::integer_from(a, 7), C::integer_from(a, 8)]),\n    ));\n    let empty = b.lit(C::proto_list(a, &Type::Integer, &[]));\n    let pair = b.lit(C::proto_pair(\n        a,\n        &Type::Integer,\n        &Type::ByteString,\n        C::integer_from(a, 7),\n        C::byte_string(a, b\"a\"),\n    ));\n    let call = |f, args: &[&'a Core<'a>]| b.builtin(f, args, Ty::Erased);\n    let add = call(F::AddInteger, &[b.int(20), b.int(22)]);\n    let x = Binder {\n        name: b.fresh(\"x\"),\n        ty: add.ty,\n    };\n    let dlist = b.lit(C::proto_list(\n        a,\n        &Type::Data,\n        a.alloc([C::data(a, D::integer_from(a, 7))]),\n    ));\n    let dmap = b.lit(C::proto_list(\n        a,\n        a.alloc(Type::Pair(&Type::Data, &Type::Data)),\n        &[],\n    ));\n    let expanding = b.lit(C::data(\n        a,\n        D::list(a, a.alloc_slice_copy(&[D::integer_from(a, 7); 30])),\n    ));\n    let prefix = string(a.as_bump().alloc_str(&\"prefix\".repeat(6)));\n    let shared = Binder {\n        name: b.fresh(\"prefix\"),\n        ty: prefix.ty,\n    };\n    let shared_prefix = b.let_(\n        shared,\n        prefix,\n        b.constr(\n            0,\n            &[\n                call(\n                    F::AppendString,\n                    &[b.var(shared.name, shared.ty), string(\"x\")],\n                ),\n                call(\n                    F::AppendString,\n                    &[b.var(shared.name, shared.ty), string(\"y\")],\n                ),\n            ],\n            Ty::Erased,\n        ),\n    );\n    let distinct_results = b.constr(\n        0,\n        &[\n            call(F::AppendString, &[prefix, string(\"x\")]),\n            call(F::AppendString, &[prefix, string(\"y\")]),\n        ],\n        Ty::Erased,\n    );\n    vec![\n        (\"shared_prefix_distinct_results\", shared_prefix, false),\n        (\"repeated_literal_distinct_results\", distinct_results, false),\n        (\n            \"expanding_data_list\",\n            call(F::UnListData, &[expanding]),\n            false,\n        ),\n        (\"addition\", add, false),\n        (\n            \"nested_arithmetic\",\n            call(F::MultiplyInteger, &[add, b.int(2)]),\n            false,\n        ),\n        (\n            \"bound_arithmetic\",\n            b.let_(\n                x,\n                add,\n                call(F::MultiplyInteger, &[b.var(x.name, x.ty), b.int(2)]),\n            ),\n            false,\n        ),\n        (\n            \"division\",\n            call(F::DivideInteger, &[b.int(-7), b.int(3)]),\n            false,\n        ),\n        (\n            \"division_zero\",\n            call(F::DivideInteger, &[int, b.int(0)]),\n            true,\n        ),\n        (\n            \"wrong_integer_shape\",\n            call(F::AddInteger, &[bytes(b\"x\"), int]),\n            true,\n        ),\n        (\n            \"byte_append\",\n            call(F::AppendByteString, &[bytes(b\"ab\"), bytes(b\"cd\")]),\n            false,\n        ),\n        (\n            \"byte_slice\",\n            call(F::SliceByteString, &[b.int(1), b.int(2), bytes(b\"abcd\")]),\n            false,\n        ),\n        (\n            \"byte_length\",\n            call(F::LengthOfByteString, &[bytes(b\"abcd\")]),\n            false,\n        ),\n        (\n            \"byte_compare\",\n            call(F::LessThanByteString, &[bytes(b\"abc\"), bytes(b\"abd\")]),\n            false,\n        ),\n        (\n            \"string_append\",\n            call(F::AppendString, &[string(\"hello \"), string(\"world\")]),\n            false,\n        ),\n        (\"encode_utf8\", call(F::EncodeUtf8, &[string(\"สวัสดี\")]), false),\n        (\n            \"decode_utf8\",\n            call(F::DecodeUtf8, &[bytes(\"héllo\".as_bytes())]),\n            false,\n        ),\n        (\"invalid_utf8\", call(F::DecodeUtf8, &[bytes(&[255])]), true),\n        (\"integer_data\", call(F::IData, &[int]), false),\n        (\"decode_integer_data\", call(F::UnIData, &[data]), false),\n        (\"wrong_data_variant\", call(F::UnBData, &[data]), true),\n        (\"list_data\", call(F::ListData, &[dlist]), false),\n        (\"map_data\", call(F::MapData, &[dmap]), false),\n        (\"data_equal\", call(F::EqualsData, &[data, data]), false),\n        (\"serialise_data\", call(F::SerialiseData, &[data]), false),\n        (\"list_head\", call(F::HeadList, &[list]), false),\n        (\"list_tail\", call(F::TailList, &[list]), false),\n        (\"empty_head\", call(F::HeadList, &[empty]), true),\n        (\"empty_tail\", call(F::TailList, &[empty]), true),\n        (\"list_null\", call(F::NullList, &[empty]), false),\n        (\"pair_first\", call(F::FstPair, &[pair]), false),\n        (\"pair_second\", call(F::SndPair, &[pair]), false),\n        (\"trace_before\", b.trace(string(\"before\"), add), false),\n        (\n            \"trace_builtin\",\n            call(F::Trace, &[string(\"keep me\"), int]),\n            false,\n        ),\n        (\n            \"cold_failure\",\n            b.if_(\n                b.lit(C::bool(a, true)),\n                int,\n                call(F::DivideInteger, &[int, b.int(0)]),\n            ),\n            false,\n        ),\n        (\n            \"selected_branch\",\n            b.if_(\n                call(F::EqualsInteger, &[int, b.int(7)]),\n                b.trace(string(\"yes\"), add),\n                b.trace(string(\"no\"), b.error(Ty::Erased)),\n            ),\n            false,\n        ),\n        (\n            \"strict_failure_order\",\n            call(\n                F::AddInteger,\n                &[\n                    b.trace(string(\"first\"), b.error(int.ty)),\n                    call(F::DivideInteger, &[int, b.int(0)]),\n                ],\n            ),\n            true,\n        ),\n        (\"unsupported_hash\", call(F::Sha2_256, &[bytes(b\"x\")]), false),\n        (\n            \"partial\",\n            b.app(\n                b.builtin(F::AddInteger, &[int], Ty::Erased),\n                &[b.int(1)],\n                Ty::Erased,\n            ),\n            false,\n        ),\n        (\n            \"large_input\",\n            call(\n                F::AppendByteString,\n                &[bytes(a.alloc_slice_copy(&[42; 4096])), bytes(b\"z\")],\n            ),\n            false,\n        ),\n        (\n            \"repeated_call\",\n            b.constr(0, &[add, add, add], Ty::Erased),\n            false,\n        ),\n    ]\n}\n",
@@ -8,12 +8,13 @@
     "Lift": "module Lift exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait Lift 'a 'b where\n    lift : 'a -> 'b\n    lower : 'b -> 'a\n\nimpl Lift int Int where\n    lift value = Builtin.iData value\n    lower value = Builtin.unIData value\n\nimpl Lift bytes Bytes where\n    lift value = Builtin.bData value\n    lower value = Builtin.unBData value\n",
     "Literal": "module Literal exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt x = x\n\nimpl FromString string where\n    fromString x = x\n\nimpl FromBytes bytes where\n    fromBytes x = x\n\ntrait FromBool 'a where\n    fromBool : bool -> 'a\n\ntrait FromUnit 'a where\n    fromUnit : unit -> 'a\n\nimpl FromBool bool where\n    fromBool value = value\n\nimpl FromUnit unit where\n    fromUnit value = value\n",
     "Logic": "module Logic exposing ( not, and, or, xor, (&&), (||) )\n\n\nimport Primitive\nimport Lift exposing ( Lift )\n\n\ninfix right 2 (||) = or\n\n\ninfix right 3 (&&) = and\n\n\n{-| Negate a Big or little Boolean, returning bool. -}\nnot : Lift bool 'a => 'a -> bool\nnot value =\n    if lower value then\n        Primitive.False\n    else\n        Primitive.True\n\n\n{-| Boolean conjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}\nand : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nand a b =\n    if lower a then\n        lower b\n    else\n        Primitive.False\n\n\n{-| Boolean disjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}\nor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nor a b =\n    if lower a then\n        Primitive.True\n    else\n        lower b\n\n\n{-| Return True when the Boolean operands differ. -}\nxor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nxor a b =\n    if lower a then\n        not b\n    else\n        lower b\n",
+    "PairInputs": "//! Inputs shared by pair-projection snapshots and explicit measurements.\nuse nash_ir::{\n    build::Builder,\n    core::*,\n    ty::{ConstTy, Ty},\n};\nuse nash_plutus::{\n    builtin::DefaultFunction as F, constant::Constant as C, data::PlutusData as D, typ::Type,\n};\n\npub fn cases<'a>(b: &Builder<'a>) -> Vec<(String, &'a Core<'a>, bool)> {\n    let a = b.arena;\n    let int = b.int(0).ty;\n    let pair = b.lit(C::proto_pair(\n        a,\n        &Type::Integer,\n        &Type::Integer,\n        C::integer_from(a, 7),\n        C::integer_from(a, 8),\n    ));\n    let data = b.lit(C::data(a, D::integer_from(a, 7)));\n    let made = b.builtin(\n        F::MkPairData,\n        &[data, data],\n        Ty::Const(a.alloc(ConstTy::Pair(data.ty, data.ty))),\n    );\n    let unwrapped = b.builtin(\n        F::UnConstrData,\n        &[b.lit(C::data(a, D::constr(a, 0, &[])))],\n        Ty::Const(a.alloc(ConstTy::Pair(\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n        ))),\n    );\n    let trace = |s, x| b.trace(b.lit(C::string(a, s)), x);\n    let mut cases = Vec::new();\n    for (name, subject, left_ty, right_ty, fails) in [\n        (\"literal\", pair, int, int, false),\n        (\"traced\", trace(\"subject\", pair), int, int, false),\n        (\"made_data\", made, data.ty, data.ty, false),\n        (\n            \"decoded\",\n            unwrapped,\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n            false,\n        ),\n        (\n            \"bad_decoder\",\n            b.builtin(F::UnConstrData, &[data], unwrapped.ty),\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n            true,\n        ),\n        (\n            \"ignored_failure\",\n            b.builtin(\n                F::MkPairData,\n                &[data, trace(\"unused field\", b.error(data.ty))],\n                made.ty,\n            ),\n            data.ty,\n            data.ty,\n            true,\n        ),\n        (\n            \"wrong_subject\",\n            b.with_type(b.int(1), pair.ty),\n            int,\n            int,\n            true,\n        ),\n        // Generic UPLC case accepts this, whereas fstPair would reject it.\n        (\n            \"native_constructor\",\n            b.with_type(b.constr(0, &[b.int(7), b.int(8)], Ty::Erased), pair.ty),\n            int,\n            int,\n            false,\n        ),\n    ] {\n        for second in [false, true] {\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: left_ty,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: right_ty,\n            };\n            let selected = if second { y } else { x };\n            let value = b.var(selected.name, selected.ty);\n            let core = b.case(\n                CaseKind::Pair,\n                subject,\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: value,\n                }],\n                None,\n                value.ty,\n            );\n            cases.push((\n                format!(\"{name}_{}\", if second { \"second\" } else { \"first\" }),\n                core,\n                fails,\n            ));\n        }\n    }\n    for mode in [\"body\", \"both\", \"neither\", \"delay\", \"lambda\", \"repeated\"] {\n        let x = Binder {\n            name: b.fresh(\"x\"),\n            ty: int,\n        };\n        let y = Binder {\n            name: b.fresh(\"y\"),\n            ty: int,\n        };\n        let xv = b.var(x.name, x.ty);\n        let body = match mode {\n            \"both\" => b.builtin(F::AddInteger, &[xv, b.var(y.name, y.ty)], int),\n            \"neither\" => b.int(42),\n            \"delay\" => b.delay(xv),\n            \"lambda\" => b.lam(\n                &[Binder {\n                    name: b.fresh(\"unused\"),\n                    ty: int,\n                }],\n                xv,\n            ),\n            \"repeated\" => b.builtin(F::AddInteger, &[xv, xv], int),\n            _ => trace(\"body\", b.builtin(F::AddInteger, &[xv, b.int(1)], int)),\n        };\n        let core = b.case(\n            CaseKind::Pair,\n            trace(\"subject\", pair),\n            &[Branch {\n                test: Test::Pair,\n                binders: a.alloc([x, y]),\n                body,\n            }],\n            None,\n            body.ty,\n        );\n        // Force/application is after the case, exposing any misplaced strict work.\n        let core = match mode {\n            \"delay\" => b.force(core, int),\n            \"lambda\" => b.app(core, &[trace(\"argument\", b.int(0))], int),\n            _ => core,\n        };\n        cases.push((mode.into(), core, false));\n    }\n    for second in [false, true] {\n        let select = |subject| {\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: int,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: int,\n            };\n            let selected = if second { y } else { x };\n            b.case(\n                CaseKind::Pair,\n                subject,\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: b.var(selected.name, int),\n                }],\n                None,\n                int,\n            )\n        };\n        let first = select(trace(\"first\", pair));\n        let second_core = select(trace(\"second\", pair));\n        cases.push((\n            format!(\n                \"two_projections_{}\",\n                if second { \"second\" } else { \"first\" }\n            ),\n            b.builtin(F::AddInteger, &[first, second_core], int),\n            false,\n        ));\n    }\n    for delayed in [false, true] {\n        let x = Binder {\n            name: b.fresh(\"x\"),\n            ty: int,\n        };\n        let y = Binder {\n            name: b.fresh(\"y\"),\n            ty: Ty::Const(a.alloc(ConstTy::List(data.ty))),\n        };\n        let value = b.var(x.name, x.ty);\n        let body = if delayed {\n            b.delay(value)\n        } else {\n            b.lam(\n                &[Binder {\n                    name: b.fresh(\"arg\"),\n                    ty: int,\n                }],\n                value,\n            )\n        };\n        let subject = b.builtin(\n            F::UnConstrData,\n            &[trace(\"before failure\", data)],\n            unwrapped.ty,\n        );\n        let case = b.case(\n            CaseKind::Pair,\n            subject,\n            &[Branch {\n                test: Test::Pair,\n                binders: a.alloc([x, y]),\n                body,\n            }],\n            None,\n            body.ty,\n        );\n        let ignored = Binder {\n            name: b.fresh(\"ignored closure\"),\n            ty: case.ty,\n        };\n        cases.push((\n            format!(\n                \"unconsumed_{}_failure\",\n                if delayed { \"delay\" } else { \"lambda\" }\n            ),\n            b.let_(ignored, case, b.int(0)),\n            true,\n        ));\n    }\n    for bad_tag in [false, true] {\n        for second in [false, true] {\n            let tag = Binder {\n                name: b.fresh(\"tag\"),\n                ty: int,\n            };\n            let fields_ty = Ty::Const(a.alloc(ConstTy::List(data.ty)));\n            let fields = Binder {\n                name: b.fresh(\"fields\"),\n                ty: fields_ty,\n            };\n            let encoded = Binder {\n                name: b.fresh(\"encoded\"),\n                ty: data.ty,\n            };\n            let decoded = Binder {\n                name: b.fresh(\"decoded\"),\n                ty: unwrapped.ty,\n            };\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: int,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: fields_ty,\n            };\n            let selected = if second { y } else { x };\n            let body = b.case(\n                CaseKind::Pair,\n                b.var(decoded.name, decoded.ty),\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: b.var(selected.name, selected.ty),\n                }],\n                None,\n                selected.ty,\n            );\n            let body = b.let_(\n                decoded,\n                b.builtin(\n                    F::UnConstrData,\n                    &[b.var(encoded.name, encoded.ty)],\n                    decoded.ty,\n                ),\n                body,\n            );\n            let body = b.let_(\n                encoded,\n                b.builtin(\n                    F::ConstrData,\n                    &[b.var(tag.name, tag.ty), b.var(fields.name, fields.ty)],\n                    encoded.ty,\n                ),\n                body,\n            );\n            let body = b.let_(\n                fields,\n                b.builtin(\n                    F::MkCons,\n                    &[\n                        trace(\"field\", data),\n                        b.lit(C::proto_list(a, &Type::Data, &[])),\n                    ],\n                    fields_ty,\n                ),\n                body,\n            );\n            let tag_value = if bad_tag {\n                let bytes = b.lit(C::data(a, D::byte_string(a, b\"bad\")));\n                b.with_type(\n                    b.builtin(\n                        F::UnBData,\n                        &[trace(\"tag\", bytes)],\n                        b.lit(C::byte_string(a, b\"bad\")).ty,\n                    ),\n                    int,\n                )\n            } else {\n                let tag_data = b.lit(C::data(a, D::integer_from(a, 0)));\n                b.builtin(F::UnIData, &[trace(\"tag\", tag_data)], int)\n            };\n            let body = b.let_(tag, tag_value, body);\n            cases.push((\n                format!(\n                    \"roundtrip_{}_{}\",\n                    if bad_tag { \"bad_tag\" } else { \"valid\" },\n                    if second { \"second\" } else { \"first\" }\n                ),\n                body,\n                bad_tag,\n            ));\n        }\n    }\n    cases\n}\n",
     "Vesting": "validator module Vesting exposing (main)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (Eq)\nimport Lift exposing (lower)\nimport Cardano.Tx exposing (validAfter, signedBy)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype step 'a = Done 'a | Next int 'a\n\ntype alias acc = { total : int, seen : list Int }\n\ntype Redeemer = Claim | Cancel\n\n-- The ledger supplies one V3 ScriptContext; spending datum is in ScriptInfo.\nmain : Data -> unit\nmain ctx =\n    case ctx of\n        Constr pair(0, [ tx, action, Constr pair(1, [ _, Constr pair(0, [ datum ]) ]) ]) ->\n            check (Primitive.coerce datum) (Primitive.coerce action) tx\n        _ -> fail\n\ncheck : Datum -> Redeemer -> Data -> unit\ncheck datum redeemer tx =\n    case redeemer of\n        Claim -> assert (Builtin.lessThanInteger (lower datum.deadline) (validAfter tx))\n        Cancel -> assert (signedBy tx datum.owner)\n",
     "VestingContextInput": "//! Shared ledger input for the vesting snapshots, artifact tests and explicit perf runner.\nuse nash_plutus::{arena::Arena, data::PlutusData};\n\npub fn context<'a>(\n    arena: &'a Arena,\n    datum: &'a PlutusData<'a>,\n    redeemer: &'a PlutusData<'a>,\n    lower_time: i128,\n    signer: &'a [u8],\n) -> &'a PlutusData<'a> {\n    let constr = |tag, fields: &[&'a PlutusData<'a>]| {\n        PlutusData::constr(arena, tag, arena.alloc_slice_copy(fields))\n    };\n    let empty_list = PlutusData::list(arena, &[]);\n    let empty_map = PlutusData::map(arena, &[]);\n    let zero = PlutusData::integer_from(arena, 0);\n    let tx_id = PlutusData::byte_string(arena, &[0; 32]);\n    let closed = constr(1, &[]);\n    let lower = constr(\n        0,\n        &[\n            constr(1, &[PlutusData::integer_from(arena, lower_time)]),\n            closed,\n        ],\n    );\n    let upper = constr(0, &[constr(2, &[]), closed]);\n    let signers = if signer.is_empty() {\n        empty_list\n    } else {\n        // The owner is deliberately second: signedBy must search the whole list.\n        PlutusData::list(\n            arena,\n            arena.alloc_slice_copy(&[\n                PlutusData::byte_string(arena, &[0xbb]),\n                PlutusData::byte_string(arena, signer),\n            ]),\n        )\n    };\n    let tx = constr(\n        0,\n        &[\n            empty_list,                 // inputs\n            empty_list,                 // reference inputs\n            empty_list,                 // outputs\n            zero,                       // fee\n            empty_map,                  // mint\n            empty_list,                 // certificates\n            empty_map,                  // withdrawals\n            constr(0, &[lower, upper]), // validity range\n            signers,\n            empty_map, // redeemers\n            empty_map, // datums\n            tx_id,\n            empty_map,      // votes\n            empty_list,     // proposals\n            constr(1, &[]), // current treasury\n            constr(1, &[]), // treasury donation\n        ],\n    );\n    let reference = constr(0, &[tx_id, zero]);\n    let spending = constr(1, &[reference, constr(0, &[datum])]);\n    constr(0, &[tx, redeemer, spending])\n}\n",
     "VestingParam": "validator module VestingParam exposing (main)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (Eq)\nimport Lift exposing (lower)\nimport Cardano.Tx exposing (validAfter, signedBy)\n\ntype Datum = Datum { owner : Bytes, deadline : Int }\n\ntype Redeemer = Claim | Cancel\n\n-- The ledger supplies one V3 ScriptContext; spending datum is in ScriptInfo.\nmain : int -> Data -> unit\nmain minimumLock ctx =\n    case ctx of\n        Constr pair(0, [ tx, action, Constr pair(1, [ _, Constr pair(0, [ datum ]) ]) ]) ->\n            check minimumLock (Primitive.coerce datum) (Primitive.coerce action) tx\n        _ -> fail\n\ncheck : int -> Datum -> Redeemer -> Data -> unit\ncheck minimumLock datum redeemer tx =\n    case redeemer of\n        Claim ->\n            assert\n                (Builtin.lessThanInteger\n                    (Builtin.addInteger (lower datum.deadline) minimumLock)\n                    (validAfter tx))\n        Cancel -> assert (signedBy tx datum.owner)\n",
     "Workloads": "module Workloads exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Logic exposing (..)\n\nsum : list int -> int\nsum xs =\n    case xs of\n        [] -> 0\n        x :: rest -> Builtin.addInteger x (sum rest)\n\nlistTraversal : int\nlistTraversal = sum [1, 2, 3, 4, 5, 6, 7, 8]\n\ncountdown : int -> int -> int\ncountdown n result =\n    if Builtin.equalsInteger n 0 then\n        result\n    else\n        countdown (Builtin.subtractInteger n 1) result\n\nstaticRecursion : int\nstaticRecursion = countdown 8 42\n\nmatchData : Data -> int\nmatchData value =\n    case value of\n        I n -> n\n        _ -> 0\n\ndataMatch : int\ndataMatch = matchData (I 42)\n\ndataMiss : int\ndataMiss = matchData (B #\"ab\")\n\ndecode : Data -> int\ndecode value =\n    case value of\n        Constr pair(_, [I n, _]) -> n\n        _ -> 0\n\ndecoding : int\ndecoding = decode (Builtin.constrData 0 [I 42, I 7])\n\nvalidate : Data -> unit\nvalidate value =\n    case value of\n        I n -> assert (Builtin.lessThanInteger 0 n)\n        _ -> fail\n\nvalidationPass : unit\nvalidationPass = validate (I 42)\n\nvalidationFail : unit\nvalidationFail = validate (I 0)\n\nbooleanHelpers : bool\nbooleanHelpers = (True && False) || (True && True)\n\nconstantPrefixTwice : int\nconstantPrefixTwice =\n    Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nconstantPrefixCold : int\nconstantPrefixCold =\n    if True then\n        42\n    else\n        Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nprefixLoop : int -> int\nprefixLoop n =\n    if Builtin.equalsInteger n 0 then\n        0\n    else\n        Builtin.addInteger\n            (Builtin.addInteger (Builtin.subtractInteger 100 n) (Builtin.subtractInteger 100 n))\n            (prefixLoop (Builtin.subtractInteger n 1))\n\nconstantPrefixLoop : int\nconstantPrefixLoop = prefixLoop 8\n"
   },
-  "revision": "efa8b57cb0b4f232b9a57839c167b84b106ea647",
+  "revision": "3a37221517a4a7644904d77aea1e0c92ef324d1d",
   "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
   "rows": [
     {
@@ -94,9 +95,9 @@
         "logs": []
       },
       "after": {
-        "cpu": 1681280,
-        "memory": 8756,
-        "bytes": 94,
+        "cpu": 878161,
+        "memory": 4392,
+        "bytes": 45,
         "result": "(con integer 42)",
         "logs": []
       }
@@ -2688,6 +2689,604 @@
         "bytes": 12,
         "result": "(constr 0 (con integer 42) (con integer 42) (con integer 42))",
         "logs": []
+      }
+    },
+    {
+      "input": "pair projection: literal_first",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: literal_second",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: traced_first",
+      "before": {
+        "cpu": 251598,
+        "memory": 1332,
+        "bytes": 28,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: traced_second",
+      "before": {
+        "cpu": 251598,
+        "memory": 1332,
+        "bytes": 28,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: made_data_first",
+      "before": {
+        "cpu": 155646,
+        "memory": 1032,
+        "bytes": 19,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 18,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: made_data_second",
+      "before": {
+        "cpu": 155646,
+        "memory": 1032,
+        "bytes": 19,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 18,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: decoded_first",
+      "before": {
+        "cpu": 136688,
+        "memory": 832,
+        "bytes": 15,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: decoded_second",
+      "before": {
+        "cpu": 136688,
+        "memory": 832,
+        "bytes": 15,
+        "result": "(con (list data) [])",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con (list data) [])",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: bad_decoder_first",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 13,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: bad_decoder_second",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 13,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: ignored_failure_first",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 34,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: ignored_failure_second",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 34,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: wrong_subject_first",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: wrong_subject_second",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: native_constructor_first",
+      "before": {
+        "cpu": 112100,
+        "memory": 800,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: native_constructor_second",
+      "before": {
+        "cpu": 112100,
+        "memory": 800,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair projection: body",
+      "before": {
+        "cpu": 588304,
+        "memory": 2466,
+        "bytes": 44,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      },
+      "after": {
+        "cpu": 668304,
+        "memory": 2966,
+        "bytes": 49,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: both",
+      "before": {
+        "cpu": 416806,
+        "memory": 1734,
+        "bytes": 31,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: neither",
+      "before": {
+        "cpu": 251598,
+        "memory": 1332,
+        "bytes": 28,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: delay",
+      "before": {
+        "cpu": 283598,
+        "memory": 1532,
+        "bytes": 28,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 427598,
+        "memory": 2432,
+        "bytes": 36,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: lambda",
+      "before": {
+        "cpu": 471096,
+        "memory": 2364,
+        "bytes": 46,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      },
+      "after": {
+        "cpu": 647096,
+        "memory": 3464,
+        "bytes": 56,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: repeated",
+      "before": {
+        "cpu": 416806,
+        "memory": 1734,
+        "bytes": 31,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: two_projections_first",
+      "before": {
+        "cpu": 652304,
+        "memory": 2866,
+        "bytes": 51,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: two_projections_second",
+      "before": {
+        "cpu": 652304,
+        "memory": 2866,
+        "bytes": 51,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: unconsumed_lambda_failure",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 39,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: unconsumed_delay_failure",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 39,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: roundtrip_valid_first",
+      "before": {
+        "cpu": 962941,
+        "memory": 4692,
+        "bytes": 62,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: roundtrip_valid_second",
+      "before": {
+        "cpu": 962941,
+        "memory": 4692,
+        "bytes": 62,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: roundtrip_bad_tag_first",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 65,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair projection: roundtrip_bad_tag_second",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 65,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
       }
     }
   ]

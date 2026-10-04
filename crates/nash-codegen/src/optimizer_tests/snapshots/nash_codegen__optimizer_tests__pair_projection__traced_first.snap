@@ -1,0 +1,39 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+case@Pair (trace "subject" in (con (pair integer integer) (7, 8))) of
+  Pair x#5 y#6 -> x#5
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (force
+      [[(force (builtin trace)) (con string "subject")]
+        (delay (con (pair integer integer) (7, 8)))])
+    (lam x_5 (lam y_6 x_5))))
+--- optimized Core
+let anf#3 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+case@Pair anf#3 of
+  Pair x#1 y#2 -> x#1
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_7
+    [(lam anf_4 (case anf_4 (lam x_5 (lam y_6 x_5))))
+      (force
+        [[builtin_7 (con string "subject")] (delay (con (pair integer integer) (7, 8)))])])
+    (force (builtin trace))])
+--- result
+(con integer 7)
+--- logs
+["subject"]
+--- budget
+cpu: 251598, memory: 1332
+--- isolated Core before
+let anf#85 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+case@Pair anf#85 of
+  Pair x#5 y#6 -> x#5
+--- isolated Core after
+let anf#85 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+case@Pair anf#85 of
+  Pair x#5 y#6 -> x#5

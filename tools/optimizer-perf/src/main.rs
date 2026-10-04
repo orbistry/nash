@@ -3,6 +3,8 @@
 mod constant_input;
 #[path = "../../../crates/nash-codegen/tests/support/inverse.rs"]
 mod inverse_input;
+#[path = "../../../crates/nash-codegen/tests/support/pair_projection.rs"]
+mod pair_input;
 mod source;
 
 #[path = "../../../crates/nash-codegen/tests/support/vesting.rs"]
@@ -27,7 +29,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -121,6 +123,10 @@ fn run() -> Result<()> {
         sources.insert(
             "ConstantInputs".into(),
             include_str!("../../../crates/nash-codegen/tests/support/constant_fold.rs").into(),
+        );
+        sources.insert(
+            "PairInputs".into(),
+            include_str!("../../../crates/nash-codegen/tests/support/pair_projection.rs").into(),
         );
         suite()?
     };
@@ -401,6 +407,16 @@ fn suite() -> Result<Vec<Row>> {
                 None,
             )?);
         }
+    }
+    let arena = Arena::new();
+    for (name, core, _) in pair_input::cases(&Builder::new(&arena)) {
+        rows.push(compare(
+            &arena,
+            format!("pair projection: {name}"),
+            core,
+            &[],
+            None,
+        )?);
     }
     Ok(rows)
 }

@@ -1,0 +1,52 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+(case@Pair (trace "subject" in (con (pair integer integer) (7, 8))) of
+  Pair x#41 y#42 -> \unused#43 : int -> x#41) (trace "argument" in 0)
+--- unoptimized UPLC
+(program 1.1.0
+  [(case
+    (force
+      [[(force (builtin trace)) (con string "subject")]
+        (delay (con (pair integer integer) (7, 8)))])
+    (lam x_41 (lam y_42 (lam unused_43 x_41))))
+    (force
+      [[(force (builtin trace)) (con string "argument")] (delay (con integer 0))])])
+--- optimized Core
+let anf#4 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+let anf#5 : int -> int = case@Pair anf#4 of
+  Pair x#1 y#2 -> \unused#3 : int -> x#1 in
+let anf#6 : int = trace "argument" in 0 in
+anf#5 anf#6
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_13
+    [(lam anf_7
+      [(lam anf_11
+        [(lam anf_12 [anf_11 anf_12])
+          (force [[builtin_13 (con string "argument")] (delay (con integer 0))])])
+        (case anf_7 (lam x_8 (lam y_9 (lam unused_10 x_8))))])
+      (force
+        [[builtin_13 (con string "subject")]
+          (delay (con (pair integer integer) (7, 8)))])])
+    (force (builtin trace))])
+--- result
+(con integer 7)
+--- logs
+["subject", "argument"]
+--- budget
+cpu: 471096, memory: 2364
+--- isolated Core before
+let anf#104 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+let anf#105 : int -> int = case@Pair anf#104 of
+  Pair x#41 y#42 -> \unused#43 : int -> x#41 in
+let anf#106 : int = trace "argument" in 0 in
+anf#105 anf#106
+--- isolated Core after
+let anf#104 : pair int int = trace "subject" in (con (pair integer integer) (7, 8)) in
+let anf#105 : int -> int = case@Pair anf#104 of
+  Pair x#41 y#42 -> \unused#43 : int -> x#41 in
+let anf#106 : int = trace "argument" in 0 in
+anf#105 anf#106

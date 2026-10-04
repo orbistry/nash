@@ -969,3 +969,12 @@ expression; the accepted policy can still grow a whole script by losing sharing
 between distinct folded constants. Source traces and strict bindings are retained.
 Evaluation and size checks use O0 assembly to avoid re-entering the optimizer.
 Explicit user comptime retains its separate budget and diagnostics.
+
+### Restricted pair cleanup
+
+O1's existing `simplify_constr_data` loop runs `pair_projection::reduce` before
+constructor/wrapper cleanup. Only a single-used-field case whose subject variable
+resolves to `unConstrData dataVar`, with `dataVar` resolving to `constrData tag fields`
+and the selected operand already a variable, is rewritten. The following inverse
+cleanup removes the introduced projection while retaining both producer bindings.
+No general case-to-projection rewrite is enabled and ANF still runs once.

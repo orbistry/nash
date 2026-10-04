@@ -99,15 +99,12 @@ let anf#68 : Main.Fields = constrData 0 anf#64 in
 let anf#69 : list Main.Fields = mkCons anf#68 (con (list data) []) in
 let match#45 : list Main.Fields = mkCons anf#62 anf#69 in
 let projection#48 : pair int (list Data) = unConstrData anf#62 in
-case@Pair projection#48 of
-  Pair tag#49 fields#50 -> case@List fields#50 of
-    Cons ignored#51 fieldTail#52 -> case@List fieldTail#52 of
-      Cons field#53 fieldTail#54 -> let anf#72 : int = unIData field#53 in
-      lessThanInteger 0 anf#72
+let anf#72 : int = unIData anf#61 in
+lessThanInteger 0 anf#72
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_24
-    [(lam partial_25
+  [(lam builtin_18
+    [(lam partial_19
       [(lam fromBytes_1
         [(lam fromInt_2
           [(lam anf_3
@@ -123,33 +120,19 @@ case@Pair projection#48 of
                               [(lam anf_14
                                 [(lam match_15
                                   [(lam projection_16
-                                    (case
-                                      projection_16
-                                      (lam tag_17
-                                        (lam fields_18
-                                          (case
-                                            fields_18
-                                            (lam ignored_19
-                                              (lam fieldTail_20
-                                                (case
-                                                  fieldTail_20
-                                                  (lam field_21
-                                                    (lam fieldTail_22
-                                                      [(lam anf_23 [[(builtin lessThanInteger) (con integer 0)] anf_23])
-                                                        [(builtin unIData) field_21]]))
-                                                  (error))))
-                                            (error))))))
+                                    [(lam anf_17 [[(builtin lessThanInteger) (con integer 0)] anf_17])
+                                      [(builtin unIData) anf_4]])
                                     [(builtin unConstrData) anf_7]])
-                                  [[builtin_24 anf_7] anf_14]])
-                                [[builtin_24 anf_13] (con (list data) [])]])
-                              [partial_25 anf_12]])
-                            [[builtin_24 anf_8] anf_10]])
-                          [[builtin_24 anf_9] (con (list data) [])]])
+                                  [[builtin_18 anf_7] anf_14]])
+                                [[builtin_18 anf_13] (con (list data) [])]])
+                              [partial_19 anf_12]])
+                            [[builtin_18 anf_8] anf_10]])
+                          [[builtin_18 anf_9] (con (list data) [])]])
                         [fromInt_2 (con integer 0)]])
                       [fromBytes_1 (con bytestring #aa)]])
-                    [partial_25 anf_6]])
-                  [[builtin_24 anf_3] anf_5]])
-                [[builtin_24 anf_4] (con (list data) [])]])
+                    [partial_19 anf_6]])
+                  [[builtin_18 anf_3] anf_5]])
+                [[builtin_18 anf_4] (con (list data) [])]])
               [fromInt_2 (con integer 14)]])
             [fromBytes_1 (con bytestring #)]])
           (builtin iData)])

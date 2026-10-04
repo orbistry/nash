@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}--- isolated Core before\\n{}\\n--- UPLC before\\n{}\\n--- isolated Core after\\n{}\\n--- UPLC after\\n{}\",\nif pipeline.is_empty() { pipeline } else { format!(\"{pipeline}\\n\") },\npretty(before), lowered(before), pretty(after), lowered(after))"
+---
+--- unoptimized Core
+\p#18 : pair int int -> case@Pair p#18 of
+  Pair x#16 y#17 -> x#16
+--- unoptimized UPLC
+(program 1.1.0 (lam p_18 (case p_18 (lam x_16 (lam y_17 x_16)))))
+--- optimized Core
+\p#1 : pair int int -> case@Pair p#1 of
+  Pair x#2 y#3 -> x#2
+--- optimized UPLC
+(program 1.1.0 (lam p_4 (case p_4 (lam x_5 (lam y_6 x_5)))))
+--- isolated Core before
+\p#18 : pair int int -> case@Pair p#18 of
+  Pair x#16 y#17 -> x#16
+--- UPLC before
+(lam p_18 (case p_18 (lam x_16 (lam y_17 x_16))))
+--- isolated Core after
+\p#18 : pair int int -> case@Pair p#18 of
+  Pair x#16 y#17 -> x#16
+--- UPLC after
+(lam p_18 (case p_18 (lam x_16 (lam y_17 x_16))))

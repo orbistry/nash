@@ -108,8 +108,15 @@ Builds and tests default to O1; these measurements still compare explicit O0 and
 
 ## Accepted constant folding
 
-Normal `measure`/`check` cover 148 cases: the original 108 plus 40 constant-folding
-fixtures. Both use production O1, including bounded folding. The user
+Normal `measure`/`check` cover 178 cases: the original 108, 40 constant-folding
+fixtures and 30 pair fixtures. Both use production O1, including bounded folding. The user
 accepted the two shared-prefix size tradeoffs. Historical pre-integration evidence
 remains in `trials/constant-fold.json` and `docs/research/constant-fold-trial.md`;
 the old `constant-trial` command has been removed.
+
+## Accepted restricted pair projection
+
+Normal `measure`/`check` include the restricted pair rewrite in production O1 and
+all 30 pair fixtures. The general rewrite was rejected; the `pair-trial` command
+was removed. Historical comparisons remain in `trials/pair-projection.json` and
+[the report](../../docs/research/pair-projection-trial.md).

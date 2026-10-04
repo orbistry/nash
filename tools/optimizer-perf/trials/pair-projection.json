@@ -1,0 +1,3174 @@
+{
+  "settings": "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 cost model; CPU=100000000 memory=2000000; raw Flat bytes; before=current O1; after=O1+single-field pair projection+cleanup; general proven-pair and cancelling-only variants; each input with ordinary lowering and builtin/constant sharing",
+  "sources": {
+    "Cardano.Tx": "module Cardano.Tx exposing (validAfter, signedBy)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (Eq)\nimport Lift exposing (lower)\n\n-- V3 TxInfo field 7 is the validity interval. Require a finite lower bound.\n-- Times are POSIX milliseconds, not slots or the current wall-clock time.\nvalidAfter : Data -> int\nvalidAfter tx =\n    case tx of\n        Constr pair(0, [ _, _, _, _, _, _, _, Constr pair(0, [ Constr pair(0, [ Constr pair(1, [ I time ]), _ ]), _ ]), _, _, _, _, _, _, _, _ ]) -> time\n        _ -> fail\n\n-- V3 TxInfo field 8 contains every extra signatory.\nsignedBy : Data -> Bytes -> bool\nsignedBy tx owner =\n    case tx of\n        Constr pair(0, [ _, _, _, _, _, _, _, _, List signers, _, _, _, _, _, _, _ ]) -> hasSigner signers (lower owner)\n        _ -> fail\n\nhasSigner : list Data -> bytes -> bool\nhasSigner signers owner =\n    case signers of\n        [] -> False\n        B signer :: rest ->\n            if Builtin.equalsByteString signer owner then True\n            else hasSigner rest owner\n        _ -> fail\n",
+    "Eq": "module Eq exposing ( Eq )\n\n\nimport Literal\nimport Logic exposing ( not, xor, (&&) )\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\n\n{-| Compare values for equality and inequality. -}\ntrait Eq 'a where\n    eq : 'a -> 'a -> bool\n\n    neq : 'a -> 'a -> bool\n    neq a b = not (eq a b)\n\n\nimpl Eq int where\n    eq = Builtin.equalsInteger\n\n\nimpl Eq bytes where\n    eq = Builtin.equalsByteString\n\n\nimpl Eq string where\n    eq = Builtin.equalsString\n\n\nimpl Eq bool where\n    eq a b = not (xor a b)\n\n\nimpl Eq unit where\n    eq _ _ = True\n\n\nimpl Eq (list ('a : Big)) where\n    eq xs ys =\n        eq (Builtin.listData xs) (Builtin.listData ys)\n\n\nimpl Eq 'a => Eq (list ('a : Little)) where\n    eq xs ys =\n        case xs of\n            [] ->\n                case ys of\n                    [] ->\n                        True\n\n                    _ :: _ ->\n                        False\n\n            x :: restX ->\n                case ys of\n                    [] ->\n                        False\n\n                    y :: restY ->\n                        eq x y && eq restX restY\n\n\nimpl ( Eq 'a, Eq 'b ) => Eq (pair 'a 'b) where\n    eq a b =\n        let\n            pair(firstA, secondA) = a\n\n            pair(firstB, secondB) = b\n        in\n            eq firstA firstB && eq secondA secondB\n\n\nimpl Eq (map ('k : Big) ('v : Big)) where\n    eq xs ys = eq (Builtin.mapData xs) (Builtin.mapData ys)\n\n\nimpl ( Eq 'k, Eq 'v ) => Eq (map ('k : Little) 'v) where\n    eq = eqMapEntries\n\n\nimpl Eq 'v => Eq (map ('k : Big) ('v : Little)) where\n    eq = eqMapEntries\n\n\neqMapEntries : ( Eq 'k, Eq 'v ) => list (pair 'k 'v) -> list (pair 'k 'v) -> bool\neqMapEntries = eq\n\n\nimpl Eq value where\n    eq a b = Builtin.equalsData (Builtin.valueData a) (Builtin.valueData b)\n",
+    "Lift": "module Lift exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait Lift 'a 'b where\n    lift : 'a -> 'b\n    lower : 'b -> 'a\n\nimpl Lift int Int where\n    lift value = Builtin.iData value\n    lower value = Builtin.unIData value\n\nimpl Lift bytes Bytes where\n    lift value = Builtin.bData value\n    lower value = Builtin.unBData value\n",
+    "Literal": "module Literal exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait FromInt 'a where\n    fromInt : int -> 'a\n\ntrait FromString 'a where\n    fromString : string -> 'a\n\ntrait FromBytes 'a where\n    fromBytes : bytes -> 'a\n\nimpl FromInt int where\n    fromInt x = x\n\nimpl FromString string where\n    fromString x = x\n\nimpl FromBytes bytes where\n    fromBytes x = x\n\ntrait FromBool 'a where\n    fromBool : bool -> 'a\n\ntrait FromUnit 'a where\n    fromUnit : unit -> 'a\n\nimpl FromBool bool where\n    fromBool value = value\n\nimpl FromUnit unit where\n    fromUnit value = value\n",
+    "Logic": "module Logic exposing ( not, and, or, xor, (&&), (||) )\n\n\nimport Primitive\nimport Lift exposing ( Lift )\n\n\ninfix right 2 (||) = or\n\n\ninfix right 3 (&&) = and\n\n\n{-| Negate a Big or little Boolean, returning bool. -}\nnot : Lift bool 'a => 'a -> bool\nnot value =\n    if lower value then\n        Primitive.False\n    else\n        Primitive.True\n\n\n{-| Boolean conjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}\nand : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nand a b =\n    if lower a then\n        lower b\n    else\n        Primitive.False\n\n\n{-| Boolean disjunction. Fully applied calls short-circuit; partial and indirect calls are strict. -}\nor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nor a b =\n    if lower a then\n        Primitive.True\n    else\n        lower b\n\n\n{-| Return True when the Boolean operands differ. -}\nxor : ( Lift bool 'a, Lift bool 'b ) => 'a -> 'b -> bool\nxor a b =\n    if lower a then\n        not b\n    else\n        lower b\n",
+    "Optimizer": "//! Accepted O1 Core pipeline. Trace policy is decided by codegen, not optimization.\nuse nash_ir::{anf, build::Builder, core::Core, hygiene};\nuse nash_plutus::arena::Arena;\n\npub fn optimize<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {\n    optimize_with(&Builder::new(arena), core)\n}\n\npub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {\n    let original_ty = core.ty;\n    let core = hygiene::freshen(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    let core = nash_ir::static_lift::lift(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    let core = nash_ir::unused_params::reduce(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    let core = anf::normalize(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    debug_assert!(anf::validate(core).is_ok());\n    // Fold representations and constructors through ANF bindings in the cleanup\n    // loops, including opportunities exposed by inlining and propagation.\n    let core = nash_ir::small_inline::simplify(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    let core = nash_ir::known_case::simplify_constr_data(b, core);\n    debug_assert!(hygiene::validate(core, &[]).is_ok());\n    debug_assert!(anf::validate(core).is_ok());\n    debug_assert_eq!(original_ty, core.ty);\n    core\n}\n",
+    "PairInputs": "//! Inputs shared by pair-projection snapshots and explicit measurements.\nuse nash_ir::{\n    build::Builder,\n    core::*,\n    ty::{ConstTy, Ty},\n};\nuse nash_plutus::{\n    builtin::DefaultFunction as F, constant::Constant as C, data::PlutusData as D, typ::Type,\n};\n\npub fn cases<'a>(b: &Builder<'a>) -> Vec<(String, &'a Core<'a>, bool)> {\n    let a = b.arena;\n    let int = b.int(0).ty;\n    let pair = b.lit(C::proto_pair(\n        a,\n        &Type::Integer,\n        &Type::Integer,\n        C::integer_from(a, 7),\n        C::integer_from(a, 8),\n    ));\n    let data = b.lit(C::data(a, D::integer_from(a, 7)));\n    let made = b.builtin(\n        F::MkPairData,\n        &[data, data],\n        Ty::Const(a.alloc(ConstTy::Pair(data.ty, data.ty))),\n    );\n    let unwrapped = b.builtin(\n        F::UnConstrData,\n        &[b.lit(C::data(a, D::constr(a, 0, &[])))],\n        Ty::Const(a.alloc(ConstTy::Pair(\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n        ))),\n    );\n    let trace = |s, x| b.trace(b.lit(C::string(a, s)), x);\n    let mut cases = Vec::new();\n    for (name, subject, left_ty, right_ty, fails) in [\n        (\"literal\", pair, int, int, false),\n        (\"traced\", trace(\"subject\", pair), int, int, false),\n        (\"made_data\", made, data.ty, data.ty, false),\n        (\n            \"decoded\",\n            unwrapped,\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n            false,\n        ),\n        (\n            \"bad_decoder\",\n            b.builtin(F::UnConstrData, &[data], unwrapped.ty),\n            int,\n            Ty::Const(a.alloc(ConstTy::List(data.ty))),\n            true,\n        ),\n        (\n            \"ignored_failure\",\n            b.builtin(\n                F::MkPairData,\n                &[data, trace(\"unused field\", b.error(data.ty))],\n                made.ty,\n            ),\n            data.ty,\n            data.ty,\n            true,\n        ),\n        (\n            \"wrong_subject\",\n            b.with_type(b.int(1), pair.ty),\n            int,\n            int,\n            true,\n        ),\n        // Generic UPLC case accepts this, whereas fstPair would reject it.\n        (\n            \"native_constructor\",\n            b.with_type(b.constr(0, &[b.int(7), b.int(8)], Ty::Erased), pair.ty),\n            int,\n            int,\n            false,\n        ),\n    ] {\n        for second in [false, true] {\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: left_ty,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: right_ty,\n            };\n            let selected = if second { y } else { x };\n            let value = b.var(selected.name, selected.ty);\n            let core = b.case(\n                CaseKind::Pair,\n                subject,\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: value,\n                }],\n                None,\n                value.ty,\n            );\n            cases.push((\n                format!(\"{name}_{}\", if second { \"second\" } else { \"first\" }),\n                core,\n                fails,\n            ));\n        }\n    }\n    for mode in [\"body\", \"both\", \"neither\", \"delay\", \"lambda\", \"repeated\"] {\n        let x = Binder {\n            name: b.fresh(\"x\"),\n            ty: int,\n        };\n        let y = Binder {\n            name: b.fresh(\"y\"),\n            ty: int,\n        };\n        let xv = b.var(x.name, x.ty);\n        let body = match mode {\n            \"both\" => b.builtin(F::AddInteger, &[xv, b.var(y.name, y.ty)], int),\n            \"neither\" => b.int(42),\n            \"delay\" => b.delay(xv),\n            \"lambda\" => b.lam(\n                &[Binder {\n                    name: b.fresh(\"unused\"),\n                    ty: int,\n                }],\n                xv,\n            ),\n            \"repeated\" => b.builtin(F::AddInteger, &[xv, xv], int),\n            _ => trace(\"body\", b.builtin(F::AddInteger, &[xv, b.int(1)], int)),\n        };\n        let core = b.case(\n            CaseKind::Pair,\n            trace(\"subject\", pair),\n            &[Branch {\n                test: Test::Pair,\n                binders: a.alloc([x, y]),\n                body,\n            }],\n            None,\n            body.ty,\n        );\n        // Force/application is after the case, exposing any misplaced strict work.\n        let core = match mode {\n            \"delay\" => b.force(core, int),\n            \"lambda\" => b.app(core, &[trace(\"argument\", b.int(0))], int),\n            _ => core,\n        };\n        cases.push((mode.into(), core, false));\n    }\n    for second in [false, true] {\n        let select = |subject| {\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: int,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: int,\n            };\n            let selected = if second { y } else { x };\n            b.case(\n                CaseKind::Pair,\n                subject,\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: b.var(selected.name, int),\n                }],\n                None,\n                int,\n            )\n        };\n        let first = select(trace(\"first\", pair));\n        let second_core = select(trace(\"second\", pair));\n        cases.push((\n            format!(\n                \"two_projections_{}\",\n                if second { \"second\" } else { \"first\" }\n            ),\n            b.builtin(F::AddInteger, &[first, second_core], int),\n            false,\n        ));\n    }\n    for delayed in [false, true] {\n        let x = Binder {\n            name: b.fresh(\"x\"),\n            ty: int,\n        };\n        let y = Binder {\n            name: b.fresh(\"y\"),\n            ty: Ty::Const(a.alloc(ConstTy::List(data.ty))),\n        };\n        let value = b.var(x.name, x.ty);\n        let body = if delayed {\n            b.delay(value)\n        } else {\n            b.lam(\n                &[Binder {\n                    name: b.fresh(\"arg\"),\n                    ty: int,\n                }],\n                value,\n            )\n        };\n        let subject = b.builtin(\n            F::UnConstrData,\n            &[trace(\"before failure\", data)],\n            unwrapped.ty,\n        );\n        let case = b.case(\n            CaseKind::Pair,\n            subject,\n            &[Branch {\n                test: Test::Pair,\n                binders: a.alloc([x, y]),\n                body,\n            }],\n            None,\n            body.ty,\n        );\n        let ignored = Binder {\n            name: b.fresh(\"ignored closure\"),\n            ty: case.ty,\n        };\n        cases.push((\n            format!(\n                \"unconsumed_{}_failure\",\n                if delayed { \"delay\" } else { \"lambda\" }\n            ),\n            b.let_(ignored, case, b.int(0)),\n            true,\n        ));\n    }\n    for bad_tag in [false, true] {\n        for second in [false, true] {\n            let tag = Binder {\n                name: b.fresh(\"tag\"),\n                ty: int,\n            };\n            let fields_ty = Ty::Const(a.alloc(ConstTy::List(data.ty)));\n            let fields = Binder {\n                name: b.fresh(\"fields\"),\n                ty: fields_ty,\n            };\n            let encoded = Binder {\n                name: b.fresh(\"encoded\"),\n                ty: data.ty,\n            };\n            let decoded = Binder {\n                name: b.fresh(\"decoded\"),\n                ty: unwrapped.ty,\n            };\n            let x = Binder {\n                name: b.fresh(\"x\"),\n                ty: int,\n            };\n            let y = Binder {\n                name: b.fresh(\"y\"),\n                ty: fields_ty,\n            };\n            let selected = if second { y } else { x };\n            let body = b.case(\n                CaseKind::Pair,\n                b.var(decoded.name, decoded.ty),\n                &[Branch {\n                    test: Test::Pair,\n                    binders: a.alloc([x, y]),\n                    body: b.var(selected.name, selected.ty),\n                }],\n                None,\n                selected.ty,\n            );\n            let body = b.let_(\n                decoded,\n                b.builtin(\n                    F::UnConstrData,\n                    &[b.var(encoded.name, encoded.ty)],\n                    decoded.ty,\n                ),\n                body,\n            );\n            let body = b.let_(\n                encoded,\n                b.builtin(\n                    F::ConstrData,\n                    &[b.var(tag.name, tag.ty), b.var(fields.name, fields.ty)],\n                    encoded.ty,\n                ),\n                body,\n            );\n            let body = b.let_(\n                fields,\n                b.builtin(\n                    F::MkCons,\n                    &[\n                        trace(\"field\", data),\n                        b.lit(C::proto_list(a, &Type::Data, &[])),\n                    ],\n                    fields_ty,\n                ),\n                body,\n            );\n            let tag_value = if bad_tag {\n                let bytes = b.lit(C::data(a, D::byte_string(a, b\"bad\")));\n                b.with_type(\n                    b.builtin(\n                        F::UnBData,\n                        &[trace(\"tag\", bytes)],\n                        b.lit(C::byte_string(a, b\"bad\")).ty,\n                    ),\n                    int,\n                )\n            } else {\n                let tag_data = b.lit(C::data(a, D::integer_from(a, 0)));\n                b.builtin(F::UnIData, &[trace(\"tag\", tag_data)], int)\n            };\n            let body = b.let_(tag, tag_value, body);\n            cases.push((\n                format!(\n                    \"roundtrip_{}_{}\",\n                    if bad_tag { \"bad_tag\" } else { \"valid\" },\n                    if second { \"second\" } else { \"first\" }\n                ),\n                body,\n                bad_tag,\n            ));\n        }\n    }\n    cases\n}\n",
+    "PairProjection": "//! Experimental single-field native pair projection; not in production O1.\nuse crate::{\n    build::Builder,\n    core::{CaseKind, Core, CoreKind, Test},\n    ty::{ConstTy, Ty},\n};\nuse nash_plutus::{builtin::DefaultFunction as F, constant::Constant};\nuse std::collections::{HashMap, HashSet};\n\n/// Requires globally unique, scoped names. Keep pair production and projection\n/// strict at the original case point, including fields captured by closures.\npub fn reduce<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {\n    reduce_with(b, core, false)\n}\n\n/// Trial restriction: introduce only projections that the existing constructor\n/// inverse rule can cancel through retained strict bindings.\npub fn reduce_cancelling<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {\n    reduce_with(b, core, true)\n}\n\nfn resolve<'a>(mut node: &'a Core<'a>, bindings: &HashMap<u32, &'a Core<'a>>) -> &'a Core<'a> {\n    while let CoreKind::Var(name) = node.kind {\n        let Some(value) = bindings.get(&name.unique) else {\n            break;\n        };\n        node = value;\n    }\n    node\n}\n\nfn reduce_with<'a>(b: &Builder<'a>, core: &'a Core<'a>, cancelling: bool) -> &'a Core<'a> {\n    let mut bindings = HashMap::new();\n    let mut used = HashSet::new();\n    core.walk(&mut |node| match node.kind {\n        CoreKind::Let { binder, value, .. } => {\n            bindings.insert(binder.name.unique, value);\n        }\n        CoreKind::Var(name) => {\n            used.insert(name.unique);\n        }\n        _ => {}\n    });\n    core.map(b, &mut |node| {\n        let CoreKind::Case {\n            kind: CaseKind::Pair,\n            scrutinee,\n            branches: [branch],\n            default: None,\n        } = node.kind\n        else {\n            return None;\n        };\n        let [left, right] = branch.binders else {\n            return None;\n        };\n        if branch.test != Test::Pair || left.name.unique == right.name.unique {\n            return None;\n        }\n        let Ty::Const(ConstTy::Pair(a, c)) = scrutinee.ty else {\n            return None;\n        };\n        if left.ty != *a || right.ty != *c {\n            return None;\n        }\n        let selected = match (\n            used.contains(&left.name.unique),\n            used.contains(&right.name.unique),\n        ) {\n            (true, false) => (left, F::FstPair),\n            (false, true) => (right, F::SndPair),\n            _ => return None,\n        };\n        let mut producer = scrutinee;\n        loop {\n            producer = match producer.kind {\n                CoreKind::Var(name) => *bindings.get(&name.unique)?,\n                CoreKind::Trace { body, .. } => body,\n                _ => break,\n            };\n        }\n        if !matches!(\n            producer.kind,\n            CoreKind::Lit(Constant::ProtoPair(..))\n                | CoreKind::Builtin {\n                    func: F::UnConstrData,\n                    args: [_]\n                }\n                | CoreKind::Builtin {\n                    func: F::MkPairData,\n                    args: [_, _]\n                }\n        ) {\n            return None;\n        }\n        if cancelling {\n            // Match inverse::constructor's exact proof. Trace wrappers are not\n            // skipped here, and neither decoder nor constructor is discarded.\n            if !matches!(scrutinee.kind, CoreKind::Var(_)) {\n                return None;\n            }\n            let CoreKind::Builtin {\n                func: F::UnConstrData,\n                args: [data],\n            } = resolve(scrutinee, &bindings).kind\n            else {\n                return None;\n            };\n            if !matches!(data.kind, CoreKind::Var(_)) {\n                return None;\n            }\n            let CoreKind::Builtin {\n                func: F::ConstrData,\n                args: [tag, fields],\n            } = resolve(data, &bindings).kind\n            else {\n                return None;\n            };\n            let field = if selected.1 == F::FstPair {\n                tag\n            } else {\n                fields\n            };\n            if !matches!(field.kind, CoreKind::Var(_)) {\n                return None;\n            }\n        }\n        let projection = b.builtin(selected.1, &[scrutinee], selected.0.ty);\n        Some(b.with_type(b.let_(*selected.0, projection, branch.body), node.ty))\n    })\n}\n",
+    "Workloads": "module Workloads exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Logic exposing (..)\n\nsum : list int -> int\nsum xs =\n    case xs of\n        [] -> 0\n        x :: rest -> Builtin.addInteger x (sum rest)\n\nlistTraversal : int\nlistTraversal = sum [1, 2, 3, 4, 5, 6, 7, 8]\n\ncountdown : int -> int -> int\ncountdown n result =\n    if Builtin.equalsInteger n 0 then\n        result\n    else\n        countdown (Builtin.subtractInteger n 1) result\n\nstaticRecursion : int\nstaticRecursion = countdown 8 42\n\nmatchData : Data -> int\nmatchData value =\n    case value of\n        I n -> n\n        _ -> 0\n\ndataMatch : int\ndataMatch = matchData (I 42)\n\ndataMiss : int\ndataMiss = matchData (B #\"ab\")\n\ndecode : Data -> int\ndecode value =\n    case value of\n        Constr pair(_, [I n, _]) -> n\n        _ -> 0\n\ndecoding : int\ndecoding = decode (Builtin.constrData 0 [I 42, I 7])\n\nvalidate : Data -> unit\nvalidate value =\n    case value of\n        I n -> assert (Builtin.lessThanInteger 0 n)\n        _ -> fail\n\nvalidationPass : unit\nvalidationPass = validate (I 42)\n\nvalidationFail : unit\nvalidationFail = validate (I 0)\n\nbooleanHelpers : bool\nbooleanHelpers = (True && False) || (True && True)\n\nconstantPrefixTwice : int\nconstantPrefixTwice =\n    Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nconstantPrefixCold : int\nconstantPrefixCold =\n    if True then\n        42\n    else\n        Builtin.addInteger (Builtin.subtractInteger 100 1) (Builtin.subtractInteger 100 2)\n\nprefixLoop : int -> int\nprefixLoop n =\n    if Builtin.equalsInteger n 0 then\n        0\n    else\n        Builtin.addInteger\n            (Builtin.addInteger (Builtin.subtractInteger 100 n) (Builtin.subtractInteger 100 n))\n            (prefixLoop (Builtin.subtractInteger n 1))\n\nconstantPrefixLoop : int\nconstantPrefixLoop = prefixLoop 8\n"
+  },
+  "revision": "ac3bdf5ab20bd91ba6b636ee4c53f44a73908769",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "rows": [
+    {
+      "input": "pair/literal_first/cancelling=false/sharing=false\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3\n--- trial Core\nfstPair (con (pair integer integer) (7, 8))",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 221995,
+        "memory": 632,
+        "bytes": 12,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_first/cancelling=false/sharing=true\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3\n--- trial Core\nfstPair (con (pair integer integer) (7, 8))",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 269995,
+        "memory": 932,
+        "bytes": 15,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_first/cancelling=true/sharing=false\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3\n--- trial Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_first/cancelling=true/sharing=true\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3\n--- trial Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#3 y#4 -> x#3",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_second/cancelling=false/sharing=false\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nsndPair (con (pair integer integer) (7, 8))",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 222092,
+        "memory": 632,
+        "bytes": 12,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_second/cancelling=false/sharing=true\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nsndPair (con (pair integer integer) (7, 8))",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 270092,
+        "memory": 932,
+        "bytes": 15,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_second/cancelling=true/sharing=false\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/literal_second/cancelling=true/sharing=true\n--- accepted Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair (con (pair integer integer) (7, 8)) of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 80100,
+        "memory": 600,
+        "bytes": 13,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/traced_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 441493,
+        "memory": 1664,
+        "bytes": 30,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 537493,
+        "memory": 2264,
+        "bytes": 34,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 441590,
+        "memory": 1664,
+        "bytes": 30,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 537590,
+        "memory": 2264,
+        "bytes": 34,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 30,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/traced_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/made_data_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 345541,
+        "memory": 1364,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 393541,
+        "memory": 1664,
+        "bytes": 24,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 345638,
+        "memory": 1364,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 393638,
+        "memory": 1664,
+        "bytes": 24,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/made_data_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair Data Data = mkPairData (con data (I 7)) (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 203646,
+        "memory": 1332,
+        "bytes": 22,
+        "result": "(con data (I 7))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\nfstPair anf#3",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 326583,
+        "memory": 1164,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\nfstPair anf#3",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 374583,
+        "memory": 1464,
+        "bytes": 20,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\nsndPair anf#3",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      },
+      "after": {
+        "cpu": 326680,
+        "memory": 1164,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\nsndPair anf#3",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      },
+      "after": {
+        "cpu": 374680,
+        "memory": 1464,
+        "bytes": 20,
+        "result": "(con (list data) [])",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      },
+      "after": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/decoded_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (Constr 0 [])) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      },
+      "after": {
+        "cpu": 184688,
+        "memory": 1132,
+        "bytes": 18,
+        "result": "(con (list data) [])",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 18,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\nsndPair anf#3",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 18,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/bad_decoder_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int (list Data) = unConstrData (con data (I 7)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 16,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/ignored_failure_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\nfstPair anf#4",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\nfstPair anf#4",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\nsndPair anf#4",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\nsndPair anf#4",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 40,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/ignored_failure_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : Data = trace \"unused field\" in error in\nlet anf#4 : pair Data Data = mkPairData (con data (I 7)) anf#3 in\ncase@Pair anf#4 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 41,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "unused field"
+        ]
+      }
+    },
+    {
+      "input": "pair/wrong_subject_first/cancelling=false/sharing=false\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_first/cancelling=false/sharing=true\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_first/cancelling=true/sharing=false\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_first/cancelling=true/sharing=true\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_second/cancelling=false/sharing=false\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_second/cancelling=false/sharing=true\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_second/cancelling=true/sharing=false\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/wrong_subject_second/cancelling=true/sharing=true\n--- accepted Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\ncase@Pair 1 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      },
+      "after": {
+        "cpu": 100,
+        "memory": 100,
+        "bytes": 9,
+        "result": "error: NonConstrScrutinized(Con(Integer(1)))",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> x#1",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 7)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/native_constructor_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2\n--- trial Core\nlet anf#3 : pair int int = constr 0 7 8 in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> y#2",
+      "before": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 160100,
+        "memory": 1100,
+        "bytes": 16,
+        "result": "(con integer 8)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/body/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#3 in\ntrace \"body\" in addInteger x#1 1",
+      "before": {
+        "cpu": 636304,
+        "memory": 2766,
+        "bytes": 46,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      },
+      "after": {
+        "cpu": 826199,
+        "memory": 3098,
+        "bytes": 48,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "pair/body/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#3 in\ntrace \"body\" in addInteger x#1 1",
+      "before": {
+        "cpu": 668304,
+        "memory": 2966,
+        "bytes": 49,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      },
+      "after": {
+        "cpu": 906199,
+        "memory": 3598,
+        "bytes": 53,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "pair/body/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1",
+      "before": {
+        "cpu": 636304,
+        "memory": 2766,
+        "bytes": 46,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      },
+      "after": {
+        "cpu": 636304,
+        "memory": 2766,
+        "bytes": 46,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "pair/body/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> trace \"body\" in addInteger x#1 1",
+      "before": {
+        "cpu": 668304,
+        "memory": 2966,
+        "bytes": 49,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      },
+      "after": {
+        "cpu": 668304,
+        "memory": 2966,
+        "bytes": 49,
+        "result": "(con integer 8)",
+        "logs": [
+          "subject",
+          "body"
+        ]
+      }
+    },
+    {
+      "input": "pair/both/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2",
+      "before": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/both/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2",
+      "before": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/both/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2",
+      "before": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/both/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 y#2",
+      "before": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 15)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/neither/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 31,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 31,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/neither/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/neither/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42",
+      "before": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 31,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 299598,
+        "memory": 1632,
+        "bytes": 31,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/neither/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> 42",
+      "before": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 347598,
+        "memory": 1932,
+        "bytes": 33,
+        "result": "(con integer 42)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/delay/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 379598,
+        "memory": 2132,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 441493,
+        "memory": 1664,
+        "bytes": 30,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/delay/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nfstPair anf#3",
+      "before": {
+        "cpu": 427598,
+        "memory": 2432,
+        "bytes": 36,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 537493,
+        "memory": 2264,
+        "bytes": 34,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/delay/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4",
+      "before": {
+        "cpu": 379598,
+        "memory": 2132,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 379598,
+        "memory": 2132,
+        "bytes": 33,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/delay/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#4 : @delay int = case@Pair anf#3 of\n  Pair x#1 y#2 -> delay x#1 in\nforce anf#4",
+      "before": {
+        "cpu": 427598,
+        "memory": 2432,
+        "bytes": 36,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 427598,
+        "memory": 2432,
+        "bytes": 36,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/lambda/cancelling=false/sharing=false\n--- accepted Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6\n--- trial Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#4 in\nlet anf#6 : int = trace \"argument\" in 0 in\nx#1",
+      "before": {
+        "cpu": 615096,
+        "memory": 3264,
+        "bytes": 54,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      },
+      "after": {
+        "cpu": 708991,
+        "memory": 2996,
+        "bytes": 51,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      }
+    },
+    {
+      "input": "pair/lambda/cancelling=false/sharing=true\n--- accepted Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6\n--- trial Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#4 in\nlet anf#6 : int = trace \"argument\" in 0 in\nx#1",
+      "before": {
+        "cpu": 647096,
+        "memory": 3464,
+        "bytes": 56,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      },
+      "after": {
+        "cpu": 788991,
+        "memory": 3496,
+        "bytes": 55,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      }
+    },
+    {
+      "input": "pair/lambda/cancelling=true/sharing=false\n--- accepted Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6\n--- trial Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6",
+      "before": {
+        "cpu": 615096,
+        "memory": 3264,
+        "bytes": 54,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      },
+      "after": {
+        "cpu": 615096,
+        "memory": 3264,
+        "bytes": 54,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      }
+    },
+    {
+      "input": "pair/lambda/cancelling=true/sharing=true\n--- accepted Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6\n--- trial Core\nlet anf#4 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet anf#5 : int -> int = case@Pair anf#4 of\n  Pair x#1 y#2 -> \\unused#3 : int -> x#1 in\nlet anf#6 : int = trace \"argument\" in 0 in\nanf#5 anf#6",
+      "before": {
+        "cpu": 647096,
+        "memory": 3464,
+        "bytes": 56,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      },
+      "after": {
+        "cpu": 647096,
+        "memory": 3464,
+        "bytes": 56,
+        "result": "(con integer 7)",
+        "logs": [
+          "subject",
+          "argument"
+        ]
+      }
+    },
+    {
+      "input": "pair/repeated/cancelling=false/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#3 in\naddInteger x#1 x#1",
+      "before": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 654701,
+        "memory": 2366,
+        "bytes": 36,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/repeated/cancelling=false/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#3 in\naddInteger x#1 x#1",
+      "before": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 750701,
+        "memory": 2966,
+        "bytes": 41,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/repeated/cancelling=true/sharing=false\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1",
+      "before": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 464806,
+        "memory": 2034,
+        "bytes": 34,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/repeated/cancelling=true/sharing=true\n--- accepted Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1\n--- trial Core\nlet anf#3 : pair int int = trace \"subject\" in (con (pair integer integer) (7, 8)) in\ncase@Pair anf#3 of\n  Pair x#1 y#2 -> addInteger x#1 x#1",
+      "before": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      },
+      "after": {
+        "cpu": 512806,
+        "memory": 2334,
+        "bytes": 36,
+        "result": "(con integer 14)",
+        "logs": [
+          "subject"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#5 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet x#3 : int = fstPair anf#7 in\naddInteger x#1 x#3",
+      "before": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 1128094,
+        "memory": 4130,
+        "bytes": 60,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet x#1 : int = fstPair anf#5 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet x#3 : int = fstPair anf#7 in\naddInteger x#1 x#3",
+      "before": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 1176094,
+        "memory": 4430,
+        "bytes": 64,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8",
+      "before": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> x#1 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> x#3 in\naddInteger anf#6 anf#8",
+      "before": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 14)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet y#2 : int = sndPair anf#5 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet y#4 : int = sndPair anf#7 in\naddInteger y#2 y#4",
+      "before": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 1128288,
+        "memory": 4130,
+        "bytes": 60,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet y#2 : int = sndPair anf#5 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet y#4 : int = sndPair anf#7 in\naddInteger y#2 y#4",
+      "before": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 1176288,
+        "memory": 4430,
+        "bytes": 64,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8",
+      "before": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 844304,
+        "memory": 4066,
+        "bytes": 60,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/two_projections_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8\n--- trial Core\nlet anf#5 : pair int int = trace \"first\" in (con (pair integer integer) (7, 8)) in\nlet anf#6 : int = case@Pair anf#5 of\n  Pair x#1 y#2 -> y#2 in\nlet anf#7 : pair int int = trace \"second\" in (con (pair integer integer) (7, 8)) in\nlet anf#8 : int = case@Pair anf#7 of\n  Pair x#3 y#4 -> y#4 in\naddInteger anf#6 anf#8",
+      "before": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      },
+      "after": {
+        "cpu": 876304,
+        "memory": 4266,
+        "bytes": 63,
+        "result": "(con integer 16)",
+        "logs": [
+          "first",
+          "second"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_lambda_failure/cancelling=false/sharing=false\n--- accepted Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0\n--- trial Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet x#1 : int = fstPair anf#6 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 43,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_lambda_failure/cancelling=false/sharing=true\n--- accepted Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0\n--- trial Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet x#1 : int = fstPair anf#6 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 48,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_lambda_failure/cancelling=true/sharing=false\n--- accepted Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0\n--- trial Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_lambda_failure/cancelling=true/sharing=true\n--- accepted Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0\n--- trial Core\nlet anf#5 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#6 : pair int (list Data) = unConstrData anf#5 in\nlet ignored closure#4 : int -> int = case@Pair anf#6 of\n  Pair x#1 y#2 -> \\arg#3 : int -> x#1 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_delay_failure/cancelling=false/sharing=false\n--- accepted Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0\n--- trial Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet x#1 : int = fstPair anf#5 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 43,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_delay_failure/cancelling=false/sharing=true\n--- accepted Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0\n--- trial Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet x#1 : int = fstPair anf#5 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 48,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_delay_failure/cancelling=true/sharing=false\n--- accepted Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0\n--- trial Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 44,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/unconsumed_delay_failure/cancelling=true/sharing=true\n--- accepted Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0\n--- trial Core\nlet anf#4 : Data = trace \"before failure\" in (con data (I 7)) in\nlet anf#5 : pair int (list Data) = unConstrData anf#4 in\nlet ignored closure#3 : @delay int = case@Pair anf#5 of\n  Pair x#1 y#2 -> delay x#1 in\n0",
+      "before": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      },
+      "after": {
+        "cpu": 59598,
+        "memory": 132,
+        "bytes": 46,
+        "result": "error: Runtime(MalFormedData(Integer(7)))",
+        "logs": [
+          "before failure"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 1058941,
+        "memory": 5292,
+        "bytes": 67,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 994941,
+        "memory": 4892,
+        "bytes": 63,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 1138941,
+        "memory": 5792,
+        "bytes": 70,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 1058941,
+        "memory": 5292,
+        "bytes": 67,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 994941,
+        "memory": 4892,
+        "bytes": 63,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 1138941,
+        "memory": 5792,
+        "bytes": 70,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con integer 0)",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 1058941,
+        "memory": 5292,
+        "bytes": 67,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 994941,
+        "memory": 4892,
+        "bytes": 63,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 1138941,
+        "memory": 5792,
+        "bytes": 70,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 1058941,
+        "memory": 5292,
+        "bytes": 67,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 994941,
+        "memory": 4892,
+        "bytes": 63,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_valid_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (I 0)) in\nlet tag#1 : int = unIData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 1138941,
+        "memory": 5792,
+        "bytes": 70,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 1074941,
+        "memory": 5392,
+        "bytes": 67,
+        "result": "(con (list data) [(I 7)])",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_first/cancelling=false/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 66,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_first/cancelling=false/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 73,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_first/cancelling=true/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 66,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_first/cancelling=true/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> x#5\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ntag#1",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 73,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_second/cancelling=false/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 66,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_second/cancelling=false/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 73,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_second/cancelling=true/sharing=false\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 66,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/roundtrip_bad_tag_second/cancelling=true/sharing=true\n--- accepted Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\ncase@Pair decoded#4 of\n  Pair x#5 y#6 -> y#6\n--- trial Core\nlet anf#7 : Data = trace \"tag\" in (con data (B #626164)) in\nlet tag#1 : int = unBData anf#7 in\nlet anf#8 : Data = trace \"field\" in (con data (I 7)) in\nlet fields#2 : list Data = mkCons anf#8 (con (list data) []) in\nlet encoded#3 : Data = constrData tag#1 fields#2 in\nlet decoded#4 : pair int (list Data) = unConstrData encoded#3 in\nfields#2",
+      "before": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 73,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      },
+      "after": {
+        "cpu": 211600,
+        "memory": 228,
+        "bytes": 70,
+        "result": "error: Runtime(TypeMismatch(Integer, ByteString([98, 97, 100])))",
+        "logs": [
+          "tag",
+          "field"
+        ]
+      }
+    },
+    {
+      "input": "pair/source/listTraversal/cancelling=false/sharing=false\n--- accepted Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37\n--- trial Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37",
+      "before": {
+        "cpu": 4828660,
+        "memory": 21872,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4828660,
+        "memory": 21872,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/listTraversal/cancelling=false/sharing=true\n--- accepted Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37\n--- trial Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37",
+      "before": {
+        "cpu": 4764660,
+        "memory": 21472,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4764660,
+        "memory": 21472,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/listTraversal/cancelling=true/sharing=false\n--- accepted Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37\n--- trial Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37",
+      "before": {
+        "cpu": 4828660,
+        "memory": 21872,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4828660,
+        "memory": 21872,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/listTraversal/cancelling=true/sharing=true\n--- accepted Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37\n--- trial Core\nletrec\n  sum#13 : list int -> int [static []] = \\xs#14 : list int -> case@List xs#14 of\n    Nil -> 0\n    Cons field#16 field#17 -> let anf#21 : int = sum#13 field#17 in\n    addInteger field#16 anf#21\nin\nlet anf#30 : list int = mkCons 8 (con (list integer) []) in\nlet anf#31 : list int = mkCons 7 anf#30 in\nlet anf#32 : list int = mkCons 6 anf#31 in\nlet anf#33 : list int = mkCons 5 anf#32 in\nlet anf#34 : list int = mkCons 4 anf#33 in\nlet anf#35 : list int = mkCons 3 anf#34 in\nlet anf#36 : list int = mkCons 2 anf#35 in\nlet anf#37 : list int = mkCons 1 anf#36 in\nsum#13 anf#37",
+      "before": {
+        "cpu": 4764660,
+        "memory": 21472,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4764660,
+        "memory": 21472,
+        "bytes": 93,
+        "result": "(con integer 36)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/staticRecursion/cancelling=false/sharing=false\n--- accepted Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8\n--- trial Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8",
+      "before": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/staticRecursion/cancelling=false/sharing=true\n--- accepted Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8\n--- trial Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8",
+      "before": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/staticRecursion/cancelling=true/sharing=false\n--- accepted Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8\n--- trial Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8",
+      "before": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/staticRecursion/cancelling=true/sharing=true\n--- accepted Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8\n--- trial Core\nletrec\n  worker#14 : int -> int [static []] = \\n#13 : int -> let anf#16 : bool = equalsInteger n#13 0 in\n  case@Bool anf#16 of\n    True -> 42\n    False -> let anf#18 : int = subtractInteger n#13 1 in\n    worker#14 anf#18\nin\nworker#14 8",
+      "before": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 4448761,
+        "memory": 19925,
+        "bytes": 39,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMatch/cancelling=false/sharing=false\n--- accepted Core\nlet anf#30 : Data = iData 42 in\n42\n--- trial Core\nlet anf#30 : Data = iData 42 in\n42",
+      "before": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMatch/cancelling=false/sharing=true\n--- accepted Core\nlet anf#30 : Data = iData 42 in\n42\n--- trial Core\nlet anf#30 : Data = iData 42 in\n42",
+      "before": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMatch/cancelling=true/sharing=false\n--- accepted Core\nlet anf#30 : Data = iData 42 in\n42\n--- trial Core\nlet anf#30 : Data = iData 42 in\n42",
+      "before": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMatch/cancelling=true/sharing=true\n--- accepted Core\nlet anf#30 : Data = iData 42 in\n42\n--- trial Core\nlet anf#30 : Data = iData 42 in\n42",
+      "before": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 111399,
+        "memory": 732,
+        "bytes": 11,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMiss/cancelling=false/sharing=false\n--- accepted Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0\n--- trial Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0",
+      "before": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMiss/cancelling=false/sharing=true\n--- accepted Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0\n--- trial Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0",
+      "before": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMiss/cancelling=true/sharing=false\n--- accepted Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0\n--- trial Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0",
+      "before": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/dataMiss/cancelling=true/sharing=true\n--- accepted Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0\n--- trial Core\nlet anf#34 : Data = bData (con bytestring #ab) in\n0",
+      "before": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 107283,
+        "memory": 732,
+        "bytes": 14,
+        "result": "(con integer 0)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/decoding/cancelling=false/sharing=false\n--- accepted Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet leaf#13 : @delay int = delay 0 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\ncase@Pair field#14 of\n  Pair field#15 field#16 -> case@List field#16 of\n    Nil -> force leaf#13\n    Cons field#17 field#18 -> case@Data field#17 of\n      DataConstr field#19 -> force leaf#13\n      DataMap field#20 -> force leaf#13\n      DataList field#21 -> force leaf#13\n      DataI field#22 -> case@List field#18 of\n        Nil -> force leaf#13\n        Cons field#23 field#24 -> case@List field#24 of\n          Nil -> field#22\n          Cons field#26 field#47 -> force leaf#13\n      DataB field#48 -> force leaf#13\n--- trial Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\n42",
+      "before": {
+        "cpu": 1601280,
+        "memory": 8256,
+        "bytes": 89,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 846161,
+        "memory": 4192,
+        "bytes": 42,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/decoding/cancelling=false/sharing=true\n--- accepted Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet leaf#13 : @delay int = delay 0 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\ncase@Pair field#14 of\n  Pair field#15 field#16 -> case@List field#16 of\n    Nil -> force leaf#13\n    Cons field#17 field#18 -> case@Data field#17 of\n      DataConstr field#19 -> force leaf#13\n      DataMap field#20 -> force leaf#13\n      DataList field#21 -> force leaf#13\n      DataI field#22 -> case@List field#18 of\n        Nil -> force leaf#13\n        Cons field#23 field#24 -> case@List field#24 of\n          Nil -> field#22\n          Cons field#26 field#47 -> force leaf#13\n      DataB field#48 -> force leaf#13\n--- trial Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\n42",
+      "before": {
+        "cpu": 1681280,
+        "memory": 8756,
+        "bytes": 94,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 878161,
+        "memory": 4392,
+        "bytes": 45,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/decoding/cancelling=true/sharing=false\n--- accepted Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet leaf#13 : @delay int = delay 0 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\ncase@Pair field#14 of\n  Pair field#15 field#16 -> case@List field#16 of\n    Nil -> force leaf#13\n    Cons field#17 field#18 -> case@Data field#17 of\n      DataConstr field#19 -> force leaf#13\n      DataMap field#20 -> force leaf#13\n      DataList field#21 -> force leaf#13\n      DataI field#22 -> case@List field#18 of\n        Nil -> force leaf#13\n        Cons field#23 field#24 -> case@List field#24 of\n          Nil -> field#22\n          Cons field#26 field#47 -> force leaf#13\n      DataB field#48 -> force leaf#13\n--- trial Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\n42",
+      "before": {
+        "cpu": 1601280,
+        "memory": 8256,
+        "bytes": 89,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 846161,
+        "memory": 4192,
+        "bytes": 42,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/decoding/cancelling=true/sharing=true\n--- accepted Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet leaf#13 : @delay int = delay 0 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\ncase@Pair field#14 of\n  Pair field#15 field#16 -> case@List field#16 of\n    Nil -> force leaf#13\n    Cons field#17 field#18 -> case@Data field#17 of\n      DataConstr field#19 -> force leaf#13\n      DataMap field#20 -> force leaf#13\n      DataList field#21 -> force leaf#13\n      DataI field#22 -> case@List field#18 of\n        Nil -> force leaf#13\n        Cons field#23 field#24 -> case@List field#24 of\n          Nil -> field#22\n          Cons field#26 field#47 -> force leaf#13\n      DataB field#48 -> force leaf#13\n--- trial Core\nlet anf#59 : Data = iData 42 in\nlet anf#61 : Data = iData 7 in\nlet anf#62 : list Data = mkCons anf#61 (con (list data) []) in\nlet anf#63 : list Data = mkCons anf#59 anf#62 in\nlet anf#64 : Data = constrData 0 anf#63 in\nlet field#14 : pair int (list Data) = unConstrData anf#64 in\n42",
+      "before": {
+        "cpu": 1681280,
+        "memory": 8756,
+        "bytes": 94,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 878161,
+        "memory": 4392,
+        "bytes": 45,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/validationPass/cancelling=false/sharing=false\n--- accepted Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 300689,
+        "memory": 1633,
+        "bytes": 44,
+        "result": "(con unit ())",
+        "logs": []
+      },
+      "after": {
+        "cpu": 300689,
+        "memory": 1633,
+        "bytes": 44,
+        "result": "(con unit ())",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/validationPass/cancelling=false/sharing=true\n--- accepted Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 364689,
+        "memory": 2033,
+        "bytes": 47,
+        "result": "(con unit ())",
+        "logs": []
+      },
+      "after": {
+        "cpu": 364689,
+        "memory": 2033,
+        "bytes": 47,
+        "result": "(con unit ())",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/validationPass/cancelling=true/sharing=false\n--- accepted Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 300689,
+        "memory": 1633,
+        "bytes": 44,
+        "result": "(con unit ())",
+        "logs": []
+      },
+      "after": {
+        "cpu": 300689,
+        "memory": 1633,
+        "bytes": 44,
+        "result": "(con unit ())",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/validationPass/cancelling=true/sharing=true\n--- accepted Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 42 in\nlet anf#32 : bool = lessThanInteger 0 42 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 364689,
+        "memory": 2033,
+        "bytes": 47,
+        "result": "(con unit ())",
+        "logs": []
+      },
+      "after": {
+        "cpu": 364689,
+        "memory": 2033,
+        "bytes": 47,
+        "result": "(con unit ())",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/validationFail/cancelling=false/sharing=false\n--- accepted Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      },
+      "after": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      }
+    },
+    {
+      "input": "pair/source/validationFail/cancelling=false/sharing=true\n--- accepted Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 47,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      },
+      "after": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 47,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      }
+    },
+    {
+      "input": "pair/source/validationFail/cancelling=true/sharing=false\n--- accepted Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      },
+      "after": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 44,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      }
+    },
+    {
+      "input": "pair/source/validationFail/cancelling=true/sharing=true\n--- accepted Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error\n--- trial Core\nlet anf#34 : Data = iData 0 in\nlet anf#32 : bool = lessThanInteger 0 0 in\ncase@Bool anf#32 of\n  True -> ()\n  False -> trace \"assertion failed\" in error",
+      "before": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 47,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      },
+      "after": {
+        "cpu": 120187,
+        "memory": 165,
+        "bytes": 47,
+        "result": "error: ExplicitErrorTerm",
+        "logs": [
+          "assertion failed"
+        ]
+      }
+    },
+    {
+      "input": "pair/source/booleanHelpers/cancelling=false/sharing=false\n--- accepted Core\ntrue\n--- trial Core\ntrue",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/booleanHelpers/cancelling=false/sharing=true\n--- accepted Core\ntrue\n--- trial Core\ntrue",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/booleanHelpers/cancelling=true/sharing=false\n--- accepted Core\ntrue\n--- trial Core\ntrue",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/booleanHelpers/cancelling=true/sharing=true\n--- accepted Core\ntrue\n--- trial Core\ntrue",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 5,
+        "result": "(con bool True)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixTwice/cancelling=false/sharing=false\n--- accepted Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12\n--- trial Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12",
+      "before": {
+        "cpu": 607724,
+        "memory": 2006,
+        "bytes": 27,
+        "result": "(con integer 197)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 607724,
+        "memory": 2006,
+        "bytes": 27,
+        "result": "(con integer 197)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixTwice/cancelling=false/sharing=true\n--- accepted Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12\n--- trial Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12",
+      "before": {
+        "cpu": 623724,
+        "memory": 2106,
+        "bytes": 26,
+        "result": "(con integer 197)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 623724,
+        "memory": 2106,
+        "bytes": 26,
+        "result": "(con integer 197)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixTwice/cancelling=true/sharing=false\n--- accepted Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12\n--- trial Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12",
+      "before": {
+        "cpu": 607724,
+        "memory": 2006,
+        "bytes": 27,
+        "result": "(con integer 197)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 607724,
+        "memory": 2006,
+        "bytes": 27,
+        "result": "(con integer 197)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixTwice/cancelling=true/sharing=true\n--- accepted Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12\n--- trial Core\nlet anf#9 : int = subtractInteger 100 1 in\nlet anf#12 : int = subtractInteger 100 2 in\naddInteger anf#9 anf#12",
+      "before": {
+        "cpu": 623724,
+        "memory": 2106,
+        "bytes": 26,
+        "result": "(con integer 197)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 623724,
+        "memory": 2106,
+        "bytes": 26,
+        "result": "(con integer 197)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixCold/cancelling=false/sharing=false\n--- accepted Core\n42\n--- trial Core\n42",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixCold/cancelling=false/sharing=true\n--- accepted Core\n42\n--- trial Core\n42",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixCold/cancelling=true/sharing=false\n--- accepted Core\n42\n--- trial Core\n42",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixCold/cancelling=true/sharing=true\n--- accepted Core\n42\n--- trial Core\n42",
+      "before": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 16100,
+        "memory": 200,
+        "bytes": 6,
+        "result": "(con integer 42)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixLoop/cancelling=false/sharing=false\n--- accepted Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8\n--- trial Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8",
+      "before": {
+        "cpu": 11271417,
+        "memory": 42389,
+        "bytes": 68,
+        "result": "(con integer 1528)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 11271417,
+        "memory": 42389,
+        "bytes": 68,
+        "result": "(con integer 1528)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixLoop/cancelling=false/sharing=true\n--- accepted Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8\n--- trial Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8",
+      "before": {
+        "cpu": 10839417,
+        "memory": 39689,
+        "bytes": 67,
+        "result": "(con integer 1528)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 10839417,
+        "memory": 39689,
+        "bytes": 67,
+        "result": "(con integer 1528)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixLoop/cancelling=true/sharing=false\n--- accepted Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8\n--- trial Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8",
+      "before": {
+        "cpu": 11271417,
+        "memory": 42389,
+        "bytes": 68,
+        "result": "(con integer 1528)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 11271417,
+        "memory": 42389,
+        "bytes": 68,
+        "result": "(con integer 1528)",
+        "logs": []
+      }
+    },
+    {
+      "input": "pair/source/constantPrefixLoop/cancelling=true/sharing=true\n--- accepted Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8\n--- trial Core\nletrec\n  prefixLoop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 0\n    False -> let anf#14 : int = subtractInteger 100 n#9 in\n    let anf#16 : int = subtractInteger 100 n#9 in\n    let anf#17 : int = addInteger anf#14 anf#16 in\n    let anf#19 : int = subtractInteger n#9 1 in\n    let anf#20 : int = prefixLoop#8 anf#19 in\n    addInteger anf#17 anf#20\nin\nprefixLoop#8 8",
+      "before": {
+        "cpu": 10839417,
+        "memory": 39689,
+        "bytes": 67,
+        "result": "(con integer 1528)",
+        "logs": []
+      },
+      "after": {
+        "cpu": 10839417,
+        "memory": 39689,
+        "bytes": 67,
+        "result": "(con integer 1528)",
+        "logs": []
+      }
+    }
+  ]
+}

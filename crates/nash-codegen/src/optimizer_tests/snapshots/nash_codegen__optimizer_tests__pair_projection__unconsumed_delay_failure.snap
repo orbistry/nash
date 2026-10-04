@@ -1,0 +1,51 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/pair_projection.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated Core after\\n{}\",\nfixture.snapshot(), pretty(anf), pretty(isolated))"
+---
+--- unoptimized Core
+let ignored closure#60 : @delay int = case@Pair unConstrData (trace "before failure" in (con data (I 7))) of
+  Pair x#58 y#59 -> delay x#58 in
+0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam n69676e6f72656420636c6f73757265_60 (con integer 0))
+    (case
+      [(builtin unConstrData)
+        (force
+          [[(force (builtin trace)) (con string "before failure")]
+            (delay (con data (I 7)))])]
+      (lam x_58 (lam y_59 (delay x_58))))])
+--- optimized Core
+let anf#4 : Data = trace "before failure" in (con data (I 7)) in
+let anf#5 : pair int (list Data) = unConstrData anf#4 in
+let ignored closure#3 : @delay int = case@Pair anf#5 of
+  Pair x#1 y#2 -> delay x#1 in
+0
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_11
+    [(lam anf_6
+      [(lam anf_7
+        [(lam n69676e6f72656420636c6f73757265_10 (con integer 0))
+          (case anf_7 (lam x_8 (lam y_9 (delay x_8))))])
+        [(builtin unConstrData) anf_6]])
+      (force [[builtin_11 (con string "before failure")] (delay (con data (I 7)))])])
+    (force (builtin trace))])
+--- result
+error: Runtime(MalFormedData(Integer(7)))
+--- logs
+["before failure"]
+--- budget
+cpu: 59598, memory: 132
+--- isolated Core before
+let anf#118 : Data = trace "before failure" in (con data (I 7)) in
+let anf#119 : pair int (list Data) = unConstrData anf#118 in
+let ignored closure#60 : @delay int = case@Pair anf#119 of
+  Pair x#58 y#59 -> delay x#58 in
+0
+--- isolated Core after
+let anf#118 : Data = trace "before failure" in (con data (I 7)) in
+let anf#119 : pair int (list Data) = unConstrData anf#118 in
+let ignored closure#60 : @delay int = case@Pair anf#119 of
+  Pair x#58 y#59 -> delay x#58 in
+0

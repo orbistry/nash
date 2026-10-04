@@ -30,8 +30,8 @@ but remains unimplemented. Known Boolean, direct/bound native-constructor and
 native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
-as well. The retained Chunk 7 scope is complete. Continue
-with Chunk 10, recursive unused-parameter removal and final convergence review. The retained Chunk 8 representation cancellations
+as well. The retained Chunk 7 scope is complete. Chunks 9 and 10 are now
+integrated; recursive unused-parameter removal and Chunk 11 remain. The retained Chunk 8 representation cancellations
 are accepted, including integer/byte/list/map Data round trips, UTF-8 round trips
 and bound constructor Data projections/reconstruction. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
@@ -1807,6 +1807,17 @@ unsupported/failing computations retain runtime behavior.
 
 ## Chunk 10 — Single-field native pair projection
 
+**Accepted and integrated (5 October 2026).** Keep only the restriction whose
+introduced projection is removed by constructor inverse cleanup. It runs inside
+`simplify_constr_data`'s existing loop before constructor/wrapper cleanup; producer
+bindings remain strict and ANF is not repeated. The general projection rule and
+trial CLI were removed. The baseline now includes 178 O0/O1 cases, adding the 30
+pair fixtures. Against the previous 148-case O1 baseline, source `decoding`
+improves from 94 to 45 bytes, 1,681,280 to 878,161 CPU and 8,756 to 4,392 memory;
+the other 147 cases are unchanged. Results/logs match throughout.
+
+See [historical pair trial and integration](../docs/research/pair-projection-trial.md).
+
 Compare `CaseKind::Pair` with `fstPair`/`sndPair` when exactly one branch binder
 is used, for a valid one-branch case without a default:
 
@@ -1842,7 +1853,7 @@ Representation cancellation and bound-constructor folding run only in the
 cleanup loops after the single ANF normalization.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
-Chunk 9 is complete; Chunk 10 adoption and final convergence review stay open.
+Chunks 9–10 are complete; final convergence review stays open.
 Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
 heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
 follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
