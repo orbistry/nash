@@ -1,0 +1,17 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nf : pair int bytes -> int\nf p = p.snd\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `int`, found `bytes`.
+   ╭─[Main.nash:3:7]
+ 1 │ module Main exposing (..)
+ 2 │ f : pair int bytes -> int
+   ·     ──────────┬──────────
+   ·               ╰── declared type
+ 3 │ f p = p.snd
+   ·       ──┬──
+   ·         ╰── body of `f`
+   ╰────

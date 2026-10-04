@@ -412,6 +412,49 @@ impl<'a> Solver<'a, '_> {
                     };
                 }
                 Content::Structure(FlatType::App1(home, name, args)) => {
+                    if home == nash_ast::primitives::primitive_home()
+                        && name == "pair"
+                        && args.len() == 2
+                    {
+                        // Pair projections are read-only fields, not record updates.
+                        if !matches!(
+                            field.context,
+                            type_::FieldContext::Access { .. } | type_::FieldContext::Accessor
+                        ) {
+                            break;
+                        }
+                        let Some((name, field_type)) = field.field else {
+                            break;
+                        };
+                        let actual = match name {
+                            "fst" => args[0],
+                            "snd" => args[1],
+                            _ => {
+                                errors.push(Error::MissingField {
+                                    region: field.region,
+                                    context: field.context,
+                                    field: name,
+                                    record: to_error_type(self.bump, uf, field.record),
+                                    available: self.bump.alloc_slice_copy(&["fst", "snd"]),
+                                });
+                                return true;
+                            }
+                        };
+                        match self.unify(uf, actual, field_type) {
+                            unify::Answer::Ok(vars) => self.introduce(uf, rank, &vars),
+                            unify::Answer::Err(vars, actual, expected) => {
+                                self.introduce(uf, rank, &vars);
+                                errors.push(Error::FieldMismatch {
+                                    region: field.region,
+                                    context: field.context,
+                                    field: name,
+                                    actual,
+                                    expected,
+                                });
+                            }
+                        }
+                        return true;
+                    }
                     let visible = if field.test_scope {
                         &self.tables.test_fields
                     } else {

@@ -596,6 +596,13 @@ impl<'a> Engine<'a, '_, '_> {
         result_ty: Ty<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let mut list = match ty {
+            Ty::Const(ConstTy::Pair(_, _)) if arity == 2 && index < 2 => {
+                return Ok(self.ir.builtin(
+                    if index == 0 { F::FstPair } else { F::SndPair },
+                    &[value],
+                    result_ty,
+                ));
+            }
             Ty::Big(BigTy::Record(_)) => self.ir.builtin(F::UnListData, &[value], DATA_LIST),
             Ty::Big(BigTy::Adt(_)) => {
                 let tag = Binder {

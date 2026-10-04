@@ -1,0 +1,14 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntype alias entry = pair int int\nf : entry -> entry\nf p = { p | snd = 1 }\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `entry`.
+   ╭─[Main.nash:4:13]
+ 3 │ f : entry -> entry
+ 4 │ f p = { p | snd = 1 }
+   ·             ─┬─
+   ·              ╰── field `snd` update of `p`
+   ╰────

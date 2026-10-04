@@ -1,0 +1,6 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\ntype alias point = { fst : int, snd : bytes }\nfirst : point -> int\nfirst = .fst\nsecond : point -> bytes\nsecond p = p.snd\n"
+---
+first : point -> int
+second : point -> bytes

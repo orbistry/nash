@@ -81,6 +81,7 @@ implementation, default imports, Prop and the full validator example.
 | Deriving | Implemented as macros (`@derive(Eq, Ord, Show, Validate)`). |
 | IR | Single tree IR (`Core`): monomorphized lambda calculus with explicit reprs. Core -> Core optimization passes. Core -> UPLC `Term`. |
 | Pattern matching | Maranget decision trees, hoisted leaves, memoized accessors. Exhaustiveness from Elm's `Nitpick/PatternMatches`. |
+| Pair access | Known builtin pairs expose read-only `.fst`/`.snd` fields and accessors, lowering to the corresponding builtins. Receiver types resolve these names; ordinary record fields retain their meaning. Pair patterns use native case, with O1 projecting only when constructor inverse cleanup can cancel the projection. |
 | Native maps | `Primitive.map k v` aliases `list (pair k v)` with Storable components. Map builtins and helper results retain the alias. Library Eq uses structural Data equality for Big/Big maps and selected element equality otherwise; native lists similarly split Big/Little element Eq. |
 | Recursion | Self-application with static-parameter lifting; mutual recursion via a combined dispatcher. No Y combinator. Plan 08 optimizes ANF Core with explicit recursion first, then rewrites recursion and lowers directly without repeating ANF. O0 keeps required recursion rewriting without optimization. |
 | Runtime errors | `fail`, `todo`, `trace`, `assert`. Trace levels silent / compact / verbose; compiler-generated traces separate switch. |

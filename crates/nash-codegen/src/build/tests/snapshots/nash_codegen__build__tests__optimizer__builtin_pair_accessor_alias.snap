@@ -1,0 +1,55 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias decoded = pair int (list Data)\nfields : decoded -> list Data\nfields = .snd\nmain : Data\nmain = Builtin.headList (fields (Builtin.unConstrData (Builtin.constrData 0 [I 42])))\n"
+---
+--- unoptimized Core
+let fields#2 : pair int (list Data) -> list Data = \record#5 : pair int (list Data) -> let projection#7 : list Data = sndPair record#5 in
+projection#7 in
+let fromInt#3 : int -> int = \value#6 : int -> value#6 in
+let evaluated#8 : Data = constrData (fromInt#3 0) (mkCons ((\field#4 : int -> iData field#4) (fromInt#3 42)) (con (list data) [])) in
+let projection#9 : pair int (list Data) = unConstrData evaluated#8 in
+let evaluated#10 : list Data = fields#2 projection#9 in
+let projection#11 : Data = headList evaluated#10 in
+let main#1 : Data = projection#11 in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam fields_2
+    [(lam fromInt_3
+      [(lam evaluated_8
+        [(lam projection_9
+          [(lam evaluated_10
+            [(lam projection_11 [(lam main_1 main_1) projection_11])
+              [(force (builtin headList)) evaluated_10]])
+            [fields_2 projection_9]])
+          [(builtin unConstrData) evaluated_8]])
+        [[(builtin constrData) [fromInt_3 (con integer 0)]]
+          [[(force (builtin mkCons))
+            [(lam field_4 [(builtin iData) field_4]) [fromInt_3 (con integer 42)]]]
+            (con (list data) [])]]])
+      (lam value_6 value_6)])
+    (lam record_5
+      [(lam projection_7 projection_7) [(force (force (builtin sndPair))) record_5]])])
+--- optimized Core
+let anf#25 : Data = iData 42 in
+let anf#26 : list Data = mkCons anf#25 (con (list data) []) in
+let evaluated#18 : Data = constrData 0 anf#26 in
+let projection#19 : pair int (list Data) = unConstrData evaluated#18 in
+headList anf#26
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_27
+    [(lam builtin_28
+      [(lam anf_25
+        [(lam anf_26
+          [(lam evaluated_18
+            [(lam projection_19 [builtin_27 anf_26]) [(builtin unConstrData) evaluated_18]])
+            [[(builtin constrData) (con integer 0)] anf_26]])
+          [[builtin_28 anf_25] (con (list data) [])]])
+        [(builtin iData) (con integer 42)]])
+      (force (builtin mkCons))])
+    (force (builtin headList))])
+--- result
+(con data (I 42))
+--- logs
+[]

@@ -5261,3 +5261,84 @@ fn nominal_reflexive_lift_does_not_block_alias_conversion_inference() {
     .unwrap();
     assert_inference_snapshot!(@output source, &annotations);
 }
+
+#[test]
+fn builtin_pair_accessors() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        first : pair 'a 'b -> 'a
+        first p = p.fst
+        second : pair 'a 'b -> 'b
+        second = .snd
+        nested : pair (pair int bytes) int -> bytes
+        nested p = p.fst.snd
+    "#
+    );
+}
+
+#[test]
+fn builtin_pair_accessor_alias() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias entry 'a = pair int 'a
+        value : entry bytes -> bytes
+        value = .snd
+    "#
+    );
+}
+
+#[test]
+fn builtin_pair_unknown_field() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\nf : pair int int -> int\nf p = p.third\n"
+    );
+}
+
+#[test]
+fn builtin_pair_accessor_remains_ambiguous() {
+    assert_inference_error_snapshot!("module Main exposing (..)\nf = .fst\n");
+}
+
+#[test]
+fn builtin_pair_rejects_update() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\nf : pair int int -> pair int int\nf p = { p | fst = 1 }\n"
+    );
+}
+
+#[test]
+fn record_named_pair_fields() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        type alias point = { fst : int, snd : bytes }
+        first : point -> int
+        first = .fst
+        second : point -> bytes
+        second p = p.snd
+    "#
+    );
+}
+
+#[test]
+fn builtin_pair_alias_rejects_update() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\ntype alias entry = pair int int\nf : entry -> entry\nf p = { p | snd = 1 }\n"
+    );
+}
+
+#[test]
+fn builtin_pair_rejects_record_pattern() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\nf : pair int int -> int\nf { fst } = fst\n"
+    );
+}
+
+#[test]
+fn builtin_pair_field_type_mismatch() {
+    assert_inference_error_snapshot!(
+        "module Main exposing (..)\nf : pair int bytes -> int\nf p = p.snd\n"
+    );
+}

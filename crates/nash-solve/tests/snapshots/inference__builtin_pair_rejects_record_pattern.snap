@@ -1,0 +1,14 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nf : pair int int -> int\nf { fst } = fst\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `pair int int`.
+   ╭─[Main.nash:3:3]
+ 2 │ f : pair int int -> int
+ 3 │ f { fst } = fst
+   ·   ───┬───
+   ·      ╰── field `fst` pattern
+   ╰────

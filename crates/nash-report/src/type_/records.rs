@@ -172,13 +172,19 @@ pub(super) fn missing_field(
     record: &ErrorType<'_>,
     available: &[&str],
 ) -> Report {
+    let receiver = if matches!(iterated_dealias(record), ErrorType::Type {home,name:"pair",..} if *home == nash_ast::primitives::primitive_home())
+    {
+        "Pair"
+    } else {
+        "Record"
+    };
     let (details, suggestions) = match iterated_dealias(record) {
         ErrorType::Record { fields } => nearby(l, field, fields),
         _ => {
             let sorted =
                 crate::suggest::sort(field, |name| (*name).to_string(), available.to_vec());
             let mut docs = vec![Doc::cat([
-                Doc::text("Record type: "),
+                Doc::text(format!("{receiver} type: ")),
                 type_diff::to_doc(l, Ctx::None, record),
             ])];
             if let Some(nearest) = sorted.first() {
@@ -204,7 +210,7 @@ pub(super) fn missing_field(
         "TYPE MISMATCH",
         region,
         None,
-        Doc::text(format!("Record has no field `{field}`.")),
+        Doc::text(format!("{receiver} has no field `{field}`.")),
         details,
     )
     .with_suggestions(suggestions);

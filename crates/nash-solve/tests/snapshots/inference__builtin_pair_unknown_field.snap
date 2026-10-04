@@ -1,0 +1,19 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nf : pair int int -> int\nf p = p.third\n"
+info: diagnostic
+---
+nash::type::missing_field
+
+  × Pair has no field `third`.
+   ╭─[Main.nash:3:7]
+ 2 │ f : pair int int -> int
+ 3 │ f p = p.third
+   ·       ───┬───
+   ·          ╰── field `third` of `p`
+   ╰────
+  help: Pair type: pair int int
+
+        Did you mean `snd`?
+
+        Available fields: `snd`, `fst`.

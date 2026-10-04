@@ -970,7 +970,12 @@ between distinct folded constants. Source traces and strict bindings are retaine
 Evaluation and size checks use O0 assembly to avoid re-entering the optimizer.
 Explicit user comptime retains its separate budget and diagnostics.
 
-### Restricted pair cleanup
+### Pair fields and restricted pair cleanup
+
+Field resolution recognizes `fst`/`snd` on known primitive pair types and their
+aliases. Codegen supplies the component types and lowers both direct access and
+accessor functions to `FstPair`/`SndPair`; the receiver is evaluated once. Pair
+record updates and record patterns remain invalid.
 
 O1's existing `simplify_constr_data` loop runs `pair_projection::reduce` before
 constructor/wrapper cleanup. Only a single-used-field case whose subject variable

@@ -1816,6 +1816,8 @@ pair fixtures. Against the previous 148-case O1 baseline, source `decoding`
 improves from 94 to 45 bytes, 1,681,280 to 878,161 CPU and 8,756 to 4,392 memory;
 the other 147 cases are unchanged. Results/logs match throughout.
 
+The language also exposes explicit `.fst`/`.snd` fields/accessors for known pair
+types, lowering directly to the builtins. These do not change pattern lowering.
 See [historical pair trial and integration](../docs/research/pair-projection-trial.md).
 
 Compare `CaseKind::Pair` with `fstPair`/`sndPair` when exactly one branch binder

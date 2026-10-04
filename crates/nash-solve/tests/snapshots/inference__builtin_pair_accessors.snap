@@ -1,0 +1,7 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nfirst : pair 'a 'b -> 'a\nfirst p = p.fst\nsecond : pair 'a 'b -> 'b\nsecond = .snd\nnested : pair (pair int bytes) int -> bytes\nnested p = p.fst.snd\n"
+---
+first : forall a b. (Storable a, Storable b) => pair a b -> a
+nested : pair (pair int bytes) int -> bytes
+second : forall a b. (Storable a, Storable b) => pair a b -> b

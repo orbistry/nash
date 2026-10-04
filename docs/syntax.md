@@ -715,3 +715,22 @@ in
 
 Pair destructuring lowers to native UPLC `case`, including wildcard fields.
 It does not implicitly construct a pair or convert a tuple to a pair.
+
+### Builtin pair access
+
+A known builtin pair type supports read-only fields `fst` and `snd`:
+
+```nash
+first : pair 'a 'b -> 'a
+first p = p.fst
+
+second : pair 'a 'b -> 'b
+second = .snd
+```
+
+Both `p.fst`/`p.snd` and accessor functions `.fst`/`.snd` use the existing field
+syntax. They lower directly to `fstPair`/`sndPair`. Aliases of pair types work the
+same way. The receiver type must be known; an unannotated standalone `.fst` does
+not assume a pair. Records with fields named `fst` or `snd` keep ordinary record
+semantics. Pair record updates and record patterns are not supported; destructure
+with `pair(first, second)` instead. This does not add tuple field access.

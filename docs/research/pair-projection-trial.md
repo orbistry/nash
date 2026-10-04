@@ -12,7 +12,8 @@ bindings remain strict. The trial CLI was removed; normal `measure`/`check` cove
 178 O0/O1 fixtures, including the 30 pair fixtures. Against the preceding 148-case
 O1 baseline with constant folding, source decoding improves from 94 to 45 bytes,
 1,681,280 to 878,161 CPU and 8,756 to 4,392 memory. The other 147 cases are unchanged.
-Results/logs match.
+Results/logs match. The source language also supports explicit `.fst`/`.snd` pair
+fields, independently of this restricted optimization of pair patterns.
 
 ## Results
 
@@ -123,3 +124,13 @@ Historical trial validation: all 609 IR/codegen tests pass, the 108-case accepte
 performance baseline matches, root and performance-workspace strict Clippy pass,
 and both formatting checks pass. A separate read-only review confirmed the
 report counts and embedded sources match the final code.
+
+## Integration validation
+
+The full workspace run passes 3,845 tests. After improving the unknown-pair-field
+message, all 672 targeted diagnostic tests pass. Root and performance-workspace
+strict Clippy pass, both formatting checks pass, and the accepted 178-case baseline
+matches. Source snapshots cover direct/accessor forms, aliases and strict trace
+behavior; inference snapshots cover ambiguity, field types, record name collisions,
+invalid updates and record patterns. A separate read-only review found no semantic
+blocker.

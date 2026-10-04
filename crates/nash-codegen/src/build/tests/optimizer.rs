@@ -67,3 +67,35 @@ boolean_case_snapshot!(
         if True then strict else True
 "#
 );
+
+boolean_case_snapshot!(
+    builtin_pair_accessors,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    first : pair 'a 'b -> 'a
+    first = .fst
+    second : pair 'a 'b -> 'b
+    second p = p.snd
+    main : (Data, Data)
+    main =
+        let
+            p = Builtin.trace "pair" (Builtin.mkPairData (I 20) (I 22))
+        in
+        (first p, second p)
+"#
+);
+boolean_case_snapshot!(
+    builtin_pair_accessor_alias,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    type alias decoded = pair int (list Data)
+    fields : decoded -> list Data
+    fields = .snd
+    main : Data
+    main = Builtin.headList (fields (Builtin.unConstrData (Builtin.constrData 0 [I 42])))
+"#
+);

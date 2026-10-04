@@ -127,6 +127,17 @@ impl<'a, 'env> TypeEnv<'a, 'env> {
                 }
             }
             CanType::Named { reference, args } => {
+                if reference.home == nash_ast::primitives::primitive_home()
+                    && reference.name == "pair"
+                {
+                    let [first, second] = *args else {
+                        return Err(TypeError::NoFields);
+                    };
+                    return Ok(vec![
+                        ("fst", 0, self.convert(first)?),
+                        ("snd", 1, self.convert(second)?),
+                    ]);
+                }
                 if let Some(alias) = self.aliases.get(reference).copied() {
                     if args.len() < alias.parameters.len() {
                         return Err(TypeError::NoFields);
