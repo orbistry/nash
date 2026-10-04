@@ -9,7 +9,7 @@ case@Bytes (con bytestring #) of
 --- optimized Core
 case@Bytes (con bytestring #) of
 --- optimized UPLC
-(program 1.1.0 [(lam generated_1 (error)) (con bytestring #)])
+(program 1.1.0 (error))
 --- isolated pass
 --- core before
 case@Bytes (con bytestring #) of

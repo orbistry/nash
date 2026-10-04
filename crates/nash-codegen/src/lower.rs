@@ -43,6 +43,14 @@ pub fn lower_with_constant_sharing<'a>(
     lower_inner(arena, core, Sharing::ForcesAndConstants)
 }
 
+/// Complete O1 lowering: share builtin work, clean up generated bindings, then
+/// pack eligible application spines. Ordinary and isolated sharing APIs stay
+/// available for O0 and pass comparisons.
+pub fn lower_optimized<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Uplc<'a>, Error> {
+    let term = lower_with_constant_sharing(arena, core)?;
+    Ok(crate::uplc_optimizer::optimize(arena, term))
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Sharing {
     None,

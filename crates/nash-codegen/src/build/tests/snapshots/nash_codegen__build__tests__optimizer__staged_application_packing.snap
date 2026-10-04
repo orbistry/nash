@@ -1,0 +1,55 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nchoose : int -> int -> int -> int\nchoose n =\n    if Builtin.equalsInteger n 0 then\n        \\x y -> Builtin.addInteger x y\n    else\n        choose (Builtin.subtractInteger n 1)\nmain : int\nmain =\n    let\n        p = choose 3 20\n    in\n    p 22\n"
+---
+--- unoptimized Core
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+letrec
+  choose#4 : int -> int -> int -> int [static []] = \n#6 : int -> case@Bool equalsInteger n#6 (fromInt#3 0) of
+    True -> \x#7 : int y#8 : int -> addInteger x#7 y#8
+    False -> choose#4 (subtractInteger n#6 (fromInt#3 1))
+in
+let p#2 : int -> int = choose#4 (fromInt#3 3) (fromInt#3 20) in
+let main#1 : int = p#2 (fromInt#3 22) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam choose_4
+      [(lam p_2 [(lam main_1 main_1) [p_2 [fromInt_3 (con integer 22)]]])
+        [[choose_4 [fromInt_3 (con integer 3)]] [fromInt_3 (con integer 20)]]])
+      [(lam self_9 [self_9 self_9])
+        (lam self_9
+          (lam n_6
+            (case
+              [[(builtin equalsInteger) n_6] [fromInt_3 (con integer 0)]]
+              [[self_9 self_9] [[(builtin subtractInteger) n_6] [fromInt_3 (con integer 1)]]]
+              (lam x_7 (lam y_8 [[(builtin addInteger) x_7] y_8])))))]])
+    (lam value_5 value_5)])
+--- optimized Core
+letrec
+  choose#11 : int -> int -> int -> int [static []] = \n#12 : int -> let anf#18 : bool = equalsInteger n#12 0 in
+  case@Bool anf#18 of
+    True -> \x#13 : int y#14 : int -> addInteger x#13 y#14
+    False -> let anf#20 : int = subtractInteger n#12 1 in
+    choose#11 anf#20
+in
+choose#11 3 20 22
+--- optimized UPLC
+(program 1.1.0
+  [(lam choose_11
+    (case (constr 0 (con integer 3) (con integer 20) (con integer 22)) choose_11))
+    [(lam self_15 [self_15 self_15])
+      (lam self_15
+        (lam n_12
+          [(lam anf_18
+            (case
+              anf_18
+              [(lam anf_20 [[self_15 self_15] anf_20])
+                [[(builtin subtractInteger) n_12] (con integer 1)]]
+              (lam x_13 (lam y_14 [[(builtin addInteger) x_13] y_14]))))
+            [[(builtin equalsInteger) n_12] (con integer 0)]]))]])
+--- result
+(con integer 42)
+--- logs
+[]

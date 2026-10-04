@@ -124,7 +124,7 @@ eq#41 values#59 values#59
                       (lam field_12
                         (lam field_13
                           [(lam anf_14
-                            (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
+                            (case anf_14 (con bool False) (case (constr 0 self_5 field_11 field_13) self_5)))
                             (force [[builtin_17 (con string "custom")] (delay (con bool False))])]))
                       (con bool False))))
                 (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])

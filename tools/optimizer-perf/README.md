@@ -19,11 +19,11 @@ mismatch, a compilation failure or an exhausted budget. `measure` prints JSON
 without changing any baseline. Debug/release profiles produce the same ledger
 budgets: these are CEK costs, not Rust wall-clock benchmarks.
 
-The 108 rows include the original 20 covering list traversal, static recursion, Data matching and
-misses, field decoding, validation success/failure, the real base Logic helpers,
-and six ledger scenarios each for the existing Vesting and VestingParam source
-fixtures, plus constant-prefix two-use, cold and loop regressions and 85 representation
-cancellation cases shared with semantic tests. Validators receive one V3 ScriptContext containing TxInfo, redeemer and spending
+The 199 rows cover list traversal, static recursion, Data matching and misses,
+field decoding, validation success/failure, base Logic helpers, constant folding,
+representation cancellation, pair projection, recursive parameters, application
+staging and trace/failure order. They also include six ledger scenarios each for
+the Vesting and VestingParam source fixtures. Validators receive one V3 ScriptContext containing TxInfo, redeemer and spending
 datum; the optional minimum-lock parameter is applied off-chain first. Times are
 POSIX milliseconds from the validity-range lower bound. Validator CPU/memory
 include parameter and context application;
@@ -109,7 +109,7 @@ Builds and tests default to O1; these measurements still compare explicit O0 and
 ## Accepted constant folding
 
 Normal `measure`/`check` include the original 108, 40 constant-folding
-fixtures and 30 pair fixtures, plus the recursive cases below. Both use production O1, including bounded folding. The user
+fixtures and 30 pair fixtures, plus the recursive cases below. Both use production O1, including unbudgeted folding. The user
 accepted the two shared-prefix size tradeoffs. Historical pre-integration evidence
 remains in `trials/constant-fold.json` and `docs/research/constant-fold-trial.md`;
 the old `constant-trial` command has been removed.
@@ -128,3 +128,14 @@ workloads, bringing the baseline to 194 cases. These cover forwarding cycles,
 consumers, strict effects, blocked call shapes, and delayed/mixed groups.
 Performance checks remain explicit and outside normal Cargo tests. See
 [the report](../../docs/research/recursive-parameters.md).
+
+## Application fusion, packing and late cleanup
+
+The Plan 08 O1 pipeline now uses `lower_optimized`, including late binding cleanup
+and values-only native Case/Constr application packing. Four source cases bring
+the baseline to 199: a staged call, traces at call stages, a traced later argument,
+and failure before that argument. Every run checks complete O1 Flat equality after
+one, two and three Core optimizations and late-pass idempotence. The original
+195 O0 rows are unchanged. See the
+[application report](../../docs/research/application-packing-trial.md) for the
+reviewed performance changes, including the size tradeoffs.

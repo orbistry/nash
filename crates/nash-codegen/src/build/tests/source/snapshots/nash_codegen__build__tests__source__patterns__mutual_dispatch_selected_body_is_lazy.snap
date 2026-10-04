@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 760
 description: "module Main exposing (..)\nimport Builtin exposing (..)\nfirst n = if equalsInteger n 0 then 42 else second (subtractInteger n 1)\nsecond n = if equalsInteger n 0 then fail else first (subtractInteger n 1)\nmain : int\nmain = first 2\n"
 ---
 --- unoptimized Core
@@ -57,11 +56,7 @@ in
 first#10 2
 --- optimized UPLC
 (program 1.1.0
-  [(lam dispatch_28
-    [(lam first_30
-      [(lam second_32 [first_30 (con integer 2)])
-        (lam n_31 [dispatch_28 (constr 1 dispatch_28 n_31)])])
-      (lam n_29 [dispatch_28 (constr 0 dispatch_28 n_29)])])
+  [(lam dispatch_28 [dispatch_28 (constr 0 dispatch_28 (con integer 2))])
     (lam request_15
       (case
         request_15

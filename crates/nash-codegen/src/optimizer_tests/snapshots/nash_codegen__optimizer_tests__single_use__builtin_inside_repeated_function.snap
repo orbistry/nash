@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/single_use.rs
-assertion_line: 40
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline\\n{}\\n--- core after\\n{}\\n--- candidate\\n{}\",\npretty(before), output(&baseline), pretty(after), output(&candidate)))"
 ---
 --- unoptimized Core
@@ -23,11 +22,9 @@ repeated#7 42
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_5
-    [(lam tracer_1
-      [(lam repeated_3
-        [(lam unused_4 [repeated_3 (con integer 42)]) [repeated_3 (con integer 1)]])
-        (lam x_2 [[tracer_1 (con string "tick")] x_2])])
-      builtin_5])
+    [(lam repeated_3
+      [(lam unused_4 [repeated_3 (con integer 42)]) [repeated_3 (con integer 1)]])
+      (lam x_2 [[builtin_5 (con string "tick")] x_2])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

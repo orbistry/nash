@@ -11,7 +11,7 @@ case@Int true of
 case@Int true of
   _ -> 42
 --- optimized UPLC
-(program 1.1.0 [(lam generated_1 (con integer 42)) (con bool True)])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
 case@Int true of

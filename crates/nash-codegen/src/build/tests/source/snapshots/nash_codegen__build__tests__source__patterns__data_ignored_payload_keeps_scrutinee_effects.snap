@@ -56,13 +56,16 @@ case@Data match#23 of
     [(lam builtin_10
       [(lam match_1
         [(lam leaf_2
-          [(lam generated_8
-            (force
-              [[[[[[builtin_9 generated_8] (delay (force leaf_2))] (delay (force leaf_2))]
-                (delay (force leaf_2))]
-                (delay (con integer 7))]
-                (delay (force leaf_2))]))
-            match_1])
+          (force
+            (case
+              (constr 0
+                match_1
+                (delay (force leaf_2))
+                (delay (force leaf_2))
+                (delay (force leaf_2))
+                (delay (con integer 7))
+                (delay (force leaf_2)))
+              builtin_9)))
           (delay (error))])
         (force [[builtin_10 (con string "data input")] (delay (con data (I 42)))])])
       (force (builtin trace))])

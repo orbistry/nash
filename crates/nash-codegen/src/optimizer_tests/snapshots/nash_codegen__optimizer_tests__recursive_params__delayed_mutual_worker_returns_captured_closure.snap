@@ -38,18 +38,14 @@ anf#13 2
 (program 1.1.0
   [(lam builtin_17
     [(lam dispatch_12
-      [(lam f_14
-        [(lam g_15 [(lam anf_16 [anf_16 (con integer 2)]) (force g_15)])
-          (delay [dispatch_12 (constr 1 dispatch_12)])])
-        (delay [dispatch_12 (constr 0 dispatch_12)])])
+      [(lam anf_16 [anf_16 (con integer 2)]) [dispatch_12 (constr 1 dispatch_12)]])
       (lam request_5
         (case
           request_5
           (lam self_6 (lam z_7 [[(builtin addInteger) (con integer 40)] z_7]))
           (lam self_10
             (force
-              [[builtin_17 (con string "worker")]
-                (delay (force (delay [self_10 (constr 0 self_10)])))]))))])
+              [[builtin_17 (con string "worker")] (delay [self_10 (constr 0 self_10)])]))))])
     (force (builtin trace))])
 --- isolated pass
 --- isolated Core before

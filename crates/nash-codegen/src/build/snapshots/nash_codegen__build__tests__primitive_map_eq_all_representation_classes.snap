@@ -547,7 +547,10 @@ constr 0 anf#302 anf#303 anf#304 anf#305
                                           (lam field_60
                                             (lam field_61
                                               [(lam anf_69
-                                                (case anf_69 (con bool False) [[[self_53 self_53] field_59] field_61]))
+                                                (case
+                                                  anf_69
+                                                  (con bool False)
+                                                  (case (constr 0 self_53 field_59 field_61) self_53)))
                                                 (case
                                                   field_58
                                                   (lam field_62
@@ -581,7 +584,10 @@ constr 0 anf#302 anf#303 anf#304 anf#305
                                       (lam field_42
                                         (lam field_43
                                           [(lam anf_49
-                                            (case anf_49 (con bool False) [[[self_35 self_35] field_41] field_43]))
+                                            (case
+                                              anf_49
+                                              (con bool False)
+                                              (case (constr 0 self_35 field_41 field_43) self_35)))
                                             (case
                                               field_40
                                               (lam field_44
@@ -609,7 +615,10 @@ constr 0 anf#302 anf#303 anf#304 anf#305
                                   (lam field_24
                                     (lam field_25
                                       [(lam anf_31
-                                        (case anf_31 (con bool False) [[[self_17 self_17] field_23] field_25]))
+                                        (case
+                                          anf_31
+                                          (con bool False)
+                                          (case (constr 0 self_17 field_23 field_25) self_17)))
                                         (case
                                           field_22
                                           (lam field_26

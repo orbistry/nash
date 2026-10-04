@@ -24,12 +24,15 @@ case@Data constrData of
   [(lam builtin_4
     [(lam generated_3
       (force
-        [[[[[[builtin_4 generated_3]
-          (delay [(lam pair_2 pair_2) [(builtin unConstrData) generated_3]])]
-          (delay (error))]
-          (delay (error))]
-          (delay (error))]
-          (delay (error))]))
+        (case
+          (constr 0
+            generated_3
+            (delay [(builtin unConstrData) generated_3])
+            (delay (error))
+            (delay (error))
+            (delay (error))
+            (delay (error)))
+          builtin_4)))
       (builtin constrData)])
     (force (builtin chooseData))])
 --- isolated pass

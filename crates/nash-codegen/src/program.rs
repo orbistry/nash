@@ -90,7 +90,7 @@ pub fn assemble_core_with_options<'a>(
         nash_config::OptimizationLevel::O0 => crate::lower::lower(arena, core)?,
         nash_config::OptimizationLevel::O1 => {
             let core = nash_ir::hygiene::freshen(&build, core);
-            crate::lower::lower_with_constant_sharing(arena, core)?
+            crate::lower::lower_optimized(arena, core)?
         }
     };
     let term = debruijn::to_debruijn(arena, named).map_err(Error::DeBruijn)?;

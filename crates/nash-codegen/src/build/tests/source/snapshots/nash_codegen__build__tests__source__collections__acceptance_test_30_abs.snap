@@ -29,12 +29,9 @@ main#1
       (lam value_6 value_6)])
     (builtin equalsInteger)])
 --- optimized Core
-let anf#20 : int -> bool = equalsInteger 14 in
-anf#20 14
+equalsInteger 14 14
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [anf_1 (con integer 14)])
-    [(builtin equalsInteger) (con integer 14)]])
+(program 1.1.0 [[(builtin equalsInteger) (con integer 14)] (con integer 14)])
 --- result
 (con bool True)
 --- logs

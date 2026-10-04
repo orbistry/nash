@@ -1,7 +1,6 @@
 ---
 source: crates/nash-ir/src/single_use/tests.rs
 assertion_line: 96
-expression: "snapshot(&b, core)"
 ---
 --- core before rule 3
 let f#2 : int -> int = trace "before" in \x#1 : int -> x#1 in

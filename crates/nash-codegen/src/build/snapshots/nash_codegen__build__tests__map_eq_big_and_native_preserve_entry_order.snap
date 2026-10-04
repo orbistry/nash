@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nentries : list (pair Int Int)\nentries = [Builtin.mkPairData 1 2, Builtin.mkPairData 1 3]\nreversed : list (pair Int Int)\nreversed = [Builtin.mkPairData 1 3, Builtin.mkPairData 1 2]\nmain =\n    ( eq (Builtin.mapData entries) (Builtin.mapData entries)\n    , eq (Builtin.mapData entries) (Builtin.mapData reversed)\n    , eq entries entries\n    , eq entries reversed\n    )\n"
 ---
 --- unoptimized Core
@@ -244,7 +243,10 @@ constr 0 anf#105 anf#108 anf#109 anf#110
                                                         (lam field_29
                                                           (lam field_30
                                                             [(lam anf_36
-                                                              (case anf_36 (con bool False) [[[self_22 self_22] field_28] field_30]))
+                                                              (case
+                                                                anf_36
+                                                                (con bool False)
+                                                                (case (constr 0 self_22 field_28 field_30) self_22)))
                                                               (case
                                                                 field_27
                                                                 (lam field_31

@@ -19,7 +19,8 @@ in
 f#1 0 0 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam f_13 [[[f_13 (con integer 0)] (con integer 0)] (con integer 42)])
+  [(lam f_13
+    (case (constr 0 (con integer 0) (con integer 0) (con integer 42)) f_13))
     [(lam self_8 [self_8 self_8])
       (lam self_9 (lam x_10 (lam n_11 (lam z_12 z_12))))]])
 --- isolated pass

@@ -56,10 +56,7 @@ f#1 7 3
 --- optimized UPLC
 (program 1.1.0
   [(lam dispatch_42
-    [(lam f_45
-      [(lam g_48 [[f_45 (con integer 7)] (con integer 3)])
-        (lam m_46 (lam y_47 [dispatch_42 (constr 1 dispatch_42 m_46 y_47)]))])
-      (lam x_43 (lam n_44 [dispatch_42 (constr 0 dispatch_42 x_43 n_44)]))])
+    [dispatch_42 (constr 0 dispatch_42 (con integer 7) (con integer 3))])
     (lam request_28
       (case
         request_28
@@ -79,10 +76,8 @@ f#1 7 3
               [(lam anf_37
                 (case
                   anf_37
-                  [(lam anf_40
-                    [(lam anf_41 [anf_40 anf_41])
-                      [[(builtin subtractInteger) m_35] (con integer 1)]])
-                    [(lam x_38 (lam n_39 [self_34 (constr 0 self_34 x_38 n_39)])) y_36]]
+                  [(lam anf_41 [self_34 (constr 0 self_34 y_36 anf_41)])
+                    [[(builtin subtractInteger) m_35] (con integer 1)]]
                   y_36))
                 [[(builtin equalsInteger) m_35] (con integer 0)]])))))])
 --- isolated pass

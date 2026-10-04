@@ -1,7 +1,6 @@
 ---
 source: crates/nash-ir/src/single_use/tests.rs
 assertion_line: 147
-expression: "snapshot(&b, b.let_(d, delayed, b.force(b.var(d.name, d.ty), INT)))"
 ---
 --- core before rule 3
 let delayed#1 : @delay int = delay error in

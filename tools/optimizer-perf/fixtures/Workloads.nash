@@ -118,3 +118,52 @@ hiddenStatic x n =
 
 cleanupExposesStatic : int
 cleanupExposesStatic = hiddenStatic 42 3
+
+packingChoose : int -> int -> int -> int
+packingChoose n =
+    if Builtin.equalsInteger n 0 then
+        \x y -> Builtin.addInteger x y
+    else
+        packingChoose (Builtin.subtractInteger n 1)
+
+stagedApplication : int
+stagedApplication =
+    let
+        p = packingChoose 3 20
+    in
+    p 22
+
+packingTraced : int -> int -> int -> int
+packingTraced n =
+    if Builtin.equalsInteger n 0 then
+        \x -> trace "first" (\y -> trace "second" (Builtin.addInteger x y))
+    else
+        packingTraced (Builtin.subtractInteger n 1)
+
+stagedApplicationTraces : int
+stagedApplicationTraces =
+    let
+        p = packingTraced 3 20
+    in
+    p 22
+
+stagedArgumentTrace : int
+stagedArgumentTrace =
+    let
+        p = packingTraced 3 20
+    in
+    p (trace "argument" 22)
+
+packingFailure : int -> int -> int -> int
+packingFailure n =
+    if Builtin.equalsInteger n 0 then
+        \x -> trace "first" fail
+    else
+        packingFailure (Builtin.subtractInteger n 1)
+
+stagedApplicationFailure : int
+stagedApplicationFailure =
+    let
+        p = packingFailure 3 20
+    in
+    p (trace "must not run" 22)

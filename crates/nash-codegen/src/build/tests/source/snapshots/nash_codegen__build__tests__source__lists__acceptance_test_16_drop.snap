@@ -36,12 +36,11 @@ main#1
           (lam end_15 [[[(builtin sliceByteString) start_14] end_15] bytes_13])))])
     (builtin equalsByteString)])
 --- optimized Core
-let anf#39 : bytes -> bool = equalsByteString (con bytestring #0304050607) in
-anf#39 (con bytestring #0304050607)
+equalsByteString (con bytestring #0304050607) (con bytestring #0304050607)
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1 [anf_1 (con bytestring #0304050607)])
-    [(builtin equalsByteString) (con bytestring #0304050607)]])
+  [[(builtin equalsByteString) (con bytestring #0304050607)]
+    (con bytestring #0304050607)])
 --- result
 (con bool True)
 --- logs

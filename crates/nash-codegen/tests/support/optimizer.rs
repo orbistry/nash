@@ -39,7 +39,7 @@ pub fn prepare<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Prepared<'a> {
     let rewritten = hygiene::freshen(&b, rewritten);
     hygiene::validate(rewritten, &[]).unwrap();
     assert_eq!(core.ty, rewritten.ty);
-    let named = lower::lower_with_constant_sharing(arena, rewritten).expect("optimized lowering");
+    let named = lower::lower_optimized(arena, rewritten).expect("optimized lowering");
     let closed = nash_plutus::debruijn::to_debruijn(arena, named).expect("closed snapshot program");
     let program = Program::new(arena, Version::plutus_v3(arena), closed);
     nash_plutus::script::validate_program(program, nash_plutus::machine::PlutusVersion::V3)

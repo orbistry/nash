@@ -152,17 +152,20 @@ case@Pair projection#68 of
                       field_3
                       (lam field_6
                         (lam field_7
-                          [(lam generated_21
-                            (force
-                              [[[[[[builtin_22 generated_21] (delay (force leaf_1))] (delay (force leaf_1))]
-                                (delay (force leaf_1))]
+                          (force
+                            (case
+                              (constr 0
+                                field_6
+                                (delay (force leaf_1))
+                                (delay (force leaf_1))
+                                (delay (force leaf_1))
                                 (delay
                                   (case
                                     field_7
                                     (lam field_12 (lam field_13 (force leaf_1)))
-                                    (con data (Constr 0 [B #aa]))))]
-                                (delay (force leaf_1))]))
-                            field_6]))
+                                    (con data (Constr 0 [B #aa]))))
+                                (delay (force leaf_1)))
+                              builtin_22))))
                       (force leaf_1))))
                   [anf_4 (con integer 0)]])
                 [(builtin equalsInteger) field_2]])))])

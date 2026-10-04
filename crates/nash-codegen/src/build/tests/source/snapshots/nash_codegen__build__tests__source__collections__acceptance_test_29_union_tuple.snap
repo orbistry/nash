@@ -342,7 +342,10 @@ worker#185 anf#198 projection#131
                                                           (lam field_68
                                                             (lam field_69
                                                               [(lam anf_75
-                                                                (case anf_75 (con bool False) [[[self_60 self_60] field_67] field_69]))
+                                                                (case
+                                                                  anf_75
+                                                                  (con bool False)
+                                                                  (case (constr 0 self_60 field_67 field_69) self_60)))
                                                                 (case
                                                                   field_66
                                                                   (lam field_70
@@ -371,7 +374,8 @@ worker#185 anf#198 projection#131
                 (lam k_42
                   (lam v_43
                     [(lam projection_44
-                      [(lam anf_45 (constr 0 anf_45)) [[[doInsert_27 projection_44] k_42] v_43]])
+                      [(lam anf_45 (constr 0 anf_45))
+                        (case (constr 0 projection_44 k_42 v_43) doInsert_27)])
                       (case m_41 (lam generated_79 generated_79))])))])
             (constr 0 anf_39)])
           (constr 0)])
@@ -389,7 +393,8 @@ worker#185 anf#198 projection#131
                         (lam field_34
                           (lam field_35
                             [(lam anf_36
-                              [(lam anf_37 [anf_36 anf_37]) [[[doInsert_27 right_31] field_34] field_35]])
+                              [(lam anf_37 [anf_36 anf_37])
+                                (case (constr 0 right_31 field_34 field_35) doInsert_27)])
                               [[self_29 self_29] field_33]])))))))))]])
       (lam elems_10
         (lam k_11

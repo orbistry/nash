@@ -22,12 +22,10 @@ case@Int anf#1 of
 (program 1.1.0
   [(lam builtin_4
     [(lam anf_2
-      [(lam generated_3
-        (case
-          [[(builtin equalsInteger) generated_3] (con integer 7)]
-          (error)
-          (con integer 42)))
-        anf_2])
+      (case
+        [[(builtin equalsInteger) anf_2] (con integer 7)]
+        (error)
+        (con integer 42)))
       (force [[builtin_4 (con string "subject")] (delay (con integer 7))])])
     (force (builtin trace))])
 --- isolated pass

@@ -254,7 +254,8 @@ equalsData anf#111 anf#112
                     (lam k_48
                       (lam v_49
                         [(lam projection_50
-                          [(lam anf_51 (constr 0 anf_51)) [[[doInsert_30 projection_50] k_48] v_49]])
+                          [(lam anf_51 (constr 0 anf_51))
+                            (case (constr 0 projection_50 k_48 v_49) doInsert_30)])
                           (case m_47 (lam generated_76 generated_76))])))])
                 (constr 0 field_45)])
               (con (list (pair data data)) [])])

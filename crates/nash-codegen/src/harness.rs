@@ -127,14 +127,27 @@ impl<'a> Fixture<'a> {
             self.evaluated.logs, optimized.logs,
             "candidate passes preserve trace order"
         );
-        let twice = crate::snapshot_optimizer::optimize(arena, self.prepared.optimized);
         let once = crate::program::assemble_core(arena, self.prepared.optimized).unwrap();
-        let twice = crate::program::assemble_core(arena, twice).unwrap();
-        assert_eq!(
-            nash_plutus::flat::encode(once.program).unwrap(),
-            nash_plutus::flat::encode(twice.program).unwrap(),
-            "a second O1 invocation must not change the optimized program"
+        let original_bytes = nash_plutus::flat::encode(once.program).unwrap();
+        let mut repeated = self.prepared.optimized;
+        for _ in 0..2 {
+            repeated = crate::snapshot_optimizer::optimize(arena, repeated);
+            let compiled = crate::program::assemble_core(arena, repeated).unwrap();
+            assert_eq!(
+                original_bytes,
+                nash_plutus::flat::encode(compiled.program).unwrap(),
+                "repeated O1 Core optimization must not change the program"
+            );
+        }
+        let late = crate::uplc_optimizer::optimize(arena, self.prepared.after.named);
+        assert!(
+            std::ptr::eq(self.prepared.after.named, late),
+            "late O1 must already be at a fixed point"
         );
+        assert!(std::ptr::eq(
+            late,
+            crate::uplc_optimizer::optimize(arena, late)
+        ));
     }
 }
 

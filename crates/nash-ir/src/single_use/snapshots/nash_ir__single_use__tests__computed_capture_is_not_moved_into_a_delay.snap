@@ -1,7 +1,6 @@
 ---
 source: crates/nash-ir/src/single_use/tests.rs
 assertion_line: 105
-expression: "snapshot(&b, core)"
 ---
 --- core before rule 3
 let x#1 : int = error in

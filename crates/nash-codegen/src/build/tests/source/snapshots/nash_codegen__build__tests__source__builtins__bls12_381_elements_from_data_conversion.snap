@@ -183,22 +183,27 @@ case@Pair field#25 of
                                             (lam field_18
                                               [(lam generated_33
                                                 (force
-                                                  [[[[[[builtin_34 generated_33] (delay (force leaf_10))] (delay (force leaf_10))]
-                                                    (delay (force leaf_10))]
-                                                    (delay (force leaf_10))]
-                                                    (delay
-                                                      [(lam field_27
-                                                        (case
-                                                          field_18
-                                                          (lam field_28
-                                                            (lam field_29
-                                                              (case
-                                                                field_29
-                                                                (lam field_31 (lam field_32 (force leaf_10)))
-                                                                [(lam evaluated_30 [[(builtin bls12_381_G1_equal) evaluated_30] anf_1])
-                                                                  [(builtin bls12_381_G1_uncompress) field_27]])))
-                                                          (force leaf_10)))
-                                                        [(builtin unBData) generated_33]])]))
+                                                  (case
+                                                    (constr 0
+                                                      generated_33
+                                                      (delay (force leaf_10))
+                                                      (delay (force leaf_10))
+                                                      (delay (force leaf_10))
+                                                      (delay (force leaf_10))
+                                                      (delay
+                                                        [(lam field_27
+                                                          (case
+                                                            field_18
+                                                            (lam field_28
+                                                              (lam field_29
+                                                                (case
+                                                                  field_29
+                                                                  (lam field_31 (lam field_32 (force leaf_10)))
+                                                                  [(lam evaluated_30 [[(builtin bls12_381_G1_equal) evaluated_30] anf_1])
+                                                                    [(builtin bls12_381_G1_uncompress) field_27]])))
+                                                            (force leaf_10)))
+                                                          [(builtin unBData) generated_33]]))
+                                                    builtin_34)))
                                                 field_17]))
                                           (force leaf_10))))
                                       [anf_14 (con integer 0)]])

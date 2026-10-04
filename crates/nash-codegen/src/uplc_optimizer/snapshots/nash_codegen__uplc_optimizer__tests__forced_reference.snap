@@ -1,0 +1,11 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+[(lam f_0 [[f_0 (con string "kept")] (con integer 42)]) (force (builtin trace))]
+--- UPLC after
+[(lam f_0 [[f_0 (con string "kept")] (con integer 42)]) (force (builtin trace))]
+--- result
+(con integer 42)
+--- logs
+["kept"]

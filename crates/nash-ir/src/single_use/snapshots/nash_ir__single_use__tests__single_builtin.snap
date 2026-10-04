@@ -1,7 +1,6 @@
 ---
 source: crates/nash-ir/src/single_use/tests.rs
 assertion_line: 153
-expression: "snapshot(&b,\nb.let_(f, b.builtin(F::AddInteger, &[], ty),\nb.app(b.var(f.name, ty), &[b.int(40), b.int(2)], INT)))"
 ---
 --- core before rule 3
 let add#2 : int -> int -> int = addInteger in

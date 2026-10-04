@@ -170,15 +170,13 @@ letrec
     worker#94 anf#98
 in
 let anf#108 : list int = worker#92 (con (list integer) [1, 2, 3]) in
-let anf#109 : list int -> bool = eq#49 anf#108 in
-anf#109 (con (list integer) [1, 1, 2, 2, 3, 3])
+eq#49 anf#108 (con (list integer) [1, 1, 2, 2, 3, 3])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_38
+  [(lam builtin_37
     [(lam eq_19
       [(lam worker_35
-        [(lam anf_36
-          [(lam anf_37 [anf_37 (con (list integer) [1, 1, 2, 2, 3, 3])]) [eq_19 anf_36]])
+        [(lam anf_36 [[eq_19 anf_36] (con (list integer) [1, 1, 2, 2, 3, 3])])
           [worker_35 (con (list integer) [1, 2, 3])]])
         [(lam self_20 [self_20 self_20])
           (lam self_21
@@ -198,11 +196,11 @@ anf#109 (con (list integer) [1, 1, 2, 2, 3, 3])
                                     xs_30
                                     (lam field_31
                                       (lam field_32
-                                        [(lam anf_33 [[builtin_38 field_31] anf_33]) [[self_29 self_29] field_32]]))
+                                        [(lam anf_33 [[builtin_37 field_31] anf_33]) [[self_29 self_29] field_32]]))
                                     anf_27)))]])
                           [[self_21 self_21] field_24]])
-                        [[builtin_38 field_23] anf_25]])
-                      [[builtin_38 field_23] (con (list integer) [])]]))
+                        [[builtin_37 field_23] anf_25]])
+                      [[builtin_37 field_23] (con (list integer) [])]]))
                 (con (list integer) []))))]])
       [(lam self_8 [self_8 self_8])
         (lam self_9
@@ -217,7 +215,7 @@ anf#109 (con (list integer) [1, 1, 2, 2, 3, 3])
                       (lam field_16
                         (lam field_17
                           [(lam anf_18
-                            (case anf_18 (con bool False) [[[self_9 self_9] field_15] field_17]))
+                            (case anf_18 (con bool False) (case (constr 0 self_9 field_15 field_17) self_9)))
                             [[(builtin equalsInteger) field_14] field_16]]))
                       (con bool False))))
                 (case ys_11 (lam field_12 (lam field_13 (con bool False))) (con bool True))))))]])

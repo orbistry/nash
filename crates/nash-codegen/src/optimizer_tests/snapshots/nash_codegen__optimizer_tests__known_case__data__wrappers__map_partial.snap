@@ -23,11 +23,15 @@ case@Data mapData of
   [(lam builtin_4
     [(lam generated_3
       (force
-        [[[[[[builtin_4 generated_3] (delay (error))]
-          (delay [(lam payload_2 payload_2) [(builtin unMapData) generated_3]])]
-          (delay (error))]
-          (delay (error))]
-          (delay (error))]))
+        (case
+          (constr 0
+            generated_3
+            (delay (error))
+            (delay [(builtin unMapData) generated_3])
+            (delay (error))
+            (delay (error))
+            (delay (error)))
+          builtin_4)))
       (builtin mapData)])
     (force (builtin chooseData))])
 --- isolated pass

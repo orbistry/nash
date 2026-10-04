@@ -24,9 +24,15 @@ case@Data anf#3 of
     [(lam anf_2
       [(lam generated_5
         (force
-          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))] (delay (error))]
-            (delay (error))]
-            (delay [(lam payload_4 payload_4) [(builtin unBData) generated_5]])]))
+          (case
+            (constr 0
+              generated_5
+              (delay (error))
+              (delay (error))
+              (delay (error))
+              (delay (error))
+              (delay [(builtin unBData) generated_5]))
+            builtin_6)))
         anf_2])
       [(con data (B #6e617368)) (con integer 0)]])
     (force (builtin chooseData))])

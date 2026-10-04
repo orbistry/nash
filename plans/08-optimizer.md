@@ -1,15 +1,21 @@
-# Plan 08 — Core -> Core optimizer
+# Plan 08 — O1 optimizer (Core and UPLC)
 
 ## Status and accepted scope
 
-**Retained scope complete (5 October 2026).** All eleven chunks are implemented
-and validated within their accepted scope. Static lifting, unused-parameter
-removal, constant folding and cleanup now reach a joint fixed point, with one ANF
-normalization and no optimizer resource or iteration caps. All 3,864 workspace
-tests and strict Clippy pass. A fresh audit of all 195 performance fixtures found
-identical closed Flat code after one, two and three O1 invocations. Explicitly
-deferred extensions remain outside this completion. See the
-[convergence follow-up](../docs/research/optimizer-convergence.md).
+**O1 application fusion, native packing and late binding cleanup are part of
+this plan (5 October 2026).** The user moved these items here from Plan 15 and
+requested implementation. The original eleven chunks remain complete; the
+additional scope in Chunk 12 is complete and validated. All 3,876 workspace tests
+and strict Clippy pass; all 199 performance cases match the reviewed baseline and
+produce identical complete O1 code after one, two and three runs.
+O2 silence remains separate in Plan 15.
+
+The existing Core passes retain one ANF normalization and their joint fixed
+point, with no optimizer resource or iteration caps. Recursion is encoded once;
+late UPLC cleanup has its own shrinking fixed point. See the
+[convergence follow-up](../docs/research/optimizer-convergence.md) for the prior
+195-case checkpoint and the [application report](../docs/research/application-packing-trial.md)
+for the new scope.
 
 **Placement correction (4 October 2026).** Constructor folding and representation
 cancellation run only in the post-ANF loops. The early `reduce_constr` and
@@ -71,8 +77,9 @@ during discovery, so the focused suites were run through Cargo instead.
 Accepted decisions (26 September 2026, reconciled with later keep decisions):
 
 - Start with binder hygiene, static-parameter lifting and A-normal form (ANF),
-  retaining explicit recursive workers in Core. Lift before ANF splits calls;
-  do not reconstruct application chains to recover this information.
+  retaining explicit recursive workers in Core. Lift before ANF splits calls.
+  The later accepted adjacent-call fusion rule may recover a call only under
+  its single-use, atomic-operand and type-view guards.
 - Optimize while recursive functions remain explicit `LetRec`, then rewrite
   recursion once and lower the generated code directly. Normalize only once,
   before Core optimization; do not rerun ANF after recursion rewriting.
@@ -1912,6 +1919,13 @@ Every executable codegen snapshot must expose the original Core and O0 UPLC,
 then accepted optimized Core and optimized UPLC, using the shared test pipeline
 in `crates/nash-codegen/tests/support/optimizer.rs`. Thus accepting a pass updates
 the full source and hand-built fixture corpus, not only its dedicated examples.
+Source fixtures also retain their Nash text in the snapshot description and
+capture evaluation results/traces where applicable. Hand-built Core/UPLC pass
+fixtures capture their actual IR inputs, not invented Nash or Rust source text.
+Omit Rust expression metadata from pass snapshots. Automated tests call compiler,
+optimizer and evaluator Rust APIs directly; do not launch the Nash CLI binary.
+CLI behavior is tested manually by the user. Keep independent type, hygiene,
+semantic-equivalence and fixed-point checks after snapshot assertions.
 Retain isolated-pass and intermediate-phase evidence after this common comparison.
 Metadata and invalid-Core diagnostics remain focused; close open fixtures explicitly
 for rendering, and never execute deliberately divergent fixtures.
@@ -1927,6 +1941,48 @@ existing source, driver and configuration tests.
 **Done when:** the accepted combination is semantically equivalent, convergent,
 measured and reviewed; final configuration is decided and documented. Mark
 SPEC.md complete only when the retained scope is implemented and validated.
+
+## Chunk 12 — Application fusion, native packing and late binding cleanup
+
+These are O1 rules. They preserve enabled traces, success/failure and termination;
+none requires silent O2. The user requested adoption after the first measured
+fusion/packing case and explicitly assigned this work to Plan 08.
+
+- Adjacent Core application stages fuse inside `single_use::inline`, within the
+  existing cleanup fixed point. Only a sole direct use qualifies; operands remain
+  atomic and intermediate type views must agree. Arguments containing the binder,
+  escaping uses and intervening computations cannot fuse.
+- `lower::lower_optimized` is the common O1 entry point for production, shared
+  snapshots, source tests and performance checks. It lowers with builtin/constant
+  sharing, then calls `uplc_optimizer::optimize`. O0 and isolated sharing APIs
+  remain available unchanged.
+- Late cleanup removes identity applications without dropping argument evaluation,
+  substitutes single-use values, removes unused value bindings and cancels direct
+  force/delay pairs. Forced builtins and applied prefixes remain computations, so
+  their sharing is retained. Substitution rejects potential name capture, including
+  shadowed names. Recursive self-application is never unfolded by multi-use beta
+  substitution.
+- Native packing replaces eligible application spines with `Case(Constr(0, args),
+  [function])`, requiring both function and arguments to be UPLC values. Three
+  arguments is the first arity where two native nodes replace more Apply nodes.
+  This is a cost-derived rule, not an optimizer execution limit. Existing packed
+  prefixes can extend; an effectful later argument retains its outer Apply.
+- Cleanup and packing reach a pointer fixed point without rebuilding Apply nodes
+  from packs. Neither repeats ANF nor re-encodes recursion. Named inputs must be
+  closed and well-scoped.
+
+The isolated baseline now includes four additional source cases: the original
+staged call, traces between call stages, an effectful later argument, and failure
+before that argument. Unit snapshots also cover shadowing, strict unused bindings,
+forced references, recursive divergence (rendered only), and four-argument packing.
+Full O1 Flat code is compared after one, two and three runs for all performance
+fixtures; normal fixture checks cover Core and late-pass fixed points separately.
+
+**Complete.** All 3,876 workspace nextest tests pass, as do root and isolated
+performance-workspace strict Clippy and formatting checks. All 199 explicit
+performance cases match the reviewed baseline. Every changed snapshot preserves
+its original O0 content. The application report records the size tradeoffs.
+Performance checks remain outside normal Cargo tests.
 
 ## Boundaries and deferred work
 

@@ -135,36 +135,44 @@ case@Data match#47 of
       [(lam leaf_4
         [(lam generated_23
           (force
-            [[[[[[builtin_25 generated_23]
-              (delay
-                [(lam field_5
-                  (case
-                    field_5
-                    (lam field_6
-                      (lam field_7
-                        (case
-                          field_7
-                          (lam field_8
-                            (lam field_9
-                              [(lam generated_24
-                                (force
-                                  [[[[[[builtin_25 generated_24] (delay (force leaf_4))] (delay (force leaf_4))]
-                                    (delay (force leaf_4))]
-                                    (delay
-                                      [(lam field_13
-                                        (case
-                                          field_9
-                                          (lam field_16 (lam field_17 (force leaf_4)))
-                                          [[(builtin addInteger) field_6] field_13]))
-                                        [(builtin unIData) generated_24]])]
-                                    (delay (force leaf_4))]))
-                                field_8]))
-                          (force leaf_4))))))
-                  [(builtin unConstrData) generated_23]])]
-              (delay (force leaf_4))]
-              (delay (force leaf_4))]
-              (delay (force leaf_4))]
-              (delay (force leaf_4))]))
+            (case
+              (constr 0
+                generated_23
+                (delay
+                  [(lam field_5
+                    (case
+                      field_5
+                      (lam field_6
+                        (lam field_7
+                          (case
+                            field_7
+                            (lam field_8
+                              (lam field_9
+                                [(lam generated_24
+                                  (force
+                                    (case
+                                      (constr 0
+                                        generated_24
+                                        (delay (force leaf_4))
+                                        (delay (force leaf_4))
+                                        (delay (force leaf_4))
+                                        (delay
+                                          [(lam field_13
+                                            (case
+                                              field_9
+                                              (lam field_16 (lam field_17 (force leaf_4)))
+                                              [[(builtin addInteger) field_6] field_13]))
+                                            [(builtin unIData) generated_24]])
+                                        (delay (force leaf_4)))
+                                      builtin_25)))
+                                  field_8]))
+                            (force leaf_4))))))
+                    [(builtin unConstrData) generated_23]])
+                (delay (force leaf_4))
+                (delay (force leaf_4))
+                (delay (force leaf_4))
+                (delay (force leaf_4)))
+              builtin_25)))
           match_3])
         (delay (error))])
       (case

@@ -1,7 +1,6 @@
 ---
 source: crates/nash-ir/src/single_use/tests.rs
 assertion_line: 57
-expression: "snapshot(&b, b.let_(f, lam, b.app(b.var(f.name, f.ty), &[b.int(40)], INT)))"
 ---
 --- core before rule 3
 let f#2 : int -> int = \x#1 : int -> addInteger x#1 2 in

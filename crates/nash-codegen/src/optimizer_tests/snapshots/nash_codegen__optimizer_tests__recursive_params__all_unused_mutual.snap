@@ -48,22 +48,20 @@ addInteger anf#7 anf#8
 (program 1.1.0
   [(lam builtin_21
     [(lam dispatch_14
-      [(lam f_15
-        [(lam g_16
-          [(lam arg_17
-            [(lam anf_18
-              [(lam arg_19 [(lam anf_20 [[(builtin addInteger) anf_18] anf_20]) (force g_16)])
-                (force [[builtin_21 (con string "entry2")] (delay (con integer 1))])])
-              (force f_15)])
-            (force [[builtin_21 (con string "entry1")] (delay (con integer 0))])])
-          (delay [dispatch_14 (constr 1 dispatch_14)])])
-        (delay [dispatch_14 (constr 0 dispatch_14)])])
+      [(lam arg_17
+        [(lam anf_18
+          [(lam arg_19
+            [(lam anf_20 [[(builtin addInteger) anf_18] anf_20])
+              [dispatch_14 (constr 1 dispatch_14)]])
+            (force [[builtin_21 (con string "entry2")] (delay (con integer 1))])])
+          [dispatch_14 (constr 0 dispatch_14)]])
+        (force [[builtin_21 (con string "entry1")] (delay (con integer 0))])])
       (lam request_11
         (case
           request_11
           (lam self_12
             (force [[builtin_21 (con string "body")] (delay (con integer 21))]))
-          (lam self_13 (force (delay [self_13 (constr 0 self_13)])))))])
+          (lam self_13 [self_13 (constr 0 self_13)])))])
     (force (builtin trace))])
 --- isolated pass
 --- isolated Core before

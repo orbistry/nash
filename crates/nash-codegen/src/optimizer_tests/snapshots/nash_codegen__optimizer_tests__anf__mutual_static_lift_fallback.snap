@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/anf.rs
-assertion_line: 53
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before static lifting\\n{}\\n--- core after static lifting / before ANF\\n{}\\n--- core after ANF\\n{}\\n--- rewritten core (no second ANF)\\n{}\\n--- baseline\\n{}\\n--- candidate\\n{}\",\npretty(fresh), pretty(lifted), pretty(first_anf), pretty(after),\nsemantic_output(&baseline), semantic_output(&normalized),))"
 ---
 --- unoptimized Core
@@ -57,10 +56,7 @@ even#7 42 3
 --- optimized UPLC
 (program 1.1.0
   [(lam dispatch_46
-    [(lam even_49
-      [(lam odd_52 [[even_49 (con integer 42)] (con integer 3)])
-        (lam y_50 (lam m_51 [dispatch_46 (constr 1 dispatch_46 y_50 m_51)]))])
-      (lam x_47 (lam n_48 [dispatch_46 (constr 0 dispatch_46 x_47 n_48)]))])
+    [dispatch_46 (constr 0 dispatch_46 (con integer 42) (con integer 3))])
     (lam request_29
       (case
         request_29
@@ -70,10 +66,8 @@ even#7 42 3
               [(lam anf_33
                 (case
                   anf_33
-                  [(lam anf_36
-                    [(lam anf_37 [anf_36 anf_37])
-                      [[(builtin subtractInteger) n_32] (con integer 1)]])
-                    [(lam y_34 (lam m_35 [self_30 (constr 1 self_30 y_34 m_35)])) x_31]]
+                  [(lam anf_37 [self_30 (constr 1 self_30 x_31 anf_37)])
+                    [[(builtin subtractInteger) n_32] (con integer 1)]]
                   x_31))
                 [[(builtin equalsInteger) n_32] (con integer 0)]])))
         (lam self_38
@@ -82,10 +76,8 @@ even#7 42 3
               [(lam anf_41
                 (case
                   anf_41
-                  [(lam anf_44
-                    [(lam anf_45 [anf_44 anf_45])
-                      [[(builtin subtractInteger) m_40] (con integer 1)]])
-                    [(lam x_42 (lam n_43 [self_38 (constr 0 self_38 x_42 n_43)])) y_39]]
+                  [(lam anf_45 [self_38 (constr 0 self_38 y_39 anf_45)])
+                    [[(builtin subtractInteger) m_40] (con integer 1)]]
                   y_39))
                 [[(builtin equalsInteger) m_40] (con integer 0)]])))))])
 --- isolated pass

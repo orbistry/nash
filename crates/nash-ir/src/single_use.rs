@@ -21,8 +21,8 @@ pub fn simplify<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
 /// Input must be typed ANF with globally unique, well-scoped binders.
 /// Values can move to their sole use, including into a suspended scope.
 /// Forced builtin references stay bound for top-level sharing, even at one use.
-/// Computations only replace an immediate return, retaining their evaluation
-/// point. In particular, computed function operands stay bound to preserve ANF.
+/// Computations can replace an immediate return or fuse adjacent application
+/// stages. Other computed function operands stay bound to preserve ANF.
 pub fn inline<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let mut uses: HashMap<u32, usize> = HashMap::new();
     core.walk(&mut |node| {
@@ -46,6 +46,27 @@ pub fn inline<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
         }
         if matches!(body.kind,CoreKind::Var(name) if name.unique==binder.name.unique) {
             return Some(b.with_type(value, node.ty));
+        }
+        if uses.get(&binder.name.unique) == Some(&1)
+            && let CoreKind::App { func, args } = value.kind
+            && let CoreKind::App {
+                func: next,
+                args: later,
+            } = body.kind
+            && matches!(next.kind, CoreKind::Var(name) if name.unique == binder.name.unique)
+            && value.ty == binder.ty
+            && next.ty == binder.ty
+            && body.ty == node.ty
+            && !args.is_empty()
+            && !later.is_empty()
+            && anf::is_atom(func)
+            && args.iter().chain(later).all(|arg| anf::is_atom(arg))
+        {
+            // App lowers left-associatively: concatenation keeps the earlier
+            // application stage before the later one. The sole occurrence also
+            // excludes references to this binder inside any later argument.
+            let args = args.iter().chain(later).copied().collect::<Vec<_>>();
+            return Some(b.app(func, &args, node.ty));
         }
         if uses.get(&binder.name.unique) != Some(&1) || !anf::is_atom(value) {
             return None;

@@ -45,18 +45,14 @@ let anf#34 : bool = case@Bool anf#28 of
   True -> false
   False -> true in
 case@Bool anf#34 of
-  True -> let anf#36 : int -> bool = eq#19 42 in
-  anf#36 42
+  True -> eq#19 42 42
   False -> false
 --- optimized UPLC
 (program 1.1.0
   [(lam eq_1
     [(lam anf_2
       [(lam anf_3
-        (case
-          anf_3
-          (con bool False)
-          [(lam anf_4 [anf_4 (con integer 42)]) [eq_1 (con integer 42)]]))
+        (case anf_3 (con bool False) [[eq_1 (con integer 42)] (con integer 42)]))
         (case anf_2 (con bool True) (con bool False))])
       [[eq_1 (con integer 41)] (con integer 42)]])
     (builtin equalsInteger)])

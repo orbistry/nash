@@ -1,0 +1,11 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+[(lam y_1 [[(lam x_0 (lam y_1 x_0)) y_1] (con integer 0)]) (con integer 42)]
+--- UPLC after
+[(lam y_1 [[(lam x_0 (lam y_1 x_0)) y_1] (con integer 0)]) (con integer 42)]
+--- result
+(con integer 42)
+--- logs
+[]

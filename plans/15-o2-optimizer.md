@@ -2,9 +2,10 @@
 
 ## Status and confirmed contract
 
-**Planned, not implemented (5 October 2026).** Plan 08's retained O1 scope is
-complete. This follow-up investigates application and lambda regrouping, using
-Aiken as a source reference rather than importing its optimizer wholesale.
+**O2 planned, not implemented (5 October 2026).** Application fusion,
+values-only native packing and late UPLC binding cleanup belong to
+[Plan 08](08-optimizer.md), as confirmed by the user. This plan retains O2 silence
+and the broader grouping/motion investigations.
 
 User decisions:
 
@@ -40,7 +41,9 @@ strict evaluation of its arguments. Document and test this distinction.
 - `assemble_core_with_options` accepts prebuilt Core without a `TraceConfig`.
   O2 silence therefore needs enforcement beyond CLI configuration.
 
-These are source-read observations. No new rewrite has yet been measured or adopted.
+These observations describe the pre-extension source. Plan 08 now implements
+adjacent fusion, values-only native packing and late UPLC cleanup. The remaining
+O2 entry-point and broader motion observations still apply.
 
 ## Aiken reference and semantic classification
 
@@ -89,25 +92,13 @@ Keep normal tests semantic and structural. Performance experiments and cost
 regressions remain outside normal Cargo test discovery. Preserve O0 snapshots.
 Reuse compiled fixtures; render snapshots before independent property assertions.
 
-## Chunk 1 — Adjacent application fusion, O1 trial
+## O1 work moved to Plan 08
 
-Start with `let p = f a in p b` where the binding is single-use and the application
-operands are atoms. Recover the saturated Core call without changing its actual
-left-to-right evaluation stages. Keep arguments containing `p`, escaping partial
-applications, and crossed computations out of this first candidate.
-
-Three cases, in order:
-
-1. A source-generated staged call that the existing beta/single-use cleanup does
-   not already remove. If no such output remains, record the result and do not
-   add a redundant pass.
-2. A trace/failure-sensitive function to verify that fusion preserves the earlier
-   application stage before the later one, including partial and excess arguments.
-3. A source workload where recovering a saturated call enables an existing pass,
-   such as unused-parameter removal or builtin-wrapper inlining.
-
-Record whether this belongs in Core cleanup or lowering. If accepted, integrate
-with the existing joint fixed point and rerun O1 twice/three times across the corpus.
+Application fusion, values-only native `Case`/`Constr` packing and late UPLC
+binding cleanup are implemented under [Plan 08, Chunk 12](08-optimizer.md).
+Their source measurements and semantic boundaries are in the
+[application report](../docs/research/application-packing-trial.md). They are not
+pending O2 features. Continue broader grouping only from those validated rules.
 
 ## Chunk 2 — Automatic O2 silence
 
@@ -132,7 +123,7 @@ feature; this plan does not change its budget or evaluation policy.
 
 ## Chunk 3 — Known-arity grouping, then native application packing
 
-Investigate only after reviewing Chunk 1. Use actual lambda/builtin arity to
+Investigate after the Plan 08 application work is validated. Use actual lambda/builtin arity to
 identify intermediate applications that cannot execute a body. Do not weaken
 ANF staging globally based on function types.
 

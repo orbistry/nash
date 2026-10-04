@@ -72,13 +72,16 @@ constr 0 anf#37 anf#39 anf#41 anf#44 anf#47
           [classify_7 (con data (Map []))]])
         [classify_7 (con data (Constr 0 []))]])
       (lam value_1
-        [(lam generated_13
-          (force
-            [[[[[[builtin_14 generated_13] (delay (con integer 0))] (delay (con integer 1))]
-              (delay (con integer 2))]
-              (delay (con integer 3))]
-              (delay (con integer 4))]))
-          value_1])])
+        (force
+          (case
+            (constr 0
+              value_1
+              (delay (con integer 0))
+              (delay (con integer 1))
+              (delay (con integer 2))
+              (delay (con integer 3))
+              (delay (con integer 4)))
+            builtin_14)))])
     (force (builtin chooseData))])
 --- result
 (constr 0

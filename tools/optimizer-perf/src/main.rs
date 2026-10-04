@@ -31,7 +31,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters(nonrecursive+recursive)/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/static-lift+unused-parameters+constant-fold+cleanup(unbudgeted-fixed-point,all-pure-representable)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters(nonrecursive+recursive)/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/static-lift+unused-parameters+constant-fold+cleanup(unbudgeted-fixed-point,all-pure-representable)/adjacent-application-fusion/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing/late-value-binding-cleanup+native-value-application-packing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -211,10 +211,38 @@ fn accepted<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     let b = Builder::new(arena);
     let core = nash_codegen::optimizer::optimize(arena, core);
     anf::validate(core).expect("ANF before recursion rewriting");
-    let core = nash_codegen::recursion::rewrite(&b, core).expect("recursion rewrite");
-    let core = hygiene::freshen(&b, core);
-    hygiene::validate(core, &[]).expect("unique closed binders");
-    core
+    let rewrite = |core| {
+        let core = nash_codegen::recursion::rewrite(&b, core).expect("recursion rewrite");
+        let core = hygiene::freshen(&b, core);
+        hygiene::validate(core, &[]).expect("unique closed binders");
+        core
+    };
+    let encode = |core| {
+        let named = nash_codegen::lower::lower_optimized(arena, core).expect("O1 lowering");
+        let twice = nash_codegen::uplc_optimizer::optimize(arena, named);
+        assert!(
+            std::ptr::eq(named, twice),
+            "late O1 must be at a fixed point"
+        );
+        assert!(std::ptr::eq(
+            twice,
+            nash_codegen::uplc_optimizer::optimize(arena, twice)
+        ));
+        let closed = debruijn::to_debruijn(arena, named).expect("closed O1 program");
+        flat::encode(Program::new(arena, Version::plutus_v3(arena), closed)).expect("O1 Flat")
+    };
+    let rewritten = rewrite(core);
+    let once = encode(rewritten);
+    let mut repeated = core;
+    for _ in 0..2 {
+        repeated = nash_codegen::optimizer::optimize(arena, repeated);
+        assert_eq!(
+            once,
+            encode(rewrite(repeated)),
+            "repeated O1 must produce identical Flat code"
+        );
+    }
+    rewritten
 }
 
 fn compare<'a>(
@@ -256,7 +284,7 @@ fn measure<'a>(
     sharing: bool,
 ) -> Result<Measurement> {
     let named = if sharing {
-        nash_codegen::lower::lower_with_constant_sharing(arena, core)
+        nash_codegen::lower::lower_optimized(arena, core)
     } else {
         nash_codegen::lower::lower(arena, core)
     }
@@ -314,6 +342,10 @@ fn suite() -> Result<Vec<Row>> {
         "constantPrefixLoop",
         "recursiveUnusedSelf",
         "recursiveUnusedMutual",
+        "stagedApplication",
+        "stagedApplicationTraces",
+        "stagedArgumentTrace",
+        "stagedApplicationFailure",
     ];
     let cores = source::compile(&arena, include_str!("../fixtures/Workloads.nash"), &names);
     let expected = [
@@ -331,6 +363,10 @@ fn suite() -> Result<Vec<Row>> {
         "(con integer 1528)",
         "(con integer 42)",
         "(con integer 42)",
+        "(con integer 42)",
+        "(con integer 42)",
+        "(con integer 42)",
+        "error: ExplicitErrorTerm",
     ];
     for ((name, core), expected) in names.into_iter().zip(cores).zip(expected) {
         rows.push(compare(

@@ -1,0 +1,11 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+(force [(lam x_0 (delay x_0)) (con integer 42)])
+--- UPLC after
+(con integer 42)
+--- result
+(con integer 42)
+--- logs
+[]

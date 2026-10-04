@@ -108,23 +108,33 @@ addInteger anf#61 anf#67
               (lam field_4
                 [(lam generated_28
                   (force
-                    [[[[[[builtin_30 generated_28] (delay (force leaf_2))] (delay (force leaf_2))]
-                      (delay (force leaf_2))]
-                      (delay
-                        [(lam field_8
-                          [(lam generated_29
-                            (force
-                              [[[[[[builtin_30 generated_29] (delay (force leaf_2))] (delay (force leaf_2))]
-                                (delay (force leaf_2))]
-                                (delay (force leaf_2))]
-                                (delay
-                                  [(lam field_13
-                                    [(lam anf_14 [[(builtin addInteger) field_8] anf_14])
-                                      [(builtin lengthOfByteString) field_13]])
-                                    [(builtin unBData) generated_29]])]))
-                            field_4])
-                          [(builtin unIData) generated_28]])]
-                      (delay (force leaf_2))]))
+                    (case
+                      (constr 0
+                        generated_28
+                        (delay (force leaf_2))
+                        (delay (force leaf_2))
+                        (delay (force leaf_2))
+                        (delay
+                          [(lam field_8
+                            [(lam generated_29
+                              (force
+                                (case
+                                  (constr 0
+                                    generated_29
+                                    (delay (force leaf_2))
+                                    (delay (force leaf_2))
+                                    (delay (force leaf_2))
+                                    (delay (force leaf_2))
+                                    (delay
+                                      [(lam field_13
+                                        [(lam anf_14 [[(builtin addInteger) field_8] anf_14])
+                                          [(builtin lengthOfByteString) field_13]])
+                                        [(builtin unBData) generated_29]]))
+                                  builtin_30)))
+                              field_4])
+                            [(builtin unIData) generated_28]])
+                        (delay (force leaf_2)))
+                      builtin_30)))
                   field_3]))))
           (delay (con integer 0))])])
     (force (builtin chooseData))])

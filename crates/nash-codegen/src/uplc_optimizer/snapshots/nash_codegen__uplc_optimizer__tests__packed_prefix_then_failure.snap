@@ -1,0 +1,41 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+(case
+  [(lam f_4
+    (constr 0
+      [[[[f_4 (con integer 10)] (con integer 10)] (con integer 20)]
+        (force [[(force (builtin trace)) (con string "fourth")] (delay (error))])]
+      (delay f_4)))
+    (lam x_0
+      (lam y_1
+        (lam z_2
+          (force
+            [[(force (builtin trace)) (con string "third")]
+              (delay
+                (lam w_3
+                  [[(builtin addInteger) [[(builtin addInteger) x_0] y_1]]
+                    [[(builtin addInteger) z_2] w_3]]))]))))]
+  (lam result_6 (lam unused_5 result_6)))
+--- UPLC after
+(case
+  [(lam f_4
+    (constr 0
+      [(case (constr 0 (con integer 10) (con integer 10) (con integer 20)) f_4)
+        (force [[(force (builtin trace)) (con string "fourth")] (delay (error))])]
+      (delay f_4)))
+    (lam x_0
+      (lam y_1
+        (lam z_2
+          (force
+            [[(force (builtin trace)) (con string "third")]
+              (delay
+                (lam w_3
+                  [[(builtin addInteger) [[(builtin addInteger) x_0] y_1]]
+                    [[(builtin addInteger) z_2] w_3]]))]))))]
+  (lam result_6 (lam unused_5 result_6)))
+--- result
+error: ExplicitErrorTerm
+--- logs
+["third", "fourth"]

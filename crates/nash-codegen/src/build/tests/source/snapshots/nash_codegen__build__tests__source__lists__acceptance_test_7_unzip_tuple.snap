@@ -351,7 +351,10 @@ case@Tag anf#179 of
                         (lam field_29
                           (lam field_30
                             [(lam anf_31
-                              (case anf_31 (con bool False) [[[self_22 self_22] field_28] field_30]))
+                              (case
+                                anf_31
+                                (con bool False)
+                                (case (constr 0 self_22 field_28 field_30) self_22)))
                               [[(builtin equalsByteString) field_27] field_29]]))
                         (con bool False))))
                   (case ys_24 (lam field_25 (lam field_26 (con bool False))) (con bool True))))))]])
@@ -368,7 +371,10 @@ case@Tag anf#179 of
                       (lam field_17
                         (lam field_18
                           [(lam anf_19
-                            (case anf_19 (con bool False) [[[self_10 self_10] field_16] field_18]))
+                            (case
+                              anf_19
+                              (con bool False)
+                              (case (constr 0 self_10 field_16 field_18) self_10)))
                             [[(builtin equalsInteger) field_15] field_17]]))
                       (con bool False))))
                 (case ys_12 (lam field_13 (lam field_14 (con bool False))) (con bool True))))))]])

@@ -1,0 +1,80 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nchoose : int -> int -> int -> int\nchoose n =\n    if Builtin.equalsInteger n 0 then\n        \\x -> trace \"first\" (\\y -> trace \"second\" (Builtin.addInteger x y))\n    else\n        choose (Builtin.subtractInteger n 1)\nmain : int\nmain =\n    let\n        p = choose 3 20\n    in\n    p 22\n"
+---
+--- unoptimized Core
+let message#11 : string = "first" in
+let message#12 : string = "second" in
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+let fromString#9 : string -> string = \value#10 : string -> value#10 in
+letrec
+  choose#4 : int -> int -> int -> int [static []] = \n#6 : int -> case@Bool equalsInteger n#6 (fromInt#3 0) of
+    True -> \x#7 : int -> trace (fromString#9 message#11) in \y#8 : int -> trace (fromString#9 message#12) in addInteger x#7 y#8
+    False -> choose#4 (subtractInteger n#6 (fromInt#3 1))
+in
+let p#2 : int -> int = choose#4 (fromInt#3 3) (fromInt#3 20) in
+let main#1 : int = p#2 (fromInt#3 22) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam message_11
+    [(lam message_12
+      [(lam fromInt_3
+        [(lam fromString_9
+          [(lam choose_4
+            [(lam p_2 [(lam main_1 main_1) [p_2 [fromInt_3 (con integer 22)]]])
+              [[choose_4 [fromInt_3 (con integer 3)]] [fromInt_3 (con integer 20)]]])
+            [(lam self_13 [self_13 self_13])
+              (lam self_13
+                (lam n_6
+                  (case
+                    [[(builtin equalsInteger) n_6] [fromInt_3 (con integer 0)]]
+                    [[self_13 self_13]
+                      [[(builtin subtractInteger) n_6] [fromInt_3 (con integer 1)]]]
+                    (lam x_7
+                      (force
+                        [[(force (builtin trace)) [fromString_9 message_11]]
+                          (delay
+                            (lam y_8
+                              (force
+                                [[(force (builtin trace)) [fromString_9 message_12]]
+                                  (delay [[(builtin addInteger) x_7] y_8])])))])))))]])
+          (lam value_10 value_10)])
+        (lam value_5 value_5)])
+      (con string "second")])
+    (con string "first")])
+--- optimized Core
+letrec
+  choose#19 : int -> int -> int -> int [static []] = \n#20 : int -> let anf#26 : bool = equalsInteger n#20 0 in
+  case@Bool anf#26 of
+    True -> \x#21 : int -> trace "first" in \y#22 : int -> trace "second" in addInteger x#21 y#22
+    False -> let anf#30 : int = subtractInteger n#20 1 in
+    choose#19 anf#30
+in
+choose#19 3 20 22
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_31
+    [(lam choose_19
+      (case (constr 0 (con integer 3) (con integer 20) (con integer 22)) choose_19))
+      [(lam self_15 [self_15 self_15])
+        (lam self_15
+          (lam n_20
+            [(lam anf_26
+              (case
+                anf_26
+                [(lam anf_30 [[self_15 self_15] anf_30])
+                  [[(builtin subtractInteger) n_20] (con integer 1)]]
+                (lam x_21
+                  (force
+                    [[builtin_31 (con string "first")]
+                      (delay
+                        (lam y_22
+                          (force
+                            [[builtin_31 (con string "second")] (delay [[(builtin addInteger) x_21] y_22])])))]))))
+              [[(builtin equalsInteger) n_20] (con integer 0)]]))]])
+    (force (builtin trace))])
+--- result
+(con integer 42)
+--- logs
+["first", "second"]

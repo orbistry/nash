@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/tests/integration.rs
-assertion_line: 196
 description: "module Main exposing (..)\nimport Builtin\nimport Prop exposing (reject)\ntests\n    prop \"reject before later generator\" =\n        let\n            x via trace \"first\" reject\n            y via fail\n        in\n        do\n            assert (Builtin.equalsInteger x y)\n"
 ---
 --- reject before later generator
@@ -604,16 +603,14 @@ case@Tag match#182 of
                                                                                 [(lam anf_92 [[applyForward_71 anf_92] (builtin decodeUtf8)])
                                                                                   [[applyForward_71 projection_39] decimal_83]]
                                                                                 [(lam anf_85
-                                                                                  [(lam anf_86
-                                                                                    [(lam anf_87
-                                                                                      [(lam anf_88
-                                                                                        [(lam anf_89
-                                                                                          [(lam anf_90 [(lam anf_91 [anf_90 anf_91]) [(builtin appendString) message_9]])
-                                                                                            [applyForward_71 anf_89]])
-                                                                                          [[applyForward_71 anf_88] (builtin decodeUtf8)]])
-                                                                                        [[applyForward_71 anf_87] decimal_83]])
-                                                                                      [anf_85 anf_86]])
-                                                                                    partial_160])
+                                                                                  [(lam anf_87
+                                                                                    [(lam anf_88
+                                                                                      [(lam anf_89
+                                                                                        [(lam anf_90 [(lam anf_91 [anf_90 anf_91]) [(builtin appendString) message_9]])
+                                                                                          [applyForward_71 anf_89]])
+                                                                                        [[applyForward_71 anf_88] (builtin decodeUtf8)]])
+                                                                                      [[applyForward_71 anf_87] decimal_83]])
+                                                                                    [anf_85 partial_160]])
                                                                                   [applyForward_71 projection_39]])])
                                                                             [[(builtin lessThanInteger) projection_39] (con integer 0)]])
                                                                           [(lam self_73 [self_73 self_73])
@@ -642,16 +639,14 @@ case@Tag match#182 of
                                                                   [(lam anf_66 [[applyForward_45 anf_66] (builtin decodeUtf8)])
                                                                     [[applyForward_45 projection_38] decimal_57]]
                                                                   [(lam anf_59
-                                                                    [(lam anf_60
-                                                                      [(lam anf_61
-                                                                        [(lam anf_62
-                                                                          [(lam anf_63
-                                                                            [(lam anf_64 [(lam anf_65 [anf_64 anf_65]) [(builtin appendString) message_9]])
-                                                                              [applyForward_45 anf_63]])
-                                                                            [[applyForward_45 anf_62] (builtin decodeUtf8)]])
-                                                                          [[applyForward_45 anf_61] decimal_57]])
-                                                                        [anf_59 anf_60]])
-                                                                      partial_160])
+                                                                    [(lam anf_61
+                                                                      [(lam anf_62
+                                                                        [(lam anf_63
+                                                                          [(lam anf_64 [(lam anf_65 [anf_64 anf_65]) [(builtin appendString) message_9]])
+                                                                            [applyForward_45 anf_63]])
+                                                                          [[applyForward_45 anf_62] (builtin decodeUtf8)]])
+                                                                        [[applyForward_45 anf_61] decimal_57]])
+                                                                      [anf_59 partial_160]])
                                                                     [applyForward_45 projection_38]])])
                                                               [[(builtin lessThanInteger) projection_38] (con integer 0)]])
                                                             [(lam self_47 [self_47 self_47])
@@ -698,17 +693,15 @@ case@Tag match#182 of
                                                               [(lam anf_146 [[applyForward_124 anf_146] (builtin decodeUtf8)])
                                                                 [[applyForward_124 projection_97] decimal_135]]
                                                               [(lam anf_137
-                                                                [(lam anf_138
-                                                                  [(lam anf_139
-                                                                    [(lam anf_140
-                                                                      [(lam anf_142
-                                                                        [(lam anf_143
-                                                                          [(lam anf_145 [anf_143 anf_145]) [(builtin appendString) message_9]])
-                                                                          [applyForward_124 anf_142]])
-                                                                        [[applyForward_124 anf_140] (builtin decodeUtf8)]])
-                                                                      [[applyForward_124 anf_139] decimal_135]])
-                                                                    [anf_137 anf_138]])
-                                                                  partial_160])
+                                                                [(lam anf_139
+                                                                  [(lam anf_140
+                                                                    [(lam anf_142
+                                                                      [(lam anf_143
+                                                                        [(lam anf_145 [anf_143 anf_145]) [(builtin appendString) message_9]])
+                                                                        [applyForward_124 anf_142]])
+                                                                      [[applyForward_124 anf_140] (builtin decodeUtf8)]])
+                                                                    [[applyForward_124 anf_139] decimal_135]])
+                                                                  [anf_137 partial_160]])
                                                                 [applyForward_124 projection_97]])])
                                                           [[(builtin lessThanInteger) projection_97] (con integer 0)]])
                                                         [(lam self_125 [self_125 self_125])
@@ -736,17 +729,15 @@ case@Tag match#182 of
                                                       [(lam anf_120 [[applyForward_100 anf_120] (builtin decodeUtf8)])
                                                         [[applyForward_100 projection_96] decimal_111]]
                                                       [(lam anf_113
-                                                        [(lam anf_114
-                                                          [(lam anf_115
-                                                            [(lam anf_116
-                                                              [(lam anf_117
-                                                                [(lam anf_118
-                                                                  [(lam anf_119 [anf_118 anf_119]) [(builtin appendString) message_9]])
-                                                                  [applyForward_100 anf_117]])
-                                                                [[applyForward_100 anf_116] (builtin decodeUtf8)]])
-                                                              [[applyForward_100 anf_115] decimal_111]])
-                                                            [anf_113 anf_114]])
-                                                          partial_160])
+                                                        [(lam anf_115
+                                                          [(lam anf_116
+                                                            [(lam anf_117
+                                                              [(lam anf_118
+                                                                [(lam anf_119 [anf_118 anf_119]) [(builtin appendString) message_9]])
+                                                                [applyForward_100 anf_117]])
+                                                              [[applyForward_100 anf_116] (builtin decodeUtf8)]])
+                                                            [[applyForward_100 anf_115] decimal_111]])
+                                                          [anf_113 partial_160]])
                                                         [applyForward_100 projection_96]])])
                                                   [[(builtin lessThanInteger) projection_96] (con integer 0)]])
                                                 [(lam self_101 [self_101 self_101])

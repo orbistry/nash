@@ -180,16 +180,14 @@ letrec
     mkCons field#81 anf#97
 in
 let anf#106 : list int = unique#78 (con (list integer) [1, 2, 3, 1]) in
-let anf#107 : list int -> bool = eq#48 anf#106 in
-anf#107 (con (list integer) [1, 2, 3])
+eq#48 anf#106 (con (list integer) [1, 2, 3])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_40
+  [(lam builtin_39
     [(lam eq_8
       [(lam eq_20
         [(lam unique_37
-          [(lam anf_38
-            [(lam anf_39 [anf_39 (con (list integer) [1, 2, 3])]) [eq_20 anf_38]])
+          [(lam anf_38 [[eq_20 anf_38] (con (list integer) [1, 2, 3])])
             [unique_37 (con (list integer) [1, 2, 3, 1])]])
           [(lam self_21 [self_21 self_21])
             (lam self_22
@@ -200,7 +198,7 @@ anf#107 (con (list integer) [1, 2, 3])
                     (lam field_25
                       [(lam worker_34
                         [(lam anf_35
-                          [(lam anf_36 [[builtin_40 field_24] anf_36]) [[self_22 self_22] anf_35]])
+                          [(lam anf_36 [[builtin_39 field_24] anf_36]) [[self_22 self_22] anf_35]])
                           [worker_34 field_25]])
                         [(lam self_26 [self_26 self_26])
                           (lam self_27
@@ -214,7 +212,7 @@ anf#107 (con (list integer) [1, 2, 3])
                                         (case
                                           anf_32
                                           [[self_27 self_27] field_30]
-                                          [(lam anf_33 [[builtin_40 field_29] anf_33]) [[self_27 self_27] field_30]]))
+                                          [(lam anf_33 [[builtin_39 field_29] anf_33]) [[self_27 self_27] field_30]]))
                                         (case anf_31 (con bool True) (con bool False))])
                                       [[eq_8 field_29] field_24]]))
                                 (con (list integer) []))))]]))
@@ -232,7 +230,10 @@ anf#107 (con (list integer) [1, 2, 3])
                         (lam field_17
                           (lam field_18
                             [(lam anf_19
-                              (case anf_19 (con bool False) [[[self_10 self_10] field_16] field_18]))
+                              (case
+                                anf_19
+                                (con bool False)
+                                (case (constr 0 self_10 field_16 field_18) self_10)))
                               [[eq_8 field_15] field_17]]))
                         (con bool False))))
                   (case ys_12 (lam field_13 (lam field_14 (con bool False))) (con bool True))))))]])

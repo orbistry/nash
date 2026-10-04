@@ -28,15 +28,12 @@ in
 force f#5
 --- optimized UPLC
 (program 1.1.0
-  [(lam dispatch_10
-    [(lam f_11
-      [(lam g_12 (force f_11)) (delay [dispatch_10 (constr 1 dispatch_10)])])
-      (delay [dispatch_10 (constr 0 dispatch_10)])])
+  [(lam dispatch_10 [dispatch_10 (constr 0 dispatch_10)])
     (lam request_7
       (case
         request_7
-        (lam self_8 (force (delay [self_8 (constr 1 self_8)])))
-        (lam self_9 (force (delay [self_9 (constr 0 self_9)])))))])
+        (lam self_8 [self_8 (constr 1 self_8)])
+        (lam self_9 [self_9 (constr 0 self_9)])))])
 --- isolated pass
 --- isolated Core before
 letrec

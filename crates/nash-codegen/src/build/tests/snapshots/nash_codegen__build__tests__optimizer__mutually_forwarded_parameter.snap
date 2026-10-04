@@ -63,12 +63,8 @@ first#16 3
 (program 1.1.0
   [(lam builtin_40
     [(lam dispatch_30
-      [(lam first_16
-        [(lam second_17
-          [(lam arg_26 [first_16 (con integer 3)])
-            [[builtin_40 (con string "entry")] (con integer 7)]])
-          (lam n_38 [dispatch_30 (constr 1 dispatch_30 n_38)])])
-        (lam n_39 [dispatch_30 (constr 0 dispatch_30 n_39)])])
+      [(lam arg_26 [dispatch_30 (constr 0 dispatch_30 (con integer 3))])
+        [[builtin_40 (con string "entry")] (con integer 7)]])
       (lam request_31
         (case
           request_31

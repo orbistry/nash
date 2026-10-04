@@ -1,0 +1,15 @@
+---
+source: crates/nash-ir/src/single_use/tests.rs
+---
+--- core before rule 3
+\(f#1 : int -> int -> int) -> let p#2 : int -> int = f#1 20 in
+let n#3 : int = trace "later" in 22 in
+p#2 n#3
+--- core after rule 3
+\(f#1 : int -> int -> int) -> let p#2 : int -> int = f#1 20 in
+let n#3 : int = trace "later" in 22 in
+p#2 n#3
+--- core after rules 1 + 2 + 3
+\(f#1 : int -> int -> int) -> let p#2 : int -> int = f#1 20 in
+let n#3 : int = trace "later" in 22 in
+p#2 n#3

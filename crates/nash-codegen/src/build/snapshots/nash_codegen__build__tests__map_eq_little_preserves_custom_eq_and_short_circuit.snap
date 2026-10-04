@@ -214,7 +214,7 @@ eq#95 values#119 values#119
                       (lam field_12
                         (lam field_13
                           [(lam anf_21
-                            (case anf_21 (con bool False) [[[self_5 self_5] field_11] field_13]))
+                            (case anf_21 (con bool False) (case (constr 0 self_5 field_11 field_13) self_5)))
                             (case
                               field_10
                               (lam field_14

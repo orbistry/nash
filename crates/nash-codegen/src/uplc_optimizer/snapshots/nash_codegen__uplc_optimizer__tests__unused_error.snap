@@ -1,0 +1,13 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+[(lam x_0 (con integer 42))
+  (force [[(force (builtin trace)) (con string "argument")] (delay (error))])]
+--- UPLC after
+[(lam x_0 (con integer 42))
+  (force [[(force (builtin trace)) (con string "argument")] (delay (error))])]
+--- result
+error: ExplicitErrorTerm
+--- logs
+["argument"]

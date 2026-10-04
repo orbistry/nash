@@ -52,12 +52,10 @@ addInteger anf#9 anf#10
 (program 1.1.0
   [(lam builtin_27
     [(lam dispatch_21
-      [(lam f_23
-        [(lam g_24
-          [(lam anf_25 [(lam anf_26 [[(builtin addInteger) anf_25] anf_26]) (force g_24)])
-            [f_23 (con integer 2)]])
-          (delay [dispatch_21 (constr 1 dispatch_21)])])
-        (lam n_22 [dispatch_21 (constr 0 dispatch_21 n_22)])])
+      [(lam anf_25
+        [(lam anf_26 [[(builtin addInteger) anf_25] anf_26])
+          [dispatch_21 (constr 1 dispatch_21)]])
+        [dispatch_21 (constr 0 dispatch_21 (con integer 2))]])
       (lam request_15
         (case
           request_15

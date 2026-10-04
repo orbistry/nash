@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 191
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nfilter xs f =\n    case xs of\n        [] -> []\n        x :: rest ->\n            if f x then mkCons x (filter rest f)\n            else filter rest f\nunique xs =\n    case xs of\n        [] -> []\n        x :: rest -> mkCons x (unique (filter rest (\\y -> neq y x)))\nempty : list int\nempty = []\nmain = eq (unique empty) []\n"
 ---
 --- unoptimized Core
@@ -222,7 +221,10 @@ eq#47 anf#96 (con (list integer) [])
                         (lam field_17
                           (lam field_18
                             [(lam anf_19
-                              (case anf_19 (con bool False) [[[self_10 self_10] field_16] field_18]))
+                              (case
+                                anf_19
+                                (con bool False)
+                                (case (constr 0 self_10 field_16 field_18) self_10)))
                               [[eq_8 field_15] field_17]]))
                         (con bool False))))
                   (case ys_12 (lam field_13 (lam field_14 (con bool False))) (con bool True))))))]])

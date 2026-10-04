@@ -26,9 +26,15 @@ case@Data anf#3 of
       [(lam anf_1
         [(lam generated_5
           (force
-            [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))] (delay (error))]
-              (delay [(lam number_4 number_4) [(builtin unIData) generated_5]])]
-              (delay (error))]))
+            (case
+              (constr 0
+                generated_5
+                (delay (error))
+                (delay (error))
+                (delay (error))
+                (delay [(builtin unIData) generated_5])
+                (delay (error)))
+              builtin_6)))
           anf_1])
         (force [[builtin_7 (con string "subject")] (delay (con data (I 42)))])])
       (force (builtin trace))])

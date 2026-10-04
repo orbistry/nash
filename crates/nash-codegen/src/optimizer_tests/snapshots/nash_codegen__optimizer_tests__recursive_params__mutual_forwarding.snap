@@ -54,11 +54,7 @@ in
 f#1 3
 --- optimized UPLC
 (program 1.1.0
-  [(lam dispatch_28
-    [(lam f_30
-      [(lam g_32 [f_30 (con integer 3)])
-        (lam m_31 [dispatch_28 (constr 1 dispatch_28 m_31)])])
-      (lam n_29 [dispatch_28 (constr 0 dispatch_28 n_29)])])
+  [(lam dispatch_28 [dispatch_28 (constr 0 dispatch_28 (con integer 3))])
     (lam request_19
       (case
         request_19

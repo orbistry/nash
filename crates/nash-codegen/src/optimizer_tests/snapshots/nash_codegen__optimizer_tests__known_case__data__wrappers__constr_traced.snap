@@ -29,12 +29,15 @@ case@Data anf#2 of
       [(lam anf_3
         [(lam generated_5
           (force
-            [[[[[[builtin_6 generated_5]
-              (delay [(lam pair_4 pair_4) [(builtin unConstrData) generated_5]])]
-              (delay (error))]
-              (delay (error))]
-              (delay (error))]
-              (delay (error))]))
+            (case
+              (constr 0
+                generated_5
+                (delay [(builtin unConstrData) generated_5])
+                (delay (error))
+                (delay (error))
+                (delay (error))
+                (delay (error)))
+              builtin_6)))
           anf_3])
         (force
           [[builtin_7 (con string "producer")] (delay (con data (Constr 59 [I 42])))])])

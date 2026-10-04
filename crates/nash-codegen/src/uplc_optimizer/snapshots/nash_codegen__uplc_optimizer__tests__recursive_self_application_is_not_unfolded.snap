@@ -1,0 +1,7 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+[(lam x_0 [x_0 x_0]) (lam x_0 [x_0 x_0])]
+--- UPLC after
+[(lam x_0 [x_0 x_0]) (lam x_0 [x_0 x_0])]

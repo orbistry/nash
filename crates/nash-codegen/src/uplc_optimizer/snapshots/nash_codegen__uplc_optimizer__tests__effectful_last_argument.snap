@@ -1,0 +1,39 @@
+---
+source: crates/nash-codegen/src/uplc_optimizer/tests.rs
+---
+--- UPLC before
+(case
+  [(lam f_3
+    (constr 0
+      [[[f_3 (con integer 20)] (con integer 20)]
+        (force [[(force (builtin trace)) (con string "last")] (delay (con integer 2))])]
+      (delay f_3)))
+    (lam x_0
+      (force
+        [[(force (builtin trace)) (con string "first")]
+          (delay
+            (lam y_1
+              (force
+                [[(force (builtin trace)) (con string "second")]
+                  (delay (lam z_2 [[(builtin addInteger) [[(builtin addInteger) x_0] y_1]] z_2]))])))]))]
+  (lam result_5 (lam unused_4 result_5)))
+--- UPLC after
+(case
+  [(lam f_3
+    (constr 0
+      [[[f_3 (con integer 20)] (con integer 20)]
+        (force [[(force (builtin trace)) (con string "last")] (delay (con integer 2))])]
+      (delay f_3)))
+    (lam x_0
+      (force
+        [[(force (builtin trace)) (con string "first")]
+          (delay
+            (lam y_1
+              (force
+                [[(force (builtin trace)) (con string "second")]
+                  (delay (lam z_2 [[(builtin addInteger) [[(builtin addInteger) x_0] y_1]] z_2]))])))]))]
+  (lam result_5 (lam unused_4 result_5)))
+--- result
+(con integer 42)
+--- logs
+["first", "second", "last"]

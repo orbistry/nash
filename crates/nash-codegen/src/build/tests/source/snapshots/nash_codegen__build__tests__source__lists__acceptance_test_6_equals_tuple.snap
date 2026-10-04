@@ -149,7 +149,7 @@ case@Bool anf#72 of
                       (lam field_13
                         (lam field_14
                           [(lam anf_15
-                            (case anf_15 (con bool False) [[[self_6 self_6] field_12] field_14]))
+                            (case anf_15 (con bool False) (case (constr 0 self_6 field_12 field_14) self_6)))
                             [[eq_4 field_11] field_13]]))
                       (con bool False))))
                 (case ys_8 (lam field_9 (lam field_10 (con bool False))) (con bool True))))))]])

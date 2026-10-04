@@ -147,17 +147,22 @@ case@List decoded#14 of
                                 (lam field_11
                                   [(lam generated_24
                                     (force
-                                      [[[[[[builtin_25 generated_24] (delay (force leaf_9))] (delay (force leaf_9))]
-                                        (delay (force leaf_9))]
-                                        (delay
-                                          [(lam field_17
-                                            (case
-                                              field_11
-                                              (lam field_19 (lam field_20 (force leaf_9)))
-                                              [(lam anf_18 [[(builtin addInteger) anf_18] field_17])
-                                                [(builtin unIData) field_6]]))
-                                            [(builtin unIData) generated_24]])]
-                                        (delay (force leaf_9))]))
+                                      (case
+                                        (constr 0
+                                          generated_24
+                                          (delay (force leaf_9))
+                                          (delay (force leaf_9))
+                                          (delay (force leaf_9))
+                                          (delay
+                                            [(lam field_17
+                                              (case
+                                                field_11
+                                                (lam field_19 (lam field_20 (force leaf_9)))
+                                                [(lam anf_18 [[(builtin addInteger) anf_18] field_17])
+                                                  [(builtin unIData) field_6]]))
+                                              [(builtin unIData) generated_24]])
+                                          (delay (force leaf_9)))
+                                        builtin_25)))
                                     field_10]))
                               (force leaf_9)))
                             (delay (error))])

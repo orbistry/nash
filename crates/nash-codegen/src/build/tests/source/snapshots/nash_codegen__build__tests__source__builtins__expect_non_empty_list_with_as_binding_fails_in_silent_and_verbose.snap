@@ -111,7 +111,7 @@ eq#31 x#53 x#53
                     (lam field_12
                       (lam field_13
                         [(lam anf_14
-                          (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
+                          (case anf_14 (con bool False) (case (constr 0 self_5 field_11 field_13) self_5)))
                           [[(builtin equalsInteger) field_10] field_12]]))
                     (con bool False))))
               (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])

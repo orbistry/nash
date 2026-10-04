@@ -154,10 +154,15 @@ constr 0 anf#69 anf#72 anf#75 anf#78 anf#80 anf#82 anf#86
           [(lam leaf_6
             [(lam generated_29
               (force
-                [[[[[[builtin_30 generated_29] (delay (force leaf_6))] (delay (force leaf_6))]
-                  (delay (force leaf_6))]
-                  (delay [(lam field_10 field_10) [(builtin unIData) generated_29]])]
-                  (delay (force leaf_6))]))
+                (case
+                  (constr 0
+                    generated_29
+                    (delay (force leaf_6))
+                    (delay (force leaf_6))
+                    (delay (force leaf_6))
+                    (delay [(builtin unIData) generated_29])
+                    (delay (force leaf_6)))
+                  builtin_30)))
               data_5])
             (delay (con integer -2))])])
       (lam xs_1 (case xs_1 (lam field_2 (lam field_3 field_2)) (con integer -1)))])

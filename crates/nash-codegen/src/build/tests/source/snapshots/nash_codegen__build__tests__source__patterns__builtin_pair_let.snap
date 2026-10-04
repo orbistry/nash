@@ -107,16 +107,21 @@ case@Pair (con (pair integer (list data)) (7, [(I 42)])) of
                 (lam field_5
                   [(lam generated_13
                     (force
-                      [[[[[[builtin_14 generated_13] (delay (force leaf_3))] (delay (force leaf_3))]
-                        (delay (force leaf_3))]
-                        (delay
-                          [(lam field_9
-                            (case
-                              field_5
-                              (lam field_10 (lam field_11 (force leaf_3)))
-                              [[(builtin addInteger) field_1] field_9]))
-                            [(builtin unIData) generated_13]])]
-                        (delay (force leaf_3))]))
+                      (case
+                        (constr 0
+                          generated_13
+                          (delay (force leaf_3))
+                          (delay (force leaf_3))
+                          (delay (force leaf_3))
+                          (delay
+                            [(lam field_9
+                              (case
+                                field_5
+                                (lam field_10 (lam field_11 (force leaf_3)))
+                                [[(builtin addInteger) field_1] field_9]))
+                              [(builtin unIData) generated_13]])
+                          (delay (force leaf_3)))
+                        builtin_14)))
                     field_4]))
               (force leaf_3)))
             (delay (error))]))))

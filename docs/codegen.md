@@ -999,8 +999,10 @@ of nonrecursive/recursive unused-parameter removal, one ANF normalization, the
 accepted inlining/dead-code cleanup, constructor and representation cleanup, then
 static lifting, constant folding and unused-parameter removal with cleanup to a
 joint fixed point. Recursion encoding follows optimization.
-Only freshening and builtin/constant sharing in lowering follow recursion encoding;
-there is no second ANF pass and no optimizer loop around the entire program.
+Freshening and builtin/constant sharing in lowering follow recursion encoding.
+The common O1 entry point `lower::lower_optimized` then runs late UPLC binding
+cleanup and native application packing. There is no second ANF pass or optimizer
+loop that repeats recursion encoding.
 
 Cleanup stops on unchanged pointers. The traversal preserves pointers for no-op
 nodes, and each accepted rewrite returns a changed pointer only for real progress.
@@ -1020,8 +1022,27 @@ their forced result before applying extra arguments, so call operands stay atomi
 Cleanup flattens introduced binding prefixes without repeating ANF. Tests cover
 this joint fixed point, folding beyond 128 calls, large inputs and growing outputs,
 failed calls alongside successful folds, and semantic equivalence across invocations.
-Executable fixture checks compare the closed code after one and two O1 invocations.
-ANF is not repeated.
+Executable fixture checks compare Core code after one, two and three invocations
+and require late UPLC pointer stability. The explicit performance corpus compares
+complete O1 Flat code after all three runs. ANF is not repeated.
+
+Adjacent `let p = f a in p b` application stages fuse inside single-use Core cleanup
+when the binder has exactly one direct use, operands are atomic and intermediate
+type views agree. Concatenated App arguments retain left-associative evaluation.
+Intervening computations and escaping partial applications remain bound.
+
+Late UPLC cleanup handles the bindings encoded as lambda applications after
+recursion/lowering. It removes immediate identities, substitutes single-use values,
+drops unused values and cancels force/delay pairs. It preserves strict computations
+and builtin sharing, rejects possible name capture, and never duplicates a lambda
+body to unfold recursive self-application. Input is closed, well-scoped named UPLC.
+
+Native packing turns eligible spines into `Case(Constr(0, args), [function])` only
+when function and arguments are UPLC values. It starts at three arguments, where
+two native nodes replace more Apply nodes. A non-value later argument remains
+outside an eligible packed prefix. Cleanup and packing reach a shrinking fixed
+point without reversing packs. These are O1 rules in Plan 08; they preserve traces,
+failure and termination. See the [measured report](research/application-packing-trial.md).
 
 The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,
 `-O1` and `--optimize 0|1` override the owning project's integer `optimize: 0|1`.

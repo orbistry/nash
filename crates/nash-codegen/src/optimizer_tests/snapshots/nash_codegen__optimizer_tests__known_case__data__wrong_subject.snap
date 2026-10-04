@@ -22,9 +22,15 @@ case@Data 42 of
   [(lam builtin_3
     [(lam generated_2
       (force
-        [[[[[[builtin_3 generated_2] (delay (error))] (delay (error))] (delay (error))]
-          (delay [(lam number_1 number_1) [(builtin unIData) generated_2]])]
-          (delay (error))]))
+        (case
+          (constr 0
+            generated_2
+            (delay (error))
+            (delay (error))
+            (delay (error))
+            (delay [(builtin unIData) generated_2])
+            (delay (error)))
+          builtin_3)))
       (con integer 42)])
     (force (builtin chooseData))])
 --- isolated pass

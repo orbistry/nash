@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nidentity value = value\nmain : int\nmain = identity Builtin.addInteger 20 22\n"
 ---
 --- unoptimized Core
@@ -18,11 +17,9 @@ main#1
       (lam value_5 value_5)])
     (lam value_4 value_4)])
 --- optimized Core
-let anf#13 : int -> int = addInteger 20 in
-anf#13 22
+addInteger 20 22
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [anf_1 (con integer 22)]) [(builtin addInteger) (con integer 20)]])
+(program 1.1.0 [[(builtin addInteger) (con integer 20)] (con integer 22)])
 --- result
 (con integer 42)
 --- logs

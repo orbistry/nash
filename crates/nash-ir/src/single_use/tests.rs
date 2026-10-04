@@ -20,12 +20,14 @@ macro_rules! assert_optimization_snapshot {
         let before = crate::beta::simplify(b, core);
         let after = inline(b, before);
         let fixed = simplify(b, before);
-        insta::assert_snapshot!($($name,)? format!(
-            "--- core before rule 3\n{}\n--- core after rule 3\n{}\n--- core after rules 1 + 2 + 3\n{}",
-            pretty(before),
-            pretty(after),
-            pretty(fixed)
-        ));
+        insta::with_settings!({omit_expression => true}, {
+            insta::assert_snapshot!($($name,)? format!(
+                "--- core before rule 3\n{}\n--- core after rule 3\n{}\n--- core after rules 1 + 2 + 3\n{}",
+                pretty(before),
+                pretty(after),
+                pretty(fixed)
+            ));
+        });
         for v in [before, after, fixed] {
             anf::validate(v).unwrap();
             hygiene::validate(v, &[]).unwrap();
@@ -195,4 +197,63 @@ fn forced_builtin_reference_stays_bound_even_when_returned() {
     let core = b.let_(f, b.builtin(F::Trace, &[], ty), b.var(f.name, ty));
     assert_optimization_snapshot!(&b, core);
     assert!(std::ptr::eq(core, inline(&b, core)));
+}
+
+#[test]
+fn adjacent_applications_preserve_stages_and_type_views() {
+    use crate::ty::TermTy;
+    let a = Arena::new();
+    let b = Builder::new(&a);
+    let partial = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[INT]), INT)));
+    let full = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[INT]), partial)));
+    let f = binder(&b, "f", full);
+    let p = binder(&b, "p", partial);
+    for (name, occurrence_ty) in [("adjacent_calls", partial), ("call_type_view", Ty::Erased)] {
+        let core = b.lam(
+            &[f],
+            b.let_(
+                p,
+                b.app(b.var(f.name, full), &[b.int(20)], partial),
+                b.app(b.var(p.name, occurrence_ty), &[b.int(22)], INT),
+            ),
+        );
+        assert_optimization_snapshot!(&b, core, name);
+    }
+}
+
+#[test]
+fn application_fusion_does_not_cross_a_computation_or_capture() {
+    use crate::ty::TermTy;
+    let a = Arena::new();
+    let b = Builder::new(&a);
+    let partial = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[INT]), INT)));
+    let full = Ty::Term(a.alloc(TermTy::Fun(a.alloc_slice_copy(&[INT]), partial)));
+    let f = binder(&b, "f", full);
+    let p = binder(&b, "p", partial);
+    let n = binder(&b, "n", INT);
+    let core = b.lam(
+        &[f],
+        b.let_(
+            p,
+            b.app(b.var(f.name, full), &[b.int(20)], partial),
+            b.let_(
+                n,
+                b.trace(b.lit(Constant::string(&a, "later")), b.int(22)),
+                b.app(b.var(p.name, partial), &[b.var(n.name, INT)], INT),
+            ),
+        ),
+    );
+    assert_optimization_snapshot!(&b, core, "crossed_trace");
+    let escape = b.lam(
+        &[f],
+        b.let_(
+            p,
+            b.app(b.var(f.name, full), &[b.int(20)], partial),
+            b.lam(
+                &[n],
+                b.app(b.var(p.name, partial), &[b.var(n.name, INT)], INT),
+            ),
+        ),
+    );
+    assert_optimization_snapshot!(&b, escape, "escaping_partial_call");
 }
