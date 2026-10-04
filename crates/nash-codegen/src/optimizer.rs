@@ -6,6 +6,9 @@ pub fn optimize<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     optimize_with(&Builder::new(arena), core)
 }
 
+/// Run the accepted pipeline once. Cleanup uses pointer-stable fixed points,
+/// but a later invocation may expose more signatures or get a fresh folding
+/// allowance. Do not wrap this in a whole-program loop or repeat ANF.
 pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let original_ty = core.ty;
     let core = hygiene::freshen(b, core);

@@ -30,7 +30,7 @@ native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
 as well. The retained Chunk 7 scope is complete. Chunks 9 and 10 are now
-integrated; Chunk 11 remains. The retained Chunk 8 representation cancellations
+integrated; the retained scope and Chunk 11 review are complete. The retained Chunk 8 representation cancellations
 are accepted, including integer/byte/list/map Data round trips, UTF-8 round trips
 and bound constructor Data projections/reconstruction. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
@@ -1842,6 +1842,29 @@ rule. No assumption that projection wins, and no per-program tuning engine.
 
 ## Chunk 11 — Composition, convergence and final configuration
 
+**Complete (5 October 2026), retained scope.**
+
+The final composition review adds five regression tests: a mixed cleanup pipeline
+with phase/type/hygiene evidence, same-node-count reassociation exposing further
+cleanup, a reachable recursive cycle rendered without evaluation, one-traversal
+signature removal, and a 130-call fixture exceeding the 128-attempt folding limit.
+Independent builders produce deterministic Core and closed UPLC. Accepted cleanup
+reaches an unchanged-pointer fixed point; no node-count stopping rule is used.
+
+Full optimizer structural idempotence is not a production contract: signature
+removal runs once before later cleanup and bounded folding gets one allowance per
+invocation. Tests demonstrate both reasons a separate invocation can make further
+progress while preserving results/logs. Do not solve these intentional work bounds
+by repeating ANF or resetting the evaluator allowance in an outer fixed point.
+The final mode decision retains O0/O1, default O1, and the existing project/CLI
+precedence. No production pass order, budget or default changed in this review.
+
+Final validation: all 3,857 workspace nextest tests pass; the five composition
+checks also pass independently. Strict workspace Clippy, formatting and whitespace
+checks pass. All 194 explicit performance cases match the accepted baseline, and
+Cargo metadata still excludes the performance package from the root workspace.
+The retained Plan 08 scope is complete; deferred work below remains deferred.
+
 **O1 integration (29 September 2026), accepted scope.**
 Production `nash-codegen::optimizer` owns the accepted Core pipeline; snapshots
 and performance measurements reuse it. Build/test accept `-O0`/`-O1` and
@@ -1853,7 +1876,7 @@ Representation cancellation and bound-constructor folding run only in the
 cleanup loops after the single ANF normalization.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
-Chunks 9–10 are complete; final convergence review stays open.
+Chunks 9–10 and the final convergence review are complete.
 Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
 heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
 follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
@@ -1866,7 +1889,7 @@ Do not repeat ANF-dependent passes or whole-program sharing after recursion rewr
 
 Detect actual structural progress or accurate rewrite reports, not equal node
 counts. Keep generated names deterministic. Test same-size rewrites, cycles,
-optimizer and cleanup idempotence, and hygiene after every pass. Check ANF only
+cleanup idempotence, the documented full-optimizer limits, and hygiene after every pass. Check ANF only
 in the main optimization phase, before recursion rewriting.
 
 Retain named phase sections for raw Core, ANF, optimized recursive Core, rewritten
@@ -1883,10 +1906,11 @@ for rendering, and never execute deliberately divergent fixtures.
 Keep O0 snapshots; never mass-replace them with optimized ones. Run ordinary
 semantic checks separately from the explicit performance regression command.
 
-Only after reviewing the accepted set, decide whether there is one optimized mode
-or several, their flags/configuration, defaults and pass assignments. Do not
-implement the old `Level::O1/O2` sketch or expose arbitrary tuning knobs first.
-Existing CLI/config optimizer rejection remains until a reviewed mode is wired.
+Final configuration is one optimized mode, O1, alongside explicit O0. Existing
+CLI/configuration validation accepts only 0 and 1, project settings belong to the
+owning workspace member, and command-line overrides take precedence. Defaults,
+trace policy, trait/Logic/Big/little semantics and both lowering modes retain their
+existing source, driver and configuration tests.
 
 **Done when:** the accepted combination is semantically equivalent, convergent,
 measured and reviewed; final configuration is decided and documented. Mark

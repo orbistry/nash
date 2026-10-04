@@ -993,3 +993,39 @@ resolves to `unConstrData dataVar`, with `dataVar` resolving to `constrData tag 
 and the selected operand already a variable, is rewritten. The following inverse
 cleanup removes the introduced projection while retaining both producer bindings.
 No general case-to-projection rewrite is enabled and ANF still runs once.
+
+
+### O1 composition and convergence
+
+The final retained pipeline is binder freshening, static lifting, one traversal
+of nonrecursive/recursive unused-parameter removal, one ANF normalization, the
+accepted inlining/dead-code cleanup, constructor and representation cleanup, then
+bounded constant folding with cleanup. Recursion encoding follows optimization.
+Only freshening and builtin/constant sharing in lowering follow recursion encoding;
+there is no second ANF pass and no optimizer loop around the entire program.
+
+Cleanup stops on unchanged pointers. The traversal preserves pointers for no-op
+nodes, and each accepted rewrite returns a changed pointer only for real progress.
+This detects same-size binding reassociation as progress. Substitution consumes
+bindings or direct applications, case/inverse rules consume known eliminations,
+and no inverse rule rebuilds the representation it removes. Recursive call cycles
+remain Core data during optimization; cleanup does not execute their bodies.
+Composition tests check hygiene and root types after individual rewrites, ANF at
+valid cleanup boundaries, cleanup pointer idempotence, same-size progress and
+deterministic Core/closed UPLC from independent name supplies.
+
+Full O1 structural idempotence is deliberately not promised. Signature removal
+runs once before cleanup, so a constant branch removed later can expose an unused
+parameter for a future invocation. Constant folding has one shared 128-attempt
+allowance per invocation, including failed attempts; a second invocation can fold
+remaining calls. The production compiler invokes O1 once. Tests cover both limits,
+semantic equivalence across invocations and an ordinary composition that does reach
+an equivalent structural result after another run. They do not reset the budget
+inside a whole-program fixed point.
+
+The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,
+`-O1` and `--optimize 0|1` override the owning project's integer `optimize: 0|1`.
+O0 retains ordinary lowering with only required recursion encoding. Explicit
+comptime evaluation remains O0, and enabled trace generation/order is independent
+of optimization level. No O2 or per-pass configuration is exposed. Runtime budget
+regression checks remain in the separate explicit performance workspace.

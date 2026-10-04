@@ -1,0 +1,43 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/composition.rs
+expression: "format!(\"{}\\n--- isolated before\\n{}\\n--- same-size reassociation\\n{}\\n--- cleanup fixed point\\n{}\\n--- lowered\\n{}\",\nsemantic_snapshot(&fixture), pretty(core), pretty(step), pretty(after),\nresult.uplc)"
+---
+--- unoptimized Core
+let f#3 : int -> int = let note#2 : int = trace "before" in 0 in
+\x#1 : int -> x#1 in
+f#3 42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_3 [f_3 (con integer 42)])
+    [(lam note_2 (lam x_1 x_1))
+      (force
+        [[(force (builtin trace)) (con string "before")] (delay (con integer 0))])]])
+--- optimized Core
+let note#4 : int = trace "before" in 0 in
+42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_2
+    [(lam note_1 (con integer 42))
+      (force [[builtin_2 (con string "before")] (delay (con integer 0))])])
+    (force (builtin trace))])
+--- result
+(con integer 42)
+--- logs
+["before"]
+--- isolated before
+let f#3 : int -> int = let note#2 : int = trace "before" in 0 in
+\x#1 : int -> x#1 in
+f#3 42
+--- same-size reassociation
+let note#2 : int = trace "before" in 0 in
+let f#3 : int -> int = \x#1 : int -> x#1 in
+f#3 42
+--- cleanup fixed point
+let note#2 : int = trace "before" in 0 in
+42
+--- lowered
+(program 1.1.0
+  [(lam note_2 (con integer 42))
+    (force
+      [[(force (builtin trace)) (con string "before")] (delay (con integer 0))])])

@@ -1,0 +1,37 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/composition.rs
+expression: "crate::harness::pass_snapshot(&arena, core,\nformat!(\"--- recursive cleanup fixed point (not evaluated)\\n{}\",\npretty(after)))"
+---
+--- unoptimized Core
+letrec
+  loop#1 : int -> int [static []] = \n#2 : int -> trace "loop" in loop#1 n#2
+in
+loop#1 0
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam loop_1 [loop_1 (con integer 0)])
+    [(lam self_3 [self_3 self_3])
+      (lam self_3
+        (lam n_2
+          (force
+            [[(force (builtin trace)) (con string "loop")] (delay [[self_3 self_3] n_2])])))]])
+--- optimized Core
+letrec
+  worker#5 : @delay int [static []] = \ -> delay (trace "loop" in force worker#5)
+in
+force worker#5
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam worker_4 (force worker_4))
+      [(lam self_2 [self_2 self_2])
+        (lam self_3
+          (delay
+            (force [[builtin_5 (con string "loop")] (delay (force [self_3 self_3]))])))]])
+    (force (builtin trace))])
+--- isolated pass
+--- recursive cleanup fixed point (not evaluated)
+letrec
+  worker#5 : @delay int [static []] = \ -> delay (trace "loop" in force worker#5)
+in
+force worker#5

@@ -1,0 +1,36 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/composition.rs
+expression: "format!(\"{}\\n--- second invocation\\n{}\\n--- second lowered\\n{}\",\nsemantic_snapshot(&fixture), pretty(twice), result.uplc)"
+---
+--- unoptimized Core
+let f#3 : int -> int -> int = \x#1 : int y#2 : int -> case@Bool true of
+  True -> y#2
+  False -> x#1 in
+addInteger (f#3 7 20) (f#3 7 22)
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_3
+    [[(builtin addInteger) [[f_3 (con integer 7)] (con integer 20)]]
+      [[f_3 (con integer 7)] (con integer 22)]])
+    (lam x_1 (lam y_2 (case (con bool True) x_1 y_2)))])
+--- optimized Core
+let f#6 : int -> int -> int = \x#4 : int y#5 : int -> y#5 in
+let anf#7 : int = f#6 7 20 in
+let anf#8 : int = f#6 7 22 in
+addInteger anf#7 anf#8
+--- optimized UPLC
+(program 1.1.0
+  [(lam f_3
+    [(lam anf_9
+      [(lam anf_10 [[(builtin addInteger) anf_9] anf_10])
+        [[f_3 (con integer 7)] (con integer 22)]])
+      [[f_3 (con integer 7)] (con integer 20)]])
+    (lam x_1 (lam y_2 y_2))])
+--- result
+(con integer 42)
+--- logs
+[]
+--- second invocation
+42
+--- second lowered
+(program 1.1.0 (con integer 42))

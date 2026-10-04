@@ -52,7 +52,7 @@ Done:
 - [x] `nash check`
 - [x] UPLC runtime (`nash-plutus`): conformance suite passes
 
-Implementation plans (Plan 08 is in progress; Plans 09 and 10 are complete):
+Implementation plans (Plans 08, 09 and 10 are complete):
 
 - [x] 01 Syntax: `'a` type vars, little/Big names, `trait`/`impl`, `=>` contexts, representation annotations, `validator module`, `tests` block, `do`, attributes, `name!()`, `comptime`, `assert`/`fail`/`todo`/`trace`; drop `Float`/`Char`/record extension types — [plans/01-syntax.md](plans/01-syntax.md)
 - [x] 02 Kinds: original declaration checking and representation rules (engine replaced by the follow-up) — [plans/02-kinds.md](plans/02-kinds.md)
@@ -63,7 +63,7 @@ Implementation plans (Plan 08 is in progress; Plans 09 and 10 are complete):
 - [x] 05 Exhaustiveness (`Nitpick/PatternMatches` port) — [plans/05-nitpick.md](plans/05-nitpick.md)
 - [x] 06 Diagnostics (`nash-report`, concise source labels, stable codes, JSON/LSP) — [plans/06-diagnostics.md](plans/06-diagnostics.md); [concise diagnostics refactor](plans/diagnostics-refactor.md) complete
 - [x] 07 Codegen: Core IR, monomorphization, decision trees, recursion, Data casts, UPLC lowering — [plans/07-codegen.md](plans/07-codegen.md)
-- [ ] 08 Optimizer: Single ANF normalization and optimization before recursion rewrite, inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md) (Retained scope of Chunks 1–10 accepted; bounded constant folding, restricted pair cancellation and O0/O1 build/test/config integration available; recursive unused-parameter removal complete; final composition review open)
+- [x] 08 Optimizer: Single ANF normalization and optimization before recursion rewrite, inlining, builtin force caching, DCE, case-of-known-ctor/constant folding — [plans/08-optimizer.md](plans/08-optimizer.md) (Retained scope complete: recursive unused parameters, bounded constant folding, restricted pair cancellation, O0/O1 build/test/config integration, and composition/convergence validation)
 - [x] 09 Validators + `nash build` — [plans/09-validators-build.md](plans/09-validators-build.md)
 - [x] 10 Testing: `tests` block, props, generators, shrinking, power-assert, `nash test` — [plans/10-testing.md](plans/10-testing.md)
 - [ ] 11 Macros + comptime — [plans/11-macros-comptime.md](plans/11-macros-comptime.md); includes explicit integer-dispatch AST and positional library macro (chunk 13), reusable call/binding/case-shaped macro inputs required in chunk 14 (library semantics deferred)

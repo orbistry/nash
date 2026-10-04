@@ -34,7 +34,7 @@ The `before` pipeline is O0 (recursion rewrite and lowering). The `after` pipeli
 is the accepted static lifting, pre-ANF unused-parameter removal, one ANF normalization and rules 1+2+3+4 plus safe dead-binding, recursive-reachability, representation cancellation, force/delay, known-Boolean/integer/bytes, bound-constructor, known-constructor field, known-list, literal-Data and IData/BData/ListData/MapData/ConstrData producer cleanup,
 then recursion rewrite, binder freshening and lowering with both Chunk 5 sharing steps. No second normalization
 or ANF-dependent cleanup runs after recursion rewriting. Rule 3 was accepted on 27 September 2026. These figures record current behavior, including overhead
-from ANF; they are not a claim that the incomplete optimizer beats O0 everywhere.
+from ANF; they are not a claim that O1 beats O0 everywhere.
 
 ## Explicit baseline updates
 
@@ -108,8 +108,8 @@ Builds and tests default to O1; these measurements still compare explicit O0 and
 
 ## Accepted constant folding
 
-Normal `measure`/`check` cover 178 cases: the original 108, 40 constant-folding
-fixtures and 30 pair fixtures. Both use production O1, including bounded folding. The user
+Normal `measure`/`check` include the original 108, 40 constant-folding
+fixtures and 30 pair fixtures, plus the recursive cases below. Both use production O1, including bounded folding. The user
 accepted the two shared-prefix size tradeoffs. Historical pre-integration evidence
 remains in `trials/constant-fold.json` and `docs/research/constant-fold-trial.md`;
 the old `constant-trial` command has been removed.

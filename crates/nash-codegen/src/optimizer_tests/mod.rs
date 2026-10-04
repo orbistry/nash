@@ -19,3 +19,5 @@ mod inverse;
 mod pair_projection;
 
 mod recursive_params;
+
+mod composition;
