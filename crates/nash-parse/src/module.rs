@@ -242,13 +242,18 @@ impl<'a> Parser<'a> {
         let decls = self.declarations()?;
 
         self.chomp(error::Module::Space)?;
-        let tests = self.one_of_with_fallback(
-            vec![Box::new(|parser: &mut Parser<'a>| {
-                parser.tests_block().map(Some)
-            })],
-            None,
-        )?;
-        self.chomp(error::Module::Space)?;
+        let mut tests = None;
+        let mut proofs = None;
+        loop {
+            if self.starts_keyword(b"tests") && tests.is_none() {
+                tests = Some(self.tests_block()?);
+            } else if self.starts_keyword(b"proof") && proofs.is_none() {
+                proofs = Some(self.proofs_block()?);
+            } else {
+                break;
+            }
+            self.chomp(error::Module::Space)?;
+        }
         if !self.is_eof() {
             return Err(error::Module::BadEnd(self.row, self.col));
         }
@@ -293,6 +298,7 @@ impl<'a> Parser<'a> {
             traits,
             impls,
             tests,
+            proofs,
             binops,
         })
     }

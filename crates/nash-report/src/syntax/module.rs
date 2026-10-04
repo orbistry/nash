@@ -273,6 +273,13 @@ pub(super) fn to_test_report(source: &Source<'_>, error: &Test<'_>, sr: Row, sc:
             "Expected a budget kind.",
             "Use `cpu` or `mem`, followed by an integer limit.",
         ),
+        Test::ProofBudget(r, c) => problem(
+            "UNSUPPORTED PROOF BUDGET",
+            r,
+            c,
+            "Execution-budget constraints are not supported in proof blocks.",
+            "Use tests to measure cpu/mem budgets; proofs use the configured CEK fuel limit.",
+        ),
         Test::WithinDuplicate(r, c) => problem(
             "DUPLICATE TEST BUDGET",
             r,

@@ -26,6 +26,7 @@ pub mod tests;
 #[cfg(test)]
 mod optimizer_tests;
 
+pub mod proofs;
 #[cfg(test)]
 #[path = "../tests/support/optimizer.rs"]
 mod snapshot_optimizer;

@@ -194,6 +194,9 @@ pub enum Context<'a> {
     Destructure,
     TestBody,
     TestGenerator,
+    ProofBody,
+    ProofDomain,
+    ProofPostcondition,
 }
 
 #[derive(Clone, Copy, Debug)]

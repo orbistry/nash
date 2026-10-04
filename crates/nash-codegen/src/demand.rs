@@ -141,6 +141,18 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
             }
             a.expr(test.body, owner, &scope, solved);
         }
+        for proof in module.proofs {
+            for body in proof.obligation.expressions() {
+                let owner = NodeId::expr(body);
+                a.owner(owner, None, solved);
+                let mut scope = env.clone();
+                for binder in proof.binders {
+                    a.expr(binder.domain, owner, &scope, solved);
+                    bind(binder.pattern, None, &mut scope);
+                }
+                a.expr(body, owner, &scope, solved);
+            }
+        }
     }
     loop {
         let previous = a.demands.clone();
@@ -606,6 +618,7 @@ mod graph_tests {
         }
         Module {
             tests: &[],
+            proofs: &[],
             traits: &[],
             impls: &[],
             kind: ModuleKind::Normal,

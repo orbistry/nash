@@ -420,6 +420,7 @@ fn compile_module<'s>(
     };
     if exclude_tests {
         module.tests = None;
+        module.proofs = None;
     }
     let name = module.name.map_or(expected_name, |name| name.value);
     let defaults = nash_can::defaults::imports(
@@ -615,7 +616,14 @@ fn scan_module(
                 .tests
                 .into_iter()
                 .filter(|_| include_tests)
-                .flat_map(|tests| tests.imports.iter()),
+                .flat_map(|tests| tests.imports.iter())
+                .chain(
+                    module
+                        .proofs
+                        .into_iter()
+                        .filter(|_| include_tests)
+                        .flat_map(|proofs| proofs.imports.iter()),
+                ),
         ) {
             if let Some(uri) = resolve_import(import.import.value, current, known_modules)
                 && !imports.contains(&uri)

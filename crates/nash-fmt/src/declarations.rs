@@ -5,6 +5,21 @@ use crate::{
 use nash_region::Position;
 use nash_source::*;
 
+type SpecificationBinders<'a> = Vec<(
+    &'a nash_region::Located<Pattern<'a>>,
+    &'a nash_region::Located<Expr<'a>>,
+)>;
+
+/// A private layout view shares formatting without changing the source AST types.
+struct SpecificationItem<'a> {
+    region: nash_region::Region,
+    name: &'a nash_region::Located<&'a str>,
+    expect: Expect,
+    budget: Option<Budget>,
+    binders: Option<SpecificationBinders<'a>>,
+    body: &'a Block<'a>,
+}
+
 impl Printer<'_> {
     pub fn exposing(&mut self, exposing: &Exposing<'_>, broken: bool) -> Doc {
         let doc = match exposing {
@@ -189,60 +204,117 @@ impl Printer<'_> {
             cat([Doc::Hard, methods]).nest(),
         ])
     }
-    fn tests(&mut self, tests: &Tests<'_>) -> Doc {
+    fn tests<'a>(&mut self, tests: &Tests<'a>) -> Doc {
+        let items = tests.tests.iter().map(|located| {
+            let test = &located.value;
+            let (binders, body) = match &test.body {
+                TestBody::Unit(body) => (None, *body),
+                TestBody::Prop { binders, body } => (
+                    Some(
+                        binders
+                            .iter()
+                            .map(|b| (b.value.pattern, b.value.generator))
+                            .collect(),
+                    ),
+                    *body,
+                ),
+            };
+            SpecificationItem {
+                region: located.region,
+                name: test.name,
+                expect: test.expect,
+                budget: test.budget,
+                binders,
+                body,
+            }
+        });
+        self.specification("tests", tests.imports, items)
+    }
+
+    fn proofs<'a>(&mut self, proofs: &Proofs<'a>) -> Doc {
+        let items = proofs.proofs.iter().map(|located| {
+            let proof = &located.value;
+            let (binders, body) = match &proof.body {
+                ProofBody::Unit(body) => (None, *body),
+                ProofBody::Prop { binders, body } => (
+                    Some(
+                        binders
+                            .iter()
+                            .map(|b| (b.value.pattern, b.value.domain))
+                            .collect(),
+                    ),
+                    *body,
+                ),
+            };
+            SpecificationItem {
+                region: located.region,
+                name: proof.name,
+                expect: proof.expect,
+                budget: None,
+                binders,
+                body,
+            }
+        });
+        self.specification("proof", proofs.imports, items)
+    }
+
+    fn specification<'a>(
+        &mut self,
+        keyword: &str,
+        imports: &[&Import<'a>],
+        items: impl Iterator<Item = SpecificationItem<'a>>,
+    ) -> Doc {
         let mut docs = Vec::new();
-        for import in tests.imports {
+        for import in imports {
             docs.push(self.import(import));
         }
-        for located in tests.tests {
-            let before = self.before(located.region.start);
-            let test = &located.value;
-            let kind = if matches!(test.body, TestBody::Prop { .. }) {
+        for item in items {
+            let before = self.before(item.region.start);
+            let kind = if item.binders.is_some() {
                 "prop"
             } else {
                 "test"
             };
-            let expectation = match test.expect {
+            let expectation = match item.expect {
                 Expect::Pass => "",
                 Expect::Fail => " fail",
                 Expect::FailOnce => " fail once",
             };
-            let budget = match test.budget {
+            let budget = match item.budget {
                 None => String::new(),
                 Some(Budget::Cpu(n)) => format!(" within (cpu {n})"),
                 Some(Budget::Mem(n)) => format!(" within (mem {n})"),
                 Some(Budget::Both { cpu, mem }) => format!(" within (cpu {cpu}, mem {mem})"),
             };
-            let body = match &test.body {
-                TestBody::Unit(b) => self.block(b.stmts, b.last),
-                TestBody::Prop { binders, body } => {
-                    let binders = join(
-                        binders.iter().map(|b| {
-                            let pattern = self.pattern(b.value.pattern, 0);
-                            let generator = self.expr(b.value.generator, 0);
-                            cat([pattern, text(" via "), generator])
-                        }),
-                        Doc::Hard,
-                    );
-                    cat([
-                        text("let"),
-                        cat([Doc::Hard, binders]).nest(),
-                        Doc::Hard,
-                        text("in"),
-                        cat([Doc::Hard, self.block(body.stmts, body.last)]).nest(),
-                    ])
-                }
+            let body = if let Some(binders) = item.binders {
+                let binders = join(
+                    binders.into_iter().map(|(pattern, value)| {
+                        let pattern = self.pattern(pattern, 0);
+                        let value = self.expr(value, 0);
+                        cat([pattern, text(" via "), value])
+                    }),
+                    Doc::Hard,
+                );
+                cat([
+                    text("let"),
+                    cat([Doc::Hard, binders]).nest(),
+                    Doc::Hard,
+                    text("in"),
+                    cat([Doc::Hard, self.block(item.body.stmts, item.body.last)]).nest(),
+                ])
+            } else {
+                self.block(item.body.stmts, item.body.last)
             };
             docs.push(cat([
                 before,
                 text(format!("{kind} ")),
-                self.literal(test.name.region),
+                self.literal(item.name.region),
                 text(format!("{expectation}{budget} =")),
                 cat([Doc::Hard, body]).nest(),
             ]));
         }
         cat([
-            text("tests"),
+            text(keyword),
             cat([Doc::Hard, join(docs, cat([Doc::Hard, Doc::Hard]))]).nest(),
         ])
     }
@@ -354,6 +426,9 @@ impl Printer<'_> {
         }
         if let Some(tests) = module.tests {
             chunks.push(self.tests(tests));
+        }
+        if let Some(proofs) = module.proofs {
+            chunks.push(self.proofs(proofs));
         }
         let trailing = self.before(Position::new(usize::MAX, usize::MAX));
         if chunks.is_empty() {

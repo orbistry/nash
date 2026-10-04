@@ -254,3 +254,10 @@ crates/nash-driver/base/  compiler-bundled Base (Nash source)
 - [diagnostics.md](diagnostics.md) — error reporting architecture
 - [stdlib.md](stdlib.md) — `nash/base` layout, prelude, `Builtin`
 - [cli.md](cli.md) — commands and outputs
+
+## Optional proof backend
+
+Module-local `proof` blocks mirror tests but use universally quantified symbolic
+`Proof` domains. `nash proof` verifies the compiled UPLC through PlutusCoreBlaster,
+CardanoLedgerApiBlaster and Lean-blaster. Results retain model assumptions,
+SMT trust and explicit execution limits, where exhaustion counts as rejection. See [proofs.md](proofs.md).

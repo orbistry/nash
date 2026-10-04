@@ -391,6 +391,11 @@ fn to_expr_report(
                 Context::Destructure => "destructuring pattern".into(),
                 Context::TestBody => "test body (which must return unit)".into(),
                 Context::TestGenerator => "property generator (which must be a generator)".into(),
+                Context::ProofBody => "proof body (which must return unit)".into(),
+                Context::ProofDomain => "symbolic proof domain".into(),
+                Context::ProofPostcondition => {
+                    "proof postcondition (which must map the returned value to bool)".into()
+                }
             };
             (*surroundings, label, *expected, hint)
         }

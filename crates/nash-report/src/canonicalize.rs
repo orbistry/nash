@@ -286,6 +286,35 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             expected,
             actual,
         } => arity(*region, name, "trait", *expected, *actual),
+        Error::ProofDomain { region } => Report::snippet(
+            "INVALID PROOF DOMAIN",
+            *region,
+            None,
+            Doc::text("Proof inputs require a symbolic domain from the bundled Proof module."),
+            Doc::text(
+                "Use `x via Proof.int` or a ledger domain such as `ctx via Proof.spendingV3`. Random generators are only available in tests.",
+            ),
+        ),
+        Error::ProofPartialExpectation { region } => Report::snippet(
+            "INVALID PARTIAL CORRECTNESS EXPECTATION",
+            *region,
+            None,
+            Doc::text(
+                "Proof.returns is a partial-correctness claim and cannot use fail or fail once.",
+            ),
+            Doc::text(
+                "Remove the failure modifier. The postcondition must hold on every successful return.",
+            ),
+        ),
+        Error::DuplicateProof {
+            name,
+            first,
+            second,
+        } => name_clash(
+            *first,
+            *second,
+            &format!("This file has multiple proofs named `{name}`."),
+        ),
         Error::DuplicateTest {
             name,
             first,
@@ -979,6 +1008,9 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::BadArity { .. } => "nash::names::bad_arity",
         Error::ExportNotFound { .. } => "nash::names::export_not_found",
         Error::ExportOpenAlias { .. } => "nash::names::export_open_alias",
+        Error::ProofDomain { .. } => "nash::proof::invalid_domain",
+        Error::ProofPartialExpectation { .. } => "nash::proof::invalid_expectation",
+        Error::DuplicateProof { .. } => "nash::names::duplicate_proof",
         Error::DuplicateTest { .. } => "nash::names::duplicate_test",
         Error::DuplicateDecl { .. } => "nash::names::duplicate_decl",
         Error::DuplicateType { .. } => "nash::names::duplicate_type",

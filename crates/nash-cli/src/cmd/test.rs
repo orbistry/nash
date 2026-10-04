@@ -193,7 +193,7 @@ impl Args {
     }
 }
 
-fn matches_filter(patterns: &[String], exact: bool, module: &str, name: &str) -> bool {
+pub(super) fn matches_filter(patterns: &[String], exact: bool, module: &str, name: &str) -> bool {
     patterns.is_empty()
         || patterns.iter().any(|pattern| {
             if let Some((wanted_module, wanted_name)) = pattern

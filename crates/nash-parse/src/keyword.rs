@@ -28,6 +28,7 @@ pub const RESERVED: &[&str] = &[
     "todo",
     "trace",
     "tests",
+    "proof",
     "validator",
 ];
 
@@ -197,6 +198,10 @@ impl<'a> Parser<'a> {
 
     pub fn keyword_validator<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
         self.keyword(b"validator", to_error)
+    }
+
+    pub fn keyword_proof<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {
+        self.keyword(b"proof", to_error)
     }
 
     pub fn keyword_tests<E>(&mut self, to_error: impl FnOnce(Row, Col) -> E) -> Result<(), E> {

@@ -30,6 +30,34 @@ struct PreparedDefinition<'a> {
     rigids: &'a [Variable],
 }
 
+/// A shared inference path accepts distinct declaration types, rather than
+/// manufacturing tests from proofs. Only test binders receive the PRNG type.
+enum Specification<'s, 'a> {
+    Test(&'s nash_ast::Test<'a>),
+    Proof(&'s nash_ast::Proof<'a>),
+}
+
+impl<'a> Specification<'_, 'a> {
+    fn name(&self) -> &'a Located<&'a str> {
+        match self {
+            Self::Test(t) => t.name,
+            Self::Proof(p) => p.name,
+        }
+    }
+    fn region(&self) -> Region {
+        match self {
+            Self::Test(t) => t.region,
+            Self::Proof(p) => p.region,
+        }
+    }
+    fn binders(&self) -> Vec<(&'a Located<Pattern<'a>>, &'a Located<Expr<'a>>)> {
+        match self {
+            Self::Test(t) => t.binders.iter().map(|b| (b.pattern, b.generator)).collect(),
+            Self::Proof(p) => p.binders.iter().map(|b| (b.pattern, b.domain)).collect(),
+        }
+    }
+}
+
 impl<'a> Solver<'a, '_> {
     pub(super) fn fresh(&mut self, uf: &mut UnionFind<'a>, rank: usize) -> Variable {
         self.register(uf, rank, Content::FlexVar(None))
@@ -688,12 +716,22 @@ impl<'a> Solver<'a, '_> {
                         self.infer_definition(uf, env, rank, state, &Rtv::new(), definition, false);
                     state = self.close_locals(uf, scope.state, scope.locals);
                 }
-                for test in module.tests {
-                    self.test_scope = true;
+                for specification in module
+                    .tests
+                    .iter()
+                    .map(Specification::Test)
+                    .chain(module.proofs.iter().map(Specification::Proof))
+                {
+                    let proof = matches!(specification, Specification::Proof(_));
+                    self.test_scope = if proof {
+                        SpecificationScope::Proof
+                    } else {
+                        SpecificationScope::Test
+                    };
                     let young = self.young_pool(rank);
                     let start = self.wanted.len();
                     let errors_before = state.errors.len();
-                    let binder = Binder::Named(test.name);
+                    let binder = Binder::Named(specification.name());
                     let unit = self.structure(
                         uf,
                         young,
@@ -707,66 +745,127 @@ impl<'a> Solver<'a, '_> {
                     let owners = self.owners.len();
                     self.owners.push(binder.node());
                     let mut patterns = Vec::new();
-                    for binder in test.binders {
+                    for (pattern, value) in specification.binders() {
                         let element = self.fresh(uf, young);
-                        let base = Some(nash_ast::primitives::BASE);
-                        let prng = self.structure(
-                            uf,
-                            young,
-                            FlatType::App1(
-                                nash_ast::ModuleName {
-                                    package: base,
-                                    name: "Prop",
-                                },
-                                "prng",
-                                vec![],
-                            ),
-                        );
-                        let pair =
-                            self.structure(uf, young, FlatType::Tuple1(element, prng, vec![]));
-                        let result = self.structure(
-                            uf,
-                            young,
-                            FlatType::App1(
-                                nash_ast::ModuleName {
-                                    package: base,
-                                    name: "Option",
-                                },
-                                "option",
-                                vec![pair],
-                            ),
-                        );
-                        let generator = self.structure(uf, young, FlatType::Fun1(prng, result));
+                        let expected = if proof {
+                            element
+                        } else {
+                            let base = Some(nash_ast::primitives::BASE);
+                            let prng = self.structure(
+                                uf,
+                                young,
+                                FlatType::App1(
+                                    nash_ast::ModuleName {
+                                        package: base,
+                                        name: "Prop",
+                                    },
+                                    "prng",
+                                    vec![],
+                                ),
+                            );
+                            let pair =
+                                self.structure(uf, young, FlatType::Tuple1(element, prng, vec![]));
+                            let result = self.structure(
+                                uf,
+                                young,
+                                FlatType::App1(
+                                    nash_ast::ModuleName {
+                                        package: base,
+                                        name: "Option",
+                                    },
+                                    "option",
+                                    vec![pair],
+                                ),
+                            );
+                            self.structure(uf, young, FlatType::Fun1(prng, result))
+                        };
+                        let context = if proof {
+                            Context::ProofDomain
+                        } else {
+                            Context::TestGenerator
+                        };
                         state = self.infer_expr(
                             uf,
                             env,
                             young,
                             state,
                             &Rtv::new(),
-                            binder.generator,
-                            Expected::FromContext(
-                                binder.generator.region,
-                                Context::TestGenerator,
-                                generator,
-                            ),
+                            value,
+                            Expected::FromContext(value.region, context, expected),
                         );
-                        patterns.push((binder.pattern, PExpected::NoExpectation(element)));
+                        patterns.push((pattern, PExpected::NoExpectation(element)));
                     }
                     let scope = self.infer_patterns(uf, env, young, state, &patterns);
-                    state = self.infer_expr(
-                        uf,
-                        &scope.env,
-                        young,
-                        scope.state,
-                        &Rtv::new(),
-                        test.body,
-                        Expected::FromContext(test.region, Context::TestBody, unit),
-                    );
+                    state = match &specification {
+                        Specification::Test(test) => self.infer_expr(
+                            uf,
+                            &scope.env,
+                            young,
+                            scope.state,
+                            &Rtv::new(),
+                            test.body,
+                            Expected::FromContext(test.region, Context::TestBody, unit),
+                        ),
+                        Specification::Proof(proof) => match proof.obligation {
+                            nash_ast::ProofObligation::Execution { body, .. } => self.infer_expr(
+                                uf,
+                                &scope.env,
+                                young,
+                                scope.state,
+                                &Rtv::new(),
+                                body,
+                                Expected::FromContext(
+                                    specification.region(),
+                                    Context::ProofBody,
+                                    unit,
+                                ),
+                            ),
+                            nash_ast::ProofObligation::Returns {
+                                computation,
+                                postcondition,
+                            } => {
+                                let returned = self.fresh(uf, young);
+                                let state = self.infer_expr(
+                                    uf,
+                                    &scope.env,
+                                    young,
+                                    scope.state,
+                                    &Rtv::new(),
+                                    computation,
+                                    Expected::NoExpectation(returned),
+                                );
+                                let boolean = self.structure(
+                                    uf,
+                                    young,
+                                    FlatType::App1(
+                                        nash_ast::primitives::primitive_home(),
+                                        "bool",
+                                        vec![],
+                                    ),
+                                );
+                                let predicate =
+                                    self.structure(uf, young, FlatType::Fun1(returned, boolean));
+                                self.infer_expr(
+                                    uf,
+                                    &scope.env,
+                                    young,
+                                    state,
+                                    &Rtv::new(),
+                                    postcondition,
+                                    Expected::FromContext(
+                                        postcondition.region,
+                                        Context::ProofPostcondition,
+                                        predicate,
+                                    ),
+                                )
+                            }
+                        },
+                    };
                     self.retry_fields(uf, young, &mut state.errors);
                     state = self.resolve_wanted(uf, young, state, start, Some(binder), false);
                     state = self.close_locals(uf, state, scope.locals);
                     self.owners.truncate(owners);
-                    // Tests own solved metadata and evidence without entering the value environment.
+                    // Specifications own solved metadata and evidence without entering the value environment.
                     state = self
                         .finish_bindings(
                             uf,
@@ -785,7 +884,7 @@ impl<'a> Solver<'a, '_> {
                         )
                         .state;
                 }
-                self.test_scope = false;
+                self.test_scope = SpecificationScope::Production;
                 state.env = env.clone();
                 return state;
             }

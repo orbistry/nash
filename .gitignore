@@ -11,3 +11,6 @@ target/
 elm/
 polarity/
 scratch/
+
+# Generated proof projects and solver transcripts
+examples/proofs/build/

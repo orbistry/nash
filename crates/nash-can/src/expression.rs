@@ -1712,8 +1712,8 @@ pub fn gather_typed_args<'a>(
     Ok((typed_args, current_type))
 }
 
-/// Only the outer test block is sequencing; nested expressions retain monadic do.
-pub(crate) fn canonicalize_test_block<'a>(
+/// Only the outer specification block is sequencing; nested expressions retain monadic do.
+pub(crate) fn canonicalize_specification_block<'a>(
     bump: &'a Bump,
     env: &Scope<'_, 'a>,
     stmts: &[&'a Located<nash_source::Stmt<'a>>],
@@ -1732,7 +1732,9 @@ pub(crate) fn canonicalize_test_block<'a>(
             stmt.region,
             free,
             warnings,
-            |env, free, warnings| canonicalize_test_block(bump, env, rest, last, free, warnings),
+            |env, free, warnings| {
+                canonicalize_specification_block(bump, env, rest, last, free, warnings)
+            },
         );
     }
     let (pattern, expr) = match stmt.value {
@@ -1748,7 +1750,8 @@ pub(crate) fn canonicalize_test_block<'a>(
         pattern::verify(bump, env.module, DuplicatePatternContext::Destruct, pattern)?;
     let inner = env.add_locals(&bindings)?;
     let mut body_free = FreeLocals::new();
-    let body = canonicalize_test_block(bump, &inner, rest, last, &mut body_free, warnings)?;
+    let body =
+        canonicalize_specification_block(bump, &inner, rest, last, &mut body_free, warnings)?;
     let outer = verify_bindings(WarningContext::Def, &bindings, body_free, warnings);
     merge_free_locals(free, outer, false);
     Ok(bump.alloc(Located::at(

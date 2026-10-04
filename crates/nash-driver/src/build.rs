@@ -331,3 +331,37 @@ pub fn compile_tests_matching_with(
     }
     Ok(outputs)
 }
+
+/// Compile only selected proof roots. Random generators are never evaluated.
+pub fn compile_proofs_matching_with(
+    solved: Solved<'_>,
+    mut config_for: impl FnMut(&url::Url) -> Option<nash_config::Build>,
+    mut include: impl FnMut(&str, &str) -> bool,
+) -> Result<Vec<nash_proof::ProofProgram>, BuildError> {
+    let arena = Arena::new();
+    let build = Build::new(solved.modules.iter().map(|module| Input {
+        module: module.module,
+        types: &module.types,
+        tables: &module.tables,
+    }));
+    let mut outputs = Vec::new();
+    for module in &solved.modules {
+        let Some(config) = config_for(&module.uri) else {
+            continue;
+        };
+        outputs.extend(
+            nash_codegen::proofs::compile_proofs_matching(
+                &arena,
+                &build,
+                module.module.name,
+                config.plutus_version,
+                |proof| include(module.module.name.name, proof.name.value),
+            )
+            .map_err(|error| BuildError {
+                module: module.module.name.name.to_owned(),
+                message: error.to_string(),
+            })?,
+        );
+    }
+    Ok(outputs)
+}
