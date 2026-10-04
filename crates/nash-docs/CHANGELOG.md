@@ -1,5 +1,11 @@
 # nash-docs
 
+## 0.2.1 — 2026-09-30
+
+### Patch changes
+
+- Updated dependencies: nash-driver@0.12.1
+
 ## 0.2.0 — 2026-09-27
 
 ### Minor changes

@@ -1,5 +1,35 @@
 # nash-ir
 
+## 0.4.0 — 2026-09-30
+
+### Minor changes
+
+- [8874c1cf](https://github.com/orbistry/nash/commit/8874c1cf4ea9c6aa7ac8e9944df1df0d2943dc7b) Add direct lambda application reduction with strict ANF bindings and iterate it with alias propagation to a fixed point.
+  
+  Permit repeated-use propagation of integer and BLS constants and byte strings up to 64 bytes. — Thanks @MicroProofs!
+- [11888aaa](https://github.com/orbistry/nash/commit/11888aaa4698a78f870b11206a10c9f7e61a304d) Remove unused, safe-to-discard Core bindings in the accepted optimizer cleanup loop. — Thanks @MicroProofs!
+- [e2c267c4](https://github.com/orbistry/nash/commit/e2c267c4361be563c2bff1819d5d770d7209c462) Remove recursive members unreachable from their group's continuation in the accepted optimizer cleanup loop. — Thanks @MicroProofs!
+- [609b1445](https://github.com/orbistry/nash/commit/609b14454e4c9bc0c3f061b5edbfb0afd9f5b212) Add single-use ANF value substitution and immediate computed-return elimination.
+  
+  Preserve forced builtin bindings for top-level sharing regardless of use count. — Thanks @MicroProofs!
+- [2ca2fc5f](https://github.com/orbistry/nash/commit/2ca2fc5f0bcd01653aa1026d9fa617819477c7de) Add typed Core inlining for shared identity and single-builtin wrappers at fully applied direct calls, composed with the accepted binding cleanup passes. — Thanks @MicroProofs!
+- [cfecc38e](https://github.com/orbistry/nash/commit/cfecc38eae60ae0b92c1fa9b849888a491e50a54) Require result types on every Core node and retain source and compiler-generated
+  runtime metadata through codegen and recursion rewriting. Core operation variants
+  move to CoreKind; builder APIs require result types where they cannot be derived. — Thanks @MicroProofs!
+- [8e03e756](https://github.com/orbistry/nash/commit/8e03e756620f738d08850439a76ace8b9a8d9c67) Add shared Core occurrence, scope, discard-safety and structural-size analyses,
+  plus capture-free substitution and binder freshening for future optimizer passes. — Thanks @MicroProofs!
+- [b26ce865](https://github.com/orbistry/nash/commit/b26ce86553341f082c6abb022ab534c92aa3f0b9) Add known Boolean case folding to the Core optimizer cleanup fixed point. — Thanks @MicroProofs!
+- [821a419f](https://github.com/orbistry/nash/commit/821a419f6668c301409acc96f80f171d4d312f44) Add a standalone Core pass for folding direct native-constructor cases while preserving strict field evaluation.
+  
+  Group Boolean and constructor folding in `known_case`, and unused-binding and recursive reachability cleanup in `dead_code`. — Thanks @MicroProofs!
+- [6843bde7](https://github.com/orbistry/nash/commit/6843bde7a2dc1f34e6a5a15bcc7a837e01446f67) Add a standalone unused-parameter pass for nonrecursive helpers with exact direct calls, preserving strict argument evaluation before or after ANF. — Thanks @MicroProofs!
+- [f3a7cacb](https://github.com/orbistry/nash/commit/f3a7cacb4019eb8fc33ed0cd4843279891d76034) Add a standalone Core pass for direct force/delay cancellation. — Thanks @MicroProofs!
+- [98881e48](https://github.com/orbistry/nash/commit/98881e48209fcf58c2383eb055e65d6c5289a259) Add typed ANF variable-alias and nonduplicating literal propagation. — Thanks @MicroProofs!
+- [1741eb00](https://github.com/orbistry/nash/commit/1741eb0038091c949f7756e61812afb90bc29c58) Add static-parameter lifting, typed A-normalization and structural invariant
+  checks for Core. Preserve application staging and branch, lambda, delay and trace
+  execution boundaries. Support explicitly delayed recursive workers after lifting
+  all static parameters. — Thanks @MicroProofs!
+
 ## 0.3.4 — 2026-09-27
 
 ### Patch changes

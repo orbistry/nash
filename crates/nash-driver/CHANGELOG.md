@@ -1,5 +1,13 @@
 # nash-driver
 
+## 0.12.1 — 2026-09-30
+
+### Patch changes
+
+- [fb196b40](https://github.com/orbistry/nash/commit/fb196b4023a38861412f89675edec61d88b311de) Scan each module for its reserved-name check and imports with a single parse, and run the scans concurrently on Tokio's blocking pool. — Thanks @MicroProofs!
+- [37d792a8](https://github.com/orbistry/nash/commit/37d792a8f3edad734307e40dfc1b13c3a04a40c7) Read uncached module sources concurrently without holding the database lock across file I/O. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.5.0
+
 ## 0.12.0 — 2026-09-27
 
 ### Minor changes

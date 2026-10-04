@@ -1,6 +1,6 @@
 [package]
 name = "nash-driver"
-version = "0.12.0"
+version = "0.12.1"
 edition.workspace = true
 description = "Build system and driver for Nash projects"
 homepage.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 
 [dependencies]
 nash-test = { path = "../nash-test", version = "0.4.2" }
-nash-codegen = { path = "../nash-codegen", version = "0.4.3" }
+nash-codegen = { path = "../nash-codegen", version = "0.5.0" }
 nash-plutus = { path = "../nash-plutus", version = "0.3.3" }
 async-trait.workspace = true
 bumpalo.workspace = true
