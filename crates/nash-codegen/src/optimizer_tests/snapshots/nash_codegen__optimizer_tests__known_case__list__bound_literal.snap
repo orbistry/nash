@@ -23,14 +23,9 @@ mkCons (addInteger (case@List alias2#15 of
       xs_13])
     (con (list integer) [21, 7])])
 --- optimized Core
-let anf#10 : int = addInteger 21 21 in
-mkCons anf#10 (con (list integer) [21, 7])
+(con (list integer) [42, 21, 7])
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam anf_1 [[builtin_2 anf_1] (con (list integer) [21, 7])])
-      [[(builtin addInteger) (con integer 21)] (con integer 21)]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con (list integer) [42, 21, 7]))
 --- isolated pass
 --- isolated ANF input
 let xs#13 : list int = (con (list integer) [21, 7]) in

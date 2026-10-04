@@ -27,6 +27,17 @@ pub fn eval_closed<'a>(
     bindings: &[(Binder<'a>, &'a Core<'a>)],
     core: &'a Core<'a>,
 ) -> Result<&'a Constant<'a>, ComptimeError<'a>> {
+    eval_closed_budget(arena, bindings, core, ExBudget::default())
+}
+
+/// Internal bounded evaluator for optimizer trials. Explicit comptime keeps its
+/// existing default budget and error reporting through `eval_closed` above.
+pub(crate) fn eval_closed_budget<'a>(
+    arena: &'a Arena,
+    bindings: &[(Binder<'a>, &'a Core<'a>)],
+    core: &'a Core<'a>,
+    budget: ExBudget,
+) -> Result<&'a Constant<'a>, ComptimeError<'a>> {
     let module = Module {
         bindings: arena.alloc_slice_copy(bindings),
         root: core,
@@ -35,10 +46,9 @@ pub fn eval_closed<'a>(
         program::Error::NotClosed(name) => ComptimeError::NotClosed(name),
         other => ComptimeError::Assembly(other),
     })?;
-    let evaluation =
-        compiled
-            .program
-            .eval_version_budget(arena, PlutusVersion::V3, ExBudget::default());
+    let evaluation = compiled
+        .program
+        .eval_version_budget(arena, PlutusVersion::V3, budget);
     match evaluation.term {
         Ok(Term::Constant(constant)) => Ok(constant),
         Ok(_) => Err(ComptimeError::NotAConstant),

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 160
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmain : bool\nmain =\n    let\n        x = 1\n    in\n    if equalsInteger x 1 then True else False\n"
 ---
 --- unoptimized Core
@@ -25,14 +24,9 @@ main#1
       (lam value_6 value_6)])
     (lam value_5 value_5)])
 --- optimized Core
-let anf#14 : bool = equalsInteger 1 1 in
-case@Bool anf#14 of
-  True -> true
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 (case anf_1 (con bool False) (con bool True)))
-    [[(builtin equalsInteger) (con integer 1)] (con integer 1)]])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

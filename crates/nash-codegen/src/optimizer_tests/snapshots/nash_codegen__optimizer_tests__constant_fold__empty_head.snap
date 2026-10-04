@@ -1,0 +1,19 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+headList (con (list integer) [])
+--- unoptimized UPLC
+(program 1.1.0 [(force (builtin headList)) (con (list integer) [])])
+--- optimized Core
+headList (con (list integer) [])
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1 [builtin_1 (con (list integer) [])]) (force (builtin headList))])
+--- result
+error: Runtime(EmptyList([]))
+--- logs
+[]
+--- budget
+cpu: 83250, memory: 132

@@ -1,7 +1,6 @@
 ---
 source: crates/nash-codegen/src/program/tests.rs
-assertion_line: 32
-expression: "crate::harness::pass_snapshot(&arena, reference,\nformat!(\"--- Core before substitution\\n{}\\n--- UPLC before substitution\\n{}\\n--- Core after substitution\\n{}\\n--- UPLC after substitution\\n{}\",\nnash_ir::pretty::pretty(reference), pretty::term(original_program.named),\nnash_ir::pretty::pretty(candidate), pretty::term(changed_program.named),))"
+expression: "format!(\"{}\\n--- isolated pass\\n--- Core before substitution\\n{}\\n--- UPLC before substitution\\n{}\\n--- Core after substitution\\n{}\\n--- UPLC after substitution\\n{}\",\nprepared.snapshot(), nash_ir::pretty::pretty(reference),\npretty::term(original_program.named), nash_ir::pretty::pretty(candidate),\npretty::term(changed_program.named),)"
 ---
 --- unoptimized Core
 let y#1 : int = 20 in
@@ -16,9 +15,9 @@ addInteger target#2 y#1
       y_1])
     (con integer 20)])
 --- optimized Core
-addInteger 20 10
+30
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 20)] (con integer 10)])
+(program 1.1.0 (con integer 30))
 --- isolated pass
 --- Core before substitution
 let y#1 : int = 20 in

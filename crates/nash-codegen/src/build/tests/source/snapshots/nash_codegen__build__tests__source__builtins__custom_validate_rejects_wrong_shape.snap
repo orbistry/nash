@@ -104,9 +104,7 @@ case@Pair projection#53 of
       (builtin equalsInteger)])
     (lam value_51 value_51)])
 --- optimized Core
-let anf#80 : Data = bData (con bytestring #aa) in
-let anf#81 : list Data = mkCons anf#80 (con (list data) []) in
-let anf#82 : Data = constrData 0 anf#81 in
+let anf#82 : Data = constrData 0 (con (list data) [(B #aa)]) in
 let leaf#23 : @delay Main.Datum = delay error in
 let field#24 : pair int (list Data) = unConstrData anf#82 in
 let decoded#66 : Main.Datum = case@Pair field#24 of
@@ -130,53 +128,47 @@ case@Pair projection#68 of
     Cons field#71 fieldTail#72 -> unIData field#71
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_36
-    [(lam builtin_37
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam leaf_4
-              [(lam field_5
-                [(lam decoded_19
-                  [(lam projection_20
+  [(lam builtin_24
+    [(lam anf_1
+      [(lam leaf_2
+        [(lam field_3
+          [(lam decoded_17
+            [(lam projection_18
+              (case
+                projection_18
+                (lam tag_19
+                  (lam fields_20
                     (case
-                      projection_20
-                      (lam tag_21
-                        (lam fields_22
-                          (case
-                            fields_22
-                            (lam field_27 (lam fieldTail_34 [(builtin unIData) field_27]))
-                            (error))))))
-                    [(builtin unConstrData) decoded_19]])
-                  (case
-                    field_5
-                    (lam field_6
-                      (lam field_7
-                        [(lam anf_8
-                          [(lam anf_9
-                            (case
-                              anf_9
-                              (force leaf_4)
-                              (case
-                                field_7
-                                (lam field_10
-                                  (lam field_11
-                                    [(lam generated_35
-                                      (force
-                                        [[[[[[builtin_36 generated_35] (delay (force leaf_4))] (delay (force leaf_4))]
-                                          (delay (force leaf_4))]
-                                          (delay (case field_11 (lam field_16 (lam field_17 (force leaf_4))) anf_3))]
-                                          (delay (force leaf_4))]))
-                                      field_10]))
-                                (force leaf_4))))
-                            [anf_8 (con integer 0)]])
-                          [(builtin equalsInteger) field_6]])))])
-                [(builtin unConstrData) anf_3]])
-              (delay (error))])
-            [[(builtin constrData) (con integer 0)] anf_2]])
-          [[builtin_37 anf_1] (con (list data) [])]])
-        [(builtin bData) (con bytestring #aa)]])
-      (force (builtin mkCons))])
+                      fields_20
+                      (lam field_21 (lam fieldTail_22 [(builtin unIData) field_21]))
+                      (error))))))
+              [(builtin unConstrData) decoded_17]])
+            (case
+              field_3
+              (lam field_4
+                (lam field_5
+                  [(lam anf_6
+                    [(lam anf_7
+                      (case
+                        anf_7
+                        (force leaf_2)
+                        (case
+                          field_5
+                          (lam field_8
+                            (lam field_9
+                              [(lam generated_23
+                                (force
+                                  [[[[[[builtin_24 generated_23] (delay (force leaf_2))] (delay (force leaf_2))]
+                                    (delay (force leaf_2))]
+                                    (delay (case field_9 (lam field_14 (lam field_15 (force leaf_2))) anf_1))]
+                                    (delay (force leaf_2))]))
+                                field_8]))
+                          (force leaf_2))))
+                      [anf_6 (con integer 0)]])
+                    [(builtin equalsInteger) field_4]])))])
+          [(builtin unConstrData) anf_1]])
+        (delay (error))])
+      [[(builtin constrData) (con integer 0)] (con (list data) [(B #aa)])]])
     (force (builtin chooseData))])
 --- result
 error: ExplicitErrorTerm

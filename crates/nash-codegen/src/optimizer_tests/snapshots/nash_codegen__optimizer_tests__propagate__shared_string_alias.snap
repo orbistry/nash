@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/propagate.rs
-assertion_line: 40
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline\\n{}\\n--- core after\\n{}\\n--- candidate\\n{}\",\npretty(before), output(&baseline), pretty(after), output(&candidate)))"
 ---
 --- unoptimized Core
@@ -12,12 +11,9 @@ appendString alias#2 alias#2
   [(lam text_1 [(lam alias_2 [[(builtin appendString) alias_2] alias_2]) text_1])
     (con string "shared payload")])
 --- optimized Core
-let text#3 : string = "shared payload" in
-appendString text#3 text#3
+"shared payloadshared payload"
 --- optimized UPLC
-(program 1.1.0
-  [(lam text_1 [[(builtin appendString) text_1] text_1])
-    (con string "shared payload")])
+(program 1.1.0 (con string "shared payloadshared payload"))
 --- isolated pass
 --- core before
 let text#1 : string = "shared payload" in

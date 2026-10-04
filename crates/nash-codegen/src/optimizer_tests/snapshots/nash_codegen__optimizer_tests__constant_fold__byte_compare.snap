@@ -1,0 +1,20 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+lessThanByteString (con bytestring #616263) (con bytestring #616264)
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin lessThanByteString) (con bytestring #616263)]
+    (con bytestring #616264)])
+--- optimized Core
+true
+--- optimized UPLC
+(program 1.1.0 (con bool True))
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 109173, memory: 601

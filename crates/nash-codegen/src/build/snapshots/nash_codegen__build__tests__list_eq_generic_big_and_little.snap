@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nsame : Eq (list 'a) => list 'a -> list 'a -> bool\nsame xs ys = eq xs ys\nbig : list Int\nbig = [1, 2]\nsmall : list int\nsmall = [1, 2]\nmain = if same big big then same small small else False\n"
 ---
 --- unoptimized Core
@@ -119,8 +118,7 @@ letrec
         True -> eq#46 field#54 field#59
         False -> false
 in
-let anf#77 : list int = mkCons 2 (con (list integer) []) in
-let small#67 : list int = mkCons 1 anf#77 in
+let small#67 : list int = (con (list integer) [1, 2]) in
 let anf#69 : List 'erased = listData big#44 in
 let anf#70 : List 'erased = listData big#44 in
 let anf#78 : bool = equalsData anf#69 anf#70 in
@@ -129,23 +127,21 @@ case@Bool anf#78 of
   False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_26
+  [(lam builtin_25
     [(lam fromInt_4
       [(lam anf_5
         [(lam anf_6
           [(lam anf_7
             [(lam big_8
               [(lam eq_20
-                [(lam anf_21
-                  [(lam small_22
+                [(lam small_21
+                  [(lam anf_22
                     [(lam anf_23
-                      [(lam anf_24
-                        [(lam anf_25 (case anf_25 (con bool False) [[eq_20 small_22] small_22]))
-                          [[(builtin equalsData) anf_23] anf_24]])
-                        [(builtin listData) big_8]])
+                      [(lam anf_24 (case anf_24 (con bool False) [[eq_20 small_21] small_21]))
+                        [[(builtin equalsData) anf_22] anf_23]])
                       [(builtin listData) big_8]])
-                    [[builtin_26 (con integer 1)] anf_21]])
-                  [[builtin_26 (con integer 2)] (con (list integer) [])]])
+                    [(builtin listData) big_8]])
+                  (con (list integer) [1, 2])])
                 [(lam self_9 [self_9 self_9])
                   (lam self_10
                     (lam xs_11
@@ -163,8 +159,8 @@ case@Bool anf#78 of
                                       [[(builtin equalsInteger) field_15] field_17]]))
                                 (con bool False))))
                           (case ys_12 (lam field_13 (lam field_14 (con bool False))) (con bool True))))))]])
-              [[builtin_26 anf_5] anf_7]])
-            [[builtin_26 anf_6] (con (list data) [])]])
+              [[builtin_25 anf_5] anf_7]])
+            [[builtin_25 anf_6] (con (list data) [])]])
           [fromInt_4 (con integer 2)]])
         [fromInt_4 (con integer 1)]])
       (builtin iData)])

@@ -36,3 +36,5 @@ mod test_support {
 }
 
 pub mod inverse;
+
+pub mod constant_fold;

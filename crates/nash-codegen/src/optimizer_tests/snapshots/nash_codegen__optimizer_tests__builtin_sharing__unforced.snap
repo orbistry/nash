@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/builtin_sharing.rs
-assertion_line: 45
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -8,9 +7,9 @@ addInteger 20 22
 --- unoptimized UPLC
 (program 1.1.0 [[(builtin addInteger) (con integer 20)] (con integer 22)])
 --- optimized Core
-addInteger 20 22
+42
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 20)] (con integer 22)])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- uplc before
 [[(builtin addInteger) (con integer 20)] (con integer 22)]

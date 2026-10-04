@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+divideInteger -7 3
+--- unoptimized UPLC
+(program 1.1.0 [[(builtin divideInteger) (con integer -7)] (con integer 3)])
+--- optimized Core
+-3
+--- optimized UPLC
+(program 1.1.0 (con integer -3))
+--- result
+(con integer -3)
+--- logs
+[]
+--- budget
+cpu: 212030, memory: 601

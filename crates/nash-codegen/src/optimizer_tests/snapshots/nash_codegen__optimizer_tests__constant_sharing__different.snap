@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/constant_sharing.rs
-assertion_line: 34
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -11,15 +10,9 @@ addInteger (subtractInteger 100 1) (subtractInteger 99 2)
     [[(builtin subtractInteger) (con integer 100)] (con integer 1)]]
     [[(builtin subtractInteger) (con integer 99)] (con integer 2)]])
 --- optimized Core
-let anf#1 : int = subtractInteger 100 1 in
-let anf#2 : int = subtractInteger 99 2 in
-addInteger anf#1 anf#2
+196
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_3
-    [(lam anf_4 [[(builtin addInteger) anf_3] anf_4])
-      [[(builtin subtractInteger) (con integer 99)] (con integer 2)]])
-    [[(builtin subtractInteger) (con integer 100)] (con integer 1)]])
+(program 1.1.0 (con integer 196))
 --- isolated pass
 --- uplc before
 [[(builtin addInteger)

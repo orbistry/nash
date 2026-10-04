@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1508
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nselect : list int -> bool\nselect xs =\n    let\n        first = Builtin.dropList 2 xs\n        second = Builtin.dropList 3 xs\n    in\n    if Builtin.nullList first then Builtin.nullList second else False\nmain = select [1]\n"
 ---
 --- unoptimized Core
@@ -33,7 +32,7 @@ main#1
       (lam value_9 value_9)])
     (lam value_8 value_8)])
 --- optimized Core
-let anf#23 : list int = mkCons 1 (con (list integer) []) in
+let anf#23 : list int = (con (list integer) [1]) in
 let second#15 : list int = dropList 3 anf#23 in
 let first#16 : list int = dropList 2 anf#23 in
 let anf#21 : bool = nullList first#16 in
@@ -44,16 +43,14 @@ case@Bool anf#21 of
 (program 1.1.0
   [(lam builtin_5
     [(lam builtin_6
-      [(lam builtin_7
-        [(lam anf_1
-          [(lam second_2
-            [(lam first_3
-              [(lam anf_4 (case anf_4 (con bool False) [builtin_5 second_2]))
-                [builtin_5 first_3]])
-              [[builtin_6 (con integer 2)] anf_1]])
-            [[builtin_6 (con integer 3)] anf_1]])
-          [[builtin_7 (con integer 1)] (con (list integer) [])]])
-        (force (builtin mkCons))])
+      [(lam anf_1
+        [(lam second_2
+          [(lam first_3
+            [(lam anf_4 (case anf_4 (con bool False) [builtin_5 second_2]))
+              [builtin_5 first_3]])
+            [[builtin_6 (con integer 2)] anf_1]])
+          [[builtin_6 (con integer 3)] anf_1]])
+        (con (list integer) [1])])
       (force (builtin dropList))])
     (force (builtin nullList))])
 --- result

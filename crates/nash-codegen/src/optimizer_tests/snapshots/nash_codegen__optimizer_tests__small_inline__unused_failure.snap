@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/small_inline.rs
-assertion_line: 37
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline uplc\\n{}\\n--- core after\\n{}\\n--- optimized uplc\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -19,21 +18,18 @@ addInteger (increment#3 1 (trace "failure" in error)) (increment#3 (trace "unrea
     (lam x_1 (lam unused_2 [[(builtin addInteger) x_1] (con integer 1)]))])
 --- optimized Core
 let arg#7 : int = trace "failure" in error in
-let anf#9 : int = addInteger 1 1 in
 let arg#8 : int = trace "unreached" in 1 in
 let anf#10 : int = addInteger arg#8 1 in
-addInteger anf#9 anf#10
+addInteger 2 anf#10
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
+  [(lam builtin_4
     [(lam arg_1
-      [(lam anf_2
-        [(lam arg_3
-          [(lam anf_4 [[(builtin addInteger) anf_2] anf_4])
-            [[(builtin addInteger) arg_3] (con integer 1)]])
-          (force [[builtin_5 (con string "unreached")] (delay (con integer 1))])])
-        [[(builtin addInteger) (con integer 1)] (con integer 1)]])
-      (force [[builtin_5 (con string "failure")] (delay (error))])])
+      [(lam arg_2
+        [(lam anf_3 [[(builtin addInteger) (con integer 2)] anf_3])
+          [[(builtin addInteger) arg_2] (con integer 1)]])
+        (force [[builtin_4 (con string "unreached")] (delay (con integer 1))])])
+      (force [[builtin_4 (con string "failure")] (delay (error))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

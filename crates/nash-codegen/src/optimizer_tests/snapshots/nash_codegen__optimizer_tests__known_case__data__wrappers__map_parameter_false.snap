@@ -19,14 +19,10 @@ case@Data mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42))
     [(builtin mapData)
       (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
 --- optimized Core
-let data_operand#3 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
-let anf#2 : Data = mapData data_operand#3 in
-data_operand#3
+(con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
 --- optimized UPLC
 (program 1.1.0
-  [(lam data_operand_1
-    [(lam anf_4 data_operand_1) [(builtin mapData) data_operand_1]])
-    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+  (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]))
 --- isolated pass
 --- isolated ANF input
 let anf#24 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in

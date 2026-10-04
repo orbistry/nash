@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+unBData (con data (I 7))
+--- unoptimized UPLC
+(program 1.1.0 [(builtin unBData) (con data (I 7))])
+--- optimized Core
+unBData (con data (I 7))
+--- optimized UPLC
+(program 1.1.0 [(builtin unBData) (con data (I 7))])
+--- result
+error: Runtime(MalFormedData(Integer(7)))
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100

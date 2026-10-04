@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/tests/integration.rs
-assertion_line: 196
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Prop exposing (constant)\ntests\n    prop \"patterns\" =\n        let\n            x via trace \"first\" (constant 7)\n            (y, z) via trace \"second\" (constant (8, True))\n        in\n        do\n            trace \"body\" ()\n            assert (if z then Builtin.equalsInteger y (Builtin.addInteger x 1) else False)\n"
 ---
 --- patterns
@@ -376,15 +375,14 @@ case@Tag match#166 of
         anf#271 anf#273
         False -> let anf#274 : bytes = applyForward#216 projection#202 decimal#221 in
         applyForward#216 anf#274 decodeUtf8 in
-      let anf#276 : list string = mkCons "?" (con (list string) []) in
-      mkCons anf#275 anf#276) in
+      mkCons anf#275 (con (list string) ["?"])) in
     constr 0 anf#234
   1 -> constr 1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_72
-    [(lam builtin_77
-      [(lam partial_82
+  [(lam builtin_71
+    [(lam builtin_76
+      [(lam partial_81
         [(lam constant_6
           [(lam assertAt_10
             [(lam anf_11
@@ -398,7 +396,7 @@ case@Tag match#166 of
                           field_26
                           (lam field_27
                             (lam field_28
-                              [(lam anf_71 (constr 0 anf_71))
+                              [(lam anf_70 (constr 0 anf_70))
                                 (constr 0
                                   field_28
                                   (lam arg_29
@@ -409,7 +407,7 @@ case@Tag match#166 of
                                           (lam field_32
                                             (lam field_33
                                               (case
-                                                (force [[builtin_72 (con string "body")] (delay (con unit ()))])
+                                                (force [[builtin_71 (con string "body")] (delay (con unit ()))])
                                                 [(lam anf_36
                                                   (case
                                                     anf_36
@@ -425,8 +423,8 @@ case@Tag match#166 of
                                                     (con bool False)
                                                     [(lam anf_35 [[(builtin equalsInteger) field_32] anf_35])
                                                       [[(builtin addInteger) projection_30] (con integer 1)]])])))))
-                                        (case field_27 (lam generated_73 (lam generated_74 generated_74)))])
-                                      (case field_27 (lam generated_75 (lam generated_76 generated_75)))])
+                                        (case field_27 (lam generated_72 (lam generated_73 generated_73)))])
+                                      (case field_27 (lam generated_74 (lam generated_75 generated_74)))])
                                   (lam arg_41
                                     [(lam projection_42
                                       [(lam projection_43
@@ -437,9 +435,7 @@ case@Tag match#166 of
                                               [(lam applyForward_48
                                                 [(lam decimal_59
                                                   [(lam anf_60
-                                                    [(lam anf_69
-                                                      [(lam anf_70 [[builtin_77 anf_69] anf_70])
-                                                        [[builtin_77 (con string "?")] (con (list string) [])]])
+                                                    [(lam anf_69 [[builtin_76 anf_69] (con (list string) ["?"])])
                                                       (case
                                                         anf_60
                                                         [(lam anf_68 [[applyForward_48 anf_68] (builtin decodeUtf8)])
@@ -470,16 +466,16 @@ case@Tag match#166 of
                                                                   [(lam anf_57
                                                                     [(lam anf_58 [[(builtin appendByteString) anf_55] anf_58])
                                                                       [[(builtin consByteString) anf_57] (con bytestring #)]])
-                                                                    [partial_82 anf_56]])
+                                                                    [partial_81 anf_56]])
                                                                   [[(builtin remainderInteger) n_51] (con integer 10)]])
                                                                 [[self_50 self_50] anf_54]])
                                                               [[(builtin quotientInteger) n_51] (con integer 10)]]
                                                             [(lam anf_53 [[(builtin consByteString) anf_53] (con bytestring #)])
-                                                              [partial_82 n_51]]))
+                                                              [partial_81 n_51]]))
                                                           [[(builtin lessThanInteger) n_51] (con integer 10)]]))]])
                                                 (lam x_46 (lam f_47 [f_47 x_46]))]))))
-                                        (case field_27 (lam generated_78 (lam generated_79 generated_79)))])
-                                      (case field_27 (lam generated_80 (lam generated_81 generated_80)))]))]))))
+                                        (case field_27 (lam generated_77 (lam generated_78 generated_78)))])
+                                      (case field_27 (lam generated_79 (lam generated_80 generated_79)))]))]))))
                       (constr 1)))
                     (case
                       match_13
@@ -502,14 +498,14 @@ case@Tag match#166 of
                                     (constr 1)))
                                   [beta_18 field_16]])
                                 (force
-                                  [[builtin_72 (con string "second")]
+                                  [[builtin_71 (con string "second")]
                                     (delay
                                       [(lam anf_17 [constant_6 anf_17]) (constr 0 (con integer 8) (con bool True))])])]))))
                       (constr 1))])
                   [anf_11 state_12]]))
-              (force [[builtin_72 (con string "first")] (delay [constant_6 (con integer 7)])])])
+              (force [[builtin_71 (con string "first")] (delay [constant_6 (con integer 7)])])])
             (lam marker_7
-              (lam rest_8 [(lam anf_9 [anf_9 (con unit ())]) [[builtin_72 marker_7] rest_8]]))])
+              (lam rest_8 [(lam anf_9 [anf_9 (con unit ())]) [[builtin_71 marker_7] rest_8]]))])
           (lam value_3
             (lam prng_4 [(lam anf_5 (constr 0 anf_5)) (constr 0 value_3 prng_4)]))])
         [(builtin addInteger) (con integer 48)]])

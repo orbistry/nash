@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 486
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (fromData)\ndecoded : Int\ndecoded = fromData (B #\"aa\")\nmain = unIData decoded\n"
 ---
 --- unoptimized Core
@@ -19,11 +18,9 @@ main#1
       (lam value_7 value_7)])
     (lam coerce_6 coerce_6)])
 --- optimized Core
-let anf#16 : Data = bData (con bytestring #aa) in
-unIData anf#16
+unIData (con data (B #aa))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [(builtin unIData) anf_1]) [(builtin bData) (con bytestring #aa)]])
+(program 1.1.0 [(builtin unIData) (con data (B #aa))])
 --- result
 error: Runtime(MalFormedData(ByteString([170])))
 --- logs

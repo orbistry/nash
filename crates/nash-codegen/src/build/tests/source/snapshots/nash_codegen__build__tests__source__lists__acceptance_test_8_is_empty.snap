@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 260
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nisEmpty bytes = equalsInteger (Builtin.lengthOfByteString bytes) 0\nmain = eq (isEmpty #\"\") True\n"
 ---
 --- unoptimized Core
@@ -48,22 +47,11 @@ main#1
 let not#23 : 'erased -> bool = \value#21 : 'erased -> case@Bool value#21 of
   True -> false
   False -> true in
-let anf#44 : int = lengthOfByteString (con bytestring #) in
-let anf#47 : bool = equalsInteger anf#44 0 in
-let b#30 : bool = true in
-let anf#43 : bool = case@Bool anf#47 of
-  True -> not#23 b#30
-  False -> b#30 in
+let anf#43 : bool = not#23 true in
 not#23 anf#43
 --- optimized UPLC
 (program 1.1.0
-  [(lam not_2
-    [(lam anf_3
-      [(lam anf_4
-        [(lam b_5 [(lam anf_6 [not_2 anf_6]) (case anf_4 b_5 [not_2 b_5])])
-          (con bool True)])
-        [[(builtin equalsInteger) anf_3] (con integer 0)]])
-      [(builtin lengthOfByteString) (con bytestring #)]])
+  [(lam not_2 [(lam anf_3 [not_2 anf_3]) [not_2 (con bool True)]])
     (lam value_1 (case value_1 (con bool True) (con bool False)))])
 --- result
 (con bool True)

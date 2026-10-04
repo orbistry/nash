@@ -9,13 +9,9 @@ unBData (bData (con bytestring #68656c6c6f)) 1
   [[(builtin unBData) [(builtin bData) (con bytestring #68656c6c6f)]]
     (con integer 1)])
 --- optimized Core
-let anf#1 : Data = bData (con bytestring #68656c6c6f) in
-let anf#2 : bytes = unBData anf#1 in
-anf#2 1
+(con bytestring #68656c6c6f) 1
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_3 [(lam anf_4 [anf_4 (con integer 1)]) [(builtin unBData) anf_3]])
-    [(builtin bData) (con bytestring #68656c6c6f)]])
+(program 1.1.0 [(con bytestring #68656c6c6f) (con integer 1)])
 --- isolated pass
 --- core before
 unBData (bData (con bytestring #68656c6c6f)) 1

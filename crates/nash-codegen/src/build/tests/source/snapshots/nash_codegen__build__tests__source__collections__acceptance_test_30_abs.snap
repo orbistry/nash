@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 358
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nabs a = if lessThanInteger a 0 then subtractInteger 0 a else a\nmain = eq (abs (subtractInteger 0 14)) 14\n"
 ---
 --- unoptimized Core
@@ -30,24 +29,12 @@ main#1
       (lam value_6 value_6)])
     (builtin equalsInteger)])
 --- optimized Core
-let anf#18 : int = subtractInteger 0 14 in
-let anf#14 : bool = lessThanInteger anf#18 0 in
-let anf#19 : int = case@Bool anf#14 of
-  True -> subtractInteger 0 anf#18
-  False -> anf#18 in
-let anf#20 : int -> bool = equalsInteger anf#19 in
+let anf#20 : int -> bool = equalsInteger 14 in
 anf#20 14
 --- optimized UPLC
 (program 1.1.0
-  [(lam partial_5
-    [(lam anf_1
-      [(lam anf_2
-        [(lam anf_3
-          [(lam anf_4 [anf_4 (con integer 14)]) [(builtin equalsInteger) anf_3]])
-          (case anf_2 anf_1 [partial_5 anf_1])])
-        [[(builtin lessThanInteger) anf_1] (con integer 0)]])
-      [partial_5 (con integer 14)]])
-    [(builtin subtractInteger) (con integer 0)]])
+  [(lam anf_1 [anf_1 (con integer 14)])
+    [(builtin equalsInteger) (con integer 14)]])
 --- result
 (con bool True)
 --- logs

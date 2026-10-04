@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/builtin_sharing.rs
-assertion_line: 45
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -17,16 +16,9 @@ case@List mkNilData () of
     (lam head_1 (lam tail_2 (con integer 0)))
     (con integer 42)))
 --- optimized Core
-let anf#5 : list Data = mkNilData () in
-case@List anf#5 of
-  Nil -> 42
-  Cons head#3 tail#4 -> 0
-  _ -> trace "never" in error
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    (case anf_1 (lam head_2 (lam tail_6 (con integer 0))) (con integer 42)))
-    [(builtin mkNilData) (con unit ())]])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- uplc before
 (case

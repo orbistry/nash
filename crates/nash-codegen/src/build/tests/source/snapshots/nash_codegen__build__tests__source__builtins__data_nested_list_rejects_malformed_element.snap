@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 346
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\ndecoded : List (List Int)\ndecoded = validate (List [List [I 1, B #\"aa\"]])\nmain = nullList (unListData decoded)\n"
 ---
 --- unoptimized Core
@@ -99,9 +98,7 @@ let mapList#39 : ('erased -> Data) -> list 'erased -> list Data = \(f#40 : 'eras
 in
 worker#72 values#41 in
 let anf#84 : Data = iData 1 in
-let anf#86 : Data = bData (con bytestring #aa) in
-let anf#87 : list Data = mkCons anf#86 (con (list data) []) in
-let anf#88 : list Data = mkCons anf#84 anf#87 in
+let anf#88 : list Data = mkCons anf#84 (con (list data) [(B #aa)]) in
 let anf#89 : Data = listData anf#88 in
 let anf#90 : list Data = mkCons anf#89 (con (list data) []) in
 let anf#91 : Data = listData anf#90 in
@@ -119,8 +116,8 @@ let projection#69 : list (List Int) = unListData decoded#68 in
 nullList projection#69
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_43
-    [(lam builtin_44
+  [(lam builtin_35
+    [(lam builtin_36
       [(lam applyForward_5
         [(lam mapList_16
           [(lam anf_17
@@ -130,33 +127,29 @@ nullList projection#69
                   [(lam anf_21
                     [(lam anf_22
                       [(lam anf_23
-                        [(lam anf_24
-                          [(lam anf_25
-                            [(lam anf_33
-                              [(lam anf_34
-                                [(lam decoded_35
-                                  [(lam projection_42 [builtin_43 projection_42])
-                                    [(builtin unListData) decoded_35]])
-                                  [[applyForward_5 anf_34] (builtin listData)]])
-                                [anf_25 anf_33]])
-                              [mapList_16
-                                (lam value_26
-                                  [(lam anf_27
-                                    [(lam anf_28
-                                      [(lam anf_31
-                                        [(lam anf_32 [[applyForward_5 anf_32] (builtin listData)]) [anf_28 anf_31]])
-                                        [mapList_16
-                                          (lam value_29 [(lam destruct_30 value_29) [(builtin unIData) value_29]])]])
-                                      [applyForward_5 anf_27]])
-                                    [[applyForward_5 value_26] (builtin unListData)]])]])
-                            [applyForward_5 anf_24]])
-                          [[applyForward_5 anf_23] (builtin unListData)]])
-                        [(builtin listData) anf_22]])
-                      [[builtin_44 anf_21] (con (list data) [])]])
+                        [(lam anf_31
+                          [(lam anf_32
+                            [(lam decoded_33
+                              [(lam projection_34 [builtin_35 projection_34])
+                                [(builtin unListData) decoded_33]])
+                              [[applyForward_5 anf_32] (builtin listData)]])
+                            [anf_23 anf_31]])
+                          [mapList_16
+                            (lam value_24
+                              [(lam anf_25
+                                [(lam anf_26
+                                  [(lam anf_29
+                                    [(lam anf_30 [[applyForward_5 anf_30] (builtin listData)]) [anf_26 anf_29]])
+                                    [mapList_16
+                                      (lam value_27 [(lam destruct_28 value_27) [(builtin unIData) value_27]])]])
+                                  [applyForward_5 anf_25]])
+                                [[applyForward_5 value_24] (builtin unListData)]])]])
+                        [applyForward_5 anf_22]])
+                      [[applyForward_5 anf_21] (builtin unListData)]])
                     [(builtin listData) anf_20]])
-                  [[builtin_44 anf_17] anf_19]])
-                [[builtin_44 anf_18] (con (list data) [])]])
-              [(builtin bData) (con bytestring #aa)]])
+                  [[builtin_36 anf_19] (con (list data) [])]])
+                [(builtin listData) anf_18]])
+              [[builtin_36 anf_17] (con (list data) [(B #aa)])]])
             [(builtin iData) (con integer 1)]])
           (lam f_6
             (lam values_7
@@ -169,7 +162,7 @@ nullList projection#69
                         (lam field_11
                           (lam field_12
                             [(lam anf_13
-                              [(lam anf_14 [[builtin_44 anf_13] anf_14]) [[self_9 self_9] field_12]])
+                              [(lam anf_14 [[builtin_36 anf_13] anf_14]) [[self_9 self_9] field_12]])
                               [f_6 field_11]]))
                         (con (list data) []))))]]))])
         (lam x_3 (lam f_4 [f_4 x_3]))])

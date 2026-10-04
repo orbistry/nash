@@ -16,15 +16,9 @@ case@Data listData (mkCons (con data (I 42)) (con (list data) [])) of
     [(builtin listData)
       [[(force (builtin mkCons)) (con data (I 42))] (con (list data) [])]]])
 --- optimized Core
-let anf#2 : list Data = mkCons (con data (I 42)) (con (list data) []) in
-let anf#3 : Data = listData anf#2 in
-anf#2
+(con (list data) [(I 42)])
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_5
-    [(lam anf_1 [(lam anf_4 anf_1) [(builtin listData) anf_1]])
-      [[builtin_5 (con data (I 42))] (con (list data) [])]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con (list data) [(I 42)]))
 --- isolated pass
 --- isolated ANF input
 let anf#23 : list Data = mkCons (con data (I 42)) (con (list data) []) in

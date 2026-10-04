@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntrait Keep 'a where\n    keep : Eq 'b => 'a -> 'b -> bool\nimpl Keep (list 'b) where\n    keep _ x = eq x x\nmain = keep [()] 42\n"
 ---
 --- unoptimized Core
@@ -26,14 +25,9 @@ main#1
       (lam arg_5 (lam x_6 [(lam match_8 [[eq_7 x_6] x_6]) arg_5]))])
     (builtin equalsInteger)])
 --- optimized Core
-let anf#22 : list unit = mkCons () (con (list unit) []) in
 equalsInteger 42 42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_2
-    [(lam anf_1 [[(builtin equalsInteger) (con integer 42)] (con integer 42)])
-      [[builtin_2 (con unit ())] (con (list unit) [])]])
-    (force (builtin mkCons))])
+(program 1.1.0 [[(builtin equalsInteger) (con integer 42)] (con integer 42)])
 --- result
 (con bool True)
 --- logs

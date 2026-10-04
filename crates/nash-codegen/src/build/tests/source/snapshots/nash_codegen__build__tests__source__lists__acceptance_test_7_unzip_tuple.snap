@@ -284,18 +284,14 @@ let anf#177 : Main.sequence ('erased, 'erased) = constr 0 in
 let anf#178 : Main.sequence ('erased, 'erased) = constr 1 anf#175 anf#177 in
 let x#161 : Main.sequence ('erased, 'erased) = constr 1 anf#171 anf#178 in
 let anf#179 : (list int, list bytes) = unzip#131 x#161 in
-let anf#183 : list int = mkCons 4 (con (list integer) []) in
-let anf#184 : list int = mkCons 3 anf#183 in
-let anf#187 : list bytes = mkCons (con bytestring #7799) (con (list bytestring) []) in
-let anf#188 : list bytes = mkCons (con bytestring #55) anf#187 in
 case@Tag anf#179 of
-  0 field#121 field#122 -> let anf#165 : bool = eq#85 field#121 anf#184 in
+  0 field#121 field#122 -> let anf#165 : bool = eq#85 field#121 (con (list integer) [3, 4]) in
   case@Bool anf#165 of
-    True -> eq#102 field#122 anf#188
+    True -> eq#102 field#122 (con (list bytestring) [#55, #7799])
     False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_63
+  [(lam builtin_59
     [(lam eq_20
       [(lam eq_32
         [(lam unzip_49
@@ -305,20 +301,16 @@ case@Tag anf#179 of
                 [(lam anf_53
                   [(lam x_54
                     [(lam anf_55
-                      [(lam anf_56
-                        [(lam anf_57
-                          [(lam anf_58
-                            [(lam anf_59
+                      (case
+                        anf_55
+                        (lam field_56
+                          (lam field_57
+                            [(lam anf_58
                               (case
-                                anf_55
-                                (lam field_60
-                                  (lam field_61
-                                    [(lam anf_62 (case anf_62 (con bool False) [[eq_32 field_61] anf_59]))
-                                      [[eq_20 field_60] anf_57]]))))
-                              [[builtin_63 (con bytestring #55)] anf_58]])
-                            [[builtin_63 (con bytestring #7799)] (con (list bytestring) [])]])
-                          [[builtin_63 (con integer 3)] anf_56]])
-                        [[builtin_63 (con integer 4)] (con (list integer) [])]])
+                                anf_58
+                                (con bool False)
+                                [[eq_32 field_57] (con (list bytestring) [#55, #7799])]))
+                              [[eq_20 field_56] (con (list integer) [3, 4])]]))))
                       [unzip_49 x_54]])
                     (constr 1 anf_50 anf_53)])
                   (constr 1 anf_51 anf_52)])
@@ -341,9 +333,9 @@ case@Tag anf#179 of
                               [(lam anf_43
                                 [(lam evaluated_44
                                   [(lam anf_47
-                                    [(lam anf_48 (constr 0 evaluated_44 anf_48)) [[builtin_63 field_39] anf_47]])
+                                    [(lam anf_48 (constr 0 evaluated_44 anf_48)) [[builtin_59 field_39] anf_47]])
                                     (case destruct_40 (lam field_45 (lam field_46 field_46)))])
-                                  [[builtin_63 field_38] anf_43]])
+                                  [[builtin_59 field_38] anf_43]])
                                 (case destruct_40 (lam field_41 (lam field_42 field_41)))])
                               [[self_34 self_34] field_37]]))))))))]])
         [(lam self_21 [self_21 self_21])

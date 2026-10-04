@@ -84,18 +84,9 @@ main#1
             arg_29]))])
     (lam value_28 value_28)])
 --- optimized Core
-let anf#73 : bool = equalsInteger 3 3 in
-case@Bool anf#73 of
-  True -> equalsInteger 1 1
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    (case
-      anf_1
-      (con bool False)
-      [[(builtin equalsInteger) (con integer 1)] (con integer 1)]))
-    [[(builtin equalsInteger) (con integer 3)] (con integer 3)]])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

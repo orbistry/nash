@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 287
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nmain =\n    let\n        x = [mkPairData (I 1) (B #\"\"), mkPairData (I 2) (B #\"aa\")]\n        first = headList x\n    in\n    equalsData (toData (mapData [first])) (toData (mapData [mkPairData (I 1) (B #\"\")]))\n"
 ---
 --- unoptimized Core
@@ -48,56 +47,47 @@ main#1
     (lam coerce_13 coerce_13)])
 --- optimized Core
 let anf#34 : Data = iData 1 in
-let anf#36 : Data = bData (con bytestring #) in
-let anf#37 : pair Data Data = mkPairData anf#34 anf#36 in
+let anf#37 : pair Data Data = mkPairData anf#34 (con data (B #)) in
 let anf#39 : Data = iData 2 in
-let anf#41 : Data = bData (con bytestring #aa) in
-let anf#42 : pair Data Data = mkPairData anf#39 anf#41 in
+let anf#42 : pair Data Data = mkPairData anf#39 (con data (B #aa)) in
 let anf#43 : list (pair Data Data) = mkCons anf#42 (con (list (pair data data)) []) in
 let x#27 : list (pair Data Data) = mkCons anf#37 anf#43 in
 let projection#28 : pair Data Data = headList x#27 in
 let anf#44 : list (pair Data Data) = mkCons projection#28 (con (list (pair data data)) []) in
 let anf#45 : Map Data Data = mapData anf#44 in
 let anf#48 : Data = iData 1 in
-let anf#50 : Data = bData (con bytestring #) in
-let anf#51 : pair Data Data = mkPairData anf#48 anf#50 in
+let anf#51 : pair Data Data = mkPairData anf#48 (con data (B #)) in
 let anf#52 : list (pair Data Data) = mkCons anf#51 (con (list (pair data data)) []) in
 let anf#53 : Map Data Data = mapData anf#52 in
 equalsData anf#45 anf#53
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_17
-    [(lam builtin_18
+  [(lam builtin_14
+    [(lam builtin_15
       [(lam anf_1
         [(lam anf_2
           [(lam anf_3
             [(lam anf_4
               [(lam anf_5
-                [(lam anf_6
-                  [(lam anf_7
-                    [(lam x_8
-                      [(lam projection_9
+                [(lam x_6
+                  [(lam projection_7
+                    [(lam anf_8
+                      [(lam anf_9
                         [(lam anf_10
                           [(lam anf_11
                             [(lam anf_12
-                              [(lam anf_13
-                                [(lam anf_14
-                                  [(lam anf_15
-                                    [(lam anf_16 [[(builtin equalsData) anf_11] anf_16]) [(builtin mapData) anf_15]])
-                                    [[builtin_17 anf_14] (con (list (pair data data)) [])]])
-                                  [[(builtin mkPairData) anf_12] anf_13]])
-                                [(builtin bData) (con bytestring #)]])
-                              [(builtin iData) (con integer 1)]])
-                            [(builtin mapData) anf_10]])
-                          [[builtin_17 projection_9] (con (list (pair data data)) [])]])
-                        [builtin_18 x_8]])
-                      [[builtin_17 anf_3] anf_7]])
-                    [[builtin_17 anf_6] (con (list (pair data data)) [])]])
-                  [[(builtin mkPairData) anf_4] anf_5]])
-                [(builtin bData) (con bytestring #aa)]])
-              [(builtin iData) (con integer 2)]])
-            [[(builtin mkPairData) anf_1] anf_2]])
-          [(builtin bData) (con bytestring #)]])
+                              [(lam anf_13 [[(builtin equalsData) anf_9] anf_13]) [(builtin mapData) anf_12]])
+                              [[builtin_14 anf_11] (con (list (pair data data)) [])]])
+                            [[(builtin mkPairData) anf_10] (con data (B #))]])
+                          [(builtin iData) (con integer 1)]])
+                        [(builtin mapData) anf_8]])
+                      [[builtin_14 projection_7] (con (list (pair data data)) [])]])
+                    [builtin_15 x_6]])
+                  [[builtin_14 anf_2] anf_5]])
+                [[builtin_14 anf_4] (con (list (pair data data)) [])]])
+              [[(builtin mkPairData) anf_3] (con data (B #aa))]])
+            [(builtin iData) (con integer 2)]])
+          [[(builtin mkPairData) anf_1] (con data (B #))]])
         [(builtin iData) (con integer 1)]])
       (force (builtin headList))])
     (force (builtin mkCons))])

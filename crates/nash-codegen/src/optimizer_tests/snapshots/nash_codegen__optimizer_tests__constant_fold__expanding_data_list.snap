@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+unListData (con data (List [I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7]))
+--- unoptimized UPLC
+(program 1.1.0
+  [(builtin unListData)
+    (con data (List [I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7]))])
+--- optimized Core
+unListData (con data (List [I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7]))
+--- optimized UPLC
+(program 1.1.0
+  [(builtin unListData)
+    (con data (List [I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7, I 7]))])
+--- result
+(con (list data) [(I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7), (I 7)])
+--- logs
+[]
+--- budget
+cpu: 74033, memory: 432

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 176
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nmain : bool\nmain = equalsData\n    (toData (Builtin.listData (Builtin.mkNilData ())))\n    (toData (Builtin.listData (Builtin.mkNilData ())))\n"
 ---
 --- unoptimized Core
@@ -19,20 +18,15 @@ main#1
       (lam value_5 value_5)])
     (lam coerce_4 coerce_4)])
 --- optimized Core
-let anf#12 : list Data = mkNilData () in
-let anf#13 : List Data = listData anf#12 in
-let anf#16 : list Data = mkNilData () in
-let anf#17 : List Data = listData anf#16 in
+let anf#13 : List Data = listData (con (list data) []) in
+let anf#17 : List Data = listData (con (list data) []) in
 equalsData anf#13 anf#17
 --- optimized UPLC
 (program 1.1.0
   [(lam anf_1
-    [(lam anf_2
-      [(lam anf_3
-        [(lam anf_4 [[(builtin equalsData) anf_2] anf_4]) [(builtin listData) anf_3]])
-        [(builtin mkNilData) (con unit ())]])
-      [(builtin listData) anf_1]])
-    [(builtin mkNilData) (con unit ())]])
+    [(lam anf_2 [[(builtin equalsData) anf_1] anf_2])
+      [(builtin listData) (con (list data) [])]])
+    [(builtin listData) (con (list data) [])]])
 --- result
 (con bool True)
 --- logs

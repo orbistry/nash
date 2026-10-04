@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+encodeUtf8 "สว\u{e31}สด\u{e35}"
+--- unoptimized UPLC
+(program 1.1.0 [(builtin encodeUtf8) (con string "สวัสดี")])
+--- optimized Core
+(con bytestring #e0b8aae0b8a7e0b8b1e0b8aae0b894e0b8b5)
+--- optimized UPLC
+(program 1.1.0 (con bytestring #e0b8aae0b8a7e0b8b1e0b8aae0b894e0b8b5))
+--- result
+(con bytestring #e0b8aae0b8a7e0b8b1e0b8aae0b894e0b8b5)
+--- logs
+[]
+--- budget
+cpu: 220784, memory: 412

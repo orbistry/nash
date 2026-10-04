@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+let prefix#2 : string = "prefixprefixprefixprefixprefixprefix" in
+constr 0 (appendString prefix#2 "x") (appendString prefix#2 "y")
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam prefix_2
+    (constr 0
+      [[(builtin appendString) prefix_2] (con string "x")]
+      [[(builtin appendString) prefix_2] (con string "y")]))
+    (con string "prefixprefixprefixprefixprefixprefix")])
+--- optimized Core
+constr 0 "prefixprefixprefixprefixprefixprefixx" "prefixprefixprefixprefixprefixprefixy"
+--- optimized UPLC
+(program 1.1.0
+  (constr 0
+    (con string "prefixprefixprefixprefixprefixprefixx")
+    (con string "prefixprefixprefixprefixprefixprefixy")))
+--- result
+(constr 0
+  (con string "prefixprefixprefixprefixprefixprefixx")
+  (con string "prefixprefixprefixprefixprefixprefixy"))
+--- logs
+[]
+--- budget
+cpu: 1305326, memory: 1526

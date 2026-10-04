@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 920
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nclassify : Data -> int\nclassify value = case value of\n    Constr _ -> 0\n    Map _ -> 1\n    List _ -> 2\n    I _ -> 3\n    B _ -> 4\nmain : (int, int, int, int, int)\nmain = (classify (Builtin.constrData 0 []), classify (Map []), classify (List []), classify (I 42), classify (B #\"aa\"))\n"
 ---
 --- unoptimized Core
@@ -54,18 +53,16 @@ let classify#27 : Data -> int = \value#20 : Data -> case@Data value#20 of
   DataB field#26 -> 4 in
 let anf#36 : Data = constrData 0 (con (list data) []) in
 let anf#37 : int = classify#27 anf#36 in
-let anf#38 : Data = mapData (con (list (pair data data)) []) in
-let anf#39 : int = classify#27 anf#38 in
+let anf#39 : int = classify#27 (con data (Map [])) in
 let anf#40 : Data = listData (con (list data) []) in
 let anf#41 : int = classify#27 anf#40 in
 let anf#43 : Data = iData 42 in
 let anf#44 : int = classify#27 anf#43 in
-let anf#46 : Data = bData (con bytestring #aa) in
-let anf#47 : int = classify#27 anf#46 in
+let anf#47 : int = classify#27 (con data (B #aa)) in
 constr 0 anf#37 anf#39 anf#41 anf#44 anf#47
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_19
+  [(lam builtin_17
     [(lam classify_7
       [(lam anf_8
         [(lam anf_9
@@ -74,22 +71,19 @@ constr 0 anf#37 anf#39 anf#41 anf#44 anf#47
               [(lam anf_12
                 [(lam anf_13
                   [(lam anf_14
-                    [(lam anf_15
-                      [(lam anf_16
-                        [(lam anf_17 (constr 0 anf_9 anf_11 anf_13 anf_15 anf_17)) [classify_7 anf_16]])
-                        [(builtin bData) (con bytestring #aa)]])
-                      [classify_7 anf_14]])
-                    [(builtin iData) (con integer 42)]])
-                  [classify_7 anf_12]])
-                [(builtin listData) (con (list data) [])]])
-              [classify_7 anf_10]])
-            [(builtin mapData) (con (list (pair data data)) [])]])
+                    [(lam anf_15 (constr 0 anf_9 anf_10 anf_12 anf_14 anf_15))
+                      [classify_7 (con data (B #aa))]])
+                    [classify_7 anf_13]])
+                  [(builtin iData) (con integer 42)]])
+                [classify_7 anf_11]])
+              [(builtin listData) (con (list data) [])]])
+            [classify_7 (con data (Map []))]])
           [classify_7 anf_8]])
         [[(builtin constrData) (con integer 0)] (con (list data) [])]])
       (lam value_1
-        [(lam generated_18
+        [(lam generated_16
           (force
-            [[[[[[builtin_19 generated_18] (delay (con integer 0))] (delay (con integer 1))]
+            [[[[[[builtin_17 generated_16] (delay (con integer 0))] (delay (con integer 1))]
               (delay (con integer 2))]
               (delay (con integer 3))]
               (delay (con integer 4))]))

@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+nullList (con (list integer) [])
+--- unoptimized UPLC
+(program 1.1.0 [(force (builtin nullList)) (con (list integer) [])])
+--- optimized Core
+true
+--- optimized UPLC
+(program 1.1.0 (con bool True))
+--- result
+(con bool True)
+--- logs
+[]
+--- budget
+cpu: 138533, memory: 532

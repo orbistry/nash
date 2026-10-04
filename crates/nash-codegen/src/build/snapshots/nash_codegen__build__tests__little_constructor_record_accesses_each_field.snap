@@ -46,12 +46,9 @@ main#1
       (lam value_10 value_10)])
     (lam value_9 value_9)])
 --- optimized Core
-let anf#34 : int = lengthOfByteString (con bytestring #aabb) in
-addInteger 42 anf#34
+44
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [[(builtin addInteger) (con integer 42)] anf_1])
-    [(builtin lengthOfByteString) (con bytestring #aabb)]])
+(program 1.1.0 (con integer 44))
 --- result
 (con integer 44)
 --- logs

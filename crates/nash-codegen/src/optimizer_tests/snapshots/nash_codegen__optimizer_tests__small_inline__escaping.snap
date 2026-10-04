@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/small_inline.rs
-assertion_line: 37
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline uplc\\n{}\\n--- core after\\n{}\\n--- optimized uplc\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -16,9 +15,9 @@ addInteger ((case@Bool true of
       [identity_2 (con integer 22)]])
     (lam x_1 x_1)])
 --- optimized Core
-addInteger 20 22
+42
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 20)] (con integer 22)])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
 let identity#2 : int -> int = \x#1 : int -> x#1 in

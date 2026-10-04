@@ -18,9 +18,9 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     (con data (I 40))]
     (con integer 2)])
 --- optimized Core
-addInteger 40 2
+42
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 40)] (con integer 2)])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 let anf#3 : int -> int = case@Data (con data (I 40)) of

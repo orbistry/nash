@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+divideInteger 7 0
+--- unoptimized UPLC
+(program 1.1.0 [[(builtin divideInteger) (con integer 7)] (con integer 0)])
+--- optimized Core
+divideInteger 7 0
+--- optimized UPLC
+(program 1.1.0 [[(builtin divideInteger) (con integer 7)] (con integer 0)])
+--- result
+error: Runtime(DivisionByZero(7, 0))
+--- logs
+[]
+--- budget
+cpu: 132030, memory: 101

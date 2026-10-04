@@ -1,0 +1,20 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+addInteger 7 1
+--- unoptimized UPLC
+(program 1.1.0 [[(builtin addInteger) (con integer 7)] (con integer 1)])
+--- optimized Core
+let anf#1 : 'erased = addInteger 7 in
+anf#1 1
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 [anf_2 (con integer 1)]) [(builtin addInteger) (con integer 7)]])
+--- result
+(con integer 8)
+--- logs
+[]
+--- budget
+cpu: 181308, memory: 602

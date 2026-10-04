@@ -17,7 +17,7 @@ case@Data (trace "producer" in bData (con bytestring #6e617368)) of
       [[(force (builtin trace)) (con string "producer")]
         (delay [(builtin bData) (con bytestring #6e617368)])])])
 --- optimized Core
-let anf#2 : Data = trace "producer" in bData (con bytestring #6e617368) in
+let anf#2 : Data = trace "producer" in (con data (B #6e617368)) in
 case@Data anf#2 of
   DataB payload#1 -> payload#1
 --- optimized UPLC
@@ -31,9 +31,7 @@ case@Data anf#2 of
               (delay (error))]
               (delay [(lam payload_4 payload_4) [(builtin unBData) generated_5]])]))
           anf_3])
-        (force
-          [[builtin_7 (con string "producer")]
-            (delay [(builtin bData) (con bytestring #6e617368)])])])
+        (force [[builtin_7 (con string "producer")] (delay (con data (B #6e617368)))])])
       (force (builtin trace))])
     (force (builtin chooseData))])
 --- isolated pass

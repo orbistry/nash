@@ -1,0 +1,21 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+trace "keep me" 7
+--- unoptimized UPLC
+(program 1.1.0
+  [[(force (builtin trace)) (con string "keep me")] (con integer 7)])
+--- optimized Core
+trace "keep me" 7
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1 [[builtin_1 (con string "keep me")] (con integer 7)])
+    (force (builtin trace))])
+--- result
+(con integer 7)
+--- logs
+["keep me"]
+--- budget
+cpu: 155598, memory: 732

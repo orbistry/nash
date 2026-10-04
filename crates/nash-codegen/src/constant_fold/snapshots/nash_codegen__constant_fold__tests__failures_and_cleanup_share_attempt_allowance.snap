@@ -1,0 +1,34 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- limited pass Core\\n{}\\n--- limited pass UPLC\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nfixture.code_snapshot(), pretty(after), evaluated.uplc, evaluated.result,\nevaluated.logs)"
+---
+--- unoptimized Core
+constr 0 (divideInteger 1 0) (multiplyInteger (addInteger 20 22) 2)
+--- unoptimized UPLC
+(program 1.1.0
+  (constr 0
+    [[(builtin divideInteger) (con integer 1)] (con integer 0)]
+    [[(builtin multiplyInteger)
+      [[(builtin addInteger) (con integer 20)] (con integer 22)]]
+      (con integer 2)]))
+--- optimized Core
+let anf#1 : int = divideInteger 1 0 in
+constr 0 anf#1 84
+--- optimized UPLC
+(program 1.1.0
+  [(lam anf_2 (constr 0 anf_2 (con integer 84)))
+    [[(builtin divideInteger) (con integer 1)] (con integer 0)]])
+--- limited pass Core
+let anf#1 : int = divideInteger 1 0 in
+let anf#3 : int = multiplyInteger 42 2 in
+constr 0 anf#1 anf#3
+--- limited pass UPLC
+(program 1.1.0
+  [(lam anf_1
+    [(lam anf_3 (constr 0 anf_1 anf_3))
+      [[(builtin multiplyInteger) (con integer 42)] (con integer 2)]])
+    [[(builtin divideInteger) (con integer 1)] (con integer 0)]])
+--- result
+error: Runtime(DivisionByZero(1, 0))
+--- logs
+[]

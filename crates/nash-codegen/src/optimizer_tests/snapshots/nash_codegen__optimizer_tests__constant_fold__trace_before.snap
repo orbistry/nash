@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+trace "before" in addInteger 20 22
+--- unoptimized UPLC
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "before")]
+      (delay [[(builtin addInteger) (con integer 20)] (con integer 22)])]))
+--- optimized Core
+trace "before" in 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    (force [[builtin_1 (con string "before")] (delay (con integer 42))]))
+    (force (builtin trace))])
+--- result
+(con integer 42)
+--- logs
+["before"]
+--- budget
+cpu: 352806, memory: 1334

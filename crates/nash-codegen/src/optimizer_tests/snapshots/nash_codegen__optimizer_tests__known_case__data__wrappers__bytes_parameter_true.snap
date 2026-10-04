@@ -20,12 +20,9 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
       [(builtin bData) input_12]])
     (con bytestring #6e617368)])
 --- optimized Core
-let anf#3 : Data = bData (con bytestring #6e617368) in
 (con bytestring #6e617368)
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 (con bytestring #6e617368))
-    [(builtin bData) (con bytestring #6e617368)]])
+(program 1.1.0 (con bytestring #6e617368))
 --- isolated pass
 --- isolated ANF input
 (\input#12 : bytes -> let anf#14 : Data = bData input#12 in

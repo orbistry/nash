@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 649
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ninspect value =\n    case value of\n        pair(I a, B bytes) -> Builtin.addInteger a (Builtin.lengthOfByteString bytes)\n        _ -> 0\nmain : int\nmain = Builtin.addInteger (inspect (Builtin.mkPairData (I 40) (B #\"aabb\"))) (inspect (Builtin.mkPairData (B #\"\") (I 2)))\n"
 ---
 --- unoptimized Core
@@ -91,32 +90,26 @@ case@Pair value#15 of
       addInteger field#23 anf#55
     DataB field#46 -> force leaf#17 in
 let anf#57 : Data = iData 40 in
-let anf#59 : Data = bData (con bytestring #aabb) in
-let anf#60 : pair Data Data = mkPairData anf#57 anf#59 in
+let anf#60 : pair Data Data = mkPairData anf#57 (con data (B #aabb)) in
 let anf#61 : int = inspect#47 anf#60 in
-let anf#63 : Data = bData (con bytestring #) in
 let anf#65 : Data = iData 2 in
-let anf#66 : pair Data Data = mkPairData anf#63 anf#65 in
+let anf#66 : pair Data Data = mkPairData (con data (B #)) anf#65 in
 let anf#67 : int = inspect#47 anf#66 in
 addInteger anf#61 anf#67
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_36
+  [(lam builtin_34
     [(lam inspect_25
       [(lam anf_26
         [(lam anf_27
           [(lam anf_28
             [(lam anf_29
               [(lam anf_30
-                [(lam anf_31
-                  [(lam anf_32
-                    [(lam anf_33 [[(builtin addInteger) anf_29] anf_33]) [inspect_25 anf_32]])
-                    [[(builtin mkPairData) anf_30] anf_31]])
-                  [(builtin iData) (con integer 2)]])
-                [(builtin bData) (con bytestring #)]])
-              [inspect_25 anf_28]])
-            [[(builtin mkPairData) anf_26] anf_27]])
-          [(builtin bData) (con bytestring #aabb)]])
+                [(lam anf_31 [[(builtin addInteger) anf_28] anf_31]) [inspect_25 anf_30]])
+                [[(builtin mkPairData) (con data (B #))] anf_29]])
+              [(builtin iData) (con integer 2)]])
+            [inspect_25 anf_27]])
+          [[(builtin mkPairData) anf_26] (con data (B #aabb))]])
         [(builtin iData) (con integer 40)]])
       (lam value_1
         [(lam leaf_2
@@ -124,24 +117,24 @@ addInteger anf#61 anf#67
             value_1
             (lam field_3
               (lam field_4
-                [(lam generated_34
+                [(lam generated_32
                   (force
-                    [[[[[[builtin_36 generated_34] (delay (force leaf_2))] (delay (force leaf_2))]
+                    [[[[[[builtin_34 generated_32] (delay (force leaf_2))] (delay (force leaf_2))]
                       (delay (force leaf_2))]
                       (delay
                         [(lam field_8
-                          [(lam generated_35
+                          [(lam generated_33
                             (force
-                              [[[[[[builtin_36 generated_35] (delay (force leaf_2))] (delay (force leaf_2))]
+                              [[[[[[builtin_34 generated_33] (delay (force leaf_2))] (delay (force leaf_2))]
                                 (delay (force leaf_2))]
                                 (delay (force leaf_2))]
                                 (delay
                                   [(lam field_13
                                     [(lam anf_14 [[(builtin addInteger) field_8] anf_14])
                                       [(builtin lengthOfByteString) field_13]])
-                                    [(builtin unBData) generated_35]])]))
+                                    [(builtin unBData) generated_33]])]))
                             field_4])
-                          [(builtin unIData) generated_34]])]
+                          [(builtin unIData) generated_32]])]
                       (delay (force leaf_2))]))
                   field_3]))))
           (delay (con integer 0))])])

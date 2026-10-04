@@ -18,26 +18,22 @@ case@Data mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42))
       (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]
       (con integer 0)]])
 --- optimized Core
-let anf#2 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
-let anf#3 : Data = anf#2 0 in
+let anf#3 : Data = (con data (Map [(I 42, I 7), (I 7, I 42), (I 42, I 42)])) 0 in
 case@Data anf#3 of
   DataMap payload#1 -> payload#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
-    [(lam anf_4
-      [(lam anf_5
-        [(lam generated_7
-          (force
-            [[[[[[builtin_8 generated_7] (delay (error))]
-              (delay [(lam payload_6 payload_6) [(builtin unMapData) generated_7]])]
-              (delay (error))]
-              (delay (error))]
-              (delay (error))]))
-          anf_5])
-        [anf_4 (con integer 0)]])
-      [(builtin mapData)
-        (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]])
+  [(lam builtin_6
+    [(lam anf_2
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (error))]
+            (delay [(lam payload_4 payload_4) [(builtin unMapData) generated_5]])]
+            (delay (error))]
+            (delay (error))]
+            (delay (error))]))
+        anf_2])
+      [(con data (Map [(I 42, I 7), (I 7, I 42), (I 42, I 42)])) (con integer 0)]])
     (force (builtin chooseData))])
 --- isolated pass
 --- isolated ANF input

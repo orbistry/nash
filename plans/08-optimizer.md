@@ -31,7 +31,7 @@ native-list folding in Chunk 7 are accepted. Literal Data-shape folding is also
 accepted, as is IData/BData/ListData/MapData/ConstrData producer case folding;
 known native-constructor field and native integer/byte case folding are accepted
 as well. The retained Chunk 7 scope is complete. Continue
-with Chunks 9, 10 and 11. The retained Chunk 8 representation cancellations
+with Chunk 10, recursive unused-parameter removal and final convergence review. The retained Chunk 8 representation cancellations
 are accepted, including integer/byte/list/map Data round trips, UTF-8 round trips
 and bound constructor Data projections/reconstruction. Normal build/test defaults are O1; explicit O0 is available in build/test and project config.
 Current assembly in
@@ -1774,6 +1774,21 @@ input tests and measured output; no trait-selection magic is added.
 
 ## Chunk 9 — Constant builtin evaluation
 
+**Accepted and integrated (5 October 2026).** Production O1 now runs bounded
+constant folding after the post-ANF cleanup/known-case loops, repeating folding
+and cleanup to stability without another ANF pass. The callback keeps evaluation
+policy in codegen and IR independent of codegen. One 128-attempt allowance covers
+the invocation, including rejected/failed calls. Per-call CPU/memory and constant
+size/depth limits remain as trialed; unsafe large negative Data constants are
+excluded. O0 and explicit comptime policy are unchanged.
+
+The user accepted the two shared-prefix size tradeoffs. The refreshed baseline
+has 148 O0/O1 cases, including the 40 constant-folding fixtures. Relative to the
+previous 108-row O1 baseline, 26 improve and 82 are unchanged; all results/logs
+match. See [the report](../docs/research/constant-fold-trial.md) for historical
+trial measurements and current integration details. The temporary constant-trial
+command and public trial entrypoint were removed.
+
 Use a callback supplied by codegen around its existing closed-term evaluator;
 keep `nash-ir` independent of codegen. Evaluate only supported, saturated,
 constant-argument builtin calls under an explicit compile-time budget. Review
@@ -1827,7 +1842,7 @@ Representation cancellation and bound-constructor folding run only in the
 cleanup loops after the single ANF normalization.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
-Chunks 9–10 and final convergence review stay open.
+Chunk 9 is complete; Chunk 10 adoption and final convergence review stay open.
 Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
 heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
 follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).

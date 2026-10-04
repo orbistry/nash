@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+addInteger (trace "first" in error) (divideInteger 7 0)
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin addInteger)
+    (force [[(force (builtin trace)) (con string "first")] (delay (error))])]
+    [[(builtin divideInteger) (con integer 7)] (con integer 0)]])
+--- optimized Core
+let anf#1 : int = trace "first" in error in
+let anf#2 : 'erased = divideInteger 7 0 in
+addInteger anf#1 anf#2
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_5
+    [(lam anf_3
+      [(lam anf_4 [[(builtin addInteger) anf_3] anf_4])
+        [[(builtin divideInteger) (con integer 7)] (con integer 0)]])
+      (force [[builtin_5 (con string "first")] (delay (error))])])
+    (force (builtin trace))])
+--- result
+error: ExplicitErrorTerm
+--- logs
+["first"]
+--- budget
+cpu: 59598, memory: 132

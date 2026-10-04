@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+constr 0 (addInteger 20 22) (addInteger 20 22) (addInteger 20 22)
+--- unoptimized UPLC
+(program 1.1.0
+  (constr 0
+    [[(builtin addInteger) (con integer 20)] (con integer 22)]
+    [[(builtin addInteger) (con integer 20)] (con integer 22)]
+    [[(builtin addInteger) (con integer 20)] (con integer 22)]))
+--- optimized Core
+constr 0 42 42 42
+--- optimized UPLC
+(program 1.1.0 (constr 0 (con integer 42) (con integer 42) (con integer 42)))
+--- result
+(constr 0 (con integer 42) (con integer 42) (con integer 42))
+--- logs
+[]
+--- budget
+cpu: 559724, memory: 1706

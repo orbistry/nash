@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 decodeUtf8 (encodeUtf8 "héllo")
@@ -8,12 +8,9 @@ decodeUtf8 (encodeUtf8 "héllo")
 (program 1.1.0
   [(builtin decodeUtf8) [(builtin encodeUtf8) (con string "héllo")]])
 --- optimized Core
-let anf#1 : bytes = encodeUtf8 "héllo" in
-decodeUtf8 anf#1
+decodeUtf8 (con bytestring #68c3a96c6c6f)
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_2 [(builtin decodeUtf8) anf_2])
-    [(builtin encodeUtf8) (con string "héllo")]])
+(program 1.1.0 [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)])
 --- isolated pass
 --- core before
 decodeUtf8 (encodeUtf8 "héllo")

@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+case@Bool equalsInteger 7 7 of
+  True -> trace "yes" in addInteger 20 22
+  False -> trace "no" in error
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    [[(builtin equalsInteger) (con integer 7)] (con integer 7)]
+    (force [[(force (builtin trace)) (con string "no")] (delay (error))])
+    (force
+      [[(force (builtin trace)) (con string "yes")]
+        (delay [[(builtin addInteger) (con integer 20)] (con integer 22)])])))
+--- optimized Core
+trace "yes" in 42
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    (force [[builtin_1 (con string "yes")] (delay (con integer 42))]))
+    (force (builtin trace))])
+--- result
+(con integer 42)
+--- logs
+["yes"]
+--- budget
+cpu: 501139, memory: 1935

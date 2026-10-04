@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/tests/integration.rs
-assertion_line: 196
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal\nimport Logic exposing (..)\nimport TestLogic exposing ((==))\ncompare : int -> int -> bool\ncompare x = trace \"partial\" (\\y -> Builtin.equalsInteger x y)\none : int\none = 1\nbadBool : unit -> bool\nbadBool _ = fail \"unselected\"\nordinary : unit\nordinary = if True || (badBool ()) then () else (fail \"wrong\")\ntests\n    test \"ordered\" = do\n        assert (compare (trace \"left\" one) (trace \"right\" 2))\n    test \"lazy\" = do\n        assert (if False then (fail \"unselected\") else True)\n    test \"lazy or\" = do\n        assert (True || (badBool ()))\n    test \"lazy and\" = do\n        assert (if False && (badBool ()) then False else True)\n    test \"ordinary lowering is lazy\" = do\n        ordinary\n"
 ---
 --- ordered
@@ -168,30 +167,20 @@ case@Bool anf#103 of
       let anf#118 : bytes = consByteString anf#116 (con bytestring #) in
       appendByteString anf#112 anf#118
   in
-  let anf#120 : bool = lessThanInteger 1 0 in
-  let anf#131 : string = case@Bool anf#120 of
-    True -> let anf#121 : (int -> int) -> int = applyForward#87 1 in
-    let anf#123 : int -> int = subtractInteger 0 in
-    let anf#124 : int = anf#121 anf#123 in
-    let anf#125 : bytes = applyForward#87 anf#124 decimal#92 in
-    let anf#126 : string = applyForward#87 anf#125 decodeUtf8 in
-    let anf#127 : (string -> string) -> string = applyForward#87 anf#126 in
-    let anf#129 : string -> string = appendString "-" in
-    anf#127 anf#129
-    False -> let anf#130 : bytes = applyForward#87 1 decimal#92 in
-    applyForward#87 anf#130 decodeUtf8 in
+  let anf#130 : bytes = applyForward#87 1 decimal#92 in
+  let anf#131 : string = applyForward#87 anf#130 decodeUtf8 in
   let anf#102 : string = appendString "\0assert\00\01\0" anf#131 in
   assertAt#68 anf#102 (\unit#98 : unit -> error))
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_39
-    [(lam partial_40
+  [(lam builtin_31
+    [(lam partial_32
       [(lam assertAt_6
         (case
-          (force [[builtin_39 (con string "left")] (delay (con unit ()))])
+          (force [[builtin_31 (con string "left")] (delay (con unit ()))])
           [(lam apply_9
             (case
-              (force [[builtin_39 (con string "right")] (delay (con unit ()))])
+              (force [[builtin_31 (con string "right")] (delay (con unit ()))])
               [(lam anf_11
                 (case
                   anf_11
@@ -200,27 +189,11 @@ case@Bool anf#103 of
                       [(lam applyForward_15
                         [(lam decimal_26
                           [(lam anf_27
-                            [(lam anf_36
-                              [(lam anf_37 [[assertAt_6 anf_37] (lam unit_38 (error))])
-                                [[(builtin appendString) (con string "\0assert\0\48\0\49\0")] anf_36]])
-                              (case
-                                anf_27
-                                [(lam anf_35 [[applyForward_15 anf_35] (builtin decodeUtf8)])
-                                  [[applyForward_15 (con integer 1)] decimal_26]]
-                                [(lam anf_28
-                                  [(lam anf_29
-                                    [(lam anf_30
-                                      [(lam anf_31
-                                        [(lam anf_32
-                                          [(lam anf_33
-                                            [(lam anf_34 [anf_33 anf_34]) [(builtin appendString) (con string "-")]])
-                                            [applyForward_15 anf_32]])
-                                          [[applyForward_15 anf_31] (builtin decodeUtf8)]])
-                                        [[applyForward_15 anf_30] decimal_26]])
-                                      [anf_28 anf_29]])
-                                    [(builtin subtractInteger) (con integer 0)]])
-                                  [applyForward_15 (con integer 1)]])])
-                            [[(builtin lessThanInteger) (con integer 1)] (con integer 0)]])
+                            [(lam anf_28
+                              [(lam anf_29 [[assertAt_6 anf_29] (lam unit_30 (error))])
+                                [[(builtin appendString) (con string "\0assert\0\48\0\49\0")] anf_28]])
+                              [[applyForward_15 anf_27] (builtin decodeUtf8)]])
+                            [[applyForward_15 (con integer 1)] decimal_26]])
                           [(lam self_16 [self_16 self_16])
                             (lam self_17
                               (lam n_18
@@ -233,21 +206,21 @@ case@Bool anf#103 of
                                           [(lam anf_24
                                             [(lam anf_25 [[(builtin appendByteString) anf_22] anf_25])
                                               [[(builtin consByteString) anf_24] (con bytestring #)]])
-                                            [partial_40 anf_23]])
+                                            [partial_32 anf_23]])
                                           [[(builtin remainderInteger) n_18] (con integer 10)]])
                                         [[self_17 self_17] anf_21]])
                                       [[(builtin quotientInteger) n_18] (con integer 10)]]
                                     [(lam anf_20 [[(builtin consByteString) anf_20] (con bytestring #)])
-                                      [partial_40 n_18]]))
+                                      [partial_32 n_18]]))
                                   [[(builtin lessThanInteger) n_18] (con integer 10)]]))]])
                         (lam x_13 (lam f_14 [f_14 x_13]))])]
                   (con unit ())))
                 [apply_9 (con integer 2)]]))
             (force
-              [[builtin_39 (con string "partial")]
+              [[builtin_31 (con string "partial")]
                 (delay (lam y_8 [[(builtin equalsInteger) (con integer 1)] y_8]))])]))
         (lam marker_3
-          (lam rest_4 [(lam anf_5 [anf_5 (con unit ())]) [[builtin_39 marker_3] rest_4]]))])
+          (lam rest_4 [(lam anf_5 [anf_5 (con unit ())]) [[builtin_31 marker_3] rest_4]]))])
       [(builtin addInteger) (con integer 48)]])
     (force (builtin trace))])
 --- encoded target UPLC

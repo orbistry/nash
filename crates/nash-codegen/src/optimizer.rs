@@ -24,6 +24,9 @@ pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let core = nash_ir::known_case::simplify_constr_data(b, core);
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     debug_assert!(anf::validate(core).is_ok());
+    let core = crate::constant_fold::simplify(b, core);
+    debug_assert!(hygiene::validate(core, &[]).is_ok());
+    debug_assert!(anf::validate(core).is_ok());
     debug_assert_eq!(original_ty, core.ty);
     core
 }

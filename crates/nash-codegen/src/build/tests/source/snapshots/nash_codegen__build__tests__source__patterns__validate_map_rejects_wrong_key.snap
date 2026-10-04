@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 1064
 description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : Map Int Bytes\nmain = validate (toData (Builtin.mapData [Builtin.mkPairData (Builtin.bData #\"aa\") (Builtin.bData #\"bb\")]))\n"
 ---
 --- unoptimized Core
@@ -98,12 +97,7 @@ main#1
     (lam x_13 (lam f_14 [f_14 x_13]))])
 --- optimized Core
 let applyForward#40 : 'erased -> ('erased -> 'erased) -> 'erased = \x#38 : 'erased (f#39 : 'erased -> 'erased) -> f#39 x#38 in
-let anf#86 : Bytes = bData (con bytestring #aa) in
-let anf#88 : Bytes = bData (con bytestring #bb) in
-let anf#89 : pair Bytes Bytes = mkPairData anf#86 anf#88 in
-let anf#90 : list (pair Bytes Bytes) = mkCons anf#89 (con (list (pair data data)) []) in
-let anf#91 : Map Bytes Bytes = mapData anf#90 in
-let anf#81 : list (pair Data Data) = applyForward#40 anf#91 unMapData in
+let anf#81 : list (pair Data Data) = applyForward#40 (con data (Map [(B #aa, B #bb)])) unMapData in
 let anf#82 : (list (pair Data Data) -> list (pair Data Data)) -> list (pair Data Data) = applyForward#40 anf#81 in
 let anf#84 : list (pair Data Data) = anf#82 (\values#43 : list 'erased -> letrec
   worker#76 : list 'erased -> list (pair Data Data) [static []] = \values#75 : list 'erased -> case@List values#75 of
@@ -119,44 +113,34 @@ worker#76 values#43) in
 applyForward#40 anf#84 mapData
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_27
+  [(lam builtin_22
     [(lam applyForward_5
       [(lam anf_6
         [(lam anf_7
-          [(lam anf_8
-            [(lam anf_9
-              [(lam anf_10
-                [(lam anf_11
-                  [(lam anf_12
-                    [(lam anf_26 [[applyForward_5 anf_26] (builtin mapData)])
-                      [anf_12
-                        (lam values_13
-                          [(lam worker_25 [worker_25 values_13])
-                            [(lam self_14 [self_14 self_14])
-                              (lam self_15
-                                (lam values_16
-                                  (case
-                                    values_16
-                                    (lam field_17
-                                      (lam field_18
-                                        [(lam anf_23
-                                          [(lam anf_24 [[builtin_27 anf_23] anf_24]) [[self_15 self_15] field_18]])
-                                          (case
-                                            field_17
-                                            (lam field_19
-                                              (lam field_20
-                                                [(lam destruct_21
-                                                  [(lam destruct_22 [[(builtin mkPairData) field_19] field_20])
-                                                    [(builtin unBData) field_20]])
-                                                  [(builtin unIData) field_19]])))]))
-                                    (con (list (pair data data)) []))))]])]])
-                    [applyForward_5 anf_11]])
-                  [[applyForward_5 anf_10] (builtin unMapData)]])
-                [(builtin mapData) anf_9]])
-              [[builtin_27 anf_8] (con (list (pair data data)) [])]])
-            [[(builtin mkPairData) anf_6] anf_7]])
-          [(builtin bData) (con bytestring #bb)]])
-        [(builtin bData) (con bytestring #aa)]])
+          [(lam anf_21 [[applyForward_5 anf_21] (builtin mapData)])
+            [anf_7
+              (lam values_8
+                [(lam worker_20 [worker_20 values_8])
+                  [(lam self_9 [self_9 self_9])
+                    (lam self_10
+                      (lam values_11
+                        (case
+                          values_11
+                          (lam field_12
+                            (lam field_13
+                              [(lam anf_18
+                                [(lam anf_19 [[builtin_22 anf_18] anf_19]) [[self_10 self_10] field_13]])
+                                (case
+                                  field_12
+                                  (lam field_14
+                                    (lam field_15
+                                      [(lam destruct_16
+                                        [(lam destruct_17 [[(builtin mkPairData) field_14] field_15])
+                                          [(builtin unBData) field_15]])
+                                        [(builtin unIData) field_14]])))]))
+                          (con (list (pair data data)) []))))]])]])
+          [applyForward_5 anf_6]])
+        [[applyForward_5 (con data (Map [(B #aa, B #bb)]))] (builtin unMapData)]])
       (lam x_3 (lam f_4 [f_4 x_3]))])
     (force (builtin mkCons))])
 --- result

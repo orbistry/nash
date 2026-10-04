@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 389
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmain = [subtractInteger 0 2, subtractInteger 0 1, 0]\n"
 ---
 --- unoptimized Core
@@ -20,23 +19,9 @@ main#1
           [[(force (builtin mkCons)) [fromInt_2 (con integer 0)]] (con (list integer) [])]]]])
     (lam value_3 value_3)])
 --- optimized Core
-let anf#9 : int = subtractInteger 0 2 in
-let anf#12 : int = subtractInteger 0 1 in
-let anf#14 : list int = mkCons 0 (con (list integer) []) in
-let anf#15 : list int = mkCons anf#12 anf#14 in
-mkCons anf#9 anf#15
+(con (list integer) [-2, -1, 0])
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_5
-    [(lam partial_6
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3 [(lam anf_4 [[builtin_5 anf_1] anf_4]) [[builtin_5 anf_2] anf_3]])
-            [[builtin_5 (con integer 0)] (con (list integer) [])]])
-          [partial_6 (con integer 1)]])
-        [partial_6 (con integer 2)]])
-      [(builtin subtractInteger) (con integer 0)]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con (list integer) [-2, -1, 0]))
 --- result
 (con (list integer) [-2, -1, 0])
 --- logs

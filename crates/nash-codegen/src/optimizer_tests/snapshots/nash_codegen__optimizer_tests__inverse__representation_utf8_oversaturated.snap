@@ -9,13 +9,9 @@ decodeUtf8 (encodeUtf8 "héllo") 1
   [[(builtin decodeUtf8) [(builtin encodeUtf8) (con string "héllo")]]
     (con integer 1)])
 --- optimized Core
-let anf#1 : bytes = encodeUtf8 "héllo" in
-let anf#2 : string = decodeUtf8 anf#1 in
-anf#2 1
+"héllo" 1
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_3 [(lam anf_4 [anf_4 (con integer 1)]) [(builtin decodeUtf8) anf_3]])
-    [(builtin encodeUtf8) (con string "héllo")]])
+(program 1.1.0 [(con string "héllo") (con integer 1)])
 --- isolated pass
 --- core before
 decodeUtf8 (encodeUtf8 "héllo") 1

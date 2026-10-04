@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 357
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nmap xs f =\n    case xs of\n        [] -> []\n        x :: rest -> mkCons (f x) (map rest f)\nmain = eq (map [6, 7, 8] (\\n -> addInteger n 1)) [7, 8, 9]\n"
 ---
 --- unoptimized Core
@@ -121,9 +120,6 @@ letrec
         True -> eq#35 field#43 field#48
         False -> false
 in
-let anf#71 : list int = mkCons 8 (con (list integer) []) in
-let anf#72 : list int = mkCons 7 anf#71 in
-let anf#73 : list int = mkCons 6 anf#72 in
 letrec
   worker#64 : list 'erased -> list int [static []] = \xs#63 : list 'erased -> case@List xs#63 of
     Nil -> (con (list integer) [])
@@ -131,63 +127,45 @@ letrec
     let anf#67 : list int = worker#64 field#56 in
     mkCons anf#66 anf#67
 in
-let anf#75 : list int = worker#64 anf#73 in
+let anf#75 : list int = worker#64 (con (list integer) [6, 7, 8]) in
 let anf#76 : list int -> bool = eq#35 anf#75 in
-let anf#80 : list int = mkCons 9 (con (list integer) []) in
-let anf#81 : list int = mkCons 8 anf#80 in
-let anf#82 : list int = mkCons 7 anf#81 in
-anf#76 anf#82
+anf#76 (con (list integer) [7, 8, 9])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_34
-    [(lam partial_35
-      [(lam partial_36
-        [(lam eq_17
-          [(lam anf_18
-            [(lam anf_19
-              [(lam anf_20
-                [(lam worker_28
-                  [(lam anf_29
-                    [(lam anf_30
-                      [(lam anf_31
-                        [(lam anf_32 [(lam anf_33 [anf_30 anf_33]) [partial_35 anf_32]])
-                          [partial_36 anf_31]])
-                        [[builtin_34 (con integer 9)] (con (list integer) [])]])
-                      [eq_17 anf_29]])
-                    [worker_28 anf_20]])
-                  [(lam self_21 [self_21 self_21])
-                    (lam self_22
-                      (lam xs_23
-                        (case
-                          xs_23
-                          (lam field_24
-                            (lam field_25
-                              [(lam anf_26
-                                [(lam anf_27 [[builtin_34 anf_26] anf_27]) [[self_22 self_22] field_25]])
-                                [[(builtin addInteger) field_24] (con integer 1)]]))
-                          (con (list integer) []))))]])
-                [[builtin_34 (con integer 6)] anf_19]])
-              [partial_35 anf_18]])
-            [partial_36 (con (list integer) [])]])
-          [(lam self_6 [self_6 self_6])
-            (lam self_7
-              (lam xs_8
-                (lam ys_9
-                  (case
-                    xs_8
-                    (lam field_12
-                      (lam field_13
-                        (case
-                          ys_9
-                          (lam field_14
-                            (lam field_15
-                              [(lam anf_16
-                                (case anf_16 (con bool False) [[[self_7 self_7] field_13] field_15]))
-                                [[(builtin equalsInteger) field_12] field_14]]))
-                          (con bool False))))
-                    (case ys_9 (lam field_10 (lam field_11 (con bool False))) (con bool True))))))]])
-        [builtin_34 (con integer 8)]])
-      [builtin_34 (con integer 7)]])
+  [(lam builtin_28
+    [(lam eq_17
+      [(lam worker_25
+        [(lam anf_26
+          [(lam anf_27 [anf_27 (con (list integer) [7, 8, 9])]) [eq_17 anf_26]])
+          [worker_25 (con (list integer) [6, 7, 8])]])
+        [(lam self_18 [self_18 self_18])
+          (lam self_19
+            (lam xs_20
+              (case
+                xs_20
+                (lam field_21
+                  (lam field_22
+                    [(lam anf_23
+                      [(lam anf_24 [[builtin_28 anf_23] anf_24]) [[self_19 self_19] field_22]])
+                      [[(builtin addInteger) field_21] (con integer 1)]]))
+                (con (list integer) []))))]])
+      [(lam self_6 [self_6 self_6])
+        (lam self_7
+          (lam xs_8
+            (lam ys_9
+              (case
+                xs_8
+                (lam field_12
+                  (lam field_13
+                    (case
+                      ys_9
+                      (lam field_14
+                        (lam field_15
+                          [(lam anf_16
+                            (case anf_16 (con bool False) [[[self_7 self_7] field_13] field_15]))
+                            [[(builtin equalsInteger) field_12] field_14]]))
+                      (con bool False))))
+                (case ys_9 (lam field_10 (lam field_11 (con bool False))) (con bool True))))))]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

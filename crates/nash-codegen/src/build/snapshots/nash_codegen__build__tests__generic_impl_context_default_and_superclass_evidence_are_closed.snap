@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntrait Eq 'a => Same 'a where\n    same : 'a -> 'a -> bool\n    same x y = eq x y\nimpl Same int where\nimpl Eq (list 'a) => Same (list 'a) where\nuse : Same 'a => 'a -> 'a -> bool\nuse x y = if same x y then neq x y else True\nmain = use [1, 2] [1, 3]\n"
 ---
 --- unoptimized Core
@@ -109,10 +108,8 @@ letrec
         True -> eq#38 field#46 field#51
         False -> false
 in
-let anf#75 : list int = mkCons 2 (con (list integer) []) in
-let anf#76 : list int = mkCons 1 anf#75 in
-let anf#80 : list int = mkCons 3 (con (list integer) []) in
-let anf#81 : list int = mkCons 1 anf#80 in
+let anf#76 : list int = (con (list integer) [1, 2]) in
+let anf#81 : list int = (con (list integer) [1, 3]) in
 let anf#72 : bool = eq#38 anf#76 anf#81 in
 case@Bool anf#72 of
   True -> let anf#71 : bool = eq#38 anf#76 anf#81 in
@@ -122,43 +119,35 @@ case@Bool anf#72 of
   False -> true
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_22
-    [(lam partial_23
-      [(lam eq_15
-        [(lam anf_16
-          [(lam anf_17
-            [(lam anf_18
-              [(lam anf_19
-                [(lam anf_20
+  [(lam eq_15
+    [(lam anf_16
+      [(lam anf_17
+        [(lam anf_18
+          (case
+            anf_18
+            (con bool True)
+            [(lam anf_19 (case anf_19 (con bool True) (con bool False)))
+              [[eq_15 anf_16] anf_17]]))
+          [[eq_15 anf_16] anf_17]])
+        (con (list integer) [1, 3])])
+      (con (list integer) [1, 2])])
+    [(lam self_4 [self_4 self_4])
+      (lam self_5
+        (lam xs_6
+          (lam ys_7
+            (case
+              xs_6
+              (lam field_10
+                (lam field_11
                   (case
-                    anf_20
-                    (con bool True)
-                    [(lam anf_21 (case anf_21 (con bool True) (con bool False)))
-                      [[eq_15 anf_17] anf_19]]))
-                  [[eq_15 anf_17] anf_19]])
-                [partial_23 anf_18]])
-              [[builtin_22 (con integer 3)] (con (list integer) [])]])
-            [partial_23 anf_16]])
-          [[builtin_22 (con integer 2)] (con (list integer) [])]])
-        [(lam self_4 [self_4 self_4])
-          (lam self_5
-            (lam xs_6
-              (lam ys_7
-                (case
-                  xs_6
-                  (lam field_10
-                    (lam field_11
-                      (case
-                        ys_7
-                        (lam field_12
-                          (lam field_13
-                            [(lam anf_14
-                              (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
-                              [[(builtin equalsInteger) field_10] field_12]]))
-                        (con bool False))))
-                  (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
-      [builtin_22 (con integer 1)]])
-    (force (builtin mkCons))])
+                    ys_7
+                    (lam field_12
+                      (lam field_13
+                        [(lam anf_14
+                          (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
+                          [[(builtin equalsInteger) field_10] field_12]]))
+                    (con bool False))))
+              (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
 --- result
 (con bool True)
 --- logs

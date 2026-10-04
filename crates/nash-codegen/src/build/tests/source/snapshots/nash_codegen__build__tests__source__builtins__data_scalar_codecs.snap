@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 298
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData, fromData)\ndecodedInt : Int\ndecodedInt = fromData (I 42)\ndecodedBytes : Bytes\ndecodedBytes = fromData (B #\"abcd\")\nmain =\n    if equalsInteger (unIData decodedInt) 42 then\n        if equalsByteString (unBData decodedBytes) #\"abcd\" then\n            equalsData (toData decodedInt) (I 42)\n        else False\n    else False\n"
 ---
 --- unoptimized Core
@@ -48,38 +47,24 @@ main#1
     (lam value_9 value_9)])
 --- optimized Core
 let anf#34 : Data = iData 42 in
-let anf#36 : Data = bData (con bytestring #abcd) in
 let anf#37 : int = unIData anf#34 in
 let anf#39 : bool = equalsInteger anf#37 42 in
 case@Bool anf#39 of
-  True -> let anf#40 : bytes = unBData anf#36 in
-  let anf#42 : bool = equalsByteString anf#40 (con bytestring #abcd) in
-  case@Bool anf#42 of
-    True -> let anf#45 : Data = iData 42 in
-    equalsData anf#34 anf#45
-    False -> false
+  True -> let anf#45 : Data = iData 42 in
+  equalsData anf#34 anf#45
   False -> false
 --- optimized UPLC
 (program 1.1.0
   [(lam anf_1
     [(lam anf_2
       [(lam anf_3
-        [(lam anf_4
-          (case
-            anf_4
-            (con bool False)
-            [(lam anf_5
-              [(lam anf_6
-                (case
-                  anf_6
-                  (con bool False)
-                  [(lam anf_7 [[(builtin equalsData) anf_1] anf_7])
-                    [(builtin iData) (con integer 42)]]))
-                [[(builtin equalsByteString) anf_5] (con bytestring #abcd)]])
-              [(builtin unBData) anf_2]]))
-          [[(builtin equalsInteger) anf_3] (con integer 42)]])
-        [(builtin unIData) anf_1]])
-      [(builtin bData) (con bytestring #abcd)]])
+        (case
+          anf_3
+          (con bool False)
+          [(lam anf_4 [[(builtin equalsData) anf_1] anf_4])
+            [(builtin iData) (con integer 42)]]))
+        [[(builtin equalsInteger) anf_2] (con integer 42)]])
+      [(builtin unIData) anf_1]])
     [(builtin iData) (con integer 42)]])
 --- result
 (con bool True)

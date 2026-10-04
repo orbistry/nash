@@ -15,23 +15,20 @@ case@Data bData (con bytestring #6e617368) 0 of
         (delay [(lam payload_5 payload_5) [(builtin unBData) generated_6]])]))
     [[(builtin bData) (con bytestring #6e617368)] (con integer 0)]])
 --- optimized Core
-let anf#2 : Data = bData (con bytestring #6e617368) in
-let anf#3 : Data = anf#2 0 in
+let anf#3 : Data = (con data (B #6e617368)) 0 in
 case@Data anf#3 of
   DataB payload#1 -> payload#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
-    [(lam anf_4
-      [(lam anf_5
-        [(lam generated_7
-          (force
-            [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
-              (delay (error))]
-              (delay [(lam payload_6 payload_6) [(builtin unBData) generated_7]])]))
-          anf_5])
-        [anf_4 (con integer 0)]])
-      [(builtin bData) (con bytestring #6e617368)]])
+  [(lam builtin_6
+    [(lam anf_2
+      [(lam generated_5
+        (force
+          [[[[[[builtin_6 generated_5] (delay (error))] (delay (error))] (delay (error))]
+            (delay (error))]
+            (delay [(lam payload_4 payload_4) [(builtin unBData) generated_5]])]))
+        anf_2])
+      [(con data (B #6e617368)) (con integer 0)]])
     (force (builtin chooseData))])
 --- isolated pass
 --- isolated ANF input

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 1054
 description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : List Int\nmain = validate (toData (Builtin.listData [Builtin.bData #\"ff\"]))\n"
 ---
 --- unoptimized Core
@@ -70,10 +69,7 @@ main#1
     (lam x_13 (lam f_14 [f_14 x_13]))])
 --- optimized Core
 let applyForward#28 : 'erased -> ('erased -> 'erased) -> 'erased = \x#26 : 'erased (f#27 : 'erased -> 'erased) -> f#27 x#26 in
-let anf#60 : Bytes = bData (con bytestring #ff) in
-let anf#61 : list Bytes = mkCons anf#60 (con (list data) []) in
-let anf#62 : List Bytes = listData anf#61 in
-let anf#55 : list Data = applyForward#28 anf#62 unListData in
+let anf#55 : list Data = applyForward#28 (con data (List [B #ff])) unListData in
 let anf#56 : (list Data -> list Data) -> list Data = applyForward#28 anf#55 in
 let anf#58 : list Data = anf#56 (\values#31 : list 'erased -> letrec
   worker#52 : list 'erased -> list Data [static []] = \values#51 : list 'erased -> case@List values#51 of
@@ -86,33 +82,27 @@ worker#52 values#31) in
 applyForward#28 anf#58 listData
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_21
+  [(lam builtin_18
     [(lam applyForward_5
       [(lam anf_6
         [(lam anf_7
-          [(lam anf_8
-            [(lam anf_9
-              [(lam anf_10
-                [(lam anf_20 [[applyForward_5 anf_20] (builtin listData)])
-                  [anf_10
-                    (lam values_11
-                      [(lam worker_19 [worker_19 values_11])
-                        [(lam self_12 [self_12 self_12])
-                          (lam self_13
-                            (lam values_14
-                              (case
-                                values_14
-                                (lam field_15
-                                  (lam field_16
-                                    [(lam destruct_17
-                                      [(lam anf_18 [[builtin_21 field_15] anf_18]) [[self_13 self_13] field_16]])
-                                      [(builtin unIData) field_15]]))
-                                (con (list data) []))))]])]])
-                [applyForward_5 anf_9]])
-              [[applyForward_5 anf_8] (builtin unListData)]])
-            [(builtin listData) anf_7]])
-          [[builtin_21 anf_6] (con (list data) [])]])
-        [(builtin bData) (con bytestring #ff)]])
+          [(lam anf_17 [[applyForward_5 anf_17] (builtin listData)])
+            [anf_7
+              (lam values_8
+                [(lam worker_16 [worker_16 values_8])
+                  [(lam self_9 [self_9 self_9])
+                    (lam self_10
+                      (lam values_11
+                        (case
+                          values_11
+                          (lam field_12
+                            (lam field_13
+                              [(lam destruct_14
+                                [(lam anf_15 [[builtin_18 field_12] anf_15]) [[self_10 self_10] field_13]])
+                                [(builtin unIData) field_12]]))
+                          (con (list data) []))))]])]])
+          [applyForward_5 anf_6]])
+        [[applyForward_5 (con data (List [B #ff]))] (builtin unListData)]])
       (lam x_3 (lam f_4 [f_4 x_3]))])
     (force (builtin mkCons))])
 --- result

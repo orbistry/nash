@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+decodeUtf8 (con bytestring #68c3a96c6c6f)
+--- unoptimized UPLC
+(program 1.1.0 [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)])
+--- optimized Core
+"héllo"
+--- optimized UPLC
+(program 1.1.0 (con string "héllo"))
+--- result
+(con string "héllo")
+--- logs
+[]
+--- budget
+cpu: 140058, memory: 406

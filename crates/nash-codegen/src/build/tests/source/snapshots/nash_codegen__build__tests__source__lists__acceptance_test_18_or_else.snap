@@ -26,9 +26,9 @@ main#1
         [(lam match_8 (case match_8 default_6 (lam field_9 [(lam a_7 a_7) field_9])))
           opt_5]))])
 --- optimized Core
-equalsInteger 42 42
+true
 --- optimized UPLC
-(program 1.1.0 [[(builtin equalsInteger) (con integer 42)] (con integer 42)])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

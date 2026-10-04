@@ -8,12 +8,9 @@ encodeUtf8 (decodeUtf8 (con bytestring #68c3a96c6c6f))
 (program 1.1.0
   [(builtin encodeUtf8) [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)]])
 --- optimized Core
-let anf#1 : string = decodeUtf8 (con bytestring #68c3a96c6c6f) in
-encodeUtf8 anf#1
+(con bytestring #68c3a96c6c6f)
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_2 [(builtin encodeUtf8) anf_2])
-    [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)]])
+(program 1.1.0 (con bytestring #68c3a96c6c6f))
 --- isolated pass
 --- core before
 encodeUtf8 (decodeUtf8 (con bytestring #68c3a96c6c6f))

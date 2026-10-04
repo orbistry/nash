@@ -13,16 +13,9 @@ addInteger (helper#12 10 20 30) (helper#12 10 20 30)
       [[[helper_12 (con integer 10)] (con integer 20)] (con integer 30)]])
     (lam x_9 (lam y_10 (lam z_11 [[(builtin addInteger) x_9] y_10])))])
 --- optimized Core
-let anf#5 : int = addInteger 10 20 in
-let anf#6 : int = addInteger 10 20 in
-addInteger anf#5 anf#6
+60
 --- optimized UPLC
-(program 1.1.0
-  [(lam partial_3
-    [(lam anf_1
-      [(lam anf_2 [[(builtin addInteger) anf_1] anf_2]) [partial_3 (con integer 20)]])
-      [partial_3 (con integer 20)]])
-    [(builtin addInteger) (con integer 10)]])
+(program 1.1.0 (con integer 60))
 --- isolated pass
 --- core before
 let helper#12 : int -> int -> int -> int = \x#9 : int y#10 : int z#11 : int -> addInteger x#9 y#10 in

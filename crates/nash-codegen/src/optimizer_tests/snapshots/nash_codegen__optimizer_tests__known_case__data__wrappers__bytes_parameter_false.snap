@@ -18,12 +18,9 @@ case@Data bData (con bytestring #6e617368) of
         (delay [(lam payload_9 payload_9) [(builtin unBData) generated_10]])]))
     [(builtin bData) (con bytestring #6e617368)]])
 --- optimized Core
-let anf#2 : Data = bData (con bytestring #6e617368) in
 (con bytestring #6e617368)
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 (con bytestring #6e617368))
-    [(builtin bData) (con bytestring #6e617368)]])
+(program 1.1.0 (con bytestring #6e617368))
 --- isolated pass
 --- isolated ANF input
 let anf#10 : Data = bData (con bytestring #6e617368) in

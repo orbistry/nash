@@ -25,15 +25,9 @@ main#1
       (lam value_9 value_9)])
     (lam value_8 value_8)])
 --- optimized Core
-let anf#21 : list int = mkCons 2 (con (list integer) []) in
-let x#14 : list int = mkCons 1 anf#21 in
 error
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam anf_1 [(lam x_2 (error)) [[builtin_3 (con integer 1)] anf_1]])
-      [[builtin_3 (con integer 2)] (con (list integer) [])]])
-    (force (builtin mkCons))])
+(program 1.1.0 (error))
 --- result
 error: ExplicitErrorTerm
 --- logs

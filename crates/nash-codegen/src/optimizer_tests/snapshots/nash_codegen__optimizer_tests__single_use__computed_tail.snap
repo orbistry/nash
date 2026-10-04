@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/single_use.rs
-assertion_line: 40
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline\\n{}\\n--- core after\\n{}\\n--- candidate\\n{}\",\npretty(before), output(&baseline), pretty(after), output(&candidate)))"
 ---
 --- unoptimized Core
@@ -11,9 +10,9 @@ result#1
   [(lam result_1 result_1)
     [[(builtin addInteger) (con integer 40)] (con integer 2)]])
 --- optimized Core
-addInteger 40 2
+42
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 40)] (con integer 2)])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
 let result#1 : int = addInteger 40 2 in

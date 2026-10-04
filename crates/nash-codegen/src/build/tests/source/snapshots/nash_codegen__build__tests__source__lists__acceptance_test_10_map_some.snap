@@ -71,12 +71,9 @@ main#1
       (builtin equalsInteger)])
     (lam value_34 value_34)])
 --- optimized Core
-let anf#59 : 'erased = addInteger 1 1 in
-equalsInteger anf#59 2
+equalsInteger 2 2
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [[(builtin equalsInteger) anf_1] (con integer 2)])
-    [[(builtin addInteger) (con integer 1)] (con integer 1)]])
+(program 1.1.0 [[(builtin equalsInteger) (con integer 2)] (con integer 2)])
 --- result
 (con bool True)
 --- logs

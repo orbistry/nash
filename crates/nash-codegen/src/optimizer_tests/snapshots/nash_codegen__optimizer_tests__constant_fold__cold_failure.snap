@@ -1,0 +1,24 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+case@Bool true of
+  True -> 7
+  False -> divideInteger 7 0
+--- unoptimized UPLC
+(program 1.1.0
+  (case
+    (con bool True)
+    [[(builtin divideInteger) (con integer 7)] (con integer 0)]
+    (con integer 7)))
+--- optimized Core
+7
+--- optimized UPLC
+(program 1.1.0 (con integer 7))
+--- result
+(con integer 7)
+--- logs
+[]
+--- budget
+cpu: 48100, memory: 400

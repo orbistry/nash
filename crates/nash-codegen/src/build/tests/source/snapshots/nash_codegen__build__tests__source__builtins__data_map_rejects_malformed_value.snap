@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 359
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\ndecoded : Map Bytes (List Int)\ndecoded = validate (Map [mkPairData (B #\"aa\") (List [B #\"bb\"])])\nmain = nullList (unMapData decoded)\n"
 ---
 --- unoptimized Core
@@ -138,14 +137,7 @@ main#1
     (lam x_16 (lam f_17 [f_17 x_16]))])
 --- optimized Core
 let applyForward#55 : 'erased -> ('erased -> 'erased) -> 'erased = \x#53 : 'erased (f#54 : 'erased -> 'erased) -> f#54 x#53 in
-let anf#124 : Data = bData (con bytestring #aa) in
-let anf#126 : Data = bData (con bytestring #bb) in
-let anf#127 : list Data = mkCons anf#126 (con (list data) []) in
-let anf#128 : Data = listData anf#127 in
-let anf#129 : pair Data Data = mkPairData anf#124 anf#128 in
-let anf#130 : list (pair Data Data) = mkCons anf#129 (con (list (pair data data)) []) in
-let anf#131 : Data = mapData anf#130 in
-let anf#119 : list (pair Data Data) = applyForward#55 anf#131 unMapData in
+let anf#119 : list (pair Data Data) = applyForward#55 (con data (Map [(B #aa, List [B #bb])])) unMapData in
 let anf#120 : (list (pair Data Data) -> list (pair Data Data)) -> list (pair Data Data) = applyForward#55 anf#119 in
 let anf#122 : list (pair Data Data) = anf#120 (\values#58 : list 'erased -> letrec
   worker#108 : list 'erased -> list (pair Data Data) [static []] = \values#107 : list 'erased -> case@List values#107 of
@@ -173,71 +165,57 @@ let anf#132 : list (pair Bytes (List Int)) = unMapData decoded#103 in
 nullList anf#132
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_45
-    [(lam builtin_46
+  [(lam builtin_38
+    [(lam builtin_39
       [(lam applyForward_7
         [(lam anf_8
           [(lam anf_9
-            [(lam anf_10
-              [(lam anf_11
-                [(lam anf_12
-                  [(lam anf_13
-                    [(lam anf_14
-                      [(lam anf_15
-                        [(lam anf_16
-                          [(lam anf_42
-                            [(lam decoded_43
-                              [(lam anf_44 [builtin_45 anf_44]) [(builtin unMapData) decoded_43]])
-                              [[applyForward_7 anf_42] (builtin mapData)]])
-                            [anf_16
-                              (lam values_17
-                                [(lam worker_41 [worker_41 values_17])
-                                  [(lam self_18 [self_18 self_18])
-                                    (lam self_19
-                                      (lam values_20
-                                        (case
-                                          values_20
-                                          (lam field_21
-                                            (lam field_22
-                                              [(lam anf_39
-                                                [(lam anf_40 [[builtin_46 anf_39] anf_40]) [[self_19 self_19] field_22]])
-                                                (case
-                                                  field_21
-                                                  (lam field_23
-                                                    (lam field_24
-                                                      [(lam destruct_25
-                                                        [(lam anf_26
-                                                          [(lam anf_27
-                                                            [(lam anf_37
-                                                              [(lam anf_38 [[(builtin mkPairData) field_23] anf_38])
-                                                                [[applyForward_7 anf_37] (builtin listData)]])
-                                                              [anf_27
-                                                                (lam values_28
-                                                                  [(lam worker_36 [worker_36 values_28])
-                                                                    [(lam self_29 [self_29 self_29])
-                                                                      (lam self_30
-                                                                        (lam values_31
-                                                                          (case
-                                                                            values_31
-                                                                            (lam field_32
-                                                                              (lam field_33
-                                                                                [(lam destruct_34
-                                                                                  [(lam anf_35 [[builtin_46 field_32] anf_35]) [[self_30 self_30] field_33]])
-                                                                                  [(builtin unIData) field_32]]))
-                                                                            (con (list data) []))))]])]])
-                                                            [applyForward_7 anf_26]])
-                                                          [[applyForward_7 field_24] (builtin unListData)]])
-                                                        [(builtin unBData) field_23]])))]))
-                                          (con (list (pair data data)) []))))]])]])
-                          [applyForward_7 anf_15]])
-                        [[applyForward_7 anf_14] (builtin unMapData)]])
-                      [(builtin mapData) anf_13]])
-                    [[builtin_46 anf_12] (con (list (pair data data)) [])]])
-                  [[(builtin mkPairData) anf_8] anf_11]])
-                [(builtin listData) anf_10]])
-              [[builtin_46 anf_9] (con (list data) [])]])
-            [(builtin bData) (con bytestring #bb)]])
-          [(builtin bData) (con bytestring #aa)]])
+            [(lam anf_35
+              [(lam decoded_36
+                [(lam anf_37 [builtin_38 anf_37]) [(builtin unMapData) decoded_36]])
+                [[applyForward_7 anf_35] (builtin mapData)]])
+              [anf_9
+                (lam values_10
+                  [(lam worker_34 [worker_34 values_10])
+                    [(lam self_11 [self_11 self_11])
+                      (lam self_12
+                        (lam values_13
+                          (case
+                            values_13
+                            (lam field_14
+                              (lam field_15
+                                [(lam anf_32
+                                  [(lam anf_33 [[builtin_39 anf_32] anf_33]) [[self_12 self_12] field_15]])
+                                  (case
+                                    field_14
+                                    (lam field_16
+                                      (lam field_17
+                                        [(lam destruct_18
+                                          [(lam anf_19
+                                            [(lam anf_20
+                                              [(lam anf_30
+                                                [(lam anf_31 [[(builtin mkPairData) field_16] anf_31])
+                                                  [[applyForward_7 anf_30] (builtin listData)]])
+                                                [anf_20
+                                                  (lam values_21
+                                                    [(lam worker_29 [worker_29 values_21])
+                                                      [(lam self_22 [self_22 self_22])
+                                                        (lam self_23
+                                                          (lam values_24
+                                                            (case
+                                                              values_24
+                                                              (lam field_25
+                                                                (lam field_26
+                                                                  [(lam destruct_27
+                                                                    [(lam anf_28 [[builtin_39 field_25] anf_28]) [[self_23 self_23] field_26]])
+                                                                    [(builtin unIData) field_25]]))
+                                                              (con (list data) []))))]])]])
+                                              [applyForward_7 anf_19]])
+                                            [[applyForward_7 field_17] (builtin unListData)]])
+                                          [(builtin unBData) field_16]])))]))
+                            (con (list (pair data data)) []))))]])]])
+            [applyForward_7 anf_8]])
+          [[applyForward_7 (con data (Map [(B #aa, List [B #bb])]))] (builtin unMapData)]])
         (lam x_5 (lam f_6 [f_6 x_5]))])
       (force (builtin mkCons))])
     (force (builtin nullList))])

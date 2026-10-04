@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 414
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nslice bytes start end = sliceByteString start end bytes\nlength bytes = lengthOfByteString bytes\ndrop bytes n = slice bytes n (subtractInteger (length bytes) n)\nmain =\n    let\n        x = #\"01020304050607\"\n    in\n    eq (drop x 2) #\"0304050607\"\n"
 ---
 --- unoptimized Core
@@ -37,22 +36,12 @@ main#1
           (lam end_15 [[[(builtin sliceByteString) start_14] end_15] bytes_13])))])
     (builtin equalsByteString)])
 --- optimized Core
-let anf#34 : int = lengthOfByteString (con bytestring #01020304050607) in
-let anf#35 : int = subtractInteger anf#34 2 in
-let anf#38 : bytes = sliceByteString 2 anf#35 (con bytestring #01020304050607) in
-let anf#39 : bytes -> bool = equalsByteString anf#38 in
+let anf#39 : bytes -> bool = equalsByteString (con bytestring #0304050607) in
 anf#39 (con bytestring #0304050607)
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1
-    [(lam anf_2
-      [(lam anf_3
-        [(lam anf_4 [anf_4 (con bytestring #0304050607)])
-          [(builtin equalsByteString) anf_3]])
-        [[[(builtin sliceByteString) (con integer 2)] anf_2]
-          (con bytestring #01020304050607)]])
-      [[(builtin subtractInteger) anf_1] (con integer 2)]])
-    [(builtin lengthOfByteString) (con bytestring #01020304050607)]])
+  [(lam anf_1 [anf_1 (con bytestring #0304050607)])
+    [(builtin equalsByteString) (con bytestring #0304050607)]])
 --- result
 (con bool True)
 --- logs

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 1
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nlength xs =\n    case xs of\n        [] -> 0\n        _ :: rest -> addInteger 1 (length rest)\nmain = equalsInteger (length [1, 2, 3]) 3\n"
 ---
 --- unoptimized Core
@@ -46,34 +45,23 @@ letrec
     Cons field#15 field#16 -> let anf#20 : int = length#12 field#16 in
     addInteger 1 anf#20
 in
-let anf#24 : list int = mkCons 3 (con (list integer) []) in
-let anf#25 : list int = mkCons 2 anf#24 in
-let anf#26 : list int = mkCons 1 anf#25 in
-let anf#27 : int = length#12 anf#26 in
+let anf#27 : int = length#12 (con (list integer) [1, 2, 3]) in
 equalsInteger anf#27 3
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_18
-    [(lam length_9
-      [(lam anf_10
-        [(lam anf_11
-          [(lam anf_14
-            [(lam anf_17 [[(builtin equalsInteger) anf_17] (con integer 3)])
-              [length_9 anf_14]])
-            [[builtin_18 (con integer 1)] anf_11]])
-          [[builtin_18 (con integer 2)] anf_10]])
-        [[builtin_18 (con integer 3)] (con (list integer) [])]])
-      [(lam self_3 [self_3 self_3])
-        (lam self_4
-          (lam xs_5
-            (case
-              xs_5
-              (lam field_6
-                (lam field_7
-                  [(lam anf_8 [[(builtin addInteger) (con integer 1)] anf_8])
-                    [[self_4 self_4] field_7]]))
-              (con integer 0))))]])
-    (force (builtin mkCons))])
+  [(lam length_9
+    [(lam anf_10 [[(builtin equalsInteger) anf_10] (con integer 3)])
+      [length_9 (con (list integer) [1, 2, 3])]])
+    [(lam self_3 [self_3 self_3])
+      (lam self_4
+        (lam xs_5
+          (case
+            xs_5
+            (lam field_6
+              (lam field_7
+                [(lam anf_8 [[(builtin addInteger) (con integer 1)] anf_8])
+                  [[self_4 self_4] field_7]]))
+            (con integer 0))))]])
 --- result
 (con bool True)
 --- logs

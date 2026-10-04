@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+decodeUtf8 (con bytestring #ff)
+--- unoptimized UPLC
+(program 1.1.0 [(builtin decodeUtf8) (con bytestring #ff)])
+--- optimized Core
+decodeUtf8 (con bytestring #ff)
+--- optimized UPLC
+(program 1.1.0 [(builtin decodeUtf8) (con bytestring #ff)])
+--- result
+error: Runtime(DecodeUtf8(Utf8Error { valid_up_to: 0, error_len: Some(1) }))
+--- logs
+[]
+--- budget
+cpu: 92058, memory: 106

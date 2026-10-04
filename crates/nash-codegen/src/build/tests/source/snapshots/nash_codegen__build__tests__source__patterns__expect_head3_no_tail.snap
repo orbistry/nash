@@ -73,37 +73,9 @@ main#1
       (lam value_27 value_27)])
     (lam value_26 value_26)])
 --- optimized Core
-let anf#42 : list int = mkCons 3 (con (list integer) []) in
-let anf#43 : list int = mkCons 2 anf#42 in
-let a#12 : list int = mkCons 1 anf#43 in
-let anf#44 : bool = equalsInteger 1 1 in
-case@Bool anf#44 of
-  True -> let anf#45 : bool = equalsInteger 2 2 in
-  case@Bool anf#45 of
-    True -> equalsInteger 3 3
-    False -> false
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_6
-    [(lam anf_1
-      [(lam anf_2
-        [(lam a_3
-          [(lam anf_4
-            (case
-              anf_4
-              (con bool False)
-              [(lam anf_5
-                (case
-                  anf_5
-                  (con bool False)
-                  [[(builtin equalsInteger) (con integer 3)] (con integer 3)]))
-                [[(builtin equalsInteger) (con integer 2)] (con integer 2)]]))
-            [[(builtin equalsInteger) (con integer 1)] (con integer 1)]])
-          [[builtin_6 (con integer 1)] anf_2]])
-        [[builtin_6 (con integer 2)] anf_1]])
-      [[builtin_6 (con integer 3)] (con (list integer) [])]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

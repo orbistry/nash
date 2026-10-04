@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1249
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nx : int\nx = 40\ny : int\ny = Builtin.addInteger x 2\nunused : int\nunused = fail\nmain : int\nmain = y\n"
 ---
 --- unoptimized Core
@@ -18,9 +17,9 @@ main#1
       [fromInt_4 (con integer 40)]])
     (lam value_5 value_5)])
 --- optimized Core
-addInteger 40 2
+42
 --- optimized UPLC
-(program 1.1.0 [[(builtin addInteger) (con integer 40)] (con integer 2)])
+(program 1.1.0 (con integer 42))
 --- result
 (con integer 42)
 --- logs

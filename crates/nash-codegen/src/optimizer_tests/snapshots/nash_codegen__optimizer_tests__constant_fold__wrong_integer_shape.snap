@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+addInteger (con bytestring #78) 7
+--- unoptimized UPLC
+(program 1.1.0 [[(builtin addInteger) (con bytestring #78)] (con integer 7)])
+--- optimized Core
+addInteger (con bytestring #78) 7
+--- optimized UPLC
+(program 1.1.0 [[(builtin addInteger) (con bytestring #78)] (con integer 7)])
+--- result
+error: Runtime(TypeMismatch(Integer, ByteString([120])))
+--- logs
+[]
+--- budget
+cpu: 100, memory: 100

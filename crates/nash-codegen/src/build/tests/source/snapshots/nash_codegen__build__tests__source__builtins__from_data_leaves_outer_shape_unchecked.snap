@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 430
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (fromData)\ndecoded : Int\ndecoded = fromData (B #\"aa\")\nmain = equalsData (coerce decoded) (B #\"aa\")\n"
 ---
 --- unoptimized Core
@@ -22,15 +21,9 @@ main#1
       (lam coerce_9 coerce_9)])
     (lam value_8 value_8)])
 --- optimized Core
-let anf#20 : Data = bData (con bytestring #aa) in
-let anf#23 : Data = bData (con bytestring #aa) in
-equalsData anf#20 anf#23
+equalsData (con data (B #aa)) (con data (B #aa))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    [(lam anf_2 [[(builtin equalsData) anf_1] anf_2])
-      [(builtin bData) (con bytestring #aa)]])
-    [(builtin bData) (con bytestring #aa)]])
+(program 1.1.0 [[(builtin equalsData) (con data (B #aa))] (con data (B #aa))])
 --- result
 (con bool True)
 --- logs

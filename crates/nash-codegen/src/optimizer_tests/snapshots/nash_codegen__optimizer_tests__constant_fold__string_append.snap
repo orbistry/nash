@@ -1,0 +1,19 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+appendString "hello " "world"
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin appendString) (con string "hello ")] (con string "world")])
+--- optimized Core
+"hello world"
+--- optimized UPLC
+(program 1.1.0 (con string "hello world"))
+--- result
+(con string "hello world")
+--- logs
+[]
+--- budget
+cpu: 201014, memory: 606

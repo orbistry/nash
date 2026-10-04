@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 432
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nslice bytes start end = sliceByteString start end bytes\ntake bytes n = slice bytes 0 n\nmain = eq (take #\"010203\" 2) #\"0102\"\n"
 ---
 --- unoptimized Core
@@ -30,15 +29,12 @@ main#1
       (lam value_10 value_10)])
     (builtin equalsByteString)])
 --- optimized Core
-let anf#32 : bytes = sliceByteString 0 2 (con bytestring #010203) in
-let anf#33 : bytes -> bool = equalsByteString anf#32 in
+let anf#33 : bytes -> bool = equalsByteString (con bytestring #0102) in
 anf#33 (con bytestring #0102)
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1
-    [(lam anf_2 [anf_2 (con bytestring #0102)]) [(builtin equalsByteString) anf_1]])
-    [[[(builtin sliceByteString) (con integer 0)] (con integer 2)]
-      (con bytestring #010203)]])
+  [(lam anf_1 [anf_1 (con bytestring #0102)])
+    [(builtin equalsByteString) (con bytestring #0102)]])
 --- result
 (con bool True)
 --- logs

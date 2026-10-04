@@ -14,3 +14,5 @@ mod small_inline;
 mod unused_params;
 
 mod inverse;
+
+mod constant_fold;

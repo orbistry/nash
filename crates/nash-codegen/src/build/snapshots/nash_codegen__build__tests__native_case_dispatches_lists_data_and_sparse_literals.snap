@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1393
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nfirst : list int -> int\nfirst xs =\n    case xs of\n        [] -> Builtin.subtractInteger 0 1\n        x :: _ -> x\ndecode : Data -> int\ndecode data =\n    case data of\n        I n -> n\n        _ -> Builtin.subtractInteger 0 2\nselect : int -> int\nselect n =\n    case n of\n        7 -> 10\n        100 -> 20\n        _ -> 30\nmain = (first [], first [42], decode (I 9), decode (B #\"\"), select 7, select 100, select (Builtin.subtractInteger 0 7))\n"
 ---
 --- unoptimized Core
@@ -90,9 +89,9 @@ main#1
     (lam value_14 value_14)])
 --- optimized Core
 let first#37 : list int -> int = \xs#20 : list int -> case@List xs#20 of
-  Nil -> subtractInteger 0 1
+  Nil -> -1
   Cons field#22 field#35 -> field#22 in
-let decode#47 : Data -> int = \data#38 : Data -> let leaf#40 : @delay int = delay (subtractInteger 0 2) in
+let decode#47 : Data -> int = \data#38 : Data -> let leaf#40 : @delay int = delay -2 in
 case@Data data#38 of
   DataConstr field#41 -> force leaf#40
   DataMap field#42 -> force leaf#40
@@ -110,76 +109,62 @@ case@Bool anf#65 of
     True -> 20
     False -> 30 in
 let anf#69 : int = first#37 (con (list integer) []) in
-let anf#71 : list int = mkCons 42 (con (list integer) []) in
-let anf#72 : int = first#37 anf#71 in
+let anf#72 : int = first#37 (con (list integer) [42]) in
 let anf#74 : Data = iData 9 in
 let anf#75 : int = decode#47 anf#74 in
-let anf#77 : Data = bData (con bytestring #) in
-let anf#78 : int = decode#47 anf#77 in
+let anf#78 : int = decode#47 (con data (B #)) in
 let anf#80 : int = select#55 7 in
 let anf#82 : int = select#55 100 in
-let anf#85 : int = subtractInteger 0 7 in
-let anf#86 : int = select#55 anf#85 in
+let anf#86 : int = select#55 -7 in
 constr 0 anf#69 anf#72 anf#75 anf#78 anf#80 anf#82 anf#86
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_33
-    [(lam builtin_35
-      [(lam partial_36
-        [(lam first_4
-          [(lam decode_12
-            [(lam eq_13
-              [(lam select_19
-                [(lam anf_21
-                  [(lam anf_23
-                    [(lam anf_24
-                      [(lam anf_25
-                        [(lam anf_26
-                          [(lam anf_27
-                            [(lam anf_28
-                              [(lam anf_29
-                                [(lam anf_30
-                                  [(lam anf_31
-                                    [(lam anf_32 (constr 0 anf_21 anf_24 anf_26 anf_28 anf_29 anf_30 anf_32))
-                                      [select_19 anf_31]])
-                                    [partial_36 (con integer 7)]])
-                                  [select_19 (con integer 100)]])
-                                [select_19 (con integer 7)]])
-                              [decode_12 anf_27]])
-                            [(builtin bData) (con bytestring #)]])
-                          [decode_12 anf_25]])
-                        [(builtin iData) (con integer 9)]])
-                      [first_4 anf_23]])
-                    [[builtin_33 (con integer 42)] (con (list integer) [])]])
-                  [first_4 (con (list integer) [])]])
-                (lam n_14
-                  [(lam anf_15
-                    [(lam anf_16
-                      (case
-                        anf_16
-                        [(lam anf_17
-                          [(lam anf_18 (case anf_18 (con integer 30) (con integer 20)))
-                            [anf_17 (con integer 100)]])
-                          [eq_13 n_14]]
-                        (con integer 10)))
-                      [anf_15 (con integer 7)]])
-                    [eq_13 n_14]])])
-              (builtin equalsInteger)])
-            (lam data_5
-              [(lam leaf_6
-                [(lam generated_34
-                  (force
-                    [[[[[[builtin_35 generated_34] (delay (force leaf_6))] (delay (force leaf_6))]
-                      (delay (force leaf_6))]
-                      (delay [(lam field_10 field_10) [(builtin unIData) generated_34]])]
-                      (delay (force leaf_6))]))
-                  data_5])
-                (delay [partial_36 (con integer 2)])])])
-          (lam xs_1
-            (case xs_1 (lam field_2 (lam field_3 field_2)) [partial_36 (con integer 1)]))])
-        [(builtin subtractInteger) (con integer 0)]])
-      (force (builtin chooseData))])
-    (force (builtin mkCons))])
+  [(lam builtin_31
+    [(lam first_4
+      [(lam decode_12
+        [(lam eq_13
+          [(lam select_19
+            [(lam anf_21
+              [(lam anf_23
+                [(lam anf_24
+                  [(lam anf_25
+                    [(lam anf_26
+                      [(lam anf_27
+                        [(lam anf_28
+                          [(lam anf_29 (constr 0 anf_21 anf_23 anf_25 anf_26 anf_27 anf_28 anf_29))
+                            [select_19 (con integer -7)]])
+                          [select_19 (con integer 100)]])
+                        [select_19 (con integer 7)]])
+                      [decode_12 (con data (B #))]])
+                    [decode_12 anf_24]])
+                  [(builtin iData) (con integer 9)]])
+                [first_4 (con (list integer) [42])]])
+              [first_4 (con (list integer) [])]])
+            (lam n_14
+              [(lam anf_15
+                [(lam anf_16
+                  (case
+                    anf_16
+                    [(lam anf_17
+                      [(lam anf_18 (case anf_18 (con integer 30) (con integer 20)))
+                        [anf_17 (con integer 100)]])
+                      [eq_13 n_14]]
+                    (con integer 10)))
+                  [anf_15 (con integer 7)]])
+                [eq_13 n_14]])])
+          (builtin equalsInteger)])
+        (lam data_5
+          [(lam leaf_6
+            [(lam generated_30
+              (force
+                [[[[[[builtin_31 generated_30] (delay (force leaf_6))] (delay (force leaf_6))]
+                  (delay (force leaf_6))]
+                  (delay [(lam field_10 field_10) [(builtin unIData) generated_30]])]
+                  (delay (force leaf_6))]))
+              data_5])
+            (delay (con integer -2))])])
+      (lam xs_1 (case xs_1 (lam field_2 (lam field_3 field_2)) (con integer -1)))])
+    (force (builtin chooseData))])
 --- result
 (constr 0
   (con integer -1)

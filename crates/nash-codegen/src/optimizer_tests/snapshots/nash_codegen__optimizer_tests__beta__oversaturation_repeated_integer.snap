@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/beta.rs
-assertion_line: 40
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline\\n{}\\n--- core after\\n{}\\n--- candidate\\n{}\",\npretty(before), output(&baseline), pretty(after), output(&candidate)))"
 ---
 --- unoptimized Core
@@ -14,15 +13,14 @@ expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core be
     (con integer 21)]
     (con integer 0)])
 --- optimized Core
-let beta#5 : int -> int = trace "intermediate" in \y#4 : int -> addInteger 21 21 in
+let beta#5 : int -> int = trace "intermediate" in \y#4 : int -> 42 in
 beta#5 0
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_3
     [(lam beta_2 [beta_2 (con integer 0)])
       (force
-        [[builtin_3 (con string "intermediate")]
-          (delay (lam y_1 [[(builtin addInteger) (con integer 21)] (con integer 21)]))])])
+        [[builtin_3 (con string "intermediate")] (delay (lam y_1 (con integer 42)))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

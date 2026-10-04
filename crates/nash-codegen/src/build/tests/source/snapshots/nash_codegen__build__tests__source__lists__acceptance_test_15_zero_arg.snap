@@ -50,15 +50,9 @@ main#1
             arg_6]))])
     (lam coerce_19 coerce_19)])
 --- optimized Core
-let anf#39 : Map Data Data = mapData (con (list (pair data data)) []) in
-let anf#41 : Map Data Data = mapData (con (list (pair data data)) []) in
-equalsData anf#39 anf#41
+equalsData (con data (Map [])) (con data (Map []))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    [(lam anf_2 [[(builtin equalsData) anf_1] anf_2])
-      [(builtin mapData) (con (list (pair data data)) [])]])
-    [(builtin mapData) (con (list (pair data data)) [])]])
+(program 1.1.0 [[(builtin equalsData) (con data (Map []))] (con data (Map []))])
 --- result
 (con bool True)
 --- logs

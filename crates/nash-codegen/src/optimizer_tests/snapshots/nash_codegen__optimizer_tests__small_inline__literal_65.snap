@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/small_inline.rs
-assertion_line: 37
 expression: "crate::harness::pass_snapshot(b.arena, core,\nformat!(\"--- core before\\n{}\\n--- baseline uplc\\n{}\\n--- core after\\n{}\\n--- optimized uplc\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), baseline.uplc, pretty(after), candidate.uplc,\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -18,7 +17,7 @@ addInteger (length#2 (con bytestring #070707070707070707070707070707070707070707
       [(builtin lengthOfByteString)
         (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)])])
 --- optimized Core
-let length#4 : @delay int = delay (lengthOfByteString (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)) in
+let length#4 : @delay int = delay 65 in
 let anf#5 : int = force length#4 in
 let anf#6 : int = force length#4 in
 addInteger anf#5 anf#6
@@ -27,9 +26,7 @@ addInteger anf#5 anf#6
   [(lam length_1
     [(lam anf_2 [(lam anf_3 [[(builtin addInteger) anf_2] anf_3]) (force length_1)])
       (force length_1)])
-    (delay
-      [(builtin lengthOfByteString)
-        (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707)])])
+    (delay (con integer 65))])
 --- isolated pass
 --- core before
 let length#2 : bytes -> int = \x#1 : bytes -> lengthOfByteString (con bytestring #0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707) in

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 119
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nexpected : list int\nexpected = [1]\nmain : bool\nmain = eq (Builtin.mkCons 1 []) expected\n"
 ---
 --- unoptimized Core
@@ -91,36 +90,27 @@ letrec
         True -> eq#27 field#35 field#40
         False -> false
 in
-let expected#45 : list int = mkCons 1 (con (list integer) []) in
-let anf#50 : list int = mkCons 1 (con (list integer) []) in
-eq#27 anf#50 expected#45
+eq#27 (con (list integer) [1]) (con (list integer) [1])
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_18
-    [(lam partial_19
-      [(lam eq_15
-        [(lam expected_16
-          [(lam anf_17 [[eq_15 anf_17] expected_16]) [partial_19 (con (list integer) [])]])
-          [partial_19 (con (list integer) [])]])
-        [(lam self_4 [self_4 self_4])
-          (lam self_5
-            (lam xs_6
-              (lam ys_7
-                (case
-                  xs_6
-                  (lam field_10
-                    (lam field_11
-                      (case
-                        ys_7
-                        (lam field_12
-                          (lam field_13
-                            [(lam anf_14
-                              (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
-                              [[(builtin equalsInteger) field_10] field_12]]))
-                        (con bool False))))
-                  (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
-      [builtin_18 (con integer 1)]])
-    (force (builtin mkCons))])
+  [(lam eq_15 [[eq_15 (con (list integer) [1])] (con (list integer) [1])])
+    [(lam self_4 [self_4 self_4])
+      (lam self_5
+        (lam xs_6
+          (lam ys_7
+            (case
+              xs_6
+              (lam field_10
+                (lam field_11
+                  (case
+                    ys_7
+                    (lam field_12
+                      (lam field_13
+                        [(lam anf_14
+                          (case anf_14 (con bool False) [[[self_5 self_5] field_11] field_13]))
+                          [[(builtin equalsInteger) field_10] field_12]]))
+                    (con bool False))))
+              (case ys_7 (lam field_8 (lam field_9 (con bool False))) (con bool True))))))]])
 --- result
 (con bool True)
 --- logs

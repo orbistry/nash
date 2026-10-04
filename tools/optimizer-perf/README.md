@@ -105,3 +105,11 @@ source once its decision is recorded.
 
 The Core pipeline is shared with production O1 in `nash-codegen::optimizer`.
 Builds and tests default to O1; these measurements still compare explicit O0 and O1.
+
+## Accepted constant folding
+
+Normal `measure`/`check` cover 148 cases: the original 108 plus 40 constant-folding
+fixtures. Both use production O1, including bounded folding. The user
+accepted the two shared-prefix size tradeoffs. Historical pre-integration evidence
+remains in `trials/constant-fold.json` and `docs/research/constant-fold-trial.md`;
+the old `constant-trial` command has been removed.

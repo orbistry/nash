@@ -8,12 +8,9 @@ listData (unListData (con data (List [I 7])))
 (program 1.1.0
   [(builtin listData) [(builtin unListData) (con data (List [I 7]))]])
 --- optimized Core
-let anf#1 : list Data = unListData (con data (List [I 7])) in
-listData anf#1
+(con data (List [I 7]))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_2 [(builtin listData) anf_2])
-    [(builtin unListData) (con data (List [I 7]))]])
+(program 1.1.0 (con data (List [I 7])))
 --- isolated pass
 --- core before
 listData (unListData (con data (List [I 7])))

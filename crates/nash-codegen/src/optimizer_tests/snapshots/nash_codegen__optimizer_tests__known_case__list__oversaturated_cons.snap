@@ -13,19 +13,14 @@ case@List mkCons 42 (con (list integer) []) 9 of
     (lam generated_2 (lam generated_1 (con integer 0)))
     (con integer 0)))
 --- optimized Core
-let anf#1 : list int = mkCons 42 (con (list integer) []) in
-let anf#2 : list int = anf#1 9 in
+let anf#2 : list int = (con (list integer) [42]) 9 in
 case@List anf#2 of
   _ -> 0
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam anf_3
-      [(lam anf_4
-        (case anf_4 (lam generated_6 (lam generated_5 (con integer 0))) (con integer 0)))
-        [anf_3 (con integer 9)]])
-      [[builtin_7 (con integer 42)] (con (list integer) [])]])
-    (force (builtin mkCons))])
+  [(lam anf_1
+    (case anf_1 (lam generated_3 (lam generated_2 (con integer 0))) (con integer 0)))
+    [(con (list integer) [42]) (con integer 9)]])
 --- isolated pass
 --- isolated ANF input
 let anf#2 : list int = mkCons 42 (con (list integer) []) in

@@ -31,18 +31,12 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
       (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])]]
     (con integer 7)])
 --- optimized Core
-let data_operand#7 : list (pair Data Data) = (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
-let anf#4 : Data = mapData data_operand#7 in
-let anf#5 : Data = mapData data_operand#7 in
-constr 0 data_operand#7 7
+constr 0 (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) 7
 --- optimized UPLC
 (program 1.1.0
-  [(lam data_operand_1
-    [(lam anf_2
-      [(lam anf_3 (constr 0 data_operand_1 (con integer 7)))
-        [(builtin mapData) data_operand_1]])
-      [(builtin mapData) data_operand_1]])
-    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])
+  (constr 0
+    (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])
+    (con integer 7)))
 --- isolated pass
 --- isolated ANF input
 let anf#11 : Data = mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in

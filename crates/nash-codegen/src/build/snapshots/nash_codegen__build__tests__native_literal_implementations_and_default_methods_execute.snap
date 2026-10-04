@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nsame : int -> int -> bool\nsame = eq\nmain = if neq (Builtin.addInteger 20 21) 42 then same 42 42 else False\n"
 ---
 --- unoptimized Core
@@ -41,8 +40,7 @@ main#1
     (lam value_6 value_6)])
 --- optimized Core
 let eq#19 : int -> int -> bool = equalsInteger in
-let anf#31 : int = addInteger 20 21 in
-let anf#28 : bool = eq#19 anf#31 42 in
+let anf#28 : bool = eq#19 41 42 in
 let anf#34 : bool = case@Bool anf#28 of
   True -> false
   False -> true in
@@ -55,14 +53,12 @@ case@Bool anf#34 of
   [(lam eq_1
     [(lam anf_2
       [(lam anf_3
-        [(lam anf_4
-          (case
-            anf_4
-            (con bool False)
-            [(lam anf_5 [anf_5 (con integer 42)]) [eq_1 (con integer 42)]]))
-          (case anf_3 (con bool True) (con bool False))])
-        [[eq_1 anf_2] (con integer 42)]])
-      [[(builtin addInteger) (con integer 20)] (con integer 21)]])
+        (case
+          anf_3
+          (con bool False)
+          [(lam anf_4 [anf_4 (con integer 42)]) [eq_1 (con integer 42)]]))
+        (case anf_2 (con bool True) (con bool False))])
+      [[eq_1 (con integer 41)] (con integer 42)]])
     (builtin equalsInteger)])
 --- result
 (con bool True)

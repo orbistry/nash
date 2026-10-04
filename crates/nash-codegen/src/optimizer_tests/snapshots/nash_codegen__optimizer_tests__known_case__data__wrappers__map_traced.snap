@@ -20,7 +20,7 @@ case@Data (trace "producer" in mapData (con (list (pair data data)) [((I 42), (I
           [(builtin mapData)
             (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])])])
 --- optimized Core
-let anf#2 : Data = trace "producer" in mapData (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))]) in
+let anf#2 : Data = trace "producer" in (con data (Map [(I 42, I 7), (I 7, I 42), (I 42, I 42)])) in
 case@Data anf#2 of
   DataMap payload#1 -> payload#1
 --- optimized UPLC
@@ -38,9 +38,7 @@ case@Data anf#2 of
           anf_3])
         (force
           [[builtin_7 (con string "producer")]
-            (delay
-              [(builtin mapData)
-                (con (list (pair data data)) [((I 42), (I 7)), ((I 7), (I 42)), ((I 42), (I 42))])])])])
+            (delay (con data (Map [(I 42, I 7), (I 7, I 42), (I 42, I 42)])))])])
       (force (builtin trace))])
     (force (builtin chooseData))])
 --- isolated pass

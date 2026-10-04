@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+iData -18446744073709551617
+--- unoptimized UPLC
+(program 1.1.0 [(builtin iData) (con integer -18446744073709551617)])
+--- optimized Core
+iData -18446744073709551617
+--- optimized UPLC
+(program 1.1.0 [(builtin iData) (con integer -18446744073709551617)])
+--- result
+(con data (I -18446744073709551617))
+--- logs
+[]
+--- budget
+cpu: 63399, memory: 432

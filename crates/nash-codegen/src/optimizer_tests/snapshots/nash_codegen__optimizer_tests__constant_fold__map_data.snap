@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/optimizer_tests/constant_fold.rs
+expression: fixture.snapshot()
+---
+--- unoptimized Core
+mapData (con (list (pair data data)) [])
+--- unoptimized UPLC
+(program 1.1.0 [(builtin mapData) (con (list (pair data data)) [])])
+--- optimized Core
+(con data (Map []))
+--- optimized UPLC
+(program 1.1.0 (con data (Map [])))
+--- result
+(con data (Map []))
+--- logs
+[]
+--- budget
+cpu: 116346, memory: 432

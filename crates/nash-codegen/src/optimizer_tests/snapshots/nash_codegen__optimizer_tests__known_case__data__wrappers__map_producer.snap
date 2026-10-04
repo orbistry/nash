@@ -16,12 +16,9 @@ case@Data mapData (con (list (pair data data)) []) of
         (delay (con integer 42))]))
     [(builtin mapData) (con (list (pair data data)) [])]])
 --- optimized Core
-let anf#1 : Data = mapData (con (list (pair data data)) []) in
 42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_2 (con integer 42))
-    [(builtin mapData) (con (list (pair data data)) [])]])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 let anf#3 : Data = mapData (con (list (pair data data)) []) in
