@@ -2,6 +2,15 @@
 
 ## Status and accepted scope
 
+**Placement correction (4 October 2026).** Constructor folding and representation
+cancellation run only in the post-ANF loops. The early `reduce_constr` and
+`inverse::reduce` calls were removed at the user's request. Existing bound-constructor
+and inverse loops handle bindings produced by codegen and opportunities exposed by
+inlining. Earlier pre-ANF placement/measurements below are historical, superseded
+by this decision; synthetic adjacent-expression savings do not justify early passes.
+The 23 source/validator performance rows are unchanged. The direct-expression
+regressions and changed constructor cases are recorded in the refreshed baseline.
+
 Chunks 1 and 2 are accepted and complete, including mandatory Core typing,
 pre-ANF static-parameter lifting and ANF. Chunk 3 is complete with an isolated
 performance runner. The user
@@ -1717,7 +1726,7 @@ retaining the validating construction. Reconstruction from `fstPair p` and
 variant checks and evaluation of unused fields remain in place. Arbitrary direct
 constructor round trips and unknown-shape unary conversions remain unchanged.
 
-The pass runs before ANF and within the existing `small_inline::simplify` cleanup
+The pass now runs only within the post-ANF `small_inline::simplify` cleanup
 loop, before beta cleanup. The latter catches bindings exposed by ANF/inlining;
 ANF is not repeated. The pass requires globally unique, well-scoped binders.
 
@@ -1814,7 +1823,8 @@ and performance measurements reuse it. Build/test accept `-O0`/`-O1` and
 The build/test default is O1. Workspace members own these settings, as with trace/target
 settings. CLI overrides each owning project's level. No O2 is defined.
 O1 preserves enabled traces and their order; trace generation remains independent.
-It includes accepted direct integer inverse cancellation before the single ANF.
+Representation cancellation and bound-constructor folding run only in the
+cleanup loops after the single ANF normalization.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
 Chunks 9–10 and final convergence review stay open.

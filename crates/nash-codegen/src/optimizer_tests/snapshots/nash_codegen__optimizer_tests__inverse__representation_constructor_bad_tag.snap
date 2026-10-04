@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 let tag#22 : int = false in
@@ -22,15 +22,17 @@ fstPair (unConstrData constructor#23)
 let tag#1 : int = false in
 let fields#2 : list Data = trace "fields evaluated" in (con (list data) [(I 7)]) in
 let constructor#3 : Data = constrData tag#1 fields#2 in
+let anf#4 : 'erased = unConstrData constructor#3 in
 tag#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam tag_4
-      [(lam fields_5
-        [(lam constructor_6 tag_4) [[(builtin constrData) tag_4] fields_5]])
+  [(lam builtin_9
+    [(lam tag_5
+      [(lam fields_6
+        [(lam constructor_7 [(lam anf_8 tag_5) [(builtin unConstrData) constructor_7]])
+          [[(builtin constrData) tag_5] fields_6]])
         (force
-          [[builtin_7 (con string "fields evaluated")] (delay (con (list data) [(I 7)]))])])
+          [[builtin_9 (con string "fields evaluated")] (delay (con (list data) [(I 7)]))])])
       (con bool False)])
     (force (builtin trace))])
 --- isolated pass

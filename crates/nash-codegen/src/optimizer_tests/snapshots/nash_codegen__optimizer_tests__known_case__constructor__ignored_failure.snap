@@ -16,15 +16,14 @@ case@Tag constr 0 (trace "first" in error) (trace "second" in 0) of
       (lam ignored_2
         (force [[(force (builtin trace)) (con string "body")] (delay (con integer 42))])))))
 --- optimized Core
-let ignored#3 : int = trace "first" in error in
-let ignored#4 : int = trace "second" in 0 in
+let anf#5 : int = trace "first" in error in
+let anf#6 : int = trace "second" in 0 in
 trace "body" in 42
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_3
-    [(lam ignored_1
-      [(lam ignored_2
-        (force [[builtin_3 (con string "body")] (delay (con integer 42))]))
+    [(lam anf_1
+      [(lam anf_2 (force [[builtin_3 (con string "body")] (delay (con integer 42))]))
         (force [[builtin_3 (con string "second")] (delay (con integer 0))])])
       (force [[builtin_3 (con string "first")] (delay (error))])])
     (force (builtin trace))])

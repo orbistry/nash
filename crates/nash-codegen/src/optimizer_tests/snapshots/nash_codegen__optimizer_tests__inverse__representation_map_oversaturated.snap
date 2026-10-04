@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 unMapData (mapData (con (list (pair data data)) [((I 7), (I 7))])) 1
@@ -10,9 +10,13 @@ unMapData (mapData (con (list (pair data data)) [((I 7), (I 7))])) 1
     [(builtin mapData) (con (list (pair data data)) [((I 7), (I 7))])]]
     (con integer 1)])
 --- optimized Core
-(con (list (pair data data)) [((I 7), (I 7))]) 1
+let anf#1 : Data = mapData (con (list (pair data data)) [((I 7), (I 7))]) in
+let anf#2 : list (pair Data Data) = unMapData anf#1 in
+anf#2 1
 --- optimized UPLC
-(program 1.1.0 [(con (list (pair data data)) [((I 7), (I 7))]) (con integer 1)])
+(program 1.1.0
+  [(lam anf_3 [(lam anf_4 [anf_4 (con integer 1)]) [(builtin unMapData) anf_3]])
+    [(builtin mapData) (con (list (pair data data)) [((I 7), (I 7))])]])
 --- isolated pass
 --- core before
 unMapData (mapData (con (list (pair data data)) [((I 7), (I 7))])) 1

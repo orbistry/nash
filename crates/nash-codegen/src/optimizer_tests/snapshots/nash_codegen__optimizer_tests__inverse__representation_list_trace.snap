@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 unListData (listData (trace "operand" in (con (list data) [(I 7)])))
@@ -12,11 +12,14 @@ unListData (listData (trace "operand" in (con (list data) [(I 7)])))
         [[(force (builtin trace)) (con string "operand")]
           (delay (con (list data) [(I 7)]))])]])
 --- optimized Core
-trace "operand" in (con (list data) [(I 7)])
+let anf#1 : list Data = trace "operand" in (con (list data) [(I 7)]) in
+let anf#2 : Data = listData anf#1 in
+anf#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_1
-    (force [[builtin_1 (con string "operand")] (delay (con (list data) [(I 7)]))]))
+  [(lam builtin_5
+    [(lam anf_3 [(lam anf_4 anf_3) [(builtin listData) anf_3]])
+      (force [[builtin_5 (con string "operand")] (delay (con (list data) [(I 7)]))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

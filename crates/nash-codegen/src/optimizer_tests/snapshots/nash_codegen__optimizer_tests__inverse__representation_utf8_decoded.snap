@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 decodeUtf8 (encodeUtf8 (decodeUtf8 (con bytestring #68c3a96c6c6f)))
@@ -9,9 +9,13 @@ decodeUtf8 (encodeUtf8 (decodeUtf8 (con bytestring #68c3a96c6c6f)))
   [(builtin decodeUtf8)
     [(builtin encodeUtf8) [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)]]])
 --- optimized Core
-decodeUtf8 (con bytestring #68c3a96c6c6f)
+let anf#1 : string = decodeUtf8 (con bytestring #68c3a96c6c6f) in
+let anf#2 : bytes = encodeUtf8 anf#1 in
+anf#1
 --- optimized UPLC
-(program 1.1.0 [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)])
+(program 1.1.0
+  [(lam anf_3 [(lam anf_4 anf_3) [(builtin encodeUtf8) anf_3]])
+    [(builtin decodeUtf8) (con bytestring #68c3a96c6c6f)]])
 --- isolated pass
 --- core before
 decodeUtf8 (encodeUtf8 (decodeUtf8 (con bytestring #68c3a96c6c6f)))

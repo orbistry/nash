@@ -16,14 +16,14 @@ expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core 
     (force
       [[(force (builtin trace)) (con string "argument")] (delay (con integer 0))])])
 --- optimized Core
-let x#3 : int = trace "field" in 42 in
-let anf#5 : int = trace "argument" in 0 in
-trace "body" in x#3
+let anf#5 : int = trace "field" in 42 in
+let anf#8 : int = trace "argument" in 0 in
+trace "body" in anf#5
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_3
-    [(lam x_1
-      [(lam anf_2 (force [[builtin_3 (con string "body")] (delay x_1)]))
+    [(lam anf_1
+      [(lam anf_2 (force [[builtin_3 (con string "body")] (delay anf_1)]))
         (force [[builtin_3 (con string "argument")] (delay (con integer 0))])])
       (force [[builtin_3 (con string "field")] (delay (con integer 42))])])
     (force (builtin trace))])

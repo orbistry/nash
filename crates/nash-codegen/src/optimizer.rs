@@ -14,13 +14,11 @@ pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     let core = nash_ir::unused_params::reduce(b, core);
     debug_assert!(hygiene::validate(core, &[]).is_ok());
-    let core = nash_ir::known_case::reduce_constr(b, core);
-    debug_assert!(hygiene::validate(core, &[]).is_ok());
-    let core = nash_ir::inverse::reduce(b, core);
-    debug_assert!(hygiene::validate(core, &[]).is_ok());
     let core = anf::normalize(b, core);
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     debug_assert!(anf::validate(core).is_ok());
+    // Fold representations and constructors through ANF bindings in the cleanup
+    // loops, including opportunities exposed by inlining and propagation.
     let core = nash_ir::small_inline::simplify(b, core);
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     let core = nash_ir::known_case::simplify_constr_data(b, core);

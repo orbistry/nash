@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 decodeUtf8 (encodeUtf8 (trace "operand" in "héllo"))
@@ -11,11 +11,14 @@ decodeUtf8 (encodeUtf8 (trace "operand" in "héllo"))
       (force
         [[(force (builtin trace)) (con string "operand")] (delay (con string "héllo"))])]])
 --- optimized Core
-trace "operand" in "héllo"
+let anf#1 : string = trace "operand" in "héllo" in
+let anf#2 : bytes = encodeUtf8 anf#1 in
+anf#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_1
-    (force [[builtin_1 (con string "operand")] (delay (con string "héllo"))]))
+  [(lam builtin_5
+    [(lam anf_3 [(lam anf_4 anf_3) [(builtin encodeUtf8) anf_3]])
+      (force [[builtin_5 (con string "operand")] (delay (con string "héllo"))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

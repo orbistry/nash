@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 unIData (iData (unIData (iData 42)))
@@ -9,9 +9,11 @@ unIData (iData (unIData (iData 42)))
   [(builtin unIData)
     [(builtin iData) [(builtin unIData) [(builtin iData) (con integer 42)]]]])
 --- optimized Core
-42
+let anf#1 : Data = iData 42 in
+unIData anf#1
 --- optimized UPLC
-(program 1.1.0 (con integer 42))
+(program 1.1.0
+  [(lam anf_2 [(builtin unIData) anf_2]) [(builtin iData) (con integer 42)]])
 --- isolated pass
 --- core before
 unIData (iData (unIData (iData 42)))

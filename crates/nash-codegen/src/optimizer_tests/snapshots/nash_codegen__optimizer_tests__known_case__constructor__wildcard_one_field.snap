@@ -16,13 +16,13 @@ case@Tag constr 1 (trace "field" in 0) of
     (lam ignored_4 (con integer 42))
     (lam ignored_5 (lam ignored_6 (con integer 42)))))
 --- optimized Core
-let ignored#1 : int = trace "field" in 0 in
+let anf#4 : int = trace "field" in 0 in
 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_3
-    [(lam ignored_2 (con integer 42))
-      (force [[builtin_3 (con string "field")] (delay (con integer 0))])])
+  [(lam builtin_2
+    [(lam anf_1 (con integer 42))
+      (force [[builtin_2 (con string "field")] (delay (con integer 0))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before

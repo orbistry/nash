@@ -10,11 +10,15 @@ trace "before" in unIData (iData 42)
     [[(force (builtin trace)) (con string "before")]
       (delay [(builtin unIData) [(builtin iData) (con integer 42)]])]))
 --- optimized Core
-trace "before" in 42
+trace "before" in let anf#1 : Data = iData 42 in
+unIData anf#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_1
-    (force [[builtin_1 (con string "before")] (delay (con integer 42))]))
+  [(lam builtin_3
+    (force
+      [[builtin_3 (con string "before")]
+        (delay
+          [(lam anf_2 [(builtin unIData) anf_2]) [(builtin iData) (con integer 42)]])]))
     (force (builtin trace))])
 --- O0 outcome
 Ok("(con integer 42)")

@@ -7,7 +7,8 @@ use crate::{
 };
 use std::{collections::HashSet, ptr};
 
-/// Compose rules 1–4, dead-code cleanup, force/delay cancellation and known Boolean/literal folding.
+/// Compose rules 1–4, dead-code cleanup, representation/force-delay cancellation
+/// and known Boolean/literal folding.
 /// Input is typed ANF with globally unique binders.
 /// Conditional bodies, partial calls and indirect calls are not selected by rule 4.
 pub fn simplify<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {

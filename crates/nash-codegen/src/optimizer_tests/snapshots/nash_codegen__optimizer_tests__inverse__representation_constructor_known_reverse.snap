@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 let constructor#23 : Data = (con data (Constr 3 [I 7])) in
@@ -20,16 +20,26 @@ trace "after decoding" in constrData (fstPair payload#24) (sndPair payload#24)
 --- optimized Core
 let constructor#1 : Data = (con data (Constr 3 [I 7])) in
 let payload#2 : 'erased = unConstrData constructor#1 in
-trace "after decoding" in constructor#1
+trace "after decoding" in let anf#3 : int = fstPair payload#2 in
+let anf#4 : list Data = sndPair payload#2 in
+constructor#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam constructor_3
-      [(lam payload_4
-        (force [[builtin_5 (con string "after decoding")] (delay constructor_3)]))
-        [(builtin unConstrData) constructor_3]])
-      (con data (Constr 3 [I 7]))])
-    (force (builtin trace))])
+  [(lam builtin_9
+    [(lam builtin_10
+      [(lam builtin_11
+        [(lam constructor_5
+          [(lam payload_6
+            (force
+              [[builtin_11 (con string "after decoding")]
+                (delay
+                  [(lam anf_7 [(lam anf_8 constructor_5) [builtin_9 payload_6]])
+                    [builtin_10 payload_6]])]))
+            [(builtin unConstrData) constructor_5]])
+          (con data (Constr 3 [I 7]))])
+        (force (builtin trace))])
+      (force (force (builtin fstPair)))])
+    (force (force (builtin sndPair)))])
 --- isolated pass
 --- core before
 let constructor#23 : Data = (con data (Constr 3 [I 7])) in

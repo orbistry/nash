@@ -1,6 +1,6 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/inverse.rs
-expression: "crate::harness::pass_snapshot(b.arena, before,\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
+expression: "format!(\"{}\\n--- isolated pass\\n{}\", fixture.code_snapshot(),\nformat!(\"--- core before\\n{}\\n--- uplc before\\n{}\\n--- core after\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\npretty(before), left.uplc, pretty(after), right.uplc, right.result,\nright.logs))"
 ---
 --- unoptimized Core
 unIData (iData (trace "operand" in 7))
@@ -11,11 +11,14 @@ unIData (iData (trace "operand" in 7))
       (force
         [[(force (builtin trace)) (con string "operand")] (delay (con integer 7))])]])
 --- optimized Core
-trace "operand" in 7
+let anf#1 : int = trace "operand" in 7 in
+let anf#2 : Data = iData anf#1 in
+anf#1
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_1
-    (force [[builtin_1 (con string "operand")] (delay (con integer 7))]))
+  [(lam builtin_5
+    [(lam anf_3 [(lam anf_4 anf_3) [(builtin iData) anf_3]])
+      (force [[builtin_5 (con string "operand")] (delay (con integer 7))])])
     (force (builtin trace))])
 --- isolated pass
 --- core before
