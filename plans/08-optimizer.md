@@ -2,6 +2,15 @@
 
 ## Status and accepted scope
 
+**Retained scope complete (5 October 2026).** All eleven chunks are implemented
+and validated within their accepted scope. Static lifting, unused-parameter
+removal, constant folding and cleanup now reach a joint fixed point, with one ANF
+normalization and no optimizer resource or iteration caps. All 3,864 workspace
+tests and strict Clippy pass. A fresh audit of all 195 performance fixtures found
+identical closed Flat code after one, two and three O1 invocations. Explicitly
+deferred extensions remain outside this completion. See the
+[convergence follow-up](../docs/research/optimizer-convergence.md).
+
 **Placement correction (4 October 2026).** Constructor folding and representation
 cancellation run only in the post-ANF loops. The early `reduce_constr` and
 `inverse::reduce` calls were removed at the user's request. Existing bound-constructor
