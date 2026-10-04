@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/builtin_sharing.rs
-assertion_line: 45
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -16,19 +15,9 @@ case@Bool ifThenElse true true false of
     [[[(force (builtin ifThenElse)) (con bool True)] (con integer 42)]
       (con integer 0)]))
 --- optimized Core
-let anf#1 : bool = ifThenElse true true false in
-case@Bool anf#1 of
-  True -> ifThenElse true 42 0
-  False -> 0
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_3
-    [(lam partial_4
-      [(lam anf_2
-        (case anf_2 (con integer 0) [[partial_4 (con integer 42)] (con integer 0)]))
-        [[partial_4 (con bool True)] (con bool False)]])
-      [builtin_3 (con bool True)]])
-    (force (builtin ifThenElse))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- uplc before
 (case

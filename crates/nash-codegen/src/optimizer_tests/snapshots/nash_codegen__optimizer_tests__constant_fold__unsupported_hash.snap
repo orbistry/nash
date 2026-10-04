@@ -7,9 +7,10 @@ sha2_256 (con bytestring #78)
 --- unoptimized UPLC
 (program 1.1.0 [(builtin sha2_256) (con bytestring #78)])
 --- optimized Core
-sha2_256 (con bytestring #78)
+(con bytestring #2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881)
 --- optimized UPLC
-(program 1.1.0 [(builtin sha2_256) (con bytestring #78)])
+(program 1.1.0
+  (con bytestring #2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881))
 --- result
 (con bytestring #2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881)
 --- logs

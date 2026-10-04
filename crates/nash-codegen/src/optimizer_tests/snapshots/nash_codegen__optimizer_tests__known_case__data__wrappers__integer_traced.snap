@@ -17,7 +17,7 @@ case@Data (trace "producer" in iData 42) of
       [[(force (builtin trace)) (con string "producer")]
         (delay [(builtin iData) (con integer 42)])])])
 --- optimized Core
-let anf#3 : Data = trace "producer" in iData 42 in
+let anf#3 : Data = trace "producer" in (con data (I 42)) in
 case@Data anf#3 of
   DataI payload#2 -> payload#2
 --- optimized UPLC
@@ -31,8 +31,7 @@ case@Data anf#3 of
               (delay [(lam payload_4 payload_4) [(builtin unIData) generated_5]])]
               (delay (error))]))
           anf_1])
-        (force
-          [[builtin_7 (con string "producer")] (delay [(builtin iData) (con integer 42)])])])
+        (force [[builtin_7 (con string "producer")] (delay (con data (I 42)))])])
       (force (builtin trace))])
     (force (builtin chooseData))])
 --- isolated pass

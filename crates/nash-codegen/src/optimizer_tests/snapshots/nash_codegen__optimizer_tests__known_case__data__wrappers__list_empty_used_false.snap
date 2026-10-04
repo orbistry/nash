@@ -15,11 +15,9 @@ case@Data listData (con (list data) []) of
         (delay (error))]))
     [(builtin listData) (con (list data) [])]])
 --- optimized Core
-let anf#2 : Data = listData (con (list data) []) in
 (con (list data) [])
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 (con (list data) [])) [(builtin listData) (con (list data) [])]])
+(program 1.1.0 (con (list data) []))
 --- isolated pass
 --- isolated ANF input
 let anf#14 : Data = listData (con (list data) []) in

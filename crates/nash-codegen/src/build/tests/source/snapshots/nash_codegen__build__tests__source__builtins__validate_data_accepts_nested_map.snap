@@ -143,12 +143,7 @@ main#1
       (lam value_19 value_19)])
     (lam coerce_5 coerce_5)])
 --- optimized Core
-let anf#122 : Data = iData 42 in
-let anf#123 : list Data = mkCons anf#122 (con (list data) []) in
-let anf#124 : Data = listData anf#123 in
-let anf#125 : pair Data Data = mkPairData (con data (B #aa)) anf#124 in
-let anf#126 : list (pair Data Data) = mkCons anf#125 (con (list (pair data data)) []) in
-let input#68 : Data = mapData anf#126 in
+let input#68 : Data = (con data (Map [(B #aa, List [I 42])])) in
 let applyForward#71 : 'erased -> ('erased -> 'erased) -> 'erased = \x#69 : 'erased (f#70 : 'erased -> 'erased) -> f#70 x#69 in
 let anf#137 : list (pair Data Data) = applyForward#71 input#68 unMapData in
 let anf#138 : (list (pair Data Data) -> list (pair Data Data)) -> list (pair Data Data) = applyForward#71 anf#137 in
@@ -177,68 +172,58 @@ let decoded#113 : Map Bytes (List Int) = applyForward#71 anf#140 mapData in
 equalsData decoded#113 input#68
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_43
-    [(lam anf_5
-      [(lam anf_6
-        [(lam anf_7
-          [(lam anf_8
-            [(lam anf_9
-              [(lam input_10
-                [(lam applyForward_13
-                  [(lam anf_14
-                    [(lam anf_15
-                      [(lam anf_41
-                        [(lam decoded_42 [[(builtin equalsData) decoded_42] input_10])
-                          [[applyForward_13 anf_41] (builtin mapData)]])
-                        [anf_15
-                          (lam values_16
-                            [(lam worker_40 [worker_40 values_16])
-                              [(lam self_17 [self_17 self_17])
-                                (lam self_18
-                                  (lam values_19
-                                    (case
-                                      values_19
-                                      (lam field_20
-                                        (lam field_21
-                                          [(lam anf_38
-                                            [(lam anf_39 [[builtin_43 anf_38] anf_39]) [[self_18 self_18] field_21]])
-                                            (case
-                                              field_20
-                                              (lam field_22
-                                                (lam field_23
-                                                  [(lam destruct_24
-                                                    [(lam anf_25
-                                                      [(lam anf_26
-                                                        [(lam anf_36
-                                                          [(lam anf_37 [[(builtin mkPairData) field_22] anf_37])
-                                                            [[applyForward_13 anf_36] (builtin listData)]])
-                                                          [anf_26
-                                                            (lam values_27
-                                                              [(lam worker_35 [worker_35 values_27])
-                                                                [(lam self_28 [self_28 self_28])
-                                                                  (lam self_29
-                                                                    (lam values_30
-                                                                      (case
-                                                                        values_30
-                                                                        (lam field_31
-                                                                          (lam field_32
-                                                                            [(lam destruct_33
-                                                                              [(lam anf_34 [[builtin_43 field_31] anf_34]) [[self_29 self_29] field_32]])
-                                                                              [(builtin unIData) field_31]]))
-                                                                        (con (list data) []))))]])]])
-                                                        [applyForward_13 anf_25]])
-                                                      [[applyForward_13 field_23] (builtin unListData)]])
-                                                    [(builtin unBData) field_22]])))]))
-                                      (con (list (pair data data)) []))))]])]])
-                      [applyForward_13 anf_14]])
-                    [[applyForward_13 input_10] (builtin unMapData)]])
-                  (lam x_11 (lam f_12 [f_12 x_11]))])
-                [(builtin mapData) anf_9]])
-              [[builtin_43 anf_8] (con (list (pair data data)) [])]])
-            [[(builtin mkPairData) (con data (B #aa))] anf_7]])
-          [(builtin listData) anf_6]])
-        [[builtin_43 anf_5] (con (list data) [])]])
-      [(builtin iData) (con integer 42)]])
+  [(lam builtin_38
+    [(lam input_5
+      [(lam applyForward_8
+        [(lam anf_9
+          [(lam anf_10
+            [(lam anf_36
+              [(lam decoded_37 [[(builtin equalsData) decoded_37] input_5])
+                [[applyForward_8 anf_36] (builtin mapData)]])
+              [anf_10
+                (lam values_11
+                  [(lam worker_35 [worker_35 values_11])
+                    [(lam self_12 [self_12 self_12])
+                      (lam self_13
+                        (lam values_14
+                          (case
+                            values_14
+                            (lam field_15
+                              (lam field_16
+                                [(lam anf_33
+                                  [(lam anf_34 [[builtin_38 anf_33] anf_34]) [[self_13 self_13] field_16]])
+                                  (case
+                                    field_15
+                                    (lam field_17
+                                      (lam field_18
+                                        [(lam destruct_19
+                                          [(lam anf_20
+                                            [(lam anf_21
+                                              [(lam anf_31
+                                                [(lam anf_32 [[(builtin mkPairData) field_17] anf_32])
+                                                  [[applyForward_8 anf_31] (builtin listData)]])
+                                                [anf_21
+                                                  (lam values_22
+                                                    [(lam worker_30 [worker_30 values_22])
+                                                      [(lam self_23 [self_23 self_23])
+                                                        (lam self_24
+                                                          (lam values_25
+                                                            (case
+                                                              values_25
+                                                              (lam field_26
+                                                                (lam field_27
+                                                                  [(lam destruct_28
+                                                                    [(lam anf_29 [[builtin_38 field_26] anf_29]) [[self_24 self_24] field_27]])
+                                                                    [(builtin unIData) field_26]]))
+                                                              (con (list data) []))))]])]])
+                                              [applyForward_8 anf_20]])
+                                            [[applyForward_8 field_18] (builtin unListData)]])
+                                          [(builtin unBData) field_17]])))]))
+                            (con (list (pair data data)) []))))]])]])
+            [applyForward_8 anf_9]])
+          [[applyForward_8 input_5] (builtin unMapData)]])
+        (lam x_6 (lam f_7 [f_7 x_6]))])
+      (con data (Map [(B #aa, List [I 42])]))])
     (force (builtin mkCons))])
 --- result
 (con bool True)

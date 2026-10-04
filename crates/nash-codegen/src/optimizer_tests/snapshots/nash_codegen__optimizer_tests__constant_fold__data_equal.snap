@@ -7,9 +7,9 @@ equalsData (con data (I 7)) (con data (I 7))
 --- unoptimized UPLC
 (program 1.1.0 [[(builtin equalsData) (con data (I 7))] (con data (I 7))])
 --- optimized Core
-equalsData (con data (I 7)) (con data (I 7))
+true
 --- optimized UPLC
-(program 1.1.0 [[(builtin equalsData) (con data (I 7))] (con data (I 7))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

@@ -19,13 +19,10 @@ case@Data constrData 18446744073709551615 (con (list data) [(I 42)]) of
     [[(builtin constrData) (con integer 18446744073709551615)]
       (con (list data) [(I 42)])]])
 --- optimized Core
-let anf#2 : Data = constrData 18446744073709551615 (con (list data) [(I 42)]) in
-unConstrData anf#2
+(con (pair integer (list data)) (18446744073709551615, [(I 42)]))
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1 [(builtin unConstrData) anf_1])
-    [[(builtin constrData) (con integer 18446744073709551615)]
-      (con (list data) [(I 42)])]])
+  (con (pair integer (list data)) (18446744073709551615, [(I 42)])))
 --- isolated pass
 --- isolated ANF input
 let anf#36 : Data = constrData 18446744073709551615 (con (list data) [(I 42)]) in

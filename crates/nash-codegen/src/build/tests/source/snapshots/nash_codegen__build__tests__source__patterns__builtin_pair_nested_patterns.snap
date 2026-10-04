@@ -89,52 +89,41 @@ case@Pair value#15 of
       DataB field#43 -> let anf#55 : int = lengthOfByteString field#43 in
       addInteger field#23 anf#55
     DataB field#46 -> force leaf#17 in
-let anf#57 : Data = iData 40 in
-let anf#60 : pair Data Data = mkPairData anf#57 (con data (B #aabb)) in
-let anf#61 : int = inspect#47 anf#60 in
-let anf#65 : Data = iData 2 in
-let anf#66 : pair Data Data = mkPairData (con data (B #)) anf#65 in
-let anf#67 : int = inspect#47 anf#66 in
+let anf#61 : int = inspect#47 (con (pair data data) ((I 40), (B #aabb))) in
+let anf#67 : int = inspect#47 (con (pair data data) ((B #), (I 2))) in
 addInteger anf#61 anf#67
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_34
+  [(lam builtin_30
     [(lam inspect_25
       [(lam anf_26
-        [(lam anf_27
-          [(lam anf_28
-            [(lam anf_29
-              [(lam anf_30
-                [(lam anf_31 [[(builtin addInteger) anf_28] anf_31]) [inspect_25 anf_30]])
-                [[(builtin mkPairData) (con data (B #))] anf_29]])
-              [(builtin iData) (con integer 2)]])
-            [inspect_25 anf_27]])
-          [[(builtin mkPairData) anf_26] (con data (B #aabb))]])
-        [(builtin iData) (con integer 40)]])
+        [(lam anf_27 [[(builtin addInteger) anf_26] anf_27])
+          [inspect_25 (con (pair data data) ((B #), (I 2)))]])
+        [inspect_25 (con (pair data data) ((I 40), (B #aabb)))]])
       (lam value_1
         [(lam leaf_2
           (case
             value_1
             (lam field_3
               (lam field_4
-                [(lam generated_32
+                [(lam generated_28
                   (force
-                    [[[[[[builtin_34 generated_32] (delay (force leaf_2))] (delay (force leaf_2))]
+                    [[[[[[builtin_30 generated_28] (delay (force leaf_2))] (delay (force leaf_2))]
                       (delay (force leaf_2))]
                       (delay
                         [(lam field_8
-                          [(lam generated_33
+                          [(lam generated_29
                             (force
-                              [[[[[[builtin_34 generated_33] (delay (force leaf_2))] (delay (force leaf_2))]
+                              [[[[[[builtin_30 generated_29] (delay (force leaf_2))] (delay (force leaf_2))]
                                 (delay (force leaf_2))]
                                 (delay (force leaf_2))]
                                 (delay
                                   [(lam field_13
                                     [(lam anf_14 [[(builtin addInteger) field_8] anf_14])
                                       [(builtin lengthOfByteString) field_13]])
-                                    [(builtin unBData) generated_33]])]))
+                                    [(builtin unBData) generated_29]])]))
                             field_4])
-                          [(builtin unIData) generated_32]])]
+                          [(builtin unIData) generated_28]])]
                       (delay (force leaf_2))]))
                   field_3]))))
           (delay (con integer 0))])])

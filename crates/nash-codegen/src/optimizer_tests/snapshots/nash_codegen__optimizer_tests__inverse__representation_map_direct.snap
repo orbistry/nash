@@ -9,9 +9,9 @@ unMapData (mapData (con (list (pair data data)) [((I 7), (I 7))]))
   [(builtin unMapData)
     [(builtin mapData) (con (list (pair data data)) [((I 7), (I 7))])]])
 --- optimized Core
-unMapData (con data (Map [(I 7, I 7)]))
+(con (list (pair data data)) [((I 7), (I 7))])
 --- optimized UPLC
-(program 1.1.0 [(builtin unMapData) (con data (Map [(I 7, I 7)]))])
+(program 1.1.0 (con (list (pair data data)) [((I 7), (I 7))]))
 --- isolated pass
 --- core before
 unMapData (mapData (con (list (pair data data)) [((I 7), (I 7))]))

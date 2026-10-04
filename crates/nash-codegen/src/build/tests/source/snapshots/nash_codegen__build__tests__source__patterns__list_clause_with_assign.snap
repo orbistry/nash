@@ -113,14 +113,12 @@ let fromInt#69 : int -> Int = iData in
 let anf#77 : Int = fromInt#69 1 in
 let anf#76 : list Data = mkCons anf#77 (con (list data) []) in
 let anf#78 : Main.Option = constrData 0 anf#76 in
-let anf#79 : Main.Option = constrData 1 (con (list data) []) in
-let anf#80 : list Main.Option = mkCons anf#79 (con (list data) []) in
-let anf#81 : list Main.Option = mkCons anf#78 anf#80 in
+let anf#81 : list Main.Option = mkCons anf#78 (con (list data) [(Constr 1 [])]) in
 let projection#51 : pair int (list Data) = unConstrData anf#78 in
 let anf#82 : list Main.Option = case@Pair projection#51 of
   Pair tag#52 fields#53 -> case@Tag tag#52 of
     0 -> mkCons anf#78 (con (list data) [])
-    1 -> mkCons anf#79 (con (list data) []) in
+    1 -> (con (list data) [(Constr 1 [])]) in
 let anf#85 : Int = fromInt#69 1 in
 let anf#84 : list Data = mkCons anf#85 (con (list data) []) in
 let anf#86 : Main.Option = constrData 0 anf#84 in
@@ -130,43 +128,39 @@ let anf#74 : List 'erased = listData anf#87 in
 equalsData anf#73 anf#74
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_18
-    [(lam partial_19
+  [(lam builtin_16
+    [(lam partial_17
       [(lam fromInt_1
         [(lam anf_2
           [(lam anf_3
             [(lam anf_4
               [(lam anf_5
-                [(lam anf_6
-                  [(lam anf_7
-                    [(lam projection_8
+                [(lam projection_6
+                  [(lam anf_9
+                    [(lam anf_10
                       [(lam anf_11
                         [(lam anf_12
                           [(lam anf_13
                             [(lam anf_14
-                              [(lam anf_15
-                                [(lam anf_16
-                                  [(lam anf_17 [[(builtin equalsData) anf_16] anf_17])
-                                    [(builtin listData) anf_15]])
-                                  [(builtin listData) anf_11]])
-                                [[builtin_18 anf_14] (con (list data) [])]])
-                              [partial_19 anf_13]])
-                            [[builtin_18 anf_12] (con (list data) [])]])
-                          [fromInt_1 (con integer 1)]])
-                        (case
-                          projection_8
-                          (lam tag_9
-                            (lam fields_10
-                              (case
-                                tag_9
-                                [[builtin_18 anf_4] (con (list data) [])]
-                                [[builtin_18 anf_5] (con (list data) [])]))))])
-                      [(builtin unConstrData) anf_4]])
-                    [[builtin_18 anf_4] anf_6]])
-                  [[builtin_18 anf_5] (con (list data) [])]])
-                [[(builtin constrData) (con integer 1)] (con (list data) [])]])
-              [partial_19 anf_3]])
-            [[builtin_18 anf_2] (con (list data) [])]])
+                              [(lam anf_15 [[(builtin equalsData) anf_14] anf_15])
+                                [(builtin listData) anf_13]])
+                              [(builtin listData) anf_9]])
+                            [[builtin_16 anf_12] (con (list data) [])]])
+                          [partial_17 anf_11]])
+                        [[builtin_16 anf_10] (con (list data) [])]])
+                      [fromInt_1 (con integer 1)]])
+                    (case
+                      projection_6
+                      (lam tag_7
+                        (lam fields_8
+                          (case
+                            tag_7
+                            [[builtin_16 anf_4] (con (list data) [])]
+                            (con (list data) [(Constr 1 [])])))))])
+                  [(builtin unConstrData) anf_4]])
+                [[builtin_16 anf_4] (con (list data) [(Constr 1 [])])]])
+              [partial_17 anf_3]])
+            [[builtin_16 anf_2] (con (list data) [])]])
           [fromInt_1 (con integer 1)]])
         (builtin iData)])
       [(builtin constrData) (con integer 0)]])

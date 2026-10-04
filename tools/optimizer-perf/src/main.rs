@@ -31,7 +31,7 @@ const BUDGET: ExBudget = ExBudget {
     cpu: 100_000_000,
     mem: 2_000_000,
 };
-const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters(nonrecursive+recursive)/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/constant-fold+cleanup(calls128,cpu1000000,mem10000,bytes4096,nodes1024,depth64)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
+const SETTINGS: &str = "v1; Plutus V3/PV11; UPLC 1.1.0; bundled V3 default cost model; CPU=100000000; memory=2000000; raw Flat bytes before ledger application; O0 vs static lift/unused-parameters(nonrecursive+recursive)/ANF once/rules1+2+3+4+dead-bindings+recursive-reachability+representation-inverse+force-delay+known-bool+int-bytes/bound-constr+known-fields+list+data+idata-bdata-listdata-mapdata-constrdata+restricted-pair-cleanup/unused-parameters+constant-fold+cleanup(unbudgeted-fixed-point,all-pure-representable)/recursion/hygiene/lower+forced-builtin-sharing+constant-prefix-sharing";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]

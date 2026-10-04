@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 1021
 description: "module Main exposing (..)\nimport Data exposing (ToData, Validate)\nmain : Bytes\nmain = validate (toData (Builtin.iData 42))\n"
 ---
 --- unoptimized Core
@@ -24,13 +23,13 @@ main#1
       [(lam candidate_6 [(lam destruct_7 candidate_6) [(builtin unBData) candidate_6]])
         [(lam coerce_8 coerce_8) value_5]])])
 --- optimized Core
-let anf#22 : Int = iData 42 in
+let anf#22 : Int = (con data (I 42)) in
 let destruct#14 : bytes = unBData anf#22 in
 anf#22
 --- optimized UPLC
 (program 1.1.0
   [(lam anf_1 [(lam destruct_2 anf_1) [(builtin unBData) anf_1]])
-    [(builtin iData) (con integer 42)]])
+    (con data (I 42))])
 --- result
 error: Runtime(MalFormedData(Integer(42)))
 --- logs

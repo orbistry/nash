@@ -224,7 +224,7 @@ fn reachable_cycle_reaches_cleanup_fixed_point_without_execution() {
 }
 
 #[test]
-fn later_cleanup_can_expose_a_signature_for_a_future_invocation() {
+fn later_cleanup_and_signature_removal_reach_a_joint_fixed_point() {
     let arena = Arena::new();
     let b = Builder::new(&arena);
     let int = b.int(0).ty;
@@ -257,7 +257,7 @@ fn later_cleanup_can_expose_a_signature_for_a_future_invocation() {
         result.uplc
     ));
     fixture.assert_equivalent(&arena);
-    assert_ne!(encoded(&arena, once), encoded(&arena, twice));
+    assert_eq!(encoded(&arena, once), encoded(&arena, twice));
     hygiene::validate(twice, &[]).unwrap();
     anf::validate(twice).unwrap();
     assert_eq!(fixture.evaluated.observable, result.observable);
@@ -265,7 +265,7 @@ fn later_cleanup_can_expose_a_signature_for_a_future_invocation() {
 }
 
 #[test]
-fn folding_budget_is_deterministic_per_invocation() {
+fn folding_reaches_fixed_point_beyond_128_calls() {
     let arena = Arena::new();
     let b = Builder::new(&arena);
     let int = b.int(0).ty;
@@ -289,7 +289,8 @@ fn folding_budget_is_deterministic_per_invocation() {
         pretty(once),
         pretty(crate::optimizer::optimize(&arena, core))
     );
-    assert_ne!(encoded(&arena, once), encoded(&arena, twice));
+    assert_eq!(encoded(&arena, once), encoded(&arena, twice));
+    assert!(std::ptr::eq(once, crate::constant_fold::simplify(&b, once)));
     assert_eq!(fixture.evaluated.observable, result.observable);
     assert_eq!(fixture.evaluated.logs, result.logs);
     for phase in [once, twice] {

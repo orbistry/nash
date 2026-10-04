@@ -1,0 +1,16 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- isolated Core\\n{}\\n--- result\\n{}\", fixture.code_snapshot(),\npretty(after), evaluated.result)"
+---
+--- unoptimized Core
+constrData 0 (con (list data) [])
+--- unoptimized UPLC
+(program 1.1.0 [[(builtin constrData) (con integer 0)] (con (list data) [])])
+--- optimized Core
+(con data (Constr 0 []))
+--- optimized UPLC
+(program 1.1.0 (con data (Constr 0 [])))
+--- isolated Core
+(con data (Constr 0 []))
+--- result
+(con data (Constr 0 []))

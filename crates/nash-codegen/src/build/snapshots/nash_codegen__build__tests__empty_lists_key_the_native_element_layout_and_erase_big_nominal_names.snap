@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 754
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nempty _ = []\nints : unit -> list int\nints = empty\nbigInts : unit -> list Int\nbigInts = empty\nbigBytes : unit -> list Bytes\nbigBytes = empty\nmain = (ints (), bigInts (), bigBytes ())\n"
 ---
 --- unoptimized Core
@@ -34,15 +33,14 @@ main#1
       empty_6])
     (lam arg_9 [(lam match_10 (con (list integer) [])) arg_9])])
 --- optimized Core
-let empty#21 : 'erased -> list Data = \arg#19 : 'erased -> (con (list data) []) in
-let anf#28 : list Int = empty#21 () in
-let anf#30 : list Bytes = empty#21 () in
+let empty#21 : @delay (list Data) = delay (con (list data) []) in
+let anf#28 : list Int = force empty#21 in
+let anf#30 : list Bytes = force empty#21 in
 constr 0 (con (list integer) []) anf#28 anf#30
 --- optimized UPLC
 (program 1.1.0
-  [(lam empty_2
-    [(lam anf_3
-      [(lam anf_4 (constr 0 (con (list integer) []) anf_3 anf_4))
-        [empty_2 (con unit ())]])
-      [empty_2 (con unit ())]])
-    (lam arg_1 (con (list data) []))])
+  [(lam empty_1
+    [(lam anf_2
+      [(lam anf_3 (constr 0 (con (list integer) []) anf_2 anf_3)) (force empty_1)])
+      (force empty_1)])
+    (delay (con (list data) []))])

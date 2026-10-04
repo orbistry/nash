@@ -19,14 +19,11 @@ case@Data iData 42 of
         (delay (error))]))
     [(builtin iData) (con integer 42)]])
 --- optimized Core
-let anf#3 : Data = iData 42 in
 trace "integer" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_2
-    [(lam anf_1
-      (force [[builtin_2 (con string "integer")] (delay (con integer 42))]))
-      [(builtin iData) (con integer 42)]])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "integer")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- isolated pass
 --- uplc before

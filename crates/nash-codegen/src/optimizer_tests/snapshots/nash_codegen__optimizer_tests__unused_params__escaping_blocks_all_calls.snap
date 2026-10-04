@@ -15,18 +15,9 @@ addInteger (helper#3 0 21) (alias#4 0 21)
       helper_3])
     (lam unused_1 (lam used_2 used_2))])
 --- optimized Core
-let helper#7 : int -> int -> int = \unused#5 : int used#6 : int -> used#6 in
-let anf#9 : int = helper#7 0 21 in
-let anf#10 : int = helper#7 0 21 in
-addInteger anf#9 anf#10
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam helper_3
-    [(lam anf_4
-      [(lam anf_8 [[(builtin addInteger) anf_4] anf_8])
-        [[helper_3 (con integer 0)] (con integer 21)]])
-      [[helper_3 (con integer 0)] (con integer 21)]])
-    (lam unused_1 (lam used_2 used_2))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
 let helper#3 : int -> int -> int = \unused#1 : int used#2 : int -> used#2 in

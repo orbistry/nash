@@ -7,9 +7,9 @@ iData (unIData (con data (I 42)))
 --- unoptimized UPLC
 (program 1.1.0 [(builtin iData) [(builtin unIData) (con data (I 42))]])
 --- optimized Core
-iData 42
+(con data (I 42))
 --- optimized UPLC
-(program 1.1.0 [(builtin iData) (con integer 42)])
+(program 1.1.0 (con data (I 42)))
 --- isolated pass
 --- core before
 iData (unIData (con data (I 42)))

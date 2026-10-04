@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Zero | One Int | Two Int Int\nchoose : Choice -> (int -> int) -> int\nchoose subject continue =\n    case trace \"subject\" subject of\n        Stop -> 0\n        _ -> trace \"fallback\" (continue 9)\nfinish : int -> int\nfinish n = trace \"continue\" (addInteger n 100)\nmain = (choose Stop (\\_ -> trace \"wrong\" fail), choose Zero finish, choose (One 2) finish, choose (Two 3 4) finish)\n"
 ---
 --- unoptimized Core
@@ -103,10 +102,8 @@ case@Pair projection#38 of
     3 -> force leaf#37 in
 let finish#43 : int -> int = \n#42 : int -> trace "continue" in addInteger n#42 100 in
 let fromInt#44 : int -> Int = iData in
-let anf#56 : Main.Choice = constrData 0 (con (list data) []) in
-let anf#58 : int = choose#41 anf#56 (\arg#45 : int -> trace "wrong" in error) in
-let anf#59 : Main.Choice = constrData 1 (con (list data) []) in
-let anf#60 : int = choose#41 anf#59 finish#43 in
+let anf#58 : int = choose#41 (con data (Constr 0 [])) (\arg#45 : int -> trace "wrong" in error) in
+let anf#60 : int = choose#41 (con data (Constr 1 [])) finish#43 in
 let anf#62 : Int = fromInt#44 2 in
 let anf#61 : list Data = mkCons anf#62 (con (list data) []) in
 let anf#63 : Main.Choice = constrData 2 anf#61 in
@@ -120,12 +117,12 @@ let anf#71 : int = choose#41 anf#70 finish#43 in
 constr 0 anf#58 anf#60 anf#64 anf#71
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_27
-    [(lam builtin_28
+  [(lam builtin_25
+    [(lam builtin_26
       [(lam choose_8
         [(lam finish_10
           [(lam fromInt_11
-            [(lam anf_12
+            [(lam anf_13
               [(lam anf_14
                 [(lam anf_15
                   [(lam anf_16
@@ -136,28 +133,24 @@ constr 0 anf#58 anf#60 anf#64 anf#71
                             [(lam anf_21
                               [(lam anf_22
                                 [(lam anf_23
-                                  [(lam anf_24
-                                    [(lam anf_25
-                                      [(lam anf_26 (constr 0 anf_14 anf_16 anf_20 anf_26))
-                                        [[choose_8 anf_25] finish_10]])
-                                      [[(builtin constrData) (con integer 3)] anf_24]])
-                                    [[builtin_27 anf_21] anf_23]])
-                                  [[builtin_27 anf_22] (con (list data) [])]])
-                                [fromInt_11 (con integer 4)]])
-                              [fromInt_11 (con integer 3)]])
-                            [[choose_8 anf_19] finish_10]])
-                          [[(builtin constrData) (con integer 2)] anf_18]])
-                        [[builtin_27 anf_17] (con (list data) [])]])
-                      [fromInt_11 (con integer 2)]])
-                    [[choose_8 anf_15] finish_10]])
-                  [[(builtin constrData) (con integer 1)] (con (list data) [])]])
-                [[choose_8 anf_12]
-                  (lam arg_13 (force [[builtin_28 (con string "wrong")] (delay (error))]))]])
-              [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                  [(lam anf_24 (constr 0 anf_13 anf_14 anf_18 anf_24))
+                                    [[choose_8 anf_23] finish_10]])
+                                  [[(builtin constrData) (con integer 3)] anf_22]])
+                                [[builtin_25 anf_19] anf_21]])
+                              [[builtin_25 anf_20] (con (list data) [])]])
+                            [fromInt_11 (con integer 4)]])
+                          [fromInt_11 (con integer 3)]])
+                        [[choose_8 anf_17] finish_10]])
+                      [[(builtin constrData) (con integer 2)] anf_16]])
+                    [[builtin_25 anf_15] (con (list data) [])]])
+                  [fromInt_11 (con integer 2)]])
+                [[choose_8 (con data (Constr 1 []))] finish_10]])
+              [[choose_8 (con data (Constr 0 []))]
+                (lam arg_12 (force [[builtin_26 (con string "wrong")] (delay (error))]))]])
             (builtin iData)])
           (lam n_9
             (force
-              [[builtin_28 (con string "continue")]
+              [[builtin_26 (con string "continue")]
                 (delay [[(builtin addInteger) n_9] (con integer 100)])]))])
         (lam subject_1
           (lam continue_2
@@ -172,8 +165,8 @@ constr 0 anf#58 anf#60 anf#64 anf#71
                   [(builtin unConstrData) match_3]])
                 (delay
                   (force
-                    [[builtin_28 (con string "fallback")] (delay [continue_2 (con integer 9)])]))])
-              (force [[builtin_28 (con string "subject")] (delay subject_1)])]))])
+                    [[builtin_26 (con string "fallback")] (delay [continue_2 (con integer 9)])]))])
+              (force [[builtin_26 (con string "subject")] (delay subject_1)])]))])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1525
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nselect : list int -> bool\nselect xs =\n    let\n        dropped = Builtin.dropList 1 xs\n    in\n    if Builtin.nullList dropped then\n        Builtin.nullList (Builtin.tailList xs)\n    else False\nmain = select []\n"
 ---
 --- unoptimized Core
@@ -29,29 +28,14 @@ main#1
       (lam value_8 value_8)])
     (lam value_7 value_7)])
 --- optimized Core
-let xs#14 : list int = (con (list integer) []) in
-let dropped#15 : list int = dropList 1 xs#14 in
-let anf#20 : bool = nullList dropped#15 in
-case@Bool anf#20 of
-  True -> let projection#16 : list int = tailList xs#14 in
-  nullList projection#16
-  False -> false
+let projection#16 : list int = tailList (con (list integer) []) in
+nullList projection#16
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_5
-    [(lam builtin_6
-      [(lam builtin_7
-        [(lam xs_1
-          [(lam dropped_2
-            [(lam anf_3
-              (case
-                anf_3
-                (con bool False)
-                [(lam projection_4 [builtin_5 projection_4]) [builtin_6 xs_1]]))
-              [builtin_5 dropped_2]])
-            [[builtin_7 (con integer 1)] xs_1]])
-          (con (list integer) [])])
-        (force (builtin dropList))])
+  [(lam builtin_2
+    [(lam builtin_3
+      [(lam projection_1 [builtin_2 projection_1])
+        [builtin_3 (con (list integer) [])]])
       (force (builtin tailList))])
     (force (builtin nullList))])
 --- result

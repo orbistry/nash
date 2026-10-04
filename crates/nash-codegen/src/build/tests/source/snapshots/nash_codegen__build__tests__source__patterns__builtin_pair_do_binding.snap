@@ -53,21 +53,17 @@ main#1
             (constr 1)))
           value_15]))])
 --- optimized Core
-let evaluated#31 : Data = constrData 42 (con (list data) []) in
-let projection#32 : pair int (list Data) = unConstrData evaluated#31 in
-let result#40 : nash/base:Option.option int = case@Pair projection#32 of
+let result#40 : nash/base:Option.option int = case@Pair (con (pair integer (list data)) (42, [])) of
   Pair field#36 field#37 -> constr 0 field#36 in
 case@Tag result#40 of
   0 field#42 -> field#42
   1 -> error
 --- optimized UPLC
 (program 1.1.0
-  [(lam evaluated_1
-    [(lam projection_2
-      [(lam result_5 (case result_5 (lam field_6 field_6) (error)))
-        (case projection_2 (lam field_3 (lam field_4 (constr 0 field_3))))])
-      [(builtin unConstrData) evaluated_1]])
-    [[(builtin constrData) (con integer 42)] (con (list data) [])]])
+  [(lam result_3 (case result_3 (lam field_4 field_4) (error)))
+    (case
+      (con (pair integer (list data)) (42, []))
+      (lam field_1 (lam field_2 (constr 0 field_1))))])
 --- result
 (con integer 42)
 --- logs

@@ -18,15 +18,9 @@ main#1
       (lam value_5 value_5)])
     (lam coerce_4 coerce_4)])
 --- optimized Core
-let anf#13 : List Data = listData (con (list data) []) in
-let anf#17 : List Data = listData (con (list data) []) in
-equalsData anf#13 anf#17
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    [(lam anf_2 [[(builtin equalsData) anf_1] anf_2])
-      [(builtin listData) (con (list data) [])]])
-    [(builtin listData) (con (list data) [])]])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

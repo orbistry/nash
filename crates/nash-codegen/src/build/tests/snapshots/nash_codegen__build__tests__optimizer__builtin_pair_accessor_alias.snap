@@ -31,24 +31,9 @@ main#1
     (lam record_5
       [(lam projection_7 projection_7) [(force (force (builtin sndPair))) record_5]])])
 --- optimized Core
-let anf#25 : Data = iData 42 in
-let anf#26 : list Data = mkCons anf#25 (con (list data) []) in
-let evaluated#18 : Data = constrData 0 anf#26 in
-let projection#19 : pair int (list Data) = unConstrData evaluated#18 in
-headList anf#26
+(con data (I 42))
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_27
-    [(lam builtin_28
-      [(lam anf_25
-        [(lam anf_26
-          [(lam evaluated_18
-            [(lam projection_19 [builtin_27 anf_26]) [(builtin unConstrData) evaluated_18]])
-            [[(builtin constrData) (con integer 0)] anf_26]])
-          [[builtin_28 anf_25] (con (list data) [])]])
-        [(builtin iData) (con integer 42)]])
-      (force (builtin mkCons))])
-    (force (builtin headList))])
+(program 1.1.0 (con data (I 42)))
 --- result
 (con data (I 42))
 --- logs

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1641
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nreplace : Record -> Record\nreplace r = { r | a = (trace \"first\" 10) }\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData [Builtin.iData 1, Builtin.iData 2, Builtin.iData 3])\nmain = Builtin.equalsData (Primitive.coerce (replace original))\n    (Primitive.coerce (Builtin.listData [Builtin.iData 10, Builtin.iData 2, Builtin.iData 3]))\n"
 ---
 --- unoptimized Core
@@ -58,70 +57,21 @@ main#1
       (builtin iData)])
     (con string "first")])
 --- optimized Core
-let anf#40 : Int = iData 1 in
-let anf#42 : Int = iData 2 in
-let anf#44 : Int = iData 3 in
-let anf#45 : list Int = mkCons anf#44 (con (list data) []) in
-let anf#46 : list Int = mkCons anf#42 anf#45 in
-let anf#47 : list Int = mkCons anf#40 anf#46 in
-let anf#48 : List Int = listData anf#47 in
 let evaluated#25 : Int = trace "first" in iData 10 in
-let projection#26 : list Data = unListData anf#48 in
-let anf#49 : { _0 : Int, _1 : Int } = case@List projection#26 of
-  Cons head#27 tail#28 -> let anf#38 : list Data = mkCons evaluated#25 tail#28 in
-  listData anf#38 in
-let anf#52 : Int = iData 10 in
-let anf#54 : Int = iData 2 in
-let anf#56 : Int = iData 3 in
-let anf#57 : list Int = mkCons anf#56 (con (list data) []) in
-let anf#58 : list Int = mkCons anf#54 anf#57 in
-let anf#59 : list Int = mkCons anf#52 anf#58 in
-let anf#60 : List Int = listData anf#59 in
-equalsData anf#49 anf#60
+let anf#38 : list Data = mkCons evaluated#25 (con (list data) [(I 2), (I 3)]) in
+let anf#49 : { _0 : Int, _1 : Int } = listData anf#38 in
+equalsData anf#49 (con data (List [I 10, I 2, I 3]))
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_21
-    [(lam builtin_22
-      [(lam anf_1
+  [(lam builtin_4
+    [(lam builtin_5
+      [(lam evaluated_1
         [(lam anf_2
-          [(lam anf_3
-            [(lam anf_4
-              [(lam anf_5
-                [(lam anf_6
-                  [(lam anf_7
-                    [(lam evaluated_8
-                      [(lam projection_9
-                        [(lam anf_13
-                          [(lam anf_14
-                            [(lam anf_15
-                              [(lam anf_16
-                                [(lam anf_17
-                                  [(lam anf_18
-                                    [(lam anf_19
-                                      [(lam anf_20 [[(builtin equalsData) anf_13] anf_20])
-                                        [(builtin listData) anf_19]])
-                                      [[builtin_21 anf_14] anf_18]])
-                                    [[builtin_21 anf_15] anf_17]])
-                                  [[builtin_21 anf_16] (con (list data) [])]])
-                                [(builtin iData) (con integer 3)]])
-                              [(builtin iData) (con integer 2)]])
-                            [(builtin iData) (con integer 10)]])
-                          (case
-                            projection_9
-                            (lam head_10
-                              (lam tail_11
-                                [(lam anf_12 [(builtin listData) anf_12]) [[builtin_21 evaluated_8] tail_11]]))
-                            (error))])
-                        [(builtin unListData) anf_7]])
-                      (force
-                        [[builtin_22 (con string "first")] (delay [(builtin iData) (con integer 10)])])])
-                    [(builtin listData) anf_6]])
-                  [[builtin_21 anf_1] anf_5]])
-                [[builtin_21 anf_2] anf_4]])
-              [[builtin_21 anf_3] (con (list data) [])]])
-            [(builtin iData) (con integer 3)]])
-          [(builtin iData) (con integer 2)]])
-        [(builtin iData) (con integer 1)]])
+          [(lam anf_3 [[(builtin equalsData) anf_3] (con data (List [I 10, I 2, I 3]))])
+            [(builtin listData) anf_2]])
+          [[builtin_4 evaluated_1] (con (list data) [(I 2), (I 3)])]])
+        (force
+          [[builtin_5 (con string "first")] (delay [(builtin iData) (con integer 10)])])])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

@@ -22,12 +22,9 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     (con integer 0)]
     (con (list data) [(I 42)])])
 --- optimized Core
-let anf#4 : Data = constrData 0 (con (list data) [(I 42)]) in
-unConstrData anf#4
+(con (pair integer (list data)) (0, [(I 42)]))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [(builtin unConstrData) anf_1])
-    [[(builtin constrData) (con integer 0)] (con (list data) [(I 42)])]])
+(program 1.1.0 (con (pair integer (list data)) (0, [(I 42)])))
 --- isolated pass
 --- isolated ANF input
 (\tag#5 : int fields#6 : list Data -> let anf#8 : Data = constrData tag#5 fields#6 in

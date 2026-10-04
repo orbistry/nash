@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1688
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData [Builtin.iData 1])\nmain = Builtin.equalsData\n    (Primitive.coerce { original | a = 10 })\n    (Primitive.coerce (Builtin.listData [Builtin.iData 10]))\n"
 ---
 --- unoptimized Core
@@ -44,45 +43,19 @@ case@List projection#12 of
             (con (list data) [])]]]])
     (lam value_11 value_11)])
 --- optimized Core
-let anf#28 : Int = iData 1 in
-let anf#29 : list Int = mkCons anf#28 (con (list data) []) in
-let anf#30 : List Int = listData anf#29 in
 let evaluated#20 : Int = iData 10 in
-let projection#21 : list Data = unListData anf#30 in
-case@List projection#21 of
-  Cons head#22 tail#23 -> let anf#31 : list Data = mkCons evaluated#20 tail#23 in
-  let anf#32 : { _0 : Int, _1 : Int } = listData anf#31 in
-  let anf#35 : Int = iData 10 in
-  let anf#36 : list Int = mkCons anf#35 (con (list data) []) in
-  let anf#37 : List Int = listData anf#36 in
-  equalsData anf#32 anf#37
+let anf#31 : list Data = mkCons evaluated#20 (con (list data) []) in
+let anf#32 : { _0 : Int, _1 : Int } = listData anf#31 in
+equalsData anf#32 (con data (List [I 10]))
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_13
-    [(lam anf_1
+  [(lam builtin_4
+    [(lam evaluated_1
       [(lam anf_2
-        [(lam anf_3
-          [(lam evaluated_4
-            [(lam projection_5
-              (case
-                projection_5
-                (lam head_6
-                  (lam tail_7
-                    [(lam anf_8
-                      [(lam anf_9
-                        [(lam anf_10
-                          [(lam anf_11
-                            [(lam anf_12 [[(builtin equalsData) anf_9] anf_12]) [(builtin listData) anf_11]])
-                            [[builtin_13 anf_10] (con (list data) [])]])
-                          [(builtin iData) (con integer 10)]])
-                        [(builtin listData) anf_8]])
-                      [[builtin_13 evaluated_4] tail_7]]))
-                (error)))
-              [(builtin unListData) anf_3]])
-            [(builtin iData) (con integer 10)]])
+        [(lam anf_3 [[(builtin equalsData) anf_3] (con data (List [I 10]))])
           [(builtin listData) anf_2]])
-        [[builtin_13 anf_1] (con (list data) [])]])
-      [(builtin iData) (con integer 1)]])
+        [[builtin_4 evaluated_1] (con (list data) [])]])
+      [(builtin iData) (con integer 10)]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

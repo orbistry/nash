@@ -1,197 +1,92 @@
-//! Bounded constant builtin evaluation for O1; explicit comptime keeps its own policy.
-use nash_ir::{build::Builder, core::Core, ty::Ty};
+//! Constant builtin evaluation and cleanup to a fixed point.
+use nash_ir::{build::Builder, core::Core};
 use nash_plutus::{
-    arena::Arena, builtin::DefaultFunction as F, constant::Constant as C, data::PlutusData as D,
-    flat, machine::ExBudget, typ::Type,
+    arena::Arena, constant::Constant as C, data::PlutusData as D, machine::eval_constant_builtin,
+    typ::Type,
 };
 
-#[derive(Clone, Copy)]
-struct Limits {
-    calls: usize,
-    bytes: usize,
-    budget: ExBudget,
-}
-impl Default for Limits {
-    fn default() -> Self {
-        Self {
-            calls: 128,
-            bytes: 4096,
-            budget: ExBudget {
-                cpu: 1_000_000,
-                mem: 10_000,
-            },
-        }
-    }
-}
-
-/// Fold constants and run existing ANF cleanup to stability.
-/// One attempt allowance is shared by the whole invocation, including failures.
-pub(crate) fn simplify<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
-    simplify_with(b, core, Limits::default())
-}
-fn simplify_with<'a>(b: &Builder<'a>, mut core: &'a Core<'a>, limits: Limits) -> &'a Core<'a> {
-    let arena = b.arena;
-    let mut calls = limits.calls;
+/// Fold every representable pure constant call, with no size or execution budget.
+pub(crate) fn simplify<'a>(b: &Builder<'a>, mut core: &'a Core<'a>) -> &'a Core<'a> {
     loop {
         let folded = nash_ir::constant_fold::reduce(b, core, &mut |func, args| {
-            if calls == 0 || !supported(func) {
+            if !args.iter().all(|c| valid(b.arena, c)) {
                 return None;
             }
-            calls -= 1;
-            let mut nodes = 1024;
-            let mut bytes = limits.bytes;
-            if !args
-                .iter()
-                .all(|c| valid(arena, c, 64, &mut nodes, &mut bytes))
-            {
-                return None;
-            }
-            let args: Vec<_> = args.iter().map(|c| b.lit(c)).collect();
-            let call = b.builtin(func, &args, Ty::Erased);
-            let size = |core| {
-                let compiled = crate::program::assemble_core(arena, core).ok()?;
-                Some(flat::encode(compiled.program).ok()?.len())
-            };
-            let before = size(call)?;
-            let result =
-                crate::comptime::eval_closed_budget(arena, &[], call, limits.budget).ok()?;
-            let mut nodes = 1024;
-            let mut bytes = limits.bytes;
-            if !valid(arena, result, 64, &mut nodes, &mut bytes) {
-                return None;
-            }
-            (size(b.lit(result))? <= before).then_some(result)
+            let result = eval_constant_builtin(b.arena, func, args)?;
+            valid(b.arena, result).then_some(result)
         });
-        if std::ptr::eq(core, folded) {
-            return core;
+        let next = nash_ir::known_case::simplify_constr_data(b, folded);
+        debug_assert!(nash_ir::anf::validate(next).is_ok());
+        debug_assert!(nash_ir::hygiene::validate(next, &[]).is_ok());
+        if std::ptr::eq(core, next) {
+            return next;
         }
-        core = nash_ir::known_case::simplify_constr_data(b, folded);
-        debug_assert!(nash_ir::anf::validate(core).is_ok());
-        debug_assert!(nash_ir::hygiene::validate(core, &[]).is_ok());
+        core = next;
     }
 }
 
-fn supported(f: F) -> bool {
-    matches!(
-        f,
-        F::AddInteger
-            | F::SubtractInteger
-            | F::MultiplyInteger
-            | F::DivideInteger
-            | F::QuotientInteger
-            | F::RemainderInteger
-            | F::ModInteger
-            | F::EqualsInteger
-            | F::LessThanInteger
-            | F::LessThanEqualsInteger
-            | F::AppendByteString
-            | F::SliceByteString
-            | F::LengthOfByteString
-            | F::EqualsByteString
-            | F::LessThanByteString
-            | F::LessThanEqualsByteString
-            | F::AppendString
-            | F::EqualsString
-            | F::EncodeUtf8
-            | F::DecodeUtf8
-            | F::FstPair
-            | F::SndPair
-            | F::MkCons
-            | F::HeadList
-            | F::TailList
-            | F::NullList
-            | F::IData
-            | F::BData
-            | F::ListData
-            | F::MapData
-            | F::UnConstrData
-            | F::UnMapData
-            | F::UnListData
-            | F::UnIData
-            | F::UnBData
-            | F::EqualsData
-            | F::SerialiseData
-            | F::MkPairData
-            | F::MkNilData
-            | F::MkNilPairData
-    )
-}
-
-// Costing/Flat encoding recurse before the CEK budget is charged. Bound both
-// metadata and payload depth/work first, and reject inconsistent raw constants.
-fn spend(remaining: &mut usize, n: usize) -> bool {
-    match remaining.checked_sub(n) {
-        Some(left) => {
-            *remaining = left;
-            true
+// Validate metadata, payloads and literal representation with heap worklists.
+// These checks impose no depth, node, byte or output-growth limit.
+fn valid<'a>(arena: &'a Arena, c: &'a C<'a>) -> bool {
+    let mut constants = vec![c];
+    let mut types = Vec::new();
+    let mut pairs = Vec::new();
+    let mut data = Vec::new();
+    while let Some(c) = constants.pop() {
+        match c {
+            C::ProtoList(t, xs) | C::ProtoArray(t, xs) => {
+                types.push(*t);
+                for x in *xs {
+                    constants.push(x);
+                    pairs.push((*t, x.type_of(arena)));
+                }
+            }
+            C::ProtoPair(ta, tb, a, b) => {
+                types.extend([*ta, *tb]);
+                constants.extend([*a, *b]);
+                pairs.extend([(*ta, a.type_of(arena)), (*tb, b.type_of(arena))]);
+            }
+            C::Data(d) => data.push(*d),
+            // UPLC's Flat format does not permit BLS constants in scripts.
+            C::Bls12_381G1Element(_) | C::Bls12_381G2Element(_) | C::Bls12_381MlResult(_) => {
+                return false;
+            }
+            _ => {}
         }
-        None => false,
     }
-}
-fn valid_type(t: &Type<'_>, depth: usize, nodes: &mut usize) -> bool {
-    if depth == 0 || !spend(nodes, 1) {
-        return false;
-    }
-    match t {
-        Type::Bool | Type::Integer | Type::ByteString | Type::String | Type::Unit | Type::Data => {
-            true
+    while let Some(t) = types.pop() {
+        match t {
+            Type::List(t) | Type::Array(t) => types.push(t),
+            Type::Pair(a, b) => types.extend([*a, *b]),
+            Type::Bls12_381G1Element | Type::Bls12_381G2Element | Type::Bls12_381MlResult => {
+                return false;
+            }
+            _ => {}
         }
-        Type::List(t) => valid_type(t, depth - 1, nodes),
-        Type::Pair(a, b) => valid_type(a, depth - 1, nodes) && valid_type(b, depth - 1, nodes),
-        _ => false,
     }
-}
-fn valid_data(d: &D<'_>, depth: usize, nodes: &mut usize, bytes: &mut usize) -> bool {
-    if depth == 0 || !spend(nodes, 1) {
-        return false;
-    }
-    match d {
-        // The existing CBOR encoder mishandles multi-limb negative Data integers.
-        // Do not freeze that bug into a literal (or a serialiseData result).
-        D::Integer(i) => {
-            !(i.bits() > 64 && *i < &0.into()) && spend(bytes, i.bits().div_ceil(8) as usize)
+    while let Some((a, b)) = pairs.pop() {
+        match (a, b) {
+            (Type::List(a), Type::List(b)) | (Type::Array(a), Type::Array(b)) => pairs.push((a, b)),
+            (Type::Pair(a, b), Type::Pair(c, d)) => pairs.extend([(*a, *c), (*b, *d)]),
+            _ if std::mem::discriminant(a) == std::mem::discriminant(b) => {}
+            _ => return false,
         }
-        D::ByteString(bs) => spend(bytes, bs.len()),
-        D::List(xs) | D::Constr { fields: xs, .. } => {
-            xs.iter().all(|x| valid_data(x, depth - 1, nodes, bytes))
-        }
-        D::Map(xs) => xs.iter().all(|(a, b)| {
-            valid_data(a, depth - 1, nodes, bytes) && valid_data(b, depth - 1, nodes, bytes)
-        }),
     }
-}
-fn valid<'a>(
-    arena: &'a Arena,
-    c: &'a C<'a>,
-    depth: usize,
-    nodes: &mut usize,
-    bytes: &mut usize,
-) -> bool {
-    if depth == 0 || !spend(nodes, 1) {
-        return false;
-    }
-    match c {
-        C::Integer(i) => spend(bytes, i.bits().div_ceil(8) as usize),
-        C::ByteString(bs) => spend(bytes, bs.len()),
-        C::String(s) => spend(bytes, s.len()),
-        C::Boolean(_) | C::Unit => true,
-        C::Data(d) => valid_data(d, depth - 1, nodes, bytes),
-        C::ProtoList(t, xs) => {
-            valid_type(t, depth - 1, nodes)
-                && xs
-                    .iter()
-                    .all(|x| valid(arena, x, depth - 1, nodes, bytes) && *t == x.type_of(arena))
+    while let Some(d) = data.pop() {
+        match d {
+            // Existing CBOR encoding mishandles negative multi-limb Data integers.
+            // Keep evaluation at runtime until that serialization bug is fixed.
+            D::Integer(i) if i.bits() > 64 && *i < &0.into() => return false,
+            D::List(xs) | D::Constr { fields: xs, .. } => data.extend(*xs),
+            D::Map(xs) => {
+                for (a, b) in *xs {
+                    data.extend([*a, *b]);
+                }
+            }
+            _ => {}
         }
-        C::ProtoPair(ta, tb, a, b) => {
-            valid_type(ta, depth - 1, nodes)
-                && valid_type(tb, depth - 1, nodes)
-                && valid(arena, a, depth - 1, nodes, bytes)
-                && valid(arena, b, depth - 1, nodes, bytes)
-                && *ta == a.type_of(arena)
-                && *tb == b.type_of(arena)
-        }
-        _ => false,
     }
+    true
 }
 
 #[cfg(test)]

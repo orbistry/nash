@@ -40,22 +40,9 @@ case@Pair projection#14 of
       (lam value_13 value_13)])
     (lam coerce_12 coerce_12)])
 --- optimized Core
-let anf#31 : Data = iData 42 in
-let anf#32 : list Data = mkCons anf#31 (con (list data) []) in
-let anf#33 : Data = constrData 0 anf#32 in
-let projection#22 : pair int (list Data) = unConstrData anf#33 in
-unIData anf#31
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_5
-    [(lam anf_1
-      [(lam anf_2
-        [(lam anf_3
-          [(lam projection_4 [(builtin unIData) anf_1]) [(builtin unConstrData) anf_3]])
-          [[(builtin constrData) (con integer 0)] anf_2]])
-        [[builtin_5 anf_1] (con (list data) [])]])
-      [(builtin iData) (con integer 42)]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con integer 42))
 --- result
 (con integer 42)
 --- logs

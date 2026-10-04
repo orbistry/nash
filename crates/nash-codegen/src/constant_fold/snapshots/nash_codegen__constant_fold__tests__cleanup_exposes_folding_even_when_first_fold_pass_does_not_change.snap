@@ -1,0 +1,26 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- isolated Core before\\n{}\\n--- isolated fixed point\\n{}\\n--- isolated UPLC\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nfixture.code_snapshot(), pretty(core), pretty(after), evaluated.uplc,\nevaluated.result, evaluated.logs)"
+---
+--- unoptimized Core
+let f#2 : int -> int = \x#1 : int -> addInteger x#1 22 in
+f#2 20
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam f_2 [f_2 (con integer 20)])
+    (lam x_1 [[(builtin addInteger) x_1] (con integer 22)])])
+--- optimized Core
+42
+--- optimized UPLC
+(program 1.1.0 (con integer 42))
+--- isolated Core before
+let f#2 : int -> int = \x#1 : int -> addInteger x#1 22 in
+f#2 20
+--- isolated fixed point
+42
+--- isolated UPLC
+(program 1.1.0 (con integer 42))
+--- result
+(con integer 42)
+--- logs
+[]

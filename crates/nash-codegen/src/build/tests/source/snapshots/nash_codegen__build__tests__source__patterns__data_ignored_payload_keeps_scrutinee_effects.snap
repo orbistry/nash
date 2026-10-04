@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 1031
 description: "module Main exposing (..)\nimport Data exposing (ToData)\nimport Primitive exposing (Data(..))\nmain : int\nmain = case trace \"data input\" (toData (Builtin.iData 42)) of\n    I _ -> 7\n    _ -> fail\n"
 ---
 --- unoptimized Core
@@ -43,7 +42,7 @@ main#1
       (lam coerce_17 coerce_17)])
     (con string "data input")])
 --- optimized Core
-let match#23 : Data = trace "data input" in iData 42 in
+let match#23 : Data = trace "data input" in (con data (I 42)) in
 let leaf#24 : @delay int = delay error in
 case@Data match#23 of
   DataConstr field#25 -> force leaf#24
@@ -65,9 +64,7 @@ case@Data match#23 of
                 (delay (force leaf_2))]))
             match_1])
           (delay (error))])
-        (force
-          [[builtin_10 (con string "data input")]
-            (delay [(builtin iData) (con integer 42)])])])
+        (force [[builtin_10 (con string "data input")] (delay (con data (I 42)))])])
       (force (builtin trace))])
     (force (builtin chooseData))])
 --- result

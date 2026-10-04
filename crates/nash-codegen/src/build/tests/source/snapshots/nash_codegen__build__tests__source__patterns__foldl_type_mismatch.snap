@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 326
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\nimport Lift exposing (lower, lift)\ntype Option 'a = None | Some 'a\ntype Address = Address { paymentCredential : Bytes, stakeCredential : Option Bytes }\ntype Output = Output { address : Address, value : List Int, datum : Option Int, referenceScript : Option Int }\nfoldl self with zero =\n    case self of\n        [] -> zero\n        x :: xs -> foldl xs with (with x zero)\nmain =\n    let\n        addr1 = Address { paymentCredential = #\"61646666\", stakeCredential = None }\n        out = Output { address = addr1, value = (lift empty), datum = None, referenceScript = None }\n        empty : list Int\n        empty = []\n        outputs : list Output\n        outputs = [out, out, out]\n        cry =\n            foldl outputs\n                (\\o mbB ->\n                    case mbB of\n                        None -> if eq o.address addr1 then Some o else None\n                        otherwise -> otherwise\n                )\n                None\n    in\n    eq cry cry\n"
 ---
 --- unoptimized Core
@@ -122,22 +121,15 @@ main#1
             zero_30])))])
 --- optimized Core
 let anf#80 : Bytes = bData (con bytestring #61646666) in
-let anf#82 : Main.Option Bytes = constrData 0 (con (list data) []) in
-let anf#78 : list Data = mkCons anf#82 (con (list data) []) in
-let anf#79 : list Data = mkCons anf#80 anf#78 in
+let anf#79 : list Data = mkCons anf#80 (con (list data) [(Constr 0 [])]) in
 let addr1#51 : Main.Address = constrData 0 anf#79 in
 let anf#88 : List Int = listData (con (list data) []) in
-let anf#90 : Main.Option Int = constrData 0 (con (list data) []) in
-let anf#92 : Main.Option Int = constrData 0 (con (list data) []) in
-let anf#83 : list Data = mkCons anf#92 (con (list data) []) in
-let anf#84 : list Data = mkCons anf#90 anf#83 in
-let anf#85 : list Data = mkCons anf#88 anf#84 in
+let anf#85 : list Data = mkCons anf#88 (con (list data) [(Constr 0 []), (Constr 0 [])]) in
 let anf#86 : list Data = mkCons addr1#51 anf#85 in
 let out#56 : Main.Output = constrData 0 anf#86 in
 let anf#93 : list Main.Output = mkCons out#56 (con (list data) []) in
 let anf#94 : list Main.Output = mkCons out#56 anf#93 in
 let outputs#57 : list Main.Output = mkCons out#56 anf#94 in
-let anf#98 : Main.Option Main.Output = constrData 0 (con (list data) []) in
 letrec
   worker#75 : list 'erased -> 'erased -> 'erased [static []] = \self#73 : list 'erased zero#74 : 'erased -> case@List self#73 of
     Nil -> zero#74
@@ -152,91 +144,77 @@ letrec
             case@Bool anf#95 of
               True -> let anf#96 : list Data = mkCons field#42 (con (list data) []) in
               constrData 1 anf#96
-              False -> constrData 0 (con (list data) [])
+              False -> (con data (Constr 0 []))
         1 -> zero#74 in
     anf#76 anf#77
 in
-let cry#71 : Main.Option Main.Output = worker#75 outputs#57 anf#98 in
+let cry#71 : Main.Option Main.Output = worker#75 outputs#57 (con data (Constr 0 [])) in
 equalsData cry#71 cry#71
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_41
-    [(lam partial_42
+  [(lam builtin_34
+    [(lam partial_35
       [(lam anf_4
         [(lam anf_5
-          [(lam anf_6
+          [(lam addr1_6
             [(lam anf_7
-              [(lam addr1_8
+              [(lam anf_8
                 [(lam anf_9
-                  [(lam anf_10
+                  [(lam out_10
                     [(lam anf_11
                       [(lam anf_12
-                        [(lam anf_13
-                          [(lam anf_14
-                            [(lam anf_15
-                              [(lam out_16
-                                [(lam anf_17
-                                  [(lam anf_18
-                                    [(lam outputs_19
-                                      [(lam anf_20
-                                        [(lam worker_39
-                                          [(lam cry_40 [[(builtin equalsData) cry_40] cry_40])
-                                            [[worker_39 outputs_19] anf_20]])
-                                          [(lam self_21 [self_21 self_21])
-                                            (lam self_22
-                                              (lam self_23
-                                                (lam zero_24
-                                                  (case
-                                                    self_23
-                                                    (lam field_25
-                                                      (lam field_26
-                                                        [(lam anf_27
-                                                          [(lam projection_28
-                                                            [(lam anf_38 [anf_27 anf_38])
-                                                              (case
-                                                                projection_28
-                                                                (lam tag_29
-                                                                  (lam fields_30
-                                                                    (case
-                                                                      tag_29
-                                                                      [(lam projection_31
+                        [(lam outputs_13
+                          [(lam worker_32
+                            [(lam cry_33 [[(builtin equalsData) cry_33] cry_33])
+                              [[worker_32 outputs_13] (con data (Constr 0 []))]])
+                            [(lam self_14 [self_14 self_14])
+                              (lam self_15
+                                (lam self_16
+                                  (lam zero_17
+                                    (case
+                                      self_16
+                                      (lam field_18
+                                        (lam field_19
+                                          [(lam anf_20
+                                            [(lam projection_21
+                                              [(lam anf_31 [anf_20 anf_31])
+                                                (case
+                                                  projection_21
+                                                  (lam tag_22
+                                                    (lam fields_23
+                                                      (case
+                                                        tag_22
+                                                        [(lam projection_24
+                                                          (case
+                                                            projection_24
+                                                            (lam tag_25
+                                                              (lam fields_26
+                                                                (case
+                                                                  fields_26
+                                                                  (lam head_27
+                                                                    (lam tail_28
+                                                                      [(lam anf_29
                                                                         (case
-                                                                          projection_31
-                                                                          (lam tag_32
-                                                                            (lam fields_33
-                                                                              (case
-                                                                                fields_33
-                                                                                (lam head_34
-                                                                                  (lam tail_35
-                                                                                    [(lam anf_36
-                                                                                      (case
-                                                                                        anf_36
-                                                                                        [partial_42 (con (list data) [])]
-                                                                                        [(lam anf_37 [[(builtin constrData) (con integer 1)] anf_37])
-                                                                                          [[builtin_41 field_25] (con (list data) [])]]))
-                                                                                      [[(builtin equalsData) head_34] addr1_8]]))
-                                                                                (error))))))
-                                                                        [(builtin unConstrData) field_25]]
-                                                                      zero_24))))])
-                                                            [(builtin unConstrData) zero_24]])
-                                                          [[self_22 self_22] field_26]]))
-                                                    zero_24))))]])
-                                        [partial_42 (con (list data) [])]])
-                                      [[builtin_41 out_16] anf_18]])
-                                    [[builtin_41 out_16] anf_17]])
-                                  [[builtin_41 out_16] (con (list data) [])]])
-                                [partial_42 anf_15]])
-                              [[builtin_41 addr1_8] anf_14]])
-                            [[builtin_41 anf_9] anf_13]])
-                          [[builtin_41 anf_10] anf_12]])
-                        [[builtin_41 anf_11] (con (list data) [])]])
-                      [partial_42 (con (list data) [])]])
-                    [partial_42 (con (list data) [])]])
-                  [(builtin listData) (con (list data) [])]])
-                [partial_42 anf_7]])
-              [[builtin_41 anf_4] anf_6]])
-            [[builtin_41 anf_5] (con (list data) [])]])
-          [partial_42 (con (list data) [])]])
+                                                                          anf_29
+                                                                          (con data (Constr 0 []))
+                                                                          [(lam anf_30 [[(builtin constrData) (con integer 1)] anf_30])
+                                                                            [[builtin_34 field_18] (con (list data) [])]]))
+                                                                        [[(builtin equalsData) head_27] addr1_6]]))
+                                                                  (error))))))
+                                                          [(builtin unConstrData) field_18]]
+                                                        zero_17))))])
+                                              [(builtin unConstrData) zero_17]])
+                                            [[self_15 self_15] field_19]]))
+                                      zero_17))))]])
+                          [[builtin_34 out_10] anf_12]])
+                        [[builtin_34 out_10] anf_11]])
+                      [[builtin_34 out_10] (con (list data) [])]])
+                    [partial_35 anf_9]])
+                  [[builtin_34 addr1_6] anf_8]])
+                [[builtin_34 anf_7] (con (list data) [(Constr 0 []), (Constr 0 [])])]])
+              [(builtin listData) (con (list data) [])]])
+            [partial_35 anf_5]])
+          [[builtin_34 anf_4] (con (list data) [(Constr 0 [])])]])
         [(builtin bData) (con bytestring #61646666)]])
       [(builtin constrData) (con integer 0)]])
     (force (builtin mkCons))])

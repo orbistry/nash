@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Literal exposing (..)\nimport Eq exposing (..)\nbigBig : map Int Int\nbigBig = [Builtin.mkPairData 1 2]\nbigLittle : map Int int\nbigLittle = []\nlittleBig : map int Int\nlittleBig = []\nlittleLittle : map int (list Data)\nlittleLittle = [Builtin.unConstrData (Builtin.constrData 1 [])]\ndifferent : map int (list Data)\ndifferent = [Builtin.unConstrData (Builtin.constrData 2 [])]\nsame : Eq (map 'k 'v) => map 'k 'v -> map 'k 'v -> bool\nsame = eq\nmain =\n    ( same bigBig bigBig\n    , same bigLittle bigLittle\n    , same littleBig littleBig\n    , same littleLittle different\n    )\n"
 ---
 --- unoptimized Core
@@ -501,22 +500,16 @@ letrec
         True -> eq#259 field#267 field#272
         False -> false
 in
-let evaluated#280 : Data = constrData 1 (con (list data) []) in
-let projection#281 : pair int (list Data) = unConstrData evaluated#280 in
-let littleLittle#282 : list (pair int (list Data)) = mkCons projection#281 (con (list (pair integer (list data))) []) in
-let evaluated#283 : Data = constrData 2 (con (list data) []) in
-let projection#284 : pair int (list Data) = unConstrData evaluated#283 in
-let different#285 : list (pair int (list Data)) = mkCons projection#284 (con (list (pair integer (list data))) []) in
 let anf#287 : Map 'erased 'erased = mapData bigBig#119 in
 let anf#288 : Map 'erased 'erased = mapData bigBig#119 in
 let anf#302 : bool = equalsData anf#287 anf#288 in
 let anf#303 : bool = eq#174 bigLittle#193 bigLittle#193 in
 let anf#304 : bool = eq#215 littleBig#234 littleBig#234 in
-let anf#305 : bool = eq#259 littleLittle#282 different#285 in
+let anf#305 : bool = eq#259 (con (list (pair integer (list data))) [(1, [])]) (con (list (pair integer (list data))) [(2, [])]) in
 constr 0 anf#302 anf#303 anf#304 anf#305
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_83
+  [(lam builtin_77
     [(lam fromInt_10
       [(lam anf_11
         [(lam anf_12
@@ -528,30 +521,19 @@ constr 0 anf#302 anf#303 anf#304 anf#305
                     [(lam eq_50
                       [(lam littleBig_51
                         [(lam eq_70
-                          [(lam evaluated_71
-                            [(lam projection_72
-                              [(lam littleLittle_73
-                                [(lam evaluated_74
-                                  [(lam projection_75
-                                    [(lam different_76
-                                      [(lam anf_77
-                                        [(lam anf_78
-                                          [(lam anf_79
-                                            [(lam anf_80
-                                              [(lam anf_81
-                                                [(lam anf_82 (constr 0 anf_79 anf_80 anf_81 anf_82))
-                                                  [[eq_70 littleLittle_73] different_76]])
-                                                [[eq_50 littleBig_51] littleBig_51]])
-                                              [[eq_32 bigLittle_33] bigLittle_33]])
-                                            [[(builtin equalsData) anf_77] anf_78]])
-                                          [(builtin mapData) bigBig_14]])
-                                        [(builtin mapData) bigBig_14]])
-                                      [[builtin_83 projection_75] (con (list (pair integer (list data))) [])]])
-                                    [(builtin unConstrData) evaluated_74]])
-                                  [[(builtin constrData) (con integer 2)] (con (list data) [])]])
-                                [[builtin_83 projection_72] (con (list (pair integer (list data))) [])]])
-                              [(builtin unConstrData) evaluated_71]])
-                            [[(builtin constrData) (con integer 1)] (con (list data) [])]])
+                          [(lam anf_71
+                            [(lam anf_72
+                              [(lam anf_73
+                                [(lam anf_74
+                                  [(lam anf_75
+                                    [(lam anf_76 (constr 0 anf_73 anf_74 anf_75 anf_76))
+                                      [[eq_70 (con (list (pair integer (list data))) [(1, [])])]
+                                        (con (list (pair integer (list data))) [(2, [])])]])
+                                    [[eq_50 littleBig_51] littleBig_51]])
+                                  [[eq_32 bigLittle_33] bigLittle_33]])
+                                [[(builtin equalsData) anf_71] anf_72]])
+                              [(builtin mapData) bigBig_14]])
+                            [(builtin mapData) bigBig_14]])
                           [(lam self_52 [self_52 self_52])
                             (lam self_53
                               (lam xs_54
@@ -641,7 +623,7 @@ constr 0 anf#302 anf#303 anf#304 anf#305
                                   (con bool False))))
                             (case ys_19 (lam field_20 (lam field_21 (con bool False))) (con bool True))))))]])
                 (builtin equalsInteger)])
-              [[builtin_83 anf_13] (con (list (pair data data)) [])]])
+              [[builtin_77 anf_13] (con (list (pair data data)) [])]])
             [[(builtin mkPairData) anf_11] anf_12]])
           [fromInt_10 (con integer 2)]])
         [fromInt_10 (con integer 1)]])

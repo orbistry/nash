@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 617
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nmain : int\nmain =\n    let\n        pair(tag, fields) = Builtin.unConstrData (Builtin.constrData 7 [I 42])\n    in\n    case fields of\n        [I number] -> Builtin.addInteger tag number\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -82,11 +81,7 @@ case@Pair match#5 of
           (con (list data) [])]]])
     (lam value_36 value_36)])
 --- optimized Core
-let anf#57 : Data = iData 42 in
-let anf#58 : list Data = mkCons anf#57 (con (list data) []) in
-let evaluated#16 : Data = constrData 7 anf#58 in
-let projection#17 : pair int (list Data) = unConstrData evaluated#16 in
-case@Pair projection#17 of
+case@Pair (con (pair integer (list data)) (7, [(I 42)])) of
   Pair field#20 field#21 -> let leaf#40 : @delay int = delay error in
   case@List field#21 of
     Nil -> force leaf#40
@@ -100,41 +95,31 @@ case@Pair projection#17 of
       DataB field#53 -> force leaf#40
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_20
-    [(lam builtin_21
-      [(lam anf_1
-        [(lam anf_2
-          [(lam evaluated_3
-            [(lam projection_4
-              (case
-                projection_4
+  [(lam builtin_14
+    (case
+      (con (pair integer (list data)) (7, [(I 42)]))
+      (lam field_1
+        (lam field_2
+          [(lam leaf_3
+            (case
+              field_2
+              (lam field_4
                 (lam field_5
-                  (lam field_6
-                    [(lam leaf_7
-                      (case
-                        field_6
-                        (lam field_8
-                          (lam field_9
-                            [(lam generated_19
-                              (force
-                                [[[[[[builtin_20 generated_19] (delay (force leaf_7))] (delay (force leaf_7))]
-                                  (delay (force leaf_7))]
-                                  (delay
-                                    [(lam field_13
-                                      (case
-                                        field_9
-                                        (lam field_14 (lam field_15 (force leaf_7)))
-                                        [[(builtin addInteger) field_5] field_13]))
-                                      [(builtin unIData) generated_19]])]
-                                  (delay (force leaf_7))]))
-                              field_8]))
-                        (force leaf_7)))
-                      (delay (error))]))))
-              [(builtin unConstrData) evaluated_3]])
-            [[(builtin constrData) (con integer 7)] anf_2]])
-          [[builtin_21 anf_1] (con (list data) [])]])
-        [(builtin iData) (con integer 42)]])
-      (force (builtin mkCons))])
+                  [(lam generated_13
+                    (force
+                      [[[[[[builtin_14 generated_13] (delay (force leaf_3))] (delay (force leaf_3))]
+                        (delay (force leaf_3))]
+                        (delay
+                          [(lam field_9
+                            (case
+                              field_5
+                              (lam field_10 (lam field_11 (force leaf_3)))
+                              [[(builtin addInteger) field_1] field_9]))
+                            [(builtin unIData) generated_13]])]
+                        (delay (force leaf_3))]))
+                    field_4]))
+              (force leaf_3)))
+            (delay (error))]))))
     (force (builtin chooseData))])
 --- result
 (con integer 49)

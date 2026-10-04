@@ -21,9 +21,9 @@ main#1
       (lam coerce_9 coerce_9)])
     (lam value_8 value_8)])
 --- optimized Core
-equalsData (con data (B #aa)) (con data (B #aa))
+true
 --- optimized UPLC
-(program 1.1.0 [[(builtin equalsData) (con data (B #aa))] (con data (B #aa))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

@@ -62,10 +62,8 @@ main#1
       (builtin equalsInteger)])
     (lam value_32 value_32)])
 --- optimized Core
-let anf#50 : Main.Option = constrData 1 (con (list data) []) in
 let leaf#16 : @delay Main.never = delay error in
-let field#17 : pair int (list Data) = unConstrData anf#50 in
-let match#45 : Main.never = case@Pair field#17 of
+let match#45 : Main.never = case@Pair (con (pair integer (list data)) (1, [])) of
   Pair field#18 field#19 -> let anf#47 : int -> bool = equalsInteger field#18 in
   let anf#49 : bool = anf#47 1 in
   case@Bool anf#49 of
@@ -76,25 +74,21 @@ let match#45 : Main.never = case@Pair field#17 of
 ()
 --- optimized UPLC
 (program 1.1.0
-  [(lam anf_1
-    [(lam leaf_2
-      [(lam field_3
-        [(lam match_10 (con unit ()))
-          (case
-            field_3
-            (lam field_4
-              (lam field_5
-                [(lam anf_6
-                  [(lam anf_7
-                    (case
-                      anf_7
-                      (force leaf_2)
-                      (case field_5 (lam field_8 (lam field_9 (force leaf_2))) (constr 0))))
-                    [anf_6 (con integer 1)]])
-                  [(builtin equalsInteger) field_4]])))])
-        [(builtin unConstrData) anf_1]])
-      (delay (error))])
-    [[(builtin constrData) (con integer 1)] (con (list data) [])]])
+  [(lam leaf_1
+    [(lam match_8 (con unit ()))
+      (case
+        (con (pair integer (list data)) (1, []))
+        (lam field_2
+          (lam field_3
+            [(lam anf_4
+              [(lam anf_5
+                (case
+                  anf_5
+                  (force leaf_1)
+                  (case field_3 (lam field_6 (lam field_7 (force leaf_1))) (constr 0))))
+                [anf_4 (con integer 1)]])
+              [(builtin equalsInteger) field_2]])))])
+    (delay (error))])
 --- result
 (con unit ())
 --- logs

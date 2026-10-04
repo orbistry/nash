@@ -626,10 +626,10 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
 
                 self.spend_budget(budget)?;
 
-                let index: i128 = arg2.try_into().unwrap();
+                let index = usize::try_from(arg2).ok();
 
-                if 0 <= index && (index as usize) < arg1.len() {
-                    let result: Integer = arg1[index as usize].into();
+                if let Some(byte) = index.and_then(|i| arg1.get(i)) {
+                    let result: Integer = (*byte).into();
                     let new = self.arena.alloc_integer(result);
                     let value = Value::integer(self.arena, new);
 
@@ -1337,7 +1337,9 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     ));
                 }
 
-                let tag = tag.try_into().expect("should cast to u64 just fine");
+                let tag = tag
+                    .try_into()
+                    .map_err(|_| MachineError::MaxConstrTagExceeded(runtime.args[0]))?;
                 let fields: BumpVec<'_, _> = fields
                     .iter()
                     .map(|d| match d {
@@ -2756,10 +2758,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                 let bytes = runtime.args[0].unwrap_byte_string()?;
                 let shift = runtime.args[1].unwrap_integer()?;
 
-                let arg1: i64 = u64::try_from(shift.abs())
-                    .unwrap()
-                    .try_into()
-                    .unwrap_or(i64::MAX);
+                let arg1: i64 = i64::try_from(shift.abs()).unwrap_or(i64::MAX);
 
                 let budget = self
                     .costs
@@ -2787,7 +2786,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                 if is_shift_left {
                     if bit_shift == 0 {
                         // If we can shift entire bytes, that's much simpler
-                        let copy_len = length - bit_shift;
+                        let copy_len = length - byte_shift;
                         // For example, consider the following byte array [1,0,1,0,1] being shifted 8 bits (1 byte)
                         // Result: [0,1,0,1,0]
                         result[..copy_len].copy_from_slice(&bytes[byte_shift..]);
@@ -2849,10 +2848,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                 let bytes = runtime.args[0].unwrap_byte_string()?;
                 let shift = runtime.args[1].unwrap_integer()?;
 
-                let arg1: i64 = u64::try_from(shift.abs())
-                    .unwrap()
-                    .try_into()
-                    .unwrap_or(i64::MAX);
+                let arg1: i64 = i64::try_from(shift.abs()).unwrap_or(i64::MAX);
 
                 let budget = self
                     .costs
@@ -3034,10 +3030,7 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                 let elements_to_drop = runtime.args[0].unwrap_integer()?;
                 let (list_type, list) = runtime.args[1].unwrap_list()?;
 
-                let arg0: i64 = u64::try_from(elements_to_drop.abs())
-                    .unwrap()
-                    .try_into()
-                    .unwrap_or(i64::MAX);
+                let arg0: i64 = i64::try_from(elements_to_drop.abs()).unwrap_or(i64::MAX);
 
                 let budget = self
                     .costs
@@ -3131,10 +3124,9 @@ impl<'a, B: BuiltinCostModel, V: Eval<'a>> Machine<'a, B, V> {
                     .ok_or(MachineError::NoCostForBuiltin(DefaultFunction::IndexArray))?;
                 self.spend_budget(budget)?;
 
-                let index: i128 = arg1.try_into().unwrap();
+                let index = usize::try_from(arg1).ok();
 
-                if 0 <= index && (index as usize) < array.len() {
-                    let element = array[index as usize];
+                if let Some(element) = index.and_then(|i| array.get(i)) {
                     let value = Value::con(self.arena, element);
                     Ok(value)
                 } else {

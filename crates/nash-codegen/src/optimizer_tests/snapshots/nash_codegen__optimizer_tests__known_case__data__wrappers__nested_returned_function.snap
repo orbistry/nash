@@ -28,13 +28,9 @@ expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- iso
     [(builtin iData) (con integer 40)]]
     (con integer 2)])
 --- optimized Core
-let anf#7 : Data = iData 40 in
-let anf#8 : Data = iData 40 in
 42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [(lam anf_2 (con integer 42)) [(builtin iData) (con integer 40)]])
-    [(builtin iData) (con integer 40)]])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- isolated ANF input
 let anf#4 : Data = iData 40 in

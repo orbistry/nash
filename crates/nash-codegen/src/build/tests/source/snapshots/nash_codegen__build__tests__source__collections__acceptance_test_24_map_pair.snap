@@ -114,51 +114,9 @@ main#1
               (constr 0 a_12 b_13)])))])
     (lam value_43 value_43)])
 --- optimized Core
-let anf#101 : Int = iData 14 in
-let anf#102 : Int = iData 42 in
-let anf#94 : 'erased = mkPairData anf#101 anf#102 in
-let anf#106 : Int = iData 14 in
-let anf#108 : Int = iData 42 in
-let anf#109 : pair Int Int = mkPairData anf#106 anf#108 in
-let projection#65 : 'erased = fstPair anf#94 in
-let projection#67 : 'erased = fstPair anf#109 in
-let anf#92 : bool = equalsData projection#65 projection#67 in
-case@Bool anf#92 of
-  True -> let projection#68 : 'erased = sndPair anf#94 in
-  let projection#70 : 'erased = sndPair anf#109 in
-  equalsData projection#68 projection#70
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_12
-    [(lam builtin_13
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam anf_4
-              [(lam anf_5
-                [(lam anf_6
-                  [(lam projection_7
-                    [(lam projection_8
-                      [(lam anf_9
-                        (case
-                          anf_9
-                          (con bool False)
-                          [(lam projection_10
-                            [(lam projection_11 [[(builtin equalsData) projection_10] projection_11])
-                              [builtin_12 anf_6]])
-                            [builtin_12 anf_3]]))
-                        [[(builtin equalsData) projection_7] projection_8]])
-                      [builtin_13 anf_6]])
-                    [builtin_13 anf_3]])
-                  [[(builtin mkPairData) anf_4] anf_5]])
-                [(builtin iData) (con integer 42)]])
-              [(builtin iData) (con integer 14)]])
-            [[(builtin mkPairData) anf_1] anf_2]])
-          [(builtin iData) (con integer 42)]])
-        [(builtin iData) (con integer 14)]])
-      (force (force (builtin fstPair)))])
-    (force (force (builtin sndPair)))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

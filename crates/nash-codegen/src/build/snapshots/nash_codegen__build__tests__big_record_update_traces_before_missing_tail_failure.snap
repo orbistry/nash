@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 1672
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\ntype alias Record = { a : Int, b : Int }\nempty : list Data\nempty = []\noriginal : Record\noriginal = Primitive.coerce (Builtin.listData empty)\nmain : Record\nmain = { original | a = (trace \"before tail\" 10) }\n"
 ---
 --- unoptimized Core
@@ -43,32 +42,16 @@ case@List projection#11 of
       (con (list data) [])])
     (con string "before tail")])
 --- optimized Core
-let anf#27 : List Data = listData (con (list data) []) in
 let evaluated#22 : Int = trace "before tail" in iData 10 in
-let projection#23 : list Data = unListData anf#27 in
-case@List projection#23 of
-  Cons head#24 tail#25 -> let anf#29 : list Data = mkCons evaluated#22 tail#25 in
-  listData anf#29
+error
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam builtin_8
-      [(lam anf_1
-        [(lam evaluated_2
-          [(lam projection_3
-            (case
-              projection_3
-              (lam head_4
-                (lam tail_5
-                  [(lam anf_6 [(builtin listData) anf_6]) [[builtin_7 evaluated_2] tail_5]]))
-              (error)))
-            [(builtin unListData) anf_1]])
-          (force
-            [[builtin_8 (con string "before tail")]
-              (delay [(builtin iData) (con integer 10)])])])
-        [(builtin listData) (con (list data) [])]])
-      (force (builtin trace))])
-    (force (builtin mkCons))])
+  [(lam builtin_2
+    [(lam evaluated_1 (error))
+      (force
+        [[builtin_2 (con string "before tail")]
+          (delay [(builtin iData) (con integer 10)])])])
+    (force (builtin trace))])
 --- result
 error: ExplicitErrorTerm
 --- logs

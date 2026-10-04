@@ -1,0 +1,18 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- isolated Core\\n{}\\n--- result\\n{}\", fixture.code_snapshot(),\npretty(after), evaluated.result)"
+---
+--- unoptimized Core
+ifThenElse true 20 22
+--- unoptimized UPLC
+(program 1.1.0
+  [[[(force (builtin ifThenElse)) (con bool True)] (con integer 20)]
+    (con integer 22)])
+--- optimized Core
+20
+--- optimized UPLC
+(program 1.1.0 (con integer 20))
+--- isolated Core
+20
+--- result
+(con integer 20)

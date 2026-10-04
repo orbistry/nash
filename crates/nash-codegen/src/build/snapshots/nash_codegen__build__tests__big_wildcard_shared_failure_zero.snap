@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Zero | One Int | Two Int Int\nchoose : Choice -> int\nchoose subject =\n    case trace \"subject\" subject of\n        Stop -> 1\n        _ -> trace \"fallback\" fail\nmain = choose Zero\n"
 ---
 --- unoptimized Core
@@ -51,8 +50,7 @@ main#1
       (con string "fallback")])
     (con string "subject")])
 --- optimized Core
-let anf#31 : Main.Choice = constrData 1 (con (list data) []) in
-let match#15 : Main.Choice = trace "subject" in anf#31 in
+let match#15 : Main.Choice = trace "subject" in (con data (Constr 1 [])) in
 let leaf#23 : @delay int = delay (trace "fallback" in error) in
 let projection#24 : pair int (list Data) = unConstrData match#15 in
 case@Pair projection#24 of
@@ -63,20 +61,18 @@ case@Pair projection#24 of
     3 -> force leaf#23
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_7
-    [(lam anf_1
-      [(lam match_2
-        [(lam leaf_3
-          [(lam projection_4
-            (case
-              projection_4
-              (lam tag_5
-                (lam fields_6
-                  (case tag_5 (con integer 1) (force leaf_3) (force leaf_3) (force leaf_3))))))
-            [(builtin unConstrData) match_2]])
-          (delay (force [[builtin_7 (con string "fallback")] (delay (error))]))])
-        (force [[builtin_7 (con string "subject")] (delay anf_1)])])
-      [[(builtin constrData) (con integer 1)] (con (list data) [])]])
+  [(lam builtin_6
+    [(lam match_1
+      [(lam leaf_2
+        [(lam projection_3
+          (case
+            projection_3
+            (lam tag_4
+              (lam fields_5
+                (case tag_4 (con integer 1) (force leaf_2) (force leaf_2) (force leaf_2))))))
+          [(builtin unConstrData) match_1]])
+        (delay (force [[builtin_6 (con string "fallback")] (delay (error))]))])
+      (force [[builtin_6 (con string "subject")] (delay (con data (Constr 1 [])))])])
     (force (builtin trace))])
 --- result
 error: ExplicitErrorTerm

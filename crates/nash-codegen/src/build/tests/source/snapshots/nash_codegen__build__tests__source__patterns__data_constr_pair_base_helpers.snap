@@ -88,41 +88,15 @@ main#1
           projection_42])
         [(builtin unConstrData) value_29]])])
 --- optimized Core
-let anf#71 : Data = iData 42 in
-let anf#72 : list Data = mkCons anf#71 (con (list data) []) in
-let anf#73 : Data = constrData 7 anf#72 in
-let projection#46 : pair int (list Data) = unConstrData anf#73 in
-let index#54 : int = case@Pair projection#46 of
+let index#54 : int = case@Pair (con (pair integer (list data)) (7, [(I 42)])) of
   Pair field#49 field#50 -> field#49 in
-let anf#76 : Data = iData 42 in
-let anf#77 : list Data = mkCons anf#76 (con (list data) []) in
-let anf#78 : Data = constrData 7 anf#77 in
-let projection#9 : pair int (list Data) = unConstrData anf#78 in
 addInteger index#54 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_13
-    [(lam partial_14
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam projection_4
-              [(lam index_7
-                [(lam anf_8
-                  [(lam anf_10
-                    [(lam anf_11
-                      [(lam projection_12 [[(builtin addInteger) index_7] (con integer 42)])
-                        [(builtin unConstrData) anf_11]])
-                      [partial_14 anf_10]])
-                    [[builtin_13 anf_8] (con (list data) [])]])
-                  [(builtin iData) (con integer 42)]])
-                (case projection_4 (lam field_5 (lam field_6 field_5)))])
-              [(builtin unConstrData) anf_3]])
-            [partial_14 anf_2]])
-          [[builtin_13 anf_1] (con (list data) [])]])
-        [(builtin iData) (con integer 42)]])
-      [(builtin constrData) (con integer 7)]])
-    (force (builtin mkCons))])
+  [(lam index_3 [[(builtin addInteger) index_3] (con integer 42)])
+    (case
+      (con (pair integer (list data)) (7, [(I 42)]))
+      (lam field_1 (lam field_2 field_1)))])
 --- result
 (con integer 49)
 --- logs

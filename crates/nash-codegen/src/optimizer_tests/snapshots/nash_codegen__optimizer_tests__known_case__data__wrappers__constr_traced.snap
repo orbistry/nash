@@ -19,7 +19,7 @@ case@Data (trace "producer" in constrData 59 (con (list data) [(I 42)])) of
       [[(force (builtin trace)) (con string "producer")]
         (delay [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])])])])
 --- optimized Core
-let anf#2 : Data = trace "producer" in constrData 59 (con (list data) [(I 42)]) in
+let anf#2 : Data = trace "producer" in (con data (Constr 59 [I 42])) in
 case@Data anf#2 of
   DataConstr pair#1 -> pair#1
 --- optimized UPLC
@@ -37,8 +37,7 @@ case@Data anf#2 of
               (delay (error))]))
           anf_3])
         (force
-          [[builtin_7 (con string "producer")]
-            (delay [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])])])])
+          [[builtin_7 (con string "producer")] (delay (con data (Constr 59 [I 42])))])])
       (force (builtin trace))])
     (force (builtin chooseData))])
 --- isolated pass

@@ -109,11 +109,7 @@ main#1
           (delay (error))])
         value_41])])
 --- optimized Core
-let anf#77 : Data = iData 42 in
-let anf#78 : list Data = mkCons anf#77 (con (list data) []) in
-let anf#79 : Data = constrData 7 anf#78 in
-let field#11 : pair int (list Data) = unConstrData anf#79 in
-let match#47 : Data = case@Pair field#11 of
+let match#47 : Data = case@Pair (con (pair integer (list data)) (7, [(I 42)])) of
   Pair tag#14 fields#15 -> constrData tag#14 fields#15 in
 let leaf#48 : @delay int = delay error in
 case@Data match#47 of
@@ -134,56 +130,46 @@ case@Data match#47 of
   DataB field#73 -> force leaf#48
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_30
-    [(lam builtin_31
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam field_4
-              [(lam match_7
-                [(lam leaf_8
-                  [(lam generated_28
-                    (force
-                      [[[[[[builtin_30 generated_28]
-                        (delay
-                          [(lam field_9
-                            (case
-                              field_9
-                              (lam field_10
-                                (lam field_12
-                                  (case
-                                    field_12
-                                    (lam field_13
-                                      (lam field_16
-                                        [(lam generated_29
-                                          (force
-                                            [[[[[[builtin_30 generated_29] (delay (force leaf_8))] (delay (force leaf_8))]
-                                              (delay (force leaf_8))]
-                                              (delay
-                                                [(lam field_20
-                                                  (case
-                                                    field_16
-                                                    (lam field_21 (lam field_22 (force leaf_8)))
-                                                    [[(builtin addInteger) field_10] field_20]))
-                                                  [(builtin unIData) generated_29]])]
-                                              (delay (force leaf_8))]))
-                                          field_13]))
-                                    (force leaf_8))))))
-                            [(builtin unConstrData) generated_28]])]
-                        (delay (force leaf_8))]
-                        (delay (force leaf_8))]
-                        (delay (force leaf_8))]
-                        (delay (force leaf_8))]))
-                    match_7])
-                  (delay (error))])
-                (case
-                  field_4
-                  (lam tag_5 (lam fields_6 [[(builtin constrData) tag_5] fields_6])))])
-              [(builtin unConstrData) anf_3]])
-            [[(builtin constrData) (con integer 7)] anf_2]])
-          [[builtin_31 anf_1] (con (list data) [])]])
-        [(builtin iData) (con integer 42)]])
-      (force (builtin mkCons))])
+  [(lam builtin_25
+    [(lam match_3
+      [(lam leaf_4
+        [(lam generated_23
+          (force
+            [[[[[[builtin_25 generated_23]
+              (delay
+                [(lam field_5
+                  (case
+                    field_5
+                    (lam field_6
+                      (lam field_7
+                        (case
+                          field_7
+                          (lam field_8
+                            (lam field_9
+                              [(lam generated_24
+                                (force
+                                  [[[[[[builtin_25 generated_24] (delay (force leaf_4))] (delay (force leaf_4))]
+                                    (delay (force leaf_4))]
+                                    (delay
+                                      [(lam field_13
+                                        (case
+                                          field_9
+                                          (lam field_16 (lam field_17 (force leaf_4)))
+                                          [[(builtin addInteger) field_6] field_13]))
+                                        [(builtin unIData) generated_24]])]
+                                    (delay (force leaf_4))]))
+                                field_8]))
+                          (force leaf_4))))))
+                  [(builtin unConstrData) generated_23]])]
+              (delay (force leaf_4))]
+              (delay (force leaf_4))]
+              (delay (force leaf_4))]
+              (delay (force leaf_4))]))
+          match_3])
+        (delay (error))])
+      (case
+        (con (pair integer (list data)) (7, [(I 42)]))
+        (lam tag_1 (lam fields_2 [[(builtin constrData) tag_1] fields_2])))])
     (force (builtin chooseData))])
 --- result
 (con integer 49)

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Zero | One Int | Two Int Int\nchoose : Choice -> int\nchoose subject =\n    case trace \"subject\" subject of\n        _ -> trace \"fallback\" 9\nmain = choose (coerce (constrData 59 []))\n"
 ---
 --- unoptimized Core
@@ -34,17 +33,14 @@ main#1
       (con string "fallback")])
     (con string "subject")])
 --- optimized Core
-let anf#26 : Data = constrData 59 (con (list data) []) in
-let match#19 : Main.Choice = trace "subject" in anf#26 in
+let match#19 : Main.Choice = trace "subject" in (con data (Constr 59 [])) in
 trace "fallback" in 9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_3
-    [(lam anf_1
-      [(lam match_2
-        (force [[builtin_3 (con string "fallback")] (delay (con integer 9))]))
-        (force [[builtin_3 (con string "subject")] (delay anf_1)])])
-      [[(builtin constrData) (con integer 59)] (con (list data) [])]])
+  [(lam builtin_2
+    [(lam match_1
+      (force [[builtin_2 (con string "fallback")] (delay (con integer 9))]))
+      (force [[builtin_2 (con string "subject")] (delay (con data (Constr 59 [])))])])
     (force (builtin trace))])
 --- result
 (con integer 9)

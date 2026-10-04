@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/lists.rs
-assertion_line: 176
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nempty : list Data\nempty = []\nsame a b = if equalsData (toData (fstPair a)) (toData (fstPair b)) then equalsData (toData (sndPair a)) (toData (sndPair b)) else False\nmain = same (mkPairData (iData 1) (listData empty)) (mkPairData (iData 1) (listData empty))\n"
 ---
 --- unoptimized Core
@@ -55,54 +54,9 @@ main#1
       (lam coerce_11 coerce_11)])
     (lam value_10 value_10)])
 --- optimized Core
-let empty#33 : list Data = (con (list data) []) in
-let anf#39 : Int = iData 1 in
-let anf#40 : List Data = listData empty#33 in
-let anf#41 : pair Int (List Data) = mkPairData anf#39 anf#40 in
-let anf#44 : Int = iData 1 in
-let anf#45 : List Data = listData empty#33 in
-let anf#46 : pair Int (List Data) = mkPairData anf#44 anf#45 in
-let projection#24 : 'erased = fstPair anf#41 in
-let projection#26 : 'erased = fstPair anf#46 in
-let anf#36 : bool = equalsData projection#24 projection#26 in
-case@Bool anf#36 of
-  True -> let projection#27 : 'erased = sndPair anf#41 in
-  let projection#29 : 'erased = sndPair anf#46 in
-  equalsData projection#27 projection#29
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_13
-    [(lam builtin_14
-      [(lam empty_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam anf_4
-              [(lam anf_5
-                [(lam anf_6
-                  [(lam anf_7
-                    [(lam projection_8
-                      [(lam projection_9
-                        [(lam anf_10
-                          (case
-                            anf_10
-                            (con bool False)
-                            [(lam projection_11
-                              [(lam projection_12 [[(builtin equalsData) projection_11] projection_12])
-                                [builtin_13 anf_7]])
-                              [builtin_13 anf_4]]))
-                          [[(builtin equalsData) projection_8] projection_9]])
-                        [builtin_14 anf_7]])
-                      [builtin_14 anf_4]])
-                    [[(builtin mkPairData) anf_5] anf_6]])
-                  [(builtin listData) empty_1]])
-                [(builtin iData) (con integer 1)]])
-              [[(builtin mkPairData) anf_2] anf_3]])
-            [(builtin listData) empty_1]])
-          [(builtin iData) (con integer 1)]])
-        (con (list data) [])])
-      (force (force (builtin fstPair)))])
-    (force (force (builtin sndPair)))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

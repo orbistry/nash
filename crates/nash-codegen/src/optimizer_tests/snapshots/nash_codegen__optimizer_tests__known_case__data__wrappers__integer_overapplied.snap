@@ -15,23 +15,20 @@ case@Data iData 42 0 of
         (delay (error))]))
     [[(builtin iData) (con integer 42)] (con integer 0)]])
 --- optimized Core
-let anf#3 : Data = iData 42 in
-let anf#4 : Data = anf#3 0 in
+let anf#4 : Data = (con data (I 42)) 0 in
 case@Data anf#4 of
   DataI payload#2 -> payload#2
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_8
+  [(lam builtin_5
     [(lam anf_1
-      [(lam anf_5
-        [(lam generated_7
-          (force
-            [[[[[[builtin_8 generated_7] (delay (error))] (delay (error))] (delay (error))]
-              (delay [(lam payload_6 payload_6) [(builtin unIData) generated_7]])]
-              (delay (error))]))
-          anf_5])
-        [anf_1 (con integer 0)]])
-      [(builtin iData) (con integer 42)]])
+      [(lam generated_4
+        (force
+          [[[[[[builtin_5 generated_4] (delay (error))] (delay (error))] (delay (error))]
+            (delay [(lam payload_3 payload_3) [(builtin unIData) generated_4]])]
+            (delay (error))]))
+        anf_1])
+      [(con data (I 42)) (con integer 0)]])
     (force (builtin chooseData))])
 --- isolated pass
 --- isolated ANF input

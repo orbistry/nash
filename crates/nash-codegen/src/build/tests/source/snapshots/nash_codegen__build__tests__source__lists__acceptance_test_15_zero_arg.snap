@@ -50,9 +50,9 @@ main#1
             arg_6]))])
     (lam coerce_19 coerce_19)])
 --- optimized Core
-equalsData (con data (Map [])) (con data (Map []))
+true
 --- optimized UPLC
-(program 1.1.0 [[(builtin equalsData) (con data (Map []))] (con data (Map []))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

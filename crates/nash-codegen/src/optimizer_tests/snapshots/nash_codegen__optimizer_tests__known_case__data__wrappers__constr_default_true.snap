@@ -26,13 +26,11 @@ case@Data constrData 59 (con (list data) [(I 42)]) of
             [[(force (builtin trace)) (con string "default")] (delay (con integer 9))]))]))
     [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
 --- optimized Core
-let anf#2 : Data = constrData 59 (con (list data) [(I 42)]) in
 trace "default" in 9
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_2
-    [(lam anf_1 (force [[builtin_2 (con string "default")] (delay (con integer 9))]))
-      [[(builtin constrData) (con integer 59)] (con (list data) [(I 42)])]])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "default")] (delay (con integer 9))]))
     (force (builtin trace))])
 --- isolated pass
 --- isolated ANF input

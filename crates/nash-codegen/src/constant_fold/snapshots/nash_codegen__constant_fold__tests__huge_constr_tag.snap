@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- result\\n{}\\n--- logs\\n{:?}\", fixture.code_snapshot(),\nfixture.evaluated.result, fixture.evaluated.logs)"
+---
+--- unoptimized Core
+constrData 1606938044258990275541962092341162602522202993782792835301376 (con (list data) [])
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin constrData)
+    (con integer 1606938044258990275541962092341162602522202993782792835301376)]
+    (con (list data) [])])
+--- optimized Core
+constrData 1606938044258990275541962092341162602522202993782792835301376 (con (list data) [])
+--- optimized UPLC
+(program 1.1.0
+  [[(builtin constrData)
+    (con integer 1606938044258990275541962092341162602522202993782792835301376)]
+    (con (list data) [])])
+--- result
+error: MaxConstrTagExceeded(Con(Integer(1606938044258990275541962092341162602522202993782792835301376)))
+--- logs
+[]

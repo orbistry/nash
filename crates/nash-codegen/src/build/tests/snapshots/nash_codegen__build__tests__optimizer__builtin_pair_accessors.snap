@@ -33,10 +33,7 @@ main#1
         [(lam projection_13 projection_13) [(force (force (builtin fstPair))) record_9]])])
     (con string "pair")])
 --- optimized Core
-let anf#33 : Data = iData 20 in
-let anf#35 : Data = iData 22 in
-let anf#36 : pair Data Data = mkPairData anf#33 anf#35 in
-let p#29 : pair Data Data = trace "pair" anf#36 in
+let p#29 : pair Data Data = trace "pair" (con (pair data data) ((I 20), (I 22))) in
 let anf#37 : Data = fstPair p#29 in
 let anf#38 : Data = sndPair p#29 in
 constr 0 anf#37 anf#38
@@ -45,16 +42,10 @@ constr 0 anf#37 anf#38
   [(lam builtin_39
     [(lam builtin_40
       [(lam builtin_41
-        [(lam anf_33
-          [(lam anf_35
-            [(lam anf_36
-              [(lam p_29
-                [(lam anf_37 [(lam anf_38 (constr 0 anf_37 anf_38)) [builtin_39 p_29]])
-                  [builtin_40 p_29]])
-                [[builtin_41 (con string "pair")] anf_36]])
-              [[(builtin mkPairData) anf_33] anf_35]])
-            [(builtin iData) (con integer 22)]])
-          [(builtin iData) (con integer 20)]])
+        [(lam p_29
+          [(lam anf_37 [(lam anf_38 (constr 0 anf_37 anf_38)) [builtin_39 p_29]])
+            [builtin_40 p_29]])
+          [[builtin_41 (con string "pair")] (con (pair data data) ((I 20), (I 22)))]])
         (force (builtin trace))])
       (force (force (builtin fstPair)))])
     (force (force (builtin sndPair)))])

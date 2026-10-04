@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Two Int Int\nchoose : Choice -> (int -> int)\nchoose subject =\n    case trace \"subject\" subject of\n        Stop -> \\n -> n\n        _ -> trace \"fallback\" (\\n -> addInteger n 1)\nmain = (choose Stop 10, choose (Two 3 4) 20)\n"
 ---
 --- unoptimized Core
@@ -66,8 +65,7 @@ case@Pair projection#27 of
     0 -> \n#30 : int -> n#30
     1 -> trace "fallback" in \n#31 : int -> addInteger n#31 1 in
 let fromInt#33 : int -> Int = iData in
-let anf#40 : Main.Choice = constrData 0 (con (list data) []) in
-let anf#41 : int -> int = choose#32 anf#40 in
+let anf#41 : int -> int = choose#32 (con data (Constr 0 [])) in
 let anf#43 : int = anf#41 10 in
 let anf#46 : Int = fromInt#33 3 in
 let anf#48 : Int = fromInt#33 4 in
@@ -79,8 +77,8 @@ let anf#52 : int = anf#50 20 in
 constr 0 anf#43 anf#52
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_20
-    [(lam builtin_21
+  [(lam builtin_19
+    [(lam builtin_20
       [(lam choose_8
         [(lam fromInt_9
           [(lam anf_10
@@ -90,17 +88,15 @@ constr 0 anf#43 anf#52
                   [(lam anf_14
                     [(lam anf_15
                       [(lam anf_16
-                        [(lam anf_17
-                          [(lam anf_18 [(lam anf_19 (constr 0 anf_12 anf_19)) [anf_18 (con integer 20)]])
-                            [choose_8 anf_17]])
-                          [[(builtin constrData) (con integer 1)] anf_16]])
-                        [[builtin_20 anf_13] anf_15]])
-                      [[builtin_20 anf_14] (con (list data) [])]])
-                    [fromInt_9 (con integer 4)]])
-                  [fromInt_9 (con integer 3)]])
-                [anf_11 (con integer 10)]])
-              [choose_8 anf_10]])
-            [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                        [(lam anf_17 [(lam anf_18 (constr 0 anf_11 anf_18)) [anf_17 (con integer 20)]])
+                          [choose_8 anf_16]])
+                        [[(builtin constrData) (con integer 1)] anf_15]])
+                      [[builtin_19 anf_12] anf_14]])
+                    [[builtin_19 anf_13] (con (list data) [])]])
+                  [fromInt_9 (con integer 4)]])
+                [fromInt_9 (con integer 3)]])
+              [anf_10 (con integer 10)]])
+            [choose_8 (con data (Constr 0 []))]])
           (builtin iData)])
         (lam subject_1
           [(lam match_2
@@ -113,10 +109,10 @@ constr 0 anf#43 anf#52
                       tag_4
                       (lam n_6 n_6)
                       (force
-                        [[builtin_21 (con string "fallback")]
+                        [[builtin_20 (con string "fallback")]
                           (delay (lam n_7 [[(builtin addInteger) n_7] (con integer 1)]))]))))))
               [(builtin unConstrData) match_2]])
-            (force [[builtin_21 (con string "subject")] (delay subject_1)])])])
+            (force [[builtin_20 (con string "subject")] (delay subject_1)])])])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

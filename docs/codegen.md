@@ -962,23 +962,20 @@ reconstruction reuse variables through retained strict producer bindings, keepin
 all tag/field/variant checks. Unknown unary shapes stay unchanged. See Plan 08
 Chunk 8 for exact retained rules and the zero-regression measurements.
 
-### Bounded constant builtin evaluation
+### Constant builtin evaluation
 
-Production O1 uses `constant_fold::simplify` after the post-ANF known-case loops.
-The IR pass follows literal bindings/aliases and supplies exactly saturated calls
-to a codegen evaluator. Successful calls become literals; cleanup can expose
-further folds. One shared allowance permits 128 attempts per optimizer invocation,
-including rejected inputs and failed evaluations. Each attempt has 1,000,000 CPU
-and 10,000 memory units. Constant payloads are limited to 4,096 bytes, 1,024 nodes
-and depth 64, checked before recursive costing and encoding.
+Production O1 follows literal bindings and aliases and evaluates exactly saturated
+pure builtin calls. Successful, representable results become literals. Unused
+parameter removal, constant folding and cleanup repeat until Core is unchanged.
+There are no attempt, CPU, memory, payload byte, node, depth or output-growth
+limits on folding. All pure builtins use the runtime's V3 semantics through a
+direct constant evaluator with zero costs, without running a budgeted CEK program.
 
-Unsupported, failing, over-budget, oversized or unsafe-to-serialize results leave
-runtime calls intact. Trace/cryptographic builtins and panic-prone/version-sensitive
-operations stay excluded. Each replacement must not grow the isolated Flat
-expression; the accepted policy can still grow a whole script by losing sharing
-between distinct folded constants. Source traces and strict bindings are retained.
-Evaluation and size checks use O0 assembly to avoid re-entering the optimizer.
-Explicit user comptime retains its separate budget and diagnostics.
+Evaluation errors leave calls intact. Trace remains at runtime to preserve effects.
+Container metadata must match payloads. Flat cannot represent BLS literals, and
+an existing CBOR defect prevents folding negative multi-limb Data integers; those
+results remain runtime calls. These are representation constraints, not resource
+cutoffs. Explicit user comptime retains its separate budget and diagnostics.
 
 ### Pair fields and restricted pair cleanup
 
@@ -1000,7 +997,7 @@ No general case-to-projection rewrite is enabled and ANF still runs once.
 The final retained pipeline is binder freshening, static lifting, one traversal
 of nonrecursive/recursive unused-parameter removal, one ANF normalization, the
 accepted inlining/dead-code cleanup, constructor and representation cleanup, then
-bounded constant folding with cleanup. Recursion encoding follows optimization.
+constant folding and unused-parameter removal with cleanup to a joint fixed point. Recursion encoding follows optimization.
 Only freshening and builtin/constant sharing in lowering follow recursion encoding;
 there is no second ANF pass and no optimizer loop around the entire program.
 
@@ -1014,14 +1011,11 @@ Composition tests check hygiene and root types after individual rewrites, ANF at
 valid cleanup boundaries, cleanup pointer idempotence, same-size progress and
 deterministic Core/closed UPLC from independent name supplies.
 
-Full O1 structural idempotence is deliberately not promised. Signature removal
-runs once before cleanup, so a constant branch removed later can expose an unused
-parameter for a future invocation. Constant folding has one shared 128-attempt
-allowance per invocation, including failed attempts; a second invocation can fold
-remaining calls. The production compiler invokes O1 once. Tests cover both limits,
-semantic equivalence across invocations and an ordinary composition that does reach
-an equivalent structural result after another run. They do not reset the budget
-inside a whole-program fixed point.
+Unused-parameter removal runs again after cleanup, so removing a constant branch
+can expose and remove a newly unused parameter in the same invocation. Tests cover
+this joint fixed point, folding beyond 128 calls, large inputs and growing outputs,
+failed calls alongside successful folds, and semantic equivalence across invocations.
+ANF is not repeated.
 
 The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,
 `-O1` and `--optimize 0|1` override the owning project's integer `optimize: 0|1`.

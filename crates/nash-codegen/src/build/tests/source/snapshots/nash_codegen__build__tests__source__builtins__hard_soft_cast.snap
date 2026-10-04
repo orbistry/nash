@@ -152,7 +152,7 @@ case@Data value#22 of
   DataList field#63 -> force leaf#24
   DataI field#64 -> force leaf#24
   DataB field#65 -> force leaf#24 in
-let x#84 : Data = constrData 0 (con (list data) []) in
+let x#84 : Data = (con data (Constr 0 [])) in
 let match#85 : nash/base:Option.option Main.foo = decode#66 x#84 in
 case@Tag match#85 of
   0 field#86 -> true
@@ -189,7 +189,7 @@ case@Tag match#85 of
                   (case match_31 (lam field_32 field_32) (error))])
                 [decode_23 x_28]]))
             [decode_23 x_28]])
-          [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+          (con data (Constr 0 []))])
         (lam value_2
           [(lam leaf_3
             [(lam generated_35

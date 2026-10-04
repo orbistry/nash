@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 573
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Lift exposing (Lift)\nentries : map Int (List Data)\nentries = [Builtin.mkPairData (Builtin.iData 7) (Builtin.listData [I 42])]\nwrapped : Map Int (List Data)\nwrapped = lift entries\ndecoded : map Int (List Data)\ndecoded = lower wrapped\nmain : int\nmain =\n    case decoded of\n        [pair(key, values)] ->\n            case Builtin.unListData values of\n                [I number] -> Builtin.addInteger (Builtin.unIData key) number\n                _ -> fail\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -102,13 +101,7 @@ main#1
       (builtin mapData)])
     (builtin unMapData)])
 --- optimized Core
-let anf#66 : Int = iData 7 in
-let anf#68 : Data = iData 42 in
-let anf#69 : list Data = mkCons anf#68 (con (list data) []) in
-let anf#70 : List Data = listData anf#69 in
-let anf#71 : pair Int (List Data) = mkPairData anf#66 anf#70 in
-let entries#12 : list (pair Int (List Data)) = mkCons anf#71 (con (list (pair data data)) []) in
-let wrapped#13 : Map Int (List Data) = mapData entries#12 in
+let wrapped#13 : Map Int (List Data) = mapData (con (list (pair data data)) [((I 7), (List [I 42]))]) in
 let decoded#14 : list (pair Int (List Data)) = unMapData wrapped#13 in
 let leaf#27 : @delay int = delay error in
 case@List decoded#14 of
@@ -131,62 +124,48 @@ case@List decoded#14 of
       Cons field#62 field#63 -> force leaf#27
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_37
-    [(lam builtin_38
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam anf_4
-              [(lam anf_5
-                [(lam entries_6
-                  [(lam wrapped_7
-                    [(lam decoded_8
-                      [(lam leaf_9
-                        (case
-                          decoded_8
-                          (lam field_10
-                            (lam field_11
-                              (case
-                                field_10
-                                (lam field_15
-                                  (lam field_16
-                                    (case
-                                      field_11
-                                      (lam field_34 (lam field_35 (force leaf_9)))
-                                      [(lam projection_17
-                                        [(lam leaf_18
-                                          (case
-                                            projection_17
-                                            (lam field_19
-                                              (lam field_20
-                                                [(lam generated_36
-                                                  (force
-                                                    [[[[[[builtin_37 generated_36] (delay (force leaf_18))] (delay (force leaf_18))]
-                                                      (delay (force leaf_18))]
-                                                      (delay
-                                                        [(lam field_24
-                                                          (case
-                                                            field_20
-                                                            (lam field_26 (lam field_32 (force leaf_18)))
-                                                            [(lam anf_25 [[(builtin addInteger) anf_25] field_24])
-                                                              [(builtin unIData) field_15]]))
-                                                          [(builtin unIData) generated_36]])]
-                                                      (delay (force leaf_18))]))
-                                                  field_19]))
-                                            (force leaf_18)))
-                                          (delay (error))])
-                                        [(builtin unListData) field_16]]))))))
-                          (force leaf_9)))
-                        (delay (error))])
-                      [(builtin unMapData) wrapped_7]])
-                    [(builtin mapData) entries_6]])
-                  [[builtin_38 anf_5] (con (list (pair data data)) [])]])
-                [[(builtin mkPairData) anf_1] anf_4]])
-              [(builtin listData) anf_3]])
-            [[builtin_38 anf_2] (con (list data) [])]])
-          [(builtin iData) (con integer 42)]])
-        [(builtin iData) (con integer 7)]])
-      (force (builtin mkCons))])
+  [(lam builtin_25
+    [(lam wrapped_1
+      [(lam decoded_2
+        [(lam leaf_3
+          (case
+            decoded_2
+            (lam field_4
+              (lam field_5
+                (case
+                  field_4
+                  (lam field_6
+                    (lam field_7
+                      (case
+                        field_5
+                        (lam field_22 (lam field_23 (force leaf_3)))
+                        [(lam projection_8
+                          [(lam leaf_9
+                            (case
+                              projection_8
+                              (lam field_10
+                                (lam field_11
+                                  [(lam generated_24
+                                    (force
+                                      [[[[[[builtin_25 generated_24] (delay (force leaf_9))] (delay (force leaf_9))]
+                                        (delay (force leaf_9))]
+                                        (delay
+                                          [(lam field_17
+                                            (case
+                                              field_11
+                                              (lam field_19 (lam field_20 (force leaf_9)))
+                                              [(lam anf_18 [[(builtin addInteger) anf_18] field_17])
+                                                [(builtin unIData) field_6]]))
+                                            [(builtin unIData) generated_24]])]
+                                        (delay (force leaf_9))]))
+                                    field_10]))
+                              (force leaf_9)))
+                            (delay (error))])
+                          [(builtin unListData) field_7]]))))))
+            (force leaf_3)))
+          (delay (error))])
+        [(builtin unMapData) wrapped_1]])
+      [(builtin mapData) (con (list (pair data data)) [((I 7), (List [I 42]))])]])
     (force (builtin chooseData))])
 --- result
 (con integer 49)

@@ -21,14 +21,9 @@ constrData (fstPair payload#24) (sndPair payload#24)
       (con (list data) [(I 7)])])
     (con integer 0)])
 --- optimized Core
-let constructor#3 : Data = constrData 0 (con (list data) [(I 7)]) in
-let payload#4 : 'erased = unConstrData constructor#3 in
-constructor#3
+(con data (Constr 0 [I 7]))
 --- optimized UPLC
-(program 1.1.0
-  [(lam constructor_1
-    [(lam payload_2 constructor_1) [(builtin unConstrData) constructor_1]])
-    [[(builtin constrData) (con integer 0)] (con (list data) [(I 7)])]])
+(program 1.1.0 (con data (Constr 0 [I 7])))
 --- isolated pass
 --- core before
 let tag#22 : int = 0 in

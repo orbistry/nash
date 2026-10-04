@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 726
 description: "module Main exposing (..)\nimport Primitive exposing (..)\ntype alias Record = { a : Int, b : Int, c : Int }\nmalformed : Record\nmalformed = coerce (List [I 1])\nmain = malformed.c\n"
 ---
 --- unoptimized Core
@@ -30,29 +29,9 @@ case@List projection#11 of
             (con (list data) [])]]]])
     (lam value_9 value_9)])
 --- optimized Core
-let anf#24 : Data = iData 1 in
-let anf#25 : list Data = mkCons anf#24 (con (list data) []) in
-let anf#26 : Data = listData anf#25 in
-let projection#18 : list Data = unListData anf#26 in
-let projection#19 : list Data = dropList 2 projection#18 in
-case@List projection#19 of
-  Cons head#20 tail#21 -> head#20
+error
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_8
-    [(lam builtin_9
-      [(lam anf_1
-        [(lam anf_2
-          [(lam anf_3
-            [(lam projection_4
-              [(lam projection_5 (case projection_5 (lam head_6 (lam tail_7 head_6)) (error)))
-                [[builtin_8 (con integer 2)] projection_4]])
-              [(builtin unListData) anf_3]])
-            [(builtin listData) anf_2]])
-          [[builtin_9 anf_1] (con (list data) [])]])
-        [(builtin iData) (con integer 1)]])
-      (force (builtin mkCons))])
-    (force (builtin dropList))])
+(program 1.1.0 (error))
 --- result
 error: ExplicitErrorTerm
 --- logs

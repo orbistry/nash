@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- result\\n{}\\n--- logs\\n{:?}\", fixture.code_snapshot(),\nfixture.evaluated.result, fixture.evaluated.logs)"
+---
+--- unoptimized Core
+indexArray (con (array integer) [1]) 1606938044258990275541962092341162602522202993782792835301376
+--- unoptimized UPLC
+(program 1.1.0
+  [[(force (builtin indexArray)) (con (array integer) [1])]
+    (con integer 1606938044258990275541962092341162602522202993782792835301376)])
+--- optimized Core
+indexArray (con (array integer) [1]) 1606938044258990275541962092341162602522202993782792835301376
+--- optimized UPLC
+(program 1.1.0
+  [(lam builtin_1
+    [[builtin_1 (con (array integer) [1])]
+      (con integer 1606938044258990275541962092341162602522202993782792835301376)])
+    (force (builtin indexArray))])
+--- result
+error: Runtime(IndexArrayOutOfBounds(1606938044258990275541962092341162602522202993782792835301376, 1))
+--- logs
+[]

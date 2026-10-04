@@ -7,9 +7,9 @@ serialiseData (con data (I 7))
 --- unoptimized UPLC
 (program 1.1.0 [(builtin serialiseData) (con data (I 7))])
 --- optimized Core
-serialiseData (con data (I 7))
+(con bytestring #07)
 --- optimized UPLC
-(program 1.1.0 [(builtin serialiseData) (con data (I 7))])
+(program 1.1.0 (con bytestring #07))
 --- result
 (con bytestring #07)
 --- logs

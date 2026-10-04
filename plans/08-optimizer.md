@@ -1584,7 +1584,8 @@ incorporates only the `decoding` improvement above; all source inputs, O0 metric
 results and logs are unchanged. Formatting, strict workspace/runner Clippy and
 the explicit baseline check pass.
 
-The evaluator currently panics for negative tags and tags above `u64::MAX`.
+At the time of this trial, the evaluator panicked for negative tags and tags
+above `u64::MAX`; the unbounded folding integration now returns evaluation errors.
 Those two fixtures render before/after Core and UPLC and independently check retained
 construction without evaluating that existing panic path. In-range boundary tags
 are evaluated normally. This is case folding, not permission to remove producers
@@ -1772,36 +1773,36 @@ input tests and measured output; no trait-selection magic is added.
 
 ## Chunk 9 — Constant builtin evaluation
 
-**Accepted and integrated (5 October 2026).** Production O1 now runs bounded
+**Accepted and integrated (5 October 2026).** Production O1 now runs unbudgeted
 constant folding after the post-ANF cleanup/known-case loops, repeating folding
 and cleanup to stability without another ANF pass. The callback keeps evaluation
-policy in codegen and IR independent of codegen. One 128-attempt allowance covers
-the invocation, including rejected/failed calls. Per-call CPU/memory and constant
-size/depth limits remain as trialed; unsafe large negative Data constants are
-excluded. O0 and explicit comptime policy are unchanged.
+policy in codegen and IR independent of codegen. There is no total attempt or
+iteration cap: stop only when folding and cleanup both leave Core unchanged.
+The earlier 128-attempt cap was an assistant-added restriction, not an approved
+keep decision, and was removed on 5 October 2026. The per-call CPU/memory, payload byte/node/depth, allowlist and Flat growth
+gates were also removed. All pure, representable successful calls fold; invalid
+constants and unsafe large negative Data literals remain runtime calls. O0 and explicit comptime policy are unchanged.
 
-The user accepted the two shared-prefix size tradeoffs. The refreshed baseline
-has 148 O0/O1 cases, including the 40 constant-folding fixtures. Relative to the
+The user accepted the two shared-prefix size tradeoffs. The initial integration baseline
+had 148 O0/O1 cases, including the 40 constant-folding fixtures. Relative to the
 previous 108-row O1 baseline, 26 improve and 82 are unchanged; all results/logs
 match. See [the report](../docs/research/constant-fold-trial.md) for historical
 trial measurements and current integration details. The temporary constant-trial
 command and public trial entrypoint were removed.
 
-Use a callback supplied by codegen around its existing closed-term evaluator;
-keep `nash-ir` independent of codegen. Evaluate only supported, saturated,
-constant-argument builtin calls under an explicit compile-time budget. Review
-per-builtin input-shape and error-safety rules against the current runtime.
+Use a callback supplied by codegen around the direct unbudgeted builtin evaluator;
+keep `nash-ir` independent of codegen. Evaluate saturated, pure constant-argument
+calls using current V3 semantics. Runtime errors leave the original expression;
+they must not become compile errors. Enforce type and serialization correctness,
+without imposing resource or literal-size policy. Explicit user `comptime`
+retains its own evaluation semantics.
 
-On unsupported results, budget exhaustion or runtime failure, leave the original
-expression. A runtime failure must not become a compile error. Account for result
-literal size: a computation that produces a huge constant is not automatically a
-win. This is optimizer folding, separate from explicit user `comptime` semantics.
+Tests cover arithmetic, cryptography, byte/string/Data/container operations,
+nonzero/zero division, malformed constants, large inputs, growing outputs,
+large indices/tags, and folding and signature removal to an unchanged tree.
 
-Tests: arithmetic, byte/string/Data/container operations, nonzero/zero division,
-empty/nonempty head/tail, malformed data, oversized results and exhausted budgets.
-
-**Done when:** supported folds are reviewed for semantics and cost/size tradeoffs;
-unsupported/failing computations retain runtime behavior.
+**Done when:** pure representable successful calls fold until unchanged;
+effectful, unrepresentable and failing computations retain runtime behavior.
 
 ## Chunk 10 — Single-field native pair projection
 
@@ -1846,20 +1847,18 @@ rule. No assumption that projection wins, and no per-program tuning engine.
 
 The final composition review adds five regression tests: a mixed cleanup pipeline
 with phase/type/hygiene evidence, same-node-count reassociation exposing further
-cleanup, a reachable recursive cycle rendered without evaluation, one-traversal
-signature removal, and a 130-call fixture exceeding the 128-attempt folding limit.
+cleanup, a reachable recursive cycle rendered without evaluation, cleanup-exposed
+signature removal, and a 130-call fixture that reaches a folding fixed point.
 Independent builders produce deterministic Core and closed UPLC. Accepted cleanup
 reaches an unchanged-pointer fixed point; no node-count stopping rule is used.
 
-Full optimizer structural idempotence is not a production contract: signature
-removal runs once before later cleanup and bounded folding gets one allowance per
-invocation. Tests demonstrate both reasons a separate invocation can make further
-progress while preserving results/logs. Do not solve these intentional work bounds
-by repeating ANF or resetting the evaluator allowance in an outer fixed point.
-The final mode decision retains O0/O1, default O1, and the existing project/CLI
-precedence. No production pass order, budget or default changed in this review.
+Unused-parameter removal now repeats with constant folding and cleanup until all
+leave Core unchanged. There are no optimization iteration or resource cutoffs.
+The regression with a parameter used only in a constant dead branch now verifies
+equal closed output across two optimizer invocations. ANF still runs once.
+The mode decision retains O0/O1, default O1, and the existing project/CLI precedence.
 
-Final validation: all 3,857 workspace nextest tests pass; the five composition
+Initial composition validation: all 3,857 workspace nextest tests pass; the five composition
 checks also pass independently. Strict workspace Clippy, formatting and whitespace
 checks pass. All 194 explicit performance cases match the accepted baseline, and
 Cargo metadata still excludes the performance package from the root workspace.
@@ -1889,7 +1888,7 @@ Do not repeat ANF-dependent passes or whole-program sharing after recursion rewr
 
 Detect actual structural progress or accurate rewrite reports, not equal node
 counts. Keep generated names deterministic. Test same-size rewrites, cycles,
-cleanup idempotence, the documented full-optimizer limits, and hygiene after every pass. Check ANF only
+cleanup idempotence, the joint signature/folding fixed point, and hygiene after every pass. Check ANF only
 in the main optimization phase, before recursion rewriting.
 
 Retain named phase sections for raw Core, ANF, optimized recursive Core, rewritten

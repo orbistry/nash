@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/optimizer_tests/builtin_sharing.rs
-assertion_line: 45
 expression: "crate::harness::pass_snapshot(b.arena, original,\nformat!(\"--- uplc before\\n{}\\n--- uplc after\\n{}\\n--- result\\n{}\\n--- logs\\n{:?}\",\nnash_plutus::pretty::term(before), nash_plutus::pretty::term(after),\ncandidate.result, candidate.logs))"
 ---
 --- unoptimized Core
@@ -12,21 +11,9 @@ unIData (fstPair (mkPairData (iData 42) (iData 42)))
       [[(builtin mkPairData) [(builtin iData) (con integer 42)]]
         [(builtin iData) (con integer 42)]]]])
 --- optimized Core
-let anf#1 : Data = iData 42 in
-let anf#2 : Data = iData 42 in
-let anf#3 : pair Data Data = mkPairData anf#1 anf#2 in
-let anf#4 : Data = fstPair anf#3 in
-unIData anf#4
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_9
-    [(lam anf_5
-      [(lam anf_6
-        [(lam anf_7 [(lam anf_8 [(builtin unIData) anf_8]) [builtin_9 anf_7]])
-          [[(builtin mkPairData) anf_5] anf_6]])
-        [(builtin iData) (con integer 42)]])
-      [(builtin iData) (con integer 42)]])
-    (force (force (builtin fstPair)))])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- uplc before
 [(builtin unIData)

@@ -18,12 +18,9 @@ case@Data constrData 0 (con (list data) []) of
         (delay (force [[(force (builtin trace)) (con string "cold")] (delay (error))]))]))
     [[(builtin constrData) (con integer 0)] (con (list data) [])]])
 --- optimized Core
-let anf#2 : Data = constrData 0 (con (list data) []) in
-unConstrData anf#2
+(con (pair integer (list data)) (0, []))
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1 [(builtin unConstrData) anf_1])
-    [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+(program 1.1.0 (con (pair integer (list data)) (0, [])))
 --- isolated pass
 --- isolated ANF input
 let anf#12 : Data = constrData 0 (con (list data) []) in

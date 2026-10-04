@@ -6,9 +6,7 @@ pub fn optimize<'a>(arena: &'a Arena, core: &'a Core<'a>) -> &'a Core<'a> {
     optimize_with(&Builder::new(arena), core)
 }
 
-/// Run the accepted pipeline once. Cleanup uses pointer-stable fixed points,
-/// but a later invocation may expose more signatures or get a fresh folding
-/// allowance. Do not wrap this in a whole-program loop or repeat ANF.
+/// Normalize once, then remove unused parameters and simplify to a joint fixed point.
 pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let original_ty = core.ty;
     let core = hygiene::freshen(b, core);
@@ -27,7 +25,15 @@ pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     let core = nash_ir::known_case::simplify_constr_data(b, core);
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     debug_assert!(anf::validate(core).is_ok());
-    let core = crate::constant_fold::simplify(b, core);
+    let mut core = core;
+    loop {
+        let next = nash_ir::unused_params::reduce(b, core);
+        let next = crate::constant_fold::simplify(b, next);
+        if std::ptr::eq(core, next) {
+            break;
+        }
+        core = next;
+    }
     debug_assert!(hygiene::validate(core, &[]).is_ok());
     debug_assert!(anf::validate(core).is_ok());
     debug_assert_eq!(original_ty, core.ty);

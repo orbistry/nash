@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 772
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nimport Logic\nimport Lift exposing (Lift)\nboth : (Lift bool 'a, Lift bool 'b) => 'a -> 'b -> bool\nboth a b = Logic.and a b\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    if Logic.or Bool.True (bad ()) then\n        both Bool.True True\n    else False\n"
 ---
 --- unoptimized Core
@@ -91,9 +90,7 @@ main#1
       (lam arg_19 (case arg_19 (error)))])
     (lam value_18 value_18)])
 --- optimized Core
-let anf#66 : nash/base:Bool.Bool = constrData 1 (con (list data) []) in
-let projection#52 : pair int (list Data) = unConstrData anf#66 in
-let anf#67 : bool = case@Pair projection#52 of
+let anf#67 : bool = case@Pair (con (pair integer (list data)) (1, [])) of
   Pair tag#54 fields#55 -> case@Tag tag#54 of
     0 -> false
     1 -> true in
@@ -106,9 +103,7 @@ let anf#70 : bool = case@Bool anf#67 of
       0 -> false
       1 -> true in
 case@Bool anf#70 of
-  True -> let anf#71 : nash/base:Bool.Bool = constrData 1 (con (list data) []) in
-  let projection#44 : pair int (list Data) = unConstrData anf#71 in
-  let anf#65 : bool = case@Pair projection#44 of
+  True -> let anf#65 : bool = case@Pair (con (pair integer (list data)) (1, [])) of
     Pair tag#46 fields#47 -> case@Tag tag#46 of
       0 -> false
       1 -> true in
@@ -118,38 +113,28 @@ case@Bool anf#70 of
   False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam partial_16
-    [(lam anf_1
-      [(lam projection_2
-        [(lam anf_5
-          [(lam anf_10
-            (case
-              anf_10
-              (con bool False)
-              [(lam anf_11
-                [(lam projection_12
-                  [(lam anf_15 (case anf_15 (con bool False) (con bool True)))
-                    (case
-                      projection_12
-                      (lam tag_13 (lam fields_14 (case tag_13 (con bool False) (con bool True)))))])
-                  [(builtin unConstrData) anf_11]])
-                [partial_16 (con (list data) [])]]))
-            (case
-              anf_5
-              [(lam anf_6
-                [(lam projection_7
-                  (case
-                    projection_7
-                    (lam tag_8 (lam fields_9 (case tag_8 (con bool False) (con bool True))))))
-                  [(builtin unConstrData) anf_6]])
-                (error)]
-              (con bool True))])
+  [(lam anf_3
+    [(lam anf_8
+      (case
+        anf_8
+        (con bool False)
+        [(lam anf_11 (case anf_11 (con bool False) (con bool True)))
           (case
-            projection_2
-            (lam tag_3 (lam fields_4 (case tag_3 (con bool False) (con bool True)))))])
-        [(builtin unConstrData) anf_1]])
-      [partial_16 (con (list data) [])]])
-    [(builtin constrData) (con integer 1)]])
+            (con (pair integer (list data)) (1, []))
+            (lam tag_9 (lam fields_10 (case tag_9 (con bool False) (con bool True)))))]))
+      (case
+        anf_3
+        [(lam anf_4
+          [(lam projection_5
+            (case
+              projection_5
+              (lam tag_6 (lam fields_7 (case tag_6 (con bool False) (con bool True))))))
+            [(builtin unConstrData) anf_4]])
+          (error)]
+        (con bool True))])
+    (case
+      (con (pair integer (list data)) (1, []))
+      (lam tag_1 (lam fields_2 (case tag_1 (con bool False) (con bool True)))))])
 --- result
 (con bool True)
 --- logs

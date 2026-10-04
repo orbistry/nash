@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 633
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nfirst pair(a, _) = a\nmain : int\nmain =\n    let\n        value = Builtin.unConstrData (Builtin.constrData 7 [])\n        pair = first value\n    in\n    (\\pair(a, _) -> Builtin.addInteger pair a) value\n"
 ---
 --- unoptimized Core
@@ -45,23 +44,20 @@ main#1
         (case match_13 (lam field_14 (lam field_15 [(lam a_12 a_12) field_14]))))
         arg_11])])
 --- optimized Core
-let evaluated#27 : Data = constrData 7 (con (list data) []) in
-let projection#28 : pair int (list Data) = unConstrData evaluated#27 in
+let projection#28 : pair int (list Data) = (con (pair integer (list data)) (7, [])) in
 let pair#30 : int = case@Pair projection#28 of
   Pair field#21 field#22 -> field#21 in
 case@Pair projection#28 of
   Pair field#33 field#34 -> addInteger pair#30 field#33
 --- optimized UPLC
 (program 1.1.0
-  [(lam evaluated_1
-    [(lam projection_2
-      [(lam pair_5
-        (case
-          projection_2
-          (lam field_6 (lam field_7 [[(builtin addInteger) pair_5] field_6]))))
-        (case projection_2 (lam field_3 (lam field_4 field_3)))])
-      [(builtin unConstrData) evaluated_1]])
-    [[(builtin constrData) (con integer 7)] (con (list data) [])]])
+  [(lam projection_1
+    [(lam pair_4
+      (case
+        projection_1
+        (lam field_5 (lam field_6 [[(builtin addInteger) pair_4] field_5]))))
+      (case projection_1 (lam field_2 (lam field_3 field_2)))])
+    (con (pair integer (list data)) (7, []))])
 --- result
 (con integer 14)
 --- logs

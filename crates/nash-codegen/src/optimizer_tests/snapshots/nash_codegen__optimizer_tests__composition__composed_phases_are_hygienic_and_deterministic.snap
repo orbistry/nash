@@ -18,14 +18,11 @@ trace "answer" in case@Bool true of
       [wrap_2 [[(builtin addInteger) (con integer 20)] (con integer 22)]]])
     (lam x_1 [(builtin iData) x_1])])
 --- optimized Core
-let packed#6 : Data = iData 42 in
 trace "answer" in 42
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_2
-    [(lam packed_1
-      (force [[builtin_2 (con string "answer")] (delay (con integer 42))]))
-      [(builtin iData) (con integer 42)]])
+  [(lam builtin_1
+    (force [[builtin_1 (con string "answer")] (delay (con integer 42))]))
     (force (builtin trace))])
 --- result
 (con integer 42)
@@ -57,14 +54,10 @@ trace "answer" in case@Bool true of
   True -> unIData packed#6
   False -> error
 --- optimized recursive Core
-let packed#6 : Data = iData 42 in
 trace "answer" in 42
 --- rewritten Core (no second ANF)
-let packed#6 : Data = iData 42 in
 trace "answer" in 42
 --- ordinary lowered output
 (program 1.1.0
-  [(lam packed_6
-    (force
-      [[(force (builtin trace)) (con string "answer")] (delay (con integer 42))]))
-    [(builtin iData) (con integer 42)]])
+  (force
+    [[(force (builtin trace)) (con string "answer")] (delay (con integer 42))]))

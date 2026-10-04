@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 473
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (validate)\nimport Lift exposing (lower)\nimport Functor\nmain =\n    let\n        a : Data\n        a = List [I 1, I 2, I 3]\n        checked : List Int\n        checked = validate a\n        values : list int\n        values = Functor.map Builtin.unIData (Builtin.unListData checked)\n    in\n    case values of\n        [h, i, j] -> if equalsInteger h h then\n                if equalsInteger i i then equalsInteger j j else False\n            else False\n        _ -> fail\n"
 ---
 --- unoptimized Core
@@ -165,14 +164,7 @@ main#1
     (lam value_34 value_34)])
 --- optimized Core
 let applyForward#69 : 'erased -> ('erased -> 'erased) -> 'erased = \x#67 : 'erased (f#68 : 'erased -> 'erased) -> f#68 x#67 in
-let anf#124 : Data = iData 1 in
-let anf#126 : Data = iData 2 in
-let anf#128 : Data = iData 3 in
-let anf#129 : list Data = mkCons anf#128 (con (list data) []) in
-let anf#130 : list Data = mkCons anf#126 anf#129 in
-let anf#131 : list Data = mkCons anf#124 anf#130 in
-let a#93 : Data = listData anf#131 in
-let anf#119 : list Data = applyForward#69 a#93 unListData in
+let anf#119 : list Data = applyForward#69 (con data (List [I 1, I 2, I 3])) unListData in
 let anf#120 : (list Data -> list Data) -> list Data = applyForward#69 anf#119 in
 let anf#122 : list Data = anf#120 (\values#72 : list 'erased -> letrec
   worker#112 : list 'erased -> list Data [static []] = \values#111 : list 'erased -> case@List values#111 of
@@ -210,87 +202,73 @@ case@List values#96 of
         Cons field#108 field#109 -> force leaf#98
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_51
+  [(lam builtin_44
     [(lam applyForward_7
       [(lam anf_8
         [(lam anf_9
-          [(lam anf_10
-            [(lam anf_11
-              [(lam anf_12
-                [(lam anf_13
-                  [(lam a_14
-                    [(lam anf_15
-                      [(lam anf_18
-                        [(lam anf_28
-                          [(lam checked_29
-                            [(lam projection_30
-                              [(lam worker_38
-                                [(lam values_39
-                                  [(lam leaf_40
-                                    (case
-                                      values_39
-                                      (lam field_41
-                                        (lam field_42
-                                          (case
-                                            field_42
-                                            (lam field_43
-                                              (lam field_44
-                                                (case
-                                                  field_44
-                                                  (lam field_45
-                                                    (lam field_46
-                                                      (case
-                                                        field_46
-                                                        (lam field_49 (lam field_50 (force leaf_40)))
-                                                        [(lam anf_47
-                                                          (case
-                                                            anf_47
-                                                            (con bool False)
-                                                            [(lam anf_48
-                                                              (case anf_48 (con bool False) [[(builtin equalsInteger) field_45] field_45]))
-                                                              [[(builtin equalsInteger) field_43] field_43]]))
-                                                          [[(builtin equalsInteger) field_41] field_41]])))
-                                                  (force leaf_40))))
-                                            (force leaf_40))))
-                                      (force leaf_40)))
-                                    (delay (error))])
-                                  [worker_38 projection_30]])
-                                [(lam self_31 [self_31 self_31])
-                                  (lam self_32
-                                    (lam values_33
-                                      (case
-                                        values_33
-                                        (lam field_34
-                                          (lam field_35
-                                            [(lam anf_36
-                                              [(lam anf_37 [[builtin_51 anf_36] anf_37]) [[self_32 self_32] field_35]])
-                                              [(builtin unIData) field_34]]))
-                                        (con (list integer) []))))]])
-                              [(builtin unListData) checked_29]])
-                            [[applyForward_7 anf_28] (builtin listData)]])
-                          [anf_18
-                            (lam values_19
-                              [(lam worker_27 [worker_27 values_19])
-                                [(lam self_20 [self_20 self_20])
-                                  (lam self_21
-                                    (lam values_22
-                                      (case
-                                        values_22
-                                        (lam field_23
-                                          (lam field_24
-                                            [(lam destruct_25
-                                              [(lam anf_26 [[builtin_51 field_23] anf_26]) [[self_21 self_21] field_24]])
-                                              [(builtin unIData) field_23]]))
-                                        (con (list data) []))))]])]])
-                        [applyForward_7 anf_15]])
-                      [[applyForward_7 a_14] (builtin unListData)]])
-                    [(builtin listData) anf_13]])
-                  [[builtin_51 anf_8] anf_12]])
-                [[builtin_51 anf_9] anf_11]])
-              [[builtin_51 anf_10] (con (list data) [])]])
-            [(builtin iData) (con integer 3)]])
-          [(builtin iData) (con integer 2)]])
-        [(builtin iData) (con integer 1)]])
+          [(lam anf_21
+            [(lam checked_22
+              [(lam projection_23
+                [(lam worker_31
+                  [(lam values_32
+                    [(lam leaf_33
+                      (case
+                        values_32
+                        (lam field_34
+                          (lam field_35
+                            (case
+                              field_35
+                              (lam field_36
+                                (lam field_37
+                                  (case
+                                    field_37
+                                    (lam field_38
+                                      (lam field_39
+                                        (case
+                                          field_39
+                                          (lam field_42 (lam field_43 (force leaf_33)))
+                                          [(lam anf_40
+                                            (case
+                                              anf_40
+                                              (con bool False)
+                                              [(lam anf_41
+                                                (case anf_41 (con bool False) [[(builtin equalsInteger) field_38] field_38]))
+                                                [[(builtin equalsInteger) field_36] field_36]]))
+                                            [[(builtin equalsInteger) field_34] field_34]])))
+                                    (force leaf_33))))
+                              (force leaf_33))))
+                        (force leaf_33)))
+                      (delay (error))])
+                    [worker_31 projection_23]])
+                  [(lam self_24 [self_24 self_24])
+                    (lam self_25
+                      (lam values_26
+                        (case
+                          values_26
+                          (lam field_27
+                            (lam field_28
+                              [(lam anf_29
+                                [(lam anf_30 [[builtin_44 anf_29] anf_30]) [[self_25 self_25] field_28]])
+                                [(builtin unIData) field_27]]))
+                          (con (list integer) []))))]])
+                [(builtin unListData) checked_22]])
+              [[applyForward_7 anf_21] (builtin listData)]])
+            [anf_9
+              (lam values_10
+                [(lam worker_20 [worker_20 values_10])
+                  [(lam self_11 [self_11 self_11])
+                    (lam self_12
+                      (lam values_13
+                        (case
+                          values_13
+                          (lam field_14
+                            (lam field_15
+                              [(lam destruct_18
+                                [(lam anf_19 [[builtin_44 field_14] anf_19]) [[self_12 self_12] field_15]])
+                                [(builtin unIData) field_14]]))
+                          (con (list data) []))))]])]])
+          [applyForward_7 anf_8]])
+        [[applyForward_7 (con data (List [I 1, I 2, I 3]))] (builtin unListData)]])
       (lam x_5 (lam f_6 [f_6 x_5]))])
     (force (builtin mkCons))])
 --- result

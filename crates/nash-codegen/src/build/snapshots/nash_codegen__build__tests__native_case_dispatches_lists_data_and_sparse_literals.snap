@@ -110,8 +110,7 @@ case@Bool anf#65 of
     False -> 30 in
 let anf#69 : int = first#37 (con (list integer) []) in
 let anf#72 : int = first#37 (con (list integer) [42]) in
-let anf#74 : Data = iData 9 in
-let anf#75 : int = decode#47 anf#74 in
+let anf#75 : int = decode#47 (con data (I 9)) in
 let anf#78 : int = decode#47 (con data (B #)) in
 let anf#80 : int = select#55 7 in
 let anf#82 : int = select#55 100 in
@@ -119,7 +118,7 @@ let anf#86 : int = select#55 -7 in
 constr 0 anf#69 anf#72 anf#75 anf#78 anf#80 anf#82 anf#86
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_31
+  [(lam builtin_30
     [(lam first_4
       [(lam decode_12
         [(lam eq_13
@@ -130,14 +129,12 @@ constr 0 anf#69 anf#72 anf#75 anf#78 anf#80 anf#82 anf#86
                   [(lam anf_25
                     [(lam anf_26
                       [(lam anf_27
-                        [(lam anf_28
-                          [(lam anf_29 (constr 0 anf_21 anf_23 anf_25 anf_26 anf_27 anf_28 anf_29))
-                            [select_19 (con integer -7)]])
-                          [select_19 (con integer 100)]])
-                        [select_19 (con integer 7)]])
-                      [decode_12 (con data (B #))]])
-                    [decode_12 anf_24]])
-                  [(builtin iData) (con integer 9)]])
+                        [(lam anf_28 (constr 0 anf_21 anf_23 anf_24 anf_25 anf_26 anf_27 anf_28))
+                          [select_19 (con integer -7)]])
+                        [select_19 (con integer 100)]])
+                      [select_19 (con integer 7)]])
+                    [decode_12 (con data (B #))]])
+                  [decode_12 (con data (I 9))]])
                 [first_4 (con (list integer) [42])]])
               [first_4 (con (list integer) [])]])
             (lam n_14
@@ -155,11 +152,11 @@ constr 0 anf#69 anf#72 anf#75 anf#78 anf#80 anf#82 anf#86
           (builtin equalsInteger)])
         (lam data_5
           [(lam leaf_6
-            [(lam generated_30
+            [(lam generated_29
               (force
-                [[[[[[builtin_31 generated_30] (delay (force leaf_6))] (delay (force leaf_6))]
+                [[[[[[builtin_30 generated_29] (delay (force leaf_6))] (delay (force leaf_6))]
                   (delay (force leaf_6))]
-                  (delay [(lam field_10 field_10) [(builtin unIData) generated_30]])]
+                  (delay [(lam field_10 field_10) [(builtin unIData) generated_29]])]
                   (delay (force leaf_6))]))
               data_5])
             (delay (con integer -2))])])

@@ -46,26 +46,9 @@ main#1
       (lam value_12 value_12)])
     (lam value_9 value_9)])
 --- optimized Core
-let anf#34 : Data = iData 42 in
-let anf#37 : int = unIData anf#34 in
-let anf#39 : bool = equalsInteger anf#37 42 in
-case@Bool anf#39 of
-  True -> let anf#45 : Data = iData 42 in
-  equalsData anf#34 anf#45
-  False -> false
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_1
-    [(lam anf_2
-      [(lam anf_3
-        (case
-          anf_3
-          (con bool False)
-          [(lam anf_4 [[(builtin equalsData) anf_1] anf_4])
-            [(builtin iData) (con integer 42)]]))
-        [[(builtin equalsInteger) anf_2] (con integer 42)]])
-      [(builtin unIData) anf_1]])
-    [(builtin iData) (con integer 42)]])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

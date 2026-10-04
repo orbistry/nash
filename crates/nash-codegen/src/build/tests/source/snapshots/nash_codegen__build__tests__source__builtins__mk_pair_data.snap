@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 190
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nmain : bool\nmain = equalsData\n    (toData (Builtin.fstPair (Builtin.mkPairData (Builtin.iData 1) (Builtin.iData 2))))\n    (toData (Builtin.iData 1))\n"
 ---
 --- unoptimized Core
@@ -25,26 +24,9 @@ main#1
       (lam value_5 value_5)])
     (lam coerce_4 coerce_4)])
 --- optimized Core
-let anf#16 : Int = iData 1 in
-let anf#18 : Int = iData 2 in
-let evaluated#12 : pair Int Int = mkPairData anf#16 anf#18 in
-let projection#13 : Int = fstPair evaluated#12 in
-let anf#21 : Int = iData 1 in
-equalsData projection#13 anf#21
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_6
-    [(lam anf_1
-      [(lam anf_2
-        [(lam evaluated_3
-          [(lam projection_4
-            [(lam anf_5 [[(builtin equalsData) projection_4] anf_5])
-              [(builtin iData) (con integer 1)]])
-            [builtin_6 evaluated_3]])
-          [[(builtin mkPairData) anf_1] anf_2]])
-        [(builtin iData) (con integer 2)]])
-      [(builtin iData) (con integer 1)]])
-    (force (force (builtin fstPair)))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

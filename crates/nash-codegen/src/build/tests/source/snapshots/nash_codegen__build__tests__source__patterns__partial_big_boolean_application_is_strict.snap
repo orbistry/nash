@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 792
 description: "module Main exposing (..)\nimport Primitive exposing (type bool(..))\nimport Bool\nimport Logic\nbad : unit -> Bool.Bool\nbad _ = fail\nmain : bool\nmain =\n    let\n        partial : Bool.Bool -> bool\n        partial = Logic.or Bool.True\n    in\n    partial (bad ())\n"
 ---
 --- unoptimized Core
@@ -45,9 +44,8 @@ case@Pair projection#24 of
   Pair tag#25 fields#26 -> case@Tag tag#25 of
     0 -> false
     1 -> true in
-let anf#34 : nash/base:Bool.Bool = constrData 1 (con (list data) []) in
 let anf#36 : nash/base:Bool.Bool = error in
-let anf#33 : bool = lower#27 anf#34 in
+let anf#33 : bool = lower#27 (con data (Constr 1 [])) in
 case@Bool anf#33 of
   True -> true
   False -> lower#27 anf#36
@@ -55,10 +53,9 @@ case@Bool anf#33 of
 (program 1.1.0
   [(lam lower_5
     [(lam anf_6
-      [(lam anf_7
-        [(lam anf_8 (case anf_8 [lower_5 anf_7] (con bool True))) [lower_5 anf_6]])
-        (error)])
-      [[(builtin constrData) (con integer 1)] (con (list data) [])]])
+      [(lam anf_7 (case anf_7 [lower_5 anf_6] (con bool True)))
+        [lower_5 (con data (Constr 1 []))]])
+      (error)])
     (lam value_1
       [(lam projection_2
         (case

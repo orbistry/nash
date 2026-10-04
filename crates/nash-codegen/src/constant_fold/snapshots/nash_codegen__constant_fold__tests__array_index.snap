@@ -1,0 +1,17 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- result\\n{}\\n--- logs\\n{:?}\", fixture.code_snapshot(),\nfixture.evaluated.result, fixture.evaluated.logs)"
+---
+--- unoptimized Core
+indexArray (con (array integer) [1]) 0
+--- unoptimized UPLC
+(program 1.1.0
+  [[(force (builtin indexArray)) (con (array integer) [1])] (con integer 0)])
+--- optimized Core
+1
+--- optimized UPLC
+(program 1.1.0 (con integer 1))
+--- result
+(con integer 1)
+--- logs
+[]

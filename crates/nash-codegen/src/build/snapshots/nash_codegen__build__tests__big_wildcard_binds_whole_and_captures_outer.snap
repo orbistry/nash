@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Zero | One Int | Two Int Int\nread : Choice -> int\nread value =\n    case value of\n        Stop -> 0\n        Zero -> 0\n        One a -> unIData a\n        Two a b -> addInteger (unIData a) (unIData b)\nchoose : int -> Choice -> int\nchoose outer subject =\n    case trace \"subject\" subject of\n        Stop -> 1\n        whole -> trace \"fallback\" (addInteger outer (read whole))\nmain = (choose 10 Stop, choose 10 Zero, choose 10 (One 20), choose 10 (Two 30 40))\n"
 ---
 --- unoptimized Core
@@ -147,11 +146,9 @@ case@Pair projection#62 of
     3 -> leaf#61 match#59 in
 let fromInt#69 : int -> Int = iData in
 let anf#80 : Main.Choice -> int = choose#68 10 in
-let anf#81 : Main.Choice = constrData 0 (con (list data) []) in
-let anf#82 : int = anf#80 anf#81 in
+let anf#82 : int = anf#80 (con data (Constr 0 [])) in
 let anf#84 : Main.Choice -> int = choose#68 10 in
-let anf#85 : Main.Choice = constrData 1 (con (list data) []) in
-let anf#86 : int = anf#84 anf#85 in
+let anf#86 : int = anf#84 (con data (Constr 1 [])) in
 let anf#88 : Main.Choice -> int = choose#68 10 in
 let anf#90 : Int = fromInt#69 20 in
 let anf#89 : list Data = mkCons anf#90 (con (list data) []) in
@@ -167,8 +164,8 @@ let anf#101 : int = anf#94 anf#100 in
 constr 0 anf#82 anf#86 anf#92 anf#101
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_41
-    [(lam builtin_42
+  [(lam builtin_39
+    [(lam builtin_40
       [(lam choose_21
         [(lam fromInt_22
           [(lam anf_23
@@ -186,25 +183,21 @@ constr 0 anf#82 anf#86 anf#92 anf#101
                                   [(lam anf_35
                                     [(lam anf_36
                                       [(lam anf_37
-                                        [(lam anf_38
-                                          [(lam anf_39
-                                            [(lam anf_40 (constr 0 anf_25 anf_28 anf_33 anf_40)) [anf_34 anf_39]])
-                                            [[(builtin constrData) (con integer 3)] anf_38]])
-                                          [[builtin_41 anf_35] anf_37]])
-                                        [[builtin_41 anf_36] (con (list data) [])]])
-                                      [fromInt_22 (con integer 40)]])
-                                    [fromInt_22 (con integer 30)]])
-                                  [choose_21 (con integer 10)]])
-                                [anf_29 anf_32]])
-                              [[(builtin constrData) (con integer 2)] anf_31]])
-                            [[builtin_41 anf_30] (con (list data) [])]])
-                          [fromInt_22 (con integer 20)]])
-                        [choose_21 (con integer 10)]])
-                      [anf_26 anf_27]])
-                    [[(builtin constrData) (con integer 1)] (con (list data) [])]])
-                  [choose_21 (con integer 10)]])
-                [anf_23 anf_24]])
-              [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                        [(lam anf_38 (constr 0 anf_24 anf_26 anf_31 anf_38)) [anf_32 anf_37]])
+                                        [[(builtin constrData) (con integer 3)] anf_36]])
+                                      [[builtin_39 anf_33] anf_35]])
+                                    [[builtin_39 anf_34] (con (list data) [])]])
+                                  [fromInt_22 (con integer 40)]])
+                                [fromInt_22 (con integer 30)]])
+                              [choose_21 (con integer 10)]])
+                            [anf_27 anf_30]])
+                          [[(builtin constrData) (con integer 2)] anf_29]])
+                        [[builtin_39 anf_28] (con (list data) [])]])
+                      [fromInt_22 (con integer 20)]])
+                    [choose_21 (con integer 10)]])
+                  [anf_25 (con data (Constr 1 []))]])
+                [choose_21 (con integer 10)]])
+              [anf_23 (con data (Constr 0 []))]])
             [choose_21 (con integer 10)]])
           (builtin iData)])
         (lam outer_1
@@ -225,7 +218,7 @@ constr 0 anf#82 anf#86 anf#92 anf#101
                   [(builtin unConstrData) match_3]])
                 (lam whole_4
                   (force
-                    [[builtin_42 (con string "fallback")]
+                    [[builtin_40 (con string "fallback")]
                       (delay
                         [(lam projection_5
                           [(lam anf_16 [[(builtin addInteger) outer_1] anf_16])
@@ -256,7 +249,7 @@ constr 0 anf#82 anf#86 anf#92 anf#101
                                             (error))))
                                       (error))))))])
                           [(builtin unConstrData) whole_4]])]))])
-              (force [[builtin_42 (con string "subject")] (delay subject_2)])]))])
+              (force [[builtin_40 (con string "subject")] (delay subject_2)])]))])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

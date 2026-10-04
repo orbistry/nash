@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 133
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (ToData)\ntype Option = Some Int | None\nmain : bool\nmain = equalsData\n    (toData (Builtin.listData (Builtin.mkCons (Some 42) [None])))\n    (toData (Builtin.listData [Some 42, None]))\n"
 ---
 --- unoptimized Core
@@ -41,54 +40,40 @@ let fromInt#9 : int -> Int = iData in
 let anf#14 : Int = fromInt#9 42 in
 let anf#13 : list Data = mkCons anf#14 (con (list data) []) in
 let anf#15 : Main.Option = constrData 0 anf#13 in
-let anf#16 : Main.Option = constrData 1 (con (list data) []) in
-let anf#17 : list Main.Option = mkCons anf#16 (con (list data) []) in
-let anf#18 : list Main.Option = mkCons anf#15 anf#17 in
+let anf#18 : list Main.Option = mkCons anf#15 (con (list data) [(Constr 1 [])]) in
 let anf#19 : List Main.Option = listData anf#18 in
 let anf#22 : Int = fromInt#9 42 in
 let anf#21 : list Data = mkCons anf#22 (con (list data) []) in
 let anf#23 : Main.Option = constrData 0 anf#21 in
-let anf#24 : Main.Option = constrData 1 (con (list data) []) in
-let anf#25 : list Main.Option = mkCons anf#24 (con (list data) []) in
-let anf#26 : list Main.Option = mkCons anf#23 anf#25 in
+let anf#26 : list Main.Option = mkCons anf#23 (con (list data) [(Constr 1 [])]) in
 let anf#27 : List Main.Option = listData anf#26 in
 equalsData anf#19 anf#27
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_31
-    [(lam partial_32
-      [(lam partial_33
-        [(lam fromInt_1
-          [(lam anf_2
-            [(lam anf_3
-              [(lam anf_4
-                [(lam anf_5
-                  [(lam anf_6
-                    [(lam anf_7
-                      [(lam anf_8
-                        [(lam anf_10
-                          [(lam anf_11
-                            [(lam anf_12
-                              [(lam anf_20
-                                [(lam anf_28
-                                  [(lam anf_29
-                                    [(lam anf_30 [[(builtin equalsData) anf_8] anf_30]) [(builtin listData) anf_29]])
-                                    [[builtin_31 anf_12] anf_28]])
-                                  [[builtin_31 anf_20] (con (list data) [])]])
-                                [partial_32 (con (list data) [])]])
-                              [partial_33 anf_11]])
-                            [[builtin_31 anf_10] (con (list data) [])]])
-                          [fromInt_1 (con integer 42)]])
-                        [(builtin listData) anf_7]])
-                      [[builtin_31 anf_4] anf_6]])
-                    [[builtin_31 anf_5] (con (list data) [])]])
-                  [partial_32 (con (list data) [])]])
-                [partial_33 anf_3]])
-              [[builtin_31 anf_2] (con (list data) [])]])
-            [fromInt_1 (con integer 42)]])
-          (builtin iData)])
-        [(builtin constrData) (con integer 0)]])
-      [(builtin constrData) (con integer 1)]])
+  [(lam builtin_13
+    [(lam partial_14
+      [(lam fromInt_1
+        [(lam anf_2
+          [(lam anf_3
+            [(lam anf_4
+              [(lam anf_5
+                [(lam anf_6
+                  [(lam anf_7
+                    [(lam anf_8
+                      [(lam anf_10
+                        [(lam anf_11
+                          [(lam anf_12 [[(builtin equalsData) anf_6] anf_12]) [(builtin listData) anf_11]])
+                          [[builtin_13 anf_10] (con (list data) [(Constr 1 [])])]])
+                        [partial_14 anf_8]])
+                      [[builtin_13 anf_7] (con (list data) [])]])
+                    [fromInt_1 (con integer 42)]])
+                  [(builtin listData) anf_5]])
+                [[builtin_13 anf_4] (con (list data) [(Constr 1 [])])]])
+              [partial_14 anf_3]])
+            [[builtin_13 anf_2] (con (list data) [])]])
+          [fromInt_1 (con integer 42)]])
+        (builtin iData)])
+      [(builtin constrData) (con integer 0)]])
     (force (builtin mkCons))])
 --- result
 (con bool True)

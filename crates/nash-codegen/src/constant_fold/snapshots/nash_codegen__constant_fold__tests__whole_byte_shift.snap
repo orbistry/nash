@@ -1,0 +1,17 @@
+---
+source: crates/nash-codegen/src/constant_fold/tests.rs
+expression: "format!(\"{}\\n--- result\\n{}\\n--- logs\\n{:?}\", fixture.code_snapshot(),\nfixture.evaluated.result, fixture.evaluated.logs)"
+---
+--- unoptimized Core
+shiftByteString (con bytestring #010203) 8
+--- unoptimized UPLC
+(program 1.1.0
+  [[(builtin shiftByteString) (con bytestring #010203)] (con integer 8)])
+--- optimized Core
+(con bytestring #020300)
+--- optimized UPLC
+(program 1.1.0 (con bytestring #020300))
+--- result
+(con bytestring #020300)
+--- logs
+[]

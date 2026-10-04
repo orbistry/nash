@@ -121,9 +121,7 @@ main#1
 --- optimized Core
 letrec
   unzip#48 : list (pair Int Bytes) -> pair (List Int) (List Bytes) [static []] = \xs#49 : list (pair Int Bytes) -> case@List xs#49 of
-    Nil -> let anf#72 : List Int = listData (con (list data) []) in
-    let anf#73 : List Bytes = listData (con (list data) []) in
-    mkPairData anf#72 anf#73
+    Nil -> (con (pair data data) ((List []), (List [])))
     Cons field#51 field#52 -> let tails#55 : pair (List Int) (List Bytes) = unzip#48 field#52 in
     let projection#56 : Int = fstPair field#51 in
     let projection#57 : List Int = fstPair tails#55 in
@@ -137,105 +135,61 @@ letrec
     let anf#76 : List Bytes = listData anf#75 in
     mkPairData evaluated#59 anf#76
 in
-let anf#78 : Int = iData 3 in
-let anf#81 : pair Int Bytes = mkPairData anf#78 (con data (B #55)) in
-let anf#83 : Int = iData 4 in
-let anf#86 : pair Int Bytes = mkPairData anf#83 (con data (B #7799)) in
-let anf#87 : list (pair Int Bytes) = mkCons anf#86 (con (list (pair data data)) []) in
-let x#67 : list (pair Int Bytes) = mkCons anf#81 anf#87 in
-let anf#88 : pair (List Int) (List Bytes) = unzip#48 x#67 in
-let anf#91 : Int = iData 3 in
-let anf#93 : Int = iData 4 in
-let anf#94 : list Int = mkCons anf#93 (con (list data) []) in
-let anf#95 : list Int = mkCons anf#91 anf#94 in
-let anf#96 : List Int = listData anf#95 in
-let anf#104 : pair (List Int) (List Bytes) = mkPairData anf#96 (con data (List [B #55, B #7799])) in
+let anf#88 : pair (List Int) (List Bytes) = unzip#48 (con (list (pair data data)) [((I 3), (B #55)), ((I 4), (B #7799))]) in
 let projection#41 : List Int = fstPair anf#88 in
-let projection#43 : List Int = fstPair anf#104 in
-let anf#70 : bool = equalsData projection#41 projection#43 in
+let anf#70 : bool = equalsData projection#41 (con data (List [I 3, I 4])) in
 case@Bool anf#70 of
   True -> let projection#44 : List Bytes = sndPair anf#88 in
-  let projection#46 : List Bytes = sndPair anf#104 in
-  equalsData projection#44 projection#46
+  equalsData projection#44 (con data (List [B #55, B #7799]))
   False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_40
-    [(lam builtin_41
-      [(lam builtin_42
-        [(lam unzip_21
-          [(lam anf_22
-            [(lam anf_23
-              [(lam anf_24
-                [(lam anf_25
-                  [(lam anf_26
-                    [(lam x_27
-                      [(lam anf_28
-                        [(lam anf_29
-                          [(lam anf_30
-                            [(lam anf_31
-                              [(lam anf_32
-                                [(lam anf_33
-                                  [(lam anf_34
-                                    [(lam projection_35
-                                      [(lam projection_36
-                                        [(lam anf_37
-                                          (case
-                                            anf_37
-                                            (con bool False)
-                                            [(lam projection_38
-                                              [(lam projection_39 [[(builtin equalsData) projection_38] projection_39])
-                                                [builtin_40 anf_34]])
-                                              [builtin_40 anf_28]]))
-                                          [[(builtin equalsData) projection_35] projection_36]])
-                                        [builtin_41 anf_34]])
-                                      [builtin_41 anf_28]])
-                                    [[(builtin mkPairData) anf_33] (con data (List [B #55, B #7799]))]])
-                                  [(builtin listData) anf_32]])
-                                [[builtin_42 anf_29] anf_31]])
-                              [[builtin_42 anf_30] (con (list data) [])]])
-                            [(builtin iData) (con integer 4)]])
-                          [(builtin iData) (con integer 3)]])
-                        [unzip_21 x_27]])
-                      [[builtin_42 anf_23] anf_26]])
-                    [[builtin_42 anf_25] (con (list (pair data data)) [])]])
-                  [[(builtin mkPairData) anf_24] (con data (B #7799))]])
-                [(builtin iData) (con integer 4)]])
-              [[(builtin mkPairData) anf_22] (con data (B #55))]])
-            [(builtin iData) (con integer 3)]])
+  [(lam builtin_24
+    [(lam builtin_25
+      [(lam builtin_26
+        [(lam unzip_19
+          [(lam anf_20
+            [(lam projection_21
+              [(lam anf_22
+                (case
+                  anf_22
+                  (con bool False)
+                  [(lam projection_23
+                    [[(builtin equalsData) projection_23] (con data (List [B #55, B #7799]))])
+                    [builtin_24 anf_20]]))
+                [[(builtin equalsData) projection_21] (con data (List [I 3, I 4]))]])
+              [builtin_25 anf_20]])
+            [unzip_19 (con (list (pair data data)) [((I 3), (B #55)), ((I 4), (B #7799))])]])
           [(lam self_3 [self_3 self_3])
             (lam self_4
               (lam xs_5
                 (case
                   xs_5
-                  (lam field_8
-                    (lam field_9
-                      [(lam tails_10
-                        [(lam projection_11
-                          [(lam projection_12
-                            [(lam projection_13
-                              [(lam anf_14
-                                [(lam evaluated_15
-                                  [(lam projection_16
-                                    [(lam projection_17
-                                      [(lam projection_18
-                                        [(lam anf_19
-                                          [(lam anf_20 [[(builtin mkPairData) evaluated_15] anf_20])
-                                            [(builtin listData) anf_19]])
-                                          [[builtin_42 projection_16] projection_18]])
-                                        [(builtin unListData) projection_17]])
-                                      [builtin_40 tails_10]])
-                                    [builtin_40 field_8]])
-                                  [(builtin listData) anf_14]])
-                                [[builtin_42 projection_11] projection_13]])
-                              [(builtin unListData) projection_12]])
-                            [builtin_41 tails_10]])
-                          [builtin_41 field_8]])
-                        [[self_4 self_4] field_9]]))
-                  [(lam anf_6
-                    [(lam anf_7 [[(builtin mkPairData) anf_6] anf_7])
-                      [(builtin listData) (con (list data) [])]])
-                    [(builtin listData) (con (list data) [])]])))]])
+                  (lam field_6
+                    (lam field_7
+                      [(lam tails_8
+                        [(lam projection_9
+                          [(lam projection_10
+                            [(lam projection_11
+                              [(lam anf_12
+                                [(lam evaluated_13
+                                  [(lam projection_14
+                                    [(lam projection_15
+                                      [(lam projection_16
+                                        [(lam anf_17
+                                          [(lam anf_18 [[(builtin mkPairData) evaluated_13] anf_18])
+                                            [(builtin listData) anf_17]])
+                                          [[builtin_26 projection_14] projection_16]])
+                                        [(builtin unListData) projection_15]])
+                                      [builtin_24 tails_8]])
+                                    [builtin_24 field_6]])
+                                  [(builtin listData) anf_12]])
+                                [[builtin_26 projection_9] projection_11]])
+                              [(builtin unListData) projection_10]])
+                            [builtin_25 tails_8]])
+                          [builtin_25 field_6]])
+                        [[self_4 self_4] field_7]]))
+                  (con (pair data data) ((List []), (List []))))))]])
         (force (builtin mkCons))])
       (force (force (builtin fstPair)))])
     (force (force (builtin sndPair)))])

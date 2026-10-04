@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests.rs
-assertion_line: 239
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype Choice = Stop | Zero | One Int | Two Int Int\nchoose : Choice -> int\nchoose subject =\n    case trace \"subject\" subject of\n        Stop -> trace \"explicit\" 1\n        _ -> trace \"fallback\" 9\nmain = (choose Stop, choose Zero, choose (One 2), choose (Two 3 4))\n"
 ---
 --- unoptimized Core
@@ -86,10 +85,8 @@ case@Pair projection#30 of
     2 -> force leaf#29
     3 -> force leaf#29 in
 let fromInt#34 : int -> Int = iData in
-let anf#42 : Main.Choice = constrData 0 (con (list data) []) in
-let anf#43 : int = choose#33 anf#42 in
-let anf#44 : Main.Choice = constrData 1 (con (list data) []) in
-let anf#45 : int = choose#33 anf#44 in
+let anf#43 : int = choose#33 (con data (Constr 0 [])) in
+let anf#45 : int = choose#33 (con data (Constr 1 [])) in
 let anf#47 : Int = fromInt#34 2 in
 let anf#46 : list Data = mkCons anf#47 (con (list data) []) in
 let anf#48 : Main.Choice = constrData 2 anf#46 in
@@ -103,8 +100,8 @@ let anf#56 : int = choose#33 anf#55 in
 constr 0 anf#43 anf#45 anf#49 anf#56
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_24
-    [(lam builtin_25
+  [(lam builtin_22
+    [(lam builtin_23
       [(lam choose_7
         [(lam fromInt_8
           [(lam anf_9
@@ -118,22 +115,18 @@ constr 0 anf#43 anf#45 anf#49 anf#56
                           [(lam anf_17
                             [(lam anf_18
                               [(lam anf_20
-                                [(lam anf_21
-                                  [(lam anf_22
-                                    [(lam anf_23 (constr 0 anf_10 anf_12 anf_16 anf_23)) [choose_7 anf_22]])
-                                    [[(builtin constrData) (con integer 3)] anf_21]])
-                                  [[builtin_24 anf_17] anf_20]])
-                                [[builtin_24 anf_18] (con (list data) [])]])
-                              [fromInt_8 (con integer 4)]])
-                            [fromInt_8 (con integer 3)]])
-                          [choose_7 anf_15]])
-                        [[(builtin constrData) (con integer 2)] anf_14]])
-                      [[builtin_24 anf_13] (con (list data) [])]])
-                    [fromInt_8 (con integer 2)]])
-                  [choose_7 anf_11]])
-                [[(builtin constrData) (con integer 1)] (con (list data) [])]])
-              [choose_7 anf_9]])
-            [[(builtin constrData) (con integer 0)] (con (list data) [])]])
+                                [(lam anf_21 (constr 0 anf_9 anf_10 anf_14 anf_21)) [choose_7 anf_20]])
+                                [[(builtin constrData) (con integer 3)] anf_18]])
+                              [[builtin_22 anf_15] anf_17]])
+                            [[builtin_22 anf_16] (con (list data) [])]])
+                          [fromInt_8 (con integer 4)]])
+                        [fromInt_8 (con integer 3)]])
+                      [choose_7 anf_13]])
+                    [[(builtin constrData) (con integer 2)] anf_12]])
+                  [[builtin_22 anf_11] (con (list data) [])]])
+                [fromInt_8 (con integer 2)]])
+              [choose_7 (con data (Constr 1 []))]])
+            [choose_7 (con data (Constr 0 []))]])
           (builtin iData)])
         (lam subject_1
           [(lam match_2
@@ -145,13 +138,13 @@ constr 0 anf#43 anf#45 anf#49 anf#56
                     (lam fields_6
                       (case
                         tag_5
-                        (force [[builtin_25 (con string "explicit")] (delay (con integer 1))])
+                        (force [[builtin_23 (con string "explicit")] (delay (con integer 1))])
                         (force leaf_3)
                         (force leaf_3)
                         (force leaf_3))))))
                 [(builtin unConstrData) match_2]])
-              (delay (force [[builtin_25 (con string "fallback")] (delay (con integer 9))]))])
-            (force [[builtin_25 (con string "subject")] (delay subject_1)])])])
+              (delay (force [[builtin_23 (con string "fallback")] (delay (con integer 9))]))])
+            (force [[builtin_23 (con string "subject")] (delay subject_1)])])])
       (force (builtin trace))])
     (force (builtin mkCons))])
 --- result

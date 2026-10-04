@@ -1,4 +1,5 @@
 mod cek;
+mod constant_eval;
 mod context;
 pub(crate) mod cost_model;
 mod discharge;
@@ -18,3 +19,5 @@ pub use eval_result::*;
 pub use info::*;
 pub use runtime::BuiltinSemantics;
 pub use runtime::PlutusVersion;
+
+pub use constant_eval::eval_constant_builtin;

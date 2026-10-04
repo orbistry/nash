@@ -14,18 +14,9 @@ addInteger (f#3 7 20) (f#3 7 22)
       [[f_3 (con integer 7)] (con integer 22)]])
     (lam x_1 (lam y_2 (case (con bool True) x_1 y_2)))])
 --- optimized Core
-let f#6 : int -> int -> int = \x#4 : int y#5 : int -> y#5 in
-let anf#7 : int = f#6 7 20 in
-let anf#8 : int = f#6 7 22 in
-addInteger anf#7 anf#8
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam f_3
-    [(lam anf_9
-      [(lam anf_10 [[(builtin addInteger) anf_9] anf_10])
-        [[f_3 (con integer 7)] (con integer 22)]])
-      [[f_3 (con integer 7)] (con integer 20)]])
-    (lam x_1 (lam y_2 y_2))])
+(program 1.1.0 (con integer 42))
 --- result
 (con integer 42)
 --- logs

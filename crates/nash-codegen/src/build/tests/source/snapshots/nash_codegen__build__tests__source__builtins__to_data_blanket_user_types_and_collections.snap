@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 499
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\ntype Token = Token Int\ntype alias Wrapped = { item : Token }\nwrapped : Wrapped\nwrapped = { item = (Token 42) }\nidentityData : Big 'a => 'a -> Data\nidentityData = toData\nmain =\n    if equalsData (toData wrapped) (List [Builtin.constrData 0 [I 42]]) then\n        check\n    else False\ncheck =\n    if equalsData (identityData (Token 42)) (Builtin.constrData 0 [I 42]) then\n        if equalsData (toData (listData [Token 42])) (List [Builtin.constrData 0 [I 42]]) then\n            equalsData (toData (mapData [mkPairData (Token 1) (Token 2)]))\n                (Map [mkPairData (Builtin.constrData 0 [I 1]) (Builtin.constrData 0 [I 2])])\n        else False\n    else False\n"
 ---
 --- unoptimized Core
@@ -118,22 +117,14 @@ let wrapped#31 : { _0 : Main.Token } = listData anf#52 in
 let anf#54 : Int = fromInt#29 42 in
 let anf#53 : list Data = mkCons anf#54 (con (list data) []) in
 let anf#55 : Main.Token = constrData 0 anf#53 in
-let anf#59 : Data = iData 42 in
-let anf#60 : list Data = mkCons anf#59 (con (list data) []) in
-let anf#61 : Data = constrData 0 anf#60 in
-let anf#62 : bool = equalsData anf#55 anf#61 in
+let anf#62 : bool = equalsData anf#55 (con data (Constr 0 [I 42])) in
 let check#45 : bool = case@Bool anf#62 of
   True -> let anf#64 : Int = fromInt#29 42 in
   let anf#63 : list Data = mkCons anf#64 (con (list data) []) in
   let anf#65 : Main.Token = constrData 0 anf#63 in
   let anf#66 : list Main.Token = mkCons anf#65 (con (list data) []) in
   let anf#67 : List Main.Token = listData anf#66 in
-  let anf#71 : Data = iData 42 in
-  let anf#72 : list Data = mkCons anf#71 (con (list data) []) in
-  let anf#73 : Data = constrData 0 anf#72 in
-  let anf#74 : list Data = mkCons anf#73 (con (list data) []) in
-  let anf#75 : Data = listData anf#74 in
-  let anf#76 : bool = equalsData anf#67 anf#75 in
+  let anf#76 : bool = equalsData anf#67 (con data (List [Constr 0 [I 42]])) in
   case@Bool anf#76 of
     True -> let anf#78 : Int = fromInt#29 1 in
     let anf#77 : list Data = mkCons anf#78 (con (list data) []) in
@@ -144,31 +135,17 @@ let check#45 : bool = case@Bool anf#62 of
     let anf#83 : pair Main.Token Main.Token = mkPairData anf#79 anf#82 in
     let anf#84 : list (pair Main.Token Main.Token) = mkCons anf#83 (con (list (pair data data)) []) in
     let anf#85 : Map Main.Token Main.Token = mapData anf#84 in
-    let anf#89 : Data = iData 1 in
-    let anf#90 : list Data = mkCons anf#89 (con (list data) []) in
-    let anf#91 : Data = constrData 0 anf#90 in
-    let anf#94 : Data = iData 2 in
-    let anf#95 : list Data = mkCons anf#94 (con (list data) []) in
-    let anf#96 : Data = constrData 0 anf#95 in
-    let anf#97 : pair Data Data = mkPairData anf#91 anf#96 in
-    let anf#98 : list (pair Data Data) = mkCons anf#97 (con (list (pair data data)) []) in
-    let anf#99 : Data = mapData anf#98 in
-    equalsData anf#85 anf#99
+    equalsData anf#85 (con data (Map [(Constr 0 [I 1], Constr 0 [I 2])]))
     False -> false
   False -> false in
-let anf#103 : Data = iData 42 in
-let anf#104 : list Data = mkCons anf#103 (con (list data) []) in
-let anf#105 : Data = constrData 0 anf#104 in
-let anf#106 : list Data = mkCons anf#105 (con (list data) []) in
-let anf#107 : Data = listData anf#106 in
-let anf#108 : bool = equalsData wrapped#31 anf#107 in
+let anf#108 : bool = equalsData wrapped#31 (con data (List [Constr 0 [I 42]])) in
 case@Bool anf#108 of
   True -> check#45
   False -> false
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_69
-    [(lam partial_70
+  [(lam builtin_28
+    [(lam partial_29
       [(lam fromInt_1
         [(lam anf_2
           [(lam anf_3
@@ -179,96 +156,55 @@ case@Bool anf#108 of
                     [(lam anf_8
                       [(lam anf_9
                         [(lam anf_10
-                          [(lam anf_11
-                            [(lam anf_12
-                              [(lam anf_13
-                                [(lam check_46
-                                  [(lam anf_47
-                                    [(lam anf_48
-                                      [(lam anf_56
-                                        [(lam anf_57
-                                          [(lam anf_58
-                                            [(lam anf_68 (case anf_68 (con bool False) check_46))
-                                              [[(builtin equalsData) wrapped_6] anf_58]])
-                                            [(builtin listData) anf_57]])
-                                          [[builtin_69 anf_56] (con (list data) [])]])
-                                        [partial_70 anf_48]])
-                                      [[builtin_69 anf_47] (con (list data) [])]])
-                                    [(builtin iData) (con integer 42)]])
-                                  (case
-                                    anf_13
-                                    (con bool False)
+                          [(lam check_26
+                            [(lam anf_27 (case anf_27 (con bool False) check_26))
+                              [[(builtin equalsData) wrapped_6] (con data (List [Constr 0 [I 42]]))]])
+                            (case
+                              anf_10
+                              (con bool False)
+                              [(lam anf_11
+                                [(lam anf_12
+                                  [(lam anf_13
                                     [(lam anf_14
                                       [(lam anf_15
                                         [(lam anf_16
-                                          [(lam anf_17
-                                            [(lam anf_18
-                                              [(lam anf_19
-                                                [(lam anf_20
-                                                  [(lam anf_21
-                                                    [(lam anf_22
-                                                      [(lam anf_23
-                                                        [(lam anf_24
-                                                          (case
-                                                            anf_24
-                                                            (con bool False)
+                                          (case
+                                            anf_16
+                                            (con bool False)
+                                            [(lam anf_17
+                                              [(lam anf_18
+                                                [(lam anf_19
+                                                  [(lam anf_20
+                                                    [(lam anf_21
+                                                      [(lam anf_22
+                                                        [(lam anf_23
+                                                          [(lam anf_24
                                                             [(lam anf_25
-                                                              [(lam anf_26
-                                                                [(lam anf_27
-                                                                  [(lam anf_28
-                                                                    [(lam anf_30
-                                                                      [(lam anf_32
-                                                                        [(lam anf_33
-                                                                          [(lam anf_34
-                                                                            [(lam anf_35
-                                                                              [(lam anf_36
-                                                                                [(lam anf_37
-                                                                                  [(lam anf_38
-                                                                                    [(lam anf_39
-                                                                                      [(lam anf_40
-                                                                                        [(lam anf_41
-                                                                                          [(lam anf_42
-                                                                                            [(lam anf_43
-                                                                                              [(lam anf_44 [[(builtin equalsData) anf_35] anf_44]) [(builtin mapData) anf_43]])
-                                                                                              [[builtin_69 anf_42] (con (list (pair data data)) [])]])
-                                                                                            [[(builtin mkPairData) anf_38] anf_41]])
-                                                                                          [partial_70 anf_40]])
-                                                                                        [[builtin_69 anf_39] (con (list data) [])]])
-                                                                                      [(builtin iData) (con integer 2)]])
-                                                                                    [partial_70 anf_37]])
-                                                                                  [[builtin_69 anf_36] (con (list data) [])]])
-                                                                                [(builtin iData) (con integer 1)]])
-                                                                              [(builtin mapData) anf_34]])
-                                                                            [[builtin_69 anf_33] (con (list (pair data data)) [])]])
-                                                                          [[(builtin mkPairData) anf_27] anf_32]])
-                                                                        [partial_70 anf_30]])
-                                                                      [[builtin_69 anf_28] (con (list data) [])]])
-                                                                    [fromInt_1 (con integer 2)]])
-                                                                  [partial_70 anf_26]])
-                                                                [[builtin_69 anf_25] (con (list data) [])]])
-                                                              [fromInt_1 (con integer 1)]]))
-                                                          [[(builtin equalsData) anf_18] anf_23]])
-                                                        [(builtin listData) anf_22]])
-                                                      [[builtin_69 anf_21] (con (list data) [])]])
-                                                    [partial_70 anf_20]])
-                                                  [[builtin_69 anf_19] (con (list data) [])]])
-                                                [(builtin iData) (con integer 42)]])
-                                              [(builtin listData) anf_17]])
-                                            [[builtin_69 anf_16] (con (list data) [])]])
-                                          [partial_70 anf_15]])
-                                        [[builtin_69 anf_14] (con (list data) [])]])
-                                      [fromInt_1 (con integer 42)]])])
-                                [[(builtin equalsData) anf_9] anf_12]])
-                              [partial_70 anf_11]])
-                            [[builtin_69 anf_10] (con (list data) [])]])
-                          [(builtin iData) (con integer 42)]])
-                        [partial_70 anf_8]])
-                      [[builtin_69 anf_7] (con (list data) [])]])
+                                                              [[(builtin equalsData) anf_25]
+                                                                (con data (Map [(Constr 0 [I 1], Constr 0 [I 2])]))])
+                                                              [(builtin mapData) anf_24]])
+                                                            [[builtin_28 anf_23] (con (list (pair data data)) [])]])
+                                                          [[(builtin mkPairData) anf_19] anf_22]])
+                                                        [partial_29 anf_21]])
+                                                      [[builtin_28 anf_20] (con (list data) [])]])
+                                                    [fromInt_1 (con integer 2)]])
+                                                  [partial_29 anf_18]])
+                                                [[builtin_28 anf_17] (con (list data) [])]])
+                                              [fromInt_1 (con integer 1)]]))
+                                          [[(builtin equalsData) anf_15] (con data (List [Constr 0 [I 42]]))]])
+                                        [(builtin listData) anf_14]])
+                                      [[builtin_28 anf_13] (con (list data) [])]])
+                                    [partial_29 anf_12]])
+                                  [[builtin_28 anf_11] (con (list data) [])]])
+                                [fromInt_1 (con integer 42)]])])
+                          [[(builtin equalsData) anf_9] (con data (Constr 0 [I 42]))]])
+                        [partial_29 anf_8]])
+                      [[builtin_28 anf_7] (con (list data) [])]])
                     [fromInt_1 (con integer 42)]])
                   [(builtin listData) anf_5]])
-                [[builtin_69 anf_4] (con (list data) [])]])
-              [partial_70 anf_3]])
-            [[builtin_69 anf_2] (con (list data) [])]])
+                [[builtin_28 anf_4] (con (list data) [])]])
+              [partial_29 anf_3]])
+            [[builtin_28 anf_2] (con (list data) [])]])
           [fromInt_1 (con integer 42)]])
         (builtin iData)])
       [(builtin constrData) (con integer 0)]])

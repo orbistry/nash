@@ -7,8 +7,10 @@ are historical: they used `08f0831f` before the post-ANF placement correction.
 ## Production integration — 5 October 2026
 
 `optimizer::optimize_with` now calls the private codegen `constant_fold` pass after
-known-case cleanup. The pass folds constants and runs cleanup until stable under
-one 128-attempt allowance, without another ANF pass. Evaluation and Flat sizing
+known-case cleanup. The pass folds constants and runs cleanup until neither changes
+Core, without a total attempt cap or another ANF pass. The assistant-added
+128-attempt restriction was not an approved keep decision and was removed on
+5 October 2026. Evaluation and Flat sizing
 use O0 assembly; explicit comptime retains its original policy. The old public
 trial entrypoint and `constant-trial` command are removed.
 
@@ -50,7 +52,7 @@ cargo run --locked --manifest-path tools/optimizer-perf/Cargo.toml -- measure
 cargo run --locked --manifest-path tools/optimizer-perf/Cargo.toml -- check
 ```
 
-## Rewrite and limits
+## Historical rewrite and limits
 
 `nash_ir::constant_fold::reduce` calls a supplied evaluator for exactly saturated
 builtins with literal arguments, including aliases of literal bindings. The IR
@@ -58,8 +60,9 @@ has no dependency on codegen. It retains original strict bindings for cleanup,
 preserves the outer type view, and requires scoped, globally unique names.
 
 The original `nash_codegen::constant_trial` started with accepted O1 and repeated folding and
-existing ANF cleanup while the tree changes. It never repeats ANF. Each invocation
-allows 128 evaluation attempts, including failures. Each call gets 1,000,000 CPU
+existing ANF cleanup while the tree changes. It never repeated ANF. That historical
+trial imposed 128 evaluation attempts per invocation, including failures; this
+unapproved total cap is no longer in production. Each historical trial call got 1,000,000 CPU
 and 10,000 memory units. Input/output preflight allows at most 4,096 payload bytes,
 1,024 nodes and depth 64 across constants, Data and type annotations. This runs
 before recursive runtime costing and Flat encoding. List/pair payloads must
@@ -69,7 +72,7 @@ The trial covers integer arithmetic/comparisons, byte append/slice/length and
 comparisons, string append/equality, UTF-8 conversion, list/pair operations, and
 selected Data construction/decoding/equality/serialization. It excludes Trace,
 cryptography, version-sensitive ConsByteString, panic-prone IndexByteString and
-ConstrData, and newer array/value/bit operations. The exact allowlist is in
+ConstrData, and newer array/value/bit operations. The historical allowlist was in
 `crates/nash-codegen/src/constant_fold.rs`.
 
 A failed, unsupported, over-budget or oversized evaluation leaves the original
@@ -106,10 +109,67 @@ integration validation is recorded below.
 
 ## Integration validation
 
-The final full workspace run passes 3,834 tests. Root and performance-workspace
+The initial integration full workspace run passed 3,834 tests. Root and performance-workspace
 strict Clippy pass, formatting checks pass, and the refreshed 148-case performance
 baseline matches. All 170 changed existing snapshots with O0/O1 sections retain
 identical unoptimized Core and UPLC. Added boundary fixtures verify that failures
-consume the shared attempt allowance across cleanup iterations and unsafe negative
-Data results remain runtime calls. A separate read-only review confirms there is
+consumed the then-present shared attempt allowance across cleanup iterations and
+unsafe negative Data results remained runtime calls. The attempt-cap fixture was
+subsequently replaced by fixed-point tests when that restriction was removed. A separate read-only review confirms there is
 no optimizer re-entry and ANF normalization still runs once.
+
+## Unbounded folding correction
+
+On 5 October 2026, the user required optimization to continue until unchanged.
+The assistant-added attempt, per-call CPU/memory, constant byte/node/depth,
+builtin allowlist and Flat no-growth restrictions have all been removed from
+production. All pure builtin calls with valid constants are attempted using the
+runtime directly with zero costs. Errors, effects and unrepresentable literals
+remain at runtime. Unused-parameter removal repeats with folding and cleanup,
+including parameters exposed by later branch simplification. ANF still runs once.
+Ordinary evaluation and explicit comptime keep their existing budget semantics.
+
+### Unbounded folding measurements
+
+Compared with the previous 194-case baseline, all O0 measurements, O1 results
+and traces are unchanged. Twenty-two cases improve CPU and memory; six increase
+Flat bytes after removal of the growth gate. The other 172 cases are unchanged.
+These costs are Plutus V3 model units, not compiler wall time or host memory.
+
+| Fixture | CPU | Memory | Flat bytes |
+| --- | ---: | ---: | ---: |
+| Workloads.dataMatch (fixtures/Workloads.nash) | 111399 → 16100 | 732 → 200 | 11 → 6 |
+| Workloads.decoding (fixtures/Workloads.nash) | 878161 → 16100 | 4392 → 200 | 45 → 6 |
+| Workloads.validationPass (fixtures/Workloads.nash) | 111399 → 16100 | 732 → 200 | 10 → 5 |
+| Workloads.validationFail (fixtures/Workloads.nash) | 74897 → 59598 | 164 → 132 | 36 → 30 |
+| representation cancellation: integer_direct | 164143 → 16100 | 964 → 200 | 12 → 6 |
+| representation cancellation: integer_decoded | 111399 → 16100 | 732 → 200 | 11 → 6 |
+| representation cancellation: integer_reverse | 63399 → 16100 | 432 → 200 | 8 → 9 |
+| representation cancellation: integer_oversaturated | 36143 → 100 | 164 → 100 | 17 → 9 |
+| representation cancellation: integer_partial | 164143 → 68844 | 964 → 432 | 12 → 11 |
+| representation cancellation: map_direct | 72723 → 16100 | 432 → 200 | 13 → 17 |
+| representation cancellation: map_decoded | 268969 → 16100 | 1264 → 200 | 20 → 17 |
+| representation cancellation: map_reverse | 220969 → 16100 | 964 → 200 | 17 → 11 |
+| representation cancellation: map_oversaturated | 24723 → 100 | 132 → 100 | 18 → 19 |
+| representation cancellation: constructor_tag | 254839 → 16100 | 1464 → 200 | 22 → 6 |
+| representation cancellation: constructor_fields | 302839 → 16100 | 1764 → 200 | 24 → 10 |
+| representation cancellation: constructor_rebuild | 254839 → 16100 | 1464 → 200 | 22 → 13 |
+| constant folding: expanding_data_list | 74033 → 16100 | 432 → 200 | 42 → 126 |
+| constant folding: integer_data | 63399 → 16100 | 432 → 200 | 8 → 9 |
+| constant folding: data_equal | 1114643 → 16100 | 601 → 200 | 16 → 5 |
+| constant folding: serialise_data | 2070166 → 16100 | 410 → 200 | 11 → 9 |
+| constant folding: unsupported_hash | 341340 → 16100 | 404 → 200 | 11 → 40 |
+| constant folding: large_input | 169849 → 16100 | 1113 → 200 | 4127 → 4121 |
+
+### Correction validation
+
+All 3,862 workspace nextest tests pass. Root and isolated performance-workspace
+strict Clippy pass; formatting and whitespace checks pass. All 194 reviewed
+performance cases match the refreshed baseline. All 133 changed existing
+snapshots with O0/O1 sections retain identical unoptimized Core and UPLC.
+Tests cover more than 128 folds, 5,000-byte inputs and growing outputs, metadata
+deeper than 64, containers larger than 1,024 nodes, and direct evaluation of a
+200,000-character result without a memory budget. The signature regression now
+reduces to 42 in the first invocation and remains unchanged in the second.
+Huge DropList inputs are checked through the unbudgeted helper; ordinary runtime
+cost arithmetic still has its pre-existing overflow for such extreme inputs.

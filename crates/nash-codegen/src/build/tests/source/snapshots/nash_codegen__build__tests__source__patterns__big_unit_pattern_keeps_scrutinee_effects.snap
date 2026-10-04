@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 865
 description: "module Main exposing (..)\nimport Unit\nconsume : Unit.Unit -> unit\nconsume value = case value of\n    Unit.Unit -> ()\nmain : unit\nmain = consume (trace \"unit input\" Unit.Unit)\n"
 ---
 --- unoptimized Core
@@ -27,15 +26,13 @@ main#1
       (lam value_8 value_8)])
     (con string "unit input")])
 --- optimized Core
-let anf#20 : nash/base:Unit.Unit = trace "unit input" in constrData 0 (con (list data) []) in
+let anf#20 : nash/base:Unit.Unit = trace "unit input" in (con data (Constr 0 [])) in
 ()
 --- optimized UPLC
 (program 1.1.0
   [(lam builtin_2
     [(lam anf_1 (con unit ()))
-      (force
-        [[builtin_2 (con string "unit input")]
-          (delay [[(builtin constrData) (con integer 0)] (con (list data) [])])])])
+      (force [[builtin_2 (con string "unit input")] (delay (con data (Constr 0 [])))])])
     (force (builtin trace))])
 --- result
 (con unit ())

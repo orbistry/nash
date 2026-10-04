@@ -125,9 +125,7 @@ let anf#69 : list Data = mkCons anf#76 (con (list data) []) in
 let anf#78 : Data = constrData 0 anf#69 in
 let anf#74 : list Data = mkCons anf#78 (con (list data) []) in
 let anf#79 : Main.Datum = constrData 1 anf#74 in
-let anf#80 : Main.Option Bytes = constrData 0 (con (list data) []) in
-let anf#81 : list Data = mkCons anf#80 (con (list data) []) in
-let anf#82 : list Data = mkCons anf#79 anf#81 in
+let anf#82 : list Data = mkCons anf#79 (con (list data) [(Constr 0 [])]) in
 let anf#83 : list Data = mkCons anf#73 anf#82 in
 let anf#84 : list Data = mkCons anf#72 anf#83 in
 let prevOutput#54 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData anf#84 in
@@ -138,17 +136,15 @@ let projection#58 : list Data = unListData prevOutput#54 in
 case@List projection#58 of
   Cons head#59 tail#60 -> case@List tail#60 of
     Cons head#61 tail#62 -> case@List tail#62 of
-      Cons head#63 tail#64 -> let anf#87 : Main.Option Bytes = constrData 0 (con (list data) []) in
-      let anf#88 : list Data = mkCons anf#87 (con (list data) []) in
-      let anf#89 : list Data = mkCons head#63 anf#88 in
+      Cons head#63 tail#64 -> let anf#89 : list Data = mkCons head#63 (con (list data) [(Constr 0 [])]) in
       let anf#90 : list Data = mkCons head#61 anf#89 in
       let anf#91 : list Data = mkCons evaluated#57 anf#90 in
       let nextOutput#65 : { _0 : Main.Address, _1 : Map Bytes (Map Bytes Int), _2 : Main.Datum, _3 : Main.Option Bytes } = listData anf#91 in
       equalsData prevOutput#54 nextOutput#65
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_37
-    [(lam partial_38
+  [(lam builtin_32
+    [(lam partial_33
       [(lam fromBytes_1
         [(lam anf_2
           [(lam anf_3
@@ -165,61 +161,53 @@ case@List projection#58 of
                                 [(lam anf_14
                                   [(lam anf_15
                                     [(lam anf_16
-                                      [(lam anf_17
+                                      [(lam prevOutput_17
                                         [(lam anf_18
-                                          [(lam prevOutput_19
-                                            [(lam anf_20
-                                              [(lam anf_21
-                                                [(lam evaluated_22
-                                                  [(lam projection_23
-                                                    (case
-                                                      projection_23
-                                                      (lam head_24
-                                                        (lam tail_25
-                                                          (case
-                                                            tail_25
-                                                            (lam head_26
-                                                              (lam tail_27
-                                                                (case
-                                                                  tail_27
-                                                                  (lam head_28
-                                                                    (lam tail_29
+                                          [(lam anf_19
+                                            [(lam evaluated_20
+                                              [(lam projection_21
+                                                (case
+                                                  projection_21
+                                                  (lam head_22
+                                                    (lam tail_23
+                                                      (case
+                                                        tail_23
+                                                        (lam head_24
+                                                          (lam tail_25
+                                                            (case
+                                                              tail_25
+                                                              (lam head_26
+                                                                (lam tail_27
+                                                                  [(lam anf_28
+                                                                    [(lam anf_29
                                                                       [(lam anf_30
-                                                                        [(lam anf_31
-                                                                          [(lam anf_32
-                                                                            [(lam anf_33
-                                                                              [(lam anf_35
-                                                                                [(lam nextOutput_36 [[(builtin equalsData) prevOutput_19] nextOutput_36])
-                                                                                  [(builtin listData) anf_35]])
-                                                                                [[builtin_37 evaluated_22] anf_33]])
-                                                                              [[builtin_37 head_26] anf_32]])
-                                                                            [[builtin_37 head_28] anf_31]])
-                                                                          [[builtin_37 anf_30] (con (list data) [])]])
-                                                                        [partial_38 (con (list data) [])]]))
-                                                                  (error))))
-                                                            (error))))
-                                                      (error)))
-                                                    [(builtin unListData) prevOutput_19]])
-                                                  [partial_38 anf_21]])
-                                                [[builtin_37 anf_20] (con (list data) [])]])
-                                              [fromBytes_1 (con bytestring #7363726970745f686173685f30)]])
-                                            [(builtin listData) anf_18]])
-                                          [[builtin_37 anf_4] anf_17]])
-                                        [[builtin_37 anf_5] anf_16]])
-                                      [[builtin_37 anf_13] anf_15]])
-                                    [[builtin_37 anf_14] (con (list data) [])]])
-                                  [partial_38 (con (list data) [])]])
+                                                                        [(lam nextOutput_31 [[(builtin equalsData) prevOutput_17] nextOutput_31])
+                                                                          [(builtin listData) anf_30]])
+                                                                        [[builtin_32 evaluated_20] anf_29]])
+                                                                      [[builtin_32 head_24] anf_28]])
+                                                                    [[builtin_32 head_26] (con (list data) [(Constr 0 [])])]]))
+                                                              (error))))
+                                                        (error))))
+                                                  (error)))
+                                                [(builtin unListData) prevOutput_17]])
+                                              [partial_33 anf_19]])
+                                            [[builtin_32 anf_18] (con (list data) [])]])
+                                          [fromBytes_1 (con bytestring #7363726970745f686173685f30)]])
+                                        [(builtin listData) anf_16]])
+                                      [[builtin_32 anf_4] anf_15]])
+                                    [[builtin_32 anf_5] anf_14]])
+                                  [[builtin_32 anf_13] (con (list data) [(Constr 0 [])])]])
                                 [[(builtin constrData) (con integer 1)] anf_12]])
-                              [[builtin_37 anf_11] (con (list data) [])]])
-                            [partial_38 anf_10]])
-                          [[builtin_37 anf_6] (con (list data) [])]])
+                              [[builtin_32 anf_11] (con (list data) [])]])
+                            [partial_33 anf_10]])
+                          [[builtin_32 anf_6] (con (list data) [])]])
                         [(builtin unConstrData) anf_8]])
-                      [partial_38 anf_7]])
-                    [[builtin_37 anf_6] (con (list data) [])]])
+                      [partial_33 anf_7]])
+                    [[builtin_32 anf_6] (con (list data) [])]])
                   [(builtin iData) (con integer 3)]])
                 [(builtin mapData) (con (list (pair data data)) [])]])
-              [partial_38 anf_3]])
-            [[builtin_37 anf_2] (con (list data) [])]])
+              [partial_33 anf_3]])
+            [[builtin_32 anf_2] (con (list data) [])]])
           [fromBytes_1 (con bytestring #7363726970745f686173685f30)]])
         (builtin bData)])
       [(builtin constrData) (con integer 0)]])

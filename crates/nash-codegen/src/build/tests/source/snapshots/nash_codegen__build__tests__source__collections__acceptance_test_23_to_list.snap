@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/collections.rs
-assertion_line: 237
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData)\nimport Literal exposing (..)\nimport Eq exposing (..)\ntype assocList = AssocList { inner : list (pair Bytes Int) }\nimpl Eq assocList where\n    eq left right = equalsData (toData (mapData left.inner)) (toData (mapData right.inner))\nnew = AssocList { inner = [] }\ntoList : assocList -> list (pair Bytes Int)\ntoList m = m.inner\ninsert : assocList -> bytes -> int -> assocList\ninsert m k v = AssocList { inner = (doInsert m.inner k v) }\ndoInsert elems k v =\n    case elems of\n        [] -> [mkPairData (bData k) (iData v)]\n        entry :: rest ->\n            let\n                k2 = unBData (fstPair entry)\n                v2 = unIData (sndPair entry)\n            in\n            if eq k k2 then mkCons (mkPairData (bData k) (iData v)) rest\n            else mkCons (mkPairData (bData k2) (iData v2)) (doInsert rest k v)\nfixture1 = insert (insert new \"foo\" 42) \"bar\" 14\nmain = equalsData (toData (mapData (toList fixture1))) (toData (mapData [mkPairData (bData \"foo\") (iData 42), mkPairData (bData \"bar\") (iData 14)]))\n"
 ---
 --- unoptimized Core
@@ -153,21 +152,19 @@ let anf#92 : list (pair Bytes Int) = field@0/1 fixture1#67 in
 let anf#93 : Map Bytes Int = mapData anf#92 in
 let anf#95 : bytes = fromString#42 message#35 in
 let anf#96 : Bytes = bData anf#95 in
-let anf#98 : Int = iData 42 in
-let anf#99 : pair Bytes Int = mkPairData anf#96 anf#98 in
+let anf#99 : pair Bytes Int = mkPairData anf#96 (con data (I 42)) in
 let anf#100 : bytes = fromString#42 message#36 in
 let anf#101 : Bytes = bData anf#100 in
-let anf#103 : Int = iData 14 in
-let anf#104 : pair Bytes Int = mkPairData anf#101 anf#103 in
+let anf#104 : pair Bytes Int = mkPairData anf#101 (con data (I 14)) in
 let anf#105 : list (pair Bytes Int) = mkCons anf#104 (con (list (pair data data)) []) in
 let anf#106 : list (pair Bytes Int) = mkCons anf#99 anf#105 in
 let anf#107 : Map Bytes Int = mapData anf#106 in
 equalsData anf#93 anf#107
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_92
-    [(lam builtin_94
-      [(lam builtin_95
+  [(lam builtin_69
+    [(lam builtin_71
+      [(lam builtin_72
         [(lam message_3
           [(lam message_4
             [(lam fromString_5
@@ -191,21 +188,17 @@ equalsData anf#93 anf#107
                                                 [(lam anf_54
                                                   [(lam anf_63
                                                     [(lam anf_65
-                                                      [(lam anf_68
-                                                        [(lam anf_86
-                                                          [(lam anf_91 [[(builtin equalsData) anf_46] anf_91]) [(builtin mapData) anf_86]])
-                                                          [[builtin_92 anf_50] anf_68]])
-                                                        [[builtin_92 anf_65] (con (list (pair data data)) [])]])
-                                                      [[(builtin mkPairData) anf_54] anf_63]])
-                                                    [(builtin iData) (con integer 14)]])
-                                                  [(builtin bData) anf_53]])
-                                                [fromString_5 message_4]])
-                                              [[(builtin mkPairData) anf_48] anf_49]])
-                                            [(builtin iData) (con integer 42)]])
+                                                      [(lam anf_68 [[(builtin equalsData) anf_46] anf_68]) [(builtin mapData) anf_65]])
+                                                      [[builtin_69 anf_49] anf_63]])
+                                                    [[builtin_69 anf_54] (con (list (pair data data)) [])]])
+                                                  [[(builtin mkPairData) anf_53] (con data (I 14))]])
+                                                [(builtin bData) anf_50]])
+                                              [fromString_5 message_4]])
+                                            [[(builtin mkPairData) anf_48] (con data (I 42))]])
                                           [(builtin bData) anf_47]])
                                         [fromString_5 message_3]])
                                       [(builtin mapData) anf_45]])
-                                    (case fixture1_44 (lam generated_93 generated_93))])
+                                    (case fixture1_44 (lam generated_70 generated_70))])
                                   [anf_43 (con integer 14)]])
                                 [anf_40 anf_41]])
                               [fromString_5 message_4]])
@@ -237,28 +230,28 @@ equalsData anf#93 anf#107
                                                   [(lam anf_26
                                                     [(lam anf_27
                                                       [(lam anf_28
-                                                        [(lam anf_29 [[builtin_92 anf_28] anf_29]) [[self_11 self_11] field_17]])
+                                                        [(lam anf_29 [[builtin_69 anf_28] anf_29]) [[self_11 self_11] field_17]])
                                                         [[(builtin mkPairData) anf_26] anf_27]])
                                                       [(builtin iData) v2_19]])
                                                     [(builtin bData) k2_21]]
                                                   [(lam anf_23
                                                     [(lam anf_24
-                                                      [(lam anf_25 [[builtin_92 anf_25] field_17])
+                                                      [(lam anf_25 [[builtin_69 anf_25] field_17])
                                                         [[(builtin mkPairData) anf_23] anf_24]])
                                                       [(builtin iData) v_8]])
                                                     [(builtin bData) k_7]]))
                                                 [[(builtin equalsByteString) k_7] k2_21]])
                                               [(builtin unBData) projection_20]])
-                                            [builtin_94 field_16]])
+                                            [builtin_71 field_16]])
                                           [(builtin unIData) projection_18]])
-                                        [builtin_95 field_16]]))
+                                        [builtin_72 field_16]]))
                                   [(lam anf_13
                                     [(lam anf_14
-                                      [(lam anf_15 [[builtin_92 anf_15] (con (list (pair data data)) [])])
+                                      [(lam anf_15 [[builtin_69 anf_15] (con (list (pair data data)) [])])
                                         [[(builtin mkPairData) anf_13] anf_14]])
                                       [(builtin iData) v_8]])
                                     [(builtin bData) k_7]])))]])
-                        (case m_6 (lam generated_96 generated_96))])))])
+                        (case m_6 (lam generated_73 generated_73))])))])
               (builtin encodeUtf8)])
             (con string "bar")])
           (con string "foo")])

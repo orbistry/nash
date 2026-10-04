@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/builtins.rs
-assertion_line: 318
 description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Data exposing (toData, fromData)\ninput = List [List [I 1, I 2], List []]\ndecoded : List (List Int)\ndecoded = fromData input\nmain = equalsData (toData decoded) input\n"
 ---
 --- unoptimized Core
@@ -35,38 +34,9 @@ main#1
       (lam value_14 value_14)])
     (lam coerce_5 coerce_5)])
 --- optimized Core
-let anf#30 : Data = iData 1 in
-let anf#32 : Data = iData 2 in
-let anf#33 : list Data = mkCons anf#32 (con (list data) []) in
-let anf#34 : list Data = mkCons anf#30 anf#33 in
-let anf#35 : Data = listData anf#34 in
-let anf#36 : Data = listData (con (list data) []) in
-let anf#37 : list Data = mkCons anf#36 (con (list data) []) in
-let anf#38 : list Data = mkCons anf#35 anf#37 in
-let input#24 : Data = listData anf#38 in
-equalsData input#24 input#24
+true
 --- optimized UPLC
-(program 1.1.0
-  [(lam builtin_10
-    [(lam anf_1
-      [(lam anf_2
-        [(lam anf_3
-          [(lam anf_4
-            [(lam anf_5
-              [(lam anf_6
-                [(lam anf_7
-                  [(lam anf_8
-                    [(lam input_9 [[(builtin equalsData) input_9] input_9])
-                      [(builtin listData) anf_8]])
-                    [[builtin_10 anf_5] anf_7]])
-                  [[builtin_10 anf_6] (con (list data) [])]])
-                [(builtin listData) (con (list data) [])]])
-              [(builtin listData) anf_4]])
-            [[builtin_10 anf_1] anf_3]])
-          [[builtin_10 anf_2] (con (list data) [])]])
-        [(builtin iData) (con integer 2)]])
-      [(builtin iData) (con integer 1)]])
-    (force (builtin mkCons))])
+(program 1.1.0 (con bool True))
 --- result
 (con bool True)
 --- logs

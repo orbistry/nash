@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 878
 description: "module Main exposing (..)\ntype Box = Box Int Int\ntype Choice = First Box | Second Int | Third\nselect : Choice -> int\nselect value = case value of\n    First (Box first second) -> Builtin.addInteger (Builtin.unIData first) (Builtin.unIData second)\n    Second number -> Builtin.unIData number\n    Third -> 0\nmain : (int, int, int)\nmain = (select (First (Box 20 22)), select (Second 7), select Third)\n"
 ---
 --- unoptimized Core
@@ -122,13 +121,12 @@ let anf#69 : Int = fromInt#51 7 in
 let anf#68 : list Data = mkCons anf#69 (con (list data) []) in
 let anf#70 : Main.Choice = constrData 1 anf#68 in
 let anf#71 : int = select#50 anf#70 in
-let anf#72 : Main.Choice = constrData 2 (con (list data) []) in
-let anf#73 : int = select#50 anf#72 in
+let anf#73 : int = select#50 (con data (Constr 2 [])) in
 constr 0 anf#67 anf#71 anf#73
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_47
-    [(lam partial_48
+  [(lam builtin_46
+    [(lam partial_47
       [(lam select_18
         [(lam fromInt_19
           [(lam anf_20
@@ -143,18 +141,18 @@ constr 0 anf#67 anf#71 anf#73
                             [(lam anf_29
                               [(lam anf_30
                                 [(lam anf_32
-                                  [(lam anf_45 [(lam anf_46 (constr 0 anf_27 anf_32 anf_46)) [select_18 anf_45]])
-                                    [[(builtin constrData) (con integer 2)] (con (list data) [])]])
+                                  [(lam anf_45 (constr 0 anf_27 anf_32 anf_45))
+                                    [select_18 (con data (Constr 2 []))]])
                                   [select_18 anf_30]])
                                 [[(builtin constrData) (con integer 1)] anf_29]])
-                              [[builtin_47 anf_28] (con (list data) [])]])
+                              [[builtin_46 anf_28] (con (list data) [])]])
                             [fromInt_19 (con integer 7)]])
                           [select_18 anf_26]])
-                        [partial_48 anf_25]])
-                      [[builtin_47 anf_24] (con (list data) [])]])
-                    [partial_48 anf_23]])
-                  [[builtin_47 anf_20] anf_22]])
-                [[builtin_47 anf_21] (con (list data) [])]])
+                        [partial_47 anf_25]])
+                      [[builtin_46 anf_24] (con (list data) [])]])
+                    [partial_47 anf_23]])
+                  [[builtin_46 anf_20] anf_22]])
+                [[builtin_46 anf_21] (con (list data) [])]])
               [fromInt_19 (con integer 22)]])
             [fromInt_19 (con integer 20)]])
           (builtin iData)])

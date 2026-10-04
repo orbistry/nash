@@ -9,11 +9,9 @@ unIData (iData (unIData (iData 42)))
   [(builtin unIData)
     [(builtin iData) [(builtin unIData) [(builtin iData) (con integer 42)]]]])
 --- optimized Core
-let anf#1 : Data = iData 42 in
-unIData anf#1
+42
 --- optimized UPLC
-(program 1.1.0
-  [(lam anf_2 [(builtin unIData) anf_2]) [(builtin iData) (con integer 42)]])
+(program 1.1.0 (con integer 42))
 --- isolated pass
 --- core before
 unIData (iData (unIData (iData 42)))

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-codegen/src/build/tests/source/patterns.rs
-assertion_line: 558
 description: "validator module Main exposing (main)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\nimport Eq exposing (..)\ntype Void = Void\ntype A 'x = NoA | SomeA Void 'x\ntype B = B { something : Void }\ntype Option 'a = None | Some 'a\nmain : Option Data -> A B -> Data -> Data -> unit\nmain datum r outputRef transaction =\n    assert\n        (case r of\n            NoA -> False\n            SomeA _ (B something) -> eq something Void\n        )\n"
 ---
 --- unoptimized Core
@@ -81,14 +80,13 @@ case@Pair projection#31 of
         Cons field#36 fieldTail#37 -> let projection#38 : pair int (list Data) = unConstrData field#36 in
         case@Pair projection#38 of
           Pair tag#39 fields#40 -> case@List fields#40 of
-            Cons field#41 fieldTail#42 -> let anf#45 : Main.Void = constrData 0 (con (list data) []) in
-            equalsData field#41 anf#45 in
+            Cons field#41 fieldTail#42 -> equalsData field#41 (con data (Constr 0 [])) in
   case@Bool anf#46 of
     True -> ()
     False -> trace "assertion failed" in error
 --- optimized UPLC
 (program 1.1.0
-  [(lam builtin_19
+  [(lam builtin_18
     (lam datum_1
       (lam r_2
         (lam outputRef_3
@@ -98,10 +96,10 @@ case@Pair projection#31 of
                 projection_5
                 (lam tag_6
                   (lam fields_7
-                    [(lam anf_18
+                    [(lam anf_17
                       (case
-                        anf_18
-                        (force [[builtin_19 (con string "assertion failed")] (delay (error))])
+                        anf_17
+                        (force [[builtin_18 (con string "assertion failed")] (delay (error))])
                         (con unit ())))
                       (case
                         tag_6
@@ -122,9 +120,7 @@ case@Pair projection#31 of
                                             (case
                                               fields_14
                                               (lam field_15
-                                                (lam fieldTail_16
-                                                  [(lam anf_17 [[(builtin equalsData) field_15] anf_17])
-                                                    [[(builtin constrData) (con integer 0)] (con (list data) [])]]))
+                                                (lam fieldTail_16 [[(builtin equalsData) field_15] (con data (Constr 0 []))]))
                                               (error))))))
                                       [(builtin unConstrData) field_10]]))
                                 (error))))
