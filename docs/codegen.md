@@ -1027,5 +1027,8 @@ The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,
 `-O1` and `--optimize 0|1` override the owning project's integer `optimize: 0|1`.
 O0 retains ordinary lowering with only required recursion encoding. Explicit
 comptime evaluation remains O0, and enabled trace generation/order is independent
-of optimization level. No O2 or per-pass configuration is exposed. Runtime budget
+of optimization level for the currently implemented O0/O1 modes. Planned O2
+will automatically disable script traces while preserving success/failure and
+termination; see [Plan 15](../plans/15-o2-optimizer.md). O2 is not implemented yet,
+and no per-pass configuration is exposed. Runtime budget
 regression checks remain in the separate explicit performance workspace.
