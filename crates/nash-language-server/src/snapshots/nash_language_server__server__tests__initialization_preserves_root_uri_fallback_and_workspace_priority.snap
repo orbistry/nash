@@ -1,0 +1,11 @@
+---
+source: crates/nash-language-server/src/server.rs
+expression: output
+---
+absent folders: ["legacy"]
+empty folders: ["legacy"]
+unusable folders: ["legacy"]
+workspace folder overrides legacy root: ["first"]
+unusable legacy root: []
+multiple folders retain order: ["second", "first"]
+no roots clears previous initialization: []

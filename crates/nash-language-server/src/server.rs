@@ -118,3 +118,83 @@ impl LanguageServer for Server {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tower_lsp_server::LspService;
+    use tower_lsp_server::ls_types::WorkspaceFolder;
+
+    #[tokio::test]
+    #[allow(deprecated)]
+    async fn initialization_preserves_root_uri_fallback_and_workspace_priority() {
+        let temporary = tempfile::tempdir().unwrap();
+        let base = temporary.path().canonicalize().unwrap();
+        for name in ["legacy", "first", "second"] {
+            std::fs::create_dir(base.join(name)).unwrap();
+        }
+        let uri = |name: &str| {
+            Url::from_directory_path(base.join(name))
+                .unwrap()
+                .as_str()
+                .parse::<Uri>()
+                .unwrap()
+        };
+        let folder = |name: &str| WorkspaceFolder {
+            name: name.to_owned(),
+            uri: uri(name),
+        };
+        let invalid_uri: Uri = "https://example.invalid/workspace".parse().unwrap();
+        let invalid_folder = WorkspaceFolder {
+            name: "non-file".into(),
+            uri: invalid_uri.clone(),
+        };
+        let cases = [
+            ("absent folders", None, Some(uri("legacy"))),
+            ("empty folders", Some(vec![]), Some(uri("legacy"))),
+            (
+                "unusable folders",
+                Some(vec![invalid_folder.clone()]),
+                Some(uri("legacy")),
+            ),
+            (
+                "workspace folder overrides legacy root",
+                Some(vec![folder("first")]),
+                Some(uri("legacy")),
+            ),
+            ("unusable legacy root", None, Some(invalid_uri)),
+            (
+                "multiple folders retain order",
+                Some(vec![folder("second"), invalid_folder, folder("first")]),
+                Some(uri("legacy")),
+            ),
+            ("no roots clears previous initialization", None, None),
+        ];
+        let (service, _socket) = LspService::new(Server::new);
+        let mut output = String::new();
+        for (label, workspace_folders, root_uri) in cases {
+            service
+                .inner()
+                .initialize(InitializeParams {
+                    workspace_folders,
+                    root_uri,
+                    ..InitializeParams::default()
+                })
+                .await
+                .expect("initialization succeeds");
+            let workspace = service.inner().workspace.lock().await;
+            let roots: Vec<_> = workspace
+                .roots
+                .iter()
+                .map(|path| {
+                    path.strip_prefix(&base)
+                        .unwrap()
+                        .to_string_lossy()
+                        .into_owned()
+                })
+                .collect();
+            output.push_str(&format!("{label}: {roots:?}\n"));
+        }
+        insta::assert_snapshot!(output);
+    }
+}

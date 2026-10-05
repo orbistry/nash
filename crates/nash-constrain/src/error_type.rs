@@ -41,9 +41,9 @@ pub enum ErrorType<'a> {
     },
 }
 
-pub fn iterated_dealias<'a>(tipe: &'a ErrorType<'a>) -> &'a ErrorType<'a> {
-    match tipe {
-        ErrorType::Alias { real, .. } => iterated_dealias(real),
-        _ => tipe,
+pub fn iterated_dealias<'a>(mut tipe: &'a ErrorType<'a>) -> &'a ErrorType<'a> {
+    while let ErrorType::Alias { real, .. } = tipe {
+        tipe = real;
     }
+    tipe
 }

@@ -375,19 +375,6 @@ impl<'a> Grounder<'a, '_> {
         depth: usize,
     ) -> Result<Pred<'a>, Error<'a>> {
         let (trait_, args) = match evidence {
-            Evidence::Repr { trait_, typ } => {
-                let super_ = trait_
-                    .supers()
-                    .get(usize::from(index))
-                    .ok_or(Error::SuperIndex {
-                        trait_: trait_.qualified(),
-                        index,
-                    })?;
-                return Ok(Pred::Implied {
-                    trait_: super_.qualified(),
-                    args: self.arena.alloc_slice_copy(&[*typ]),
-                });
-            }
             Evidence::StructuralEq { typ } => (primitives::eq_trait(), vec![*typ]),
             Evidence::ReflexiveLift { typ } => (primitives::lift_trait(), vec![*typ, *typ]),
             Evidence::Impl {
@@ -401,8 +388,10 @@ impl<'a> Grounder<'a, '_> {
                     .collect::<Result<Vec<_>, _>>()?;
                 (impl_.key.trait_, args)
             }
-            Evidence::Given { .. } | Evidence::Super { .. } => {
-                return Err(Error::UnresolvedEvidence);
+            // `one` has resolved givens/projections and handled representation
+            // superclasses directly before calling this private helper.
+            Evidence::Repr { .. } | Evidence::Given { .. } | Evidence::Super { .. } => {
+                unreachable!("superclass predicate requires resolved non-representation evidence")
             }
         };
         let info = self

@@ -86,3 +86,21 @@ alias. Removed ignored private parameters in config parsing, import resolution,
 and destructuring projection. Actual source-cache invalidation remains covered
 by its existing regression. The language server still supports `root_uri` when
 workspace folders are absent.
+
+Error-type alias lookup (`iterated_dealias`) is a loop: Elm's version is tail
+recursive.
+
+Removed duplicate representation-superclass handling from the private evidence
+helper: its sole caller has already handled representation evidence and
+resolved givens/projections. Public evidence grounding and identity validation
+retain their malformed-input checks. Constructor argument/index validation in
+the public decision-tree API remains necessary for callers that supply raw
+canonical ASTs; source canonicalization alone does not guarantee those inputs.
+Evidence identity validation also remains shared: root compilation, eager
+specialization, and some method paths resolve evidence directly instead of
+passing it through the grounding helper.
+
+LSP initialization has an explicit regression for absent, empty, and unusable
+workspace folders falling back to `root_uri`, valid folders taking priority,
+multiple-folder ordering, unusable legacy URIs, and clearing prior roots when
+none are provided. Supported editor behavior is unchanged.
