@@ -134,7 +134,7 @@ impl<'a> Engine<'a, '_, '_> {
                 Binding::Template { id, projection } => {
                     let binder = self.use_template(id, node, ctx)?;
                     if let Some(name) = projection {
-                        self.destruct_projection(id, name, binder, node, ctx)?
+                        self.destruct_projection(id, name, binder)?
                     } else {
                         self.ir.var(binder.name, binder.ty)
                     }

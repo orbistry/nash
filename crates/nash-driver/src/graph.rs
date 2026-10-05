@@ -195,33 +195,6 @@ impl DepGraph {
         }
         levels
     }
-
-    /// Check if module A depends on module B (directly or transitively).
-    pub fn depends_on(&self, a: &Url, b: &Url) -> bool {
-        let mut visited = HashSet::new();
-        self.depends_on_dfs(a, b, &mut visited)
-    }
-
-    fn depends_on_dfs(&self, current: &Url, target: &Url, visited: &mut HashSet<Url>) -> bool {
-        if current == target {
-            return true;
-        }
-
-        if visited.contains(current) {
-            return false;
-        }
-        visited.insert(current.clone());
-
-        if let Some(imports) = self.edges.get(current) {
-            for import in imports {
-                if self.depends_on_dfs(import, target, visited) {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
 }
 
 /// Extract a module name from a file URI for display.

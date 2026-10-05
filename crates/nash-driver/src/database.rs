@@ -16,19 +16,12 @@ use crate::source::FileSource;
 /// The database provides:
 /// - File reading via a `FileSource` abstraction
 /// - Caching of source text
-/// - Dependency tracking for invalidation
 pub struct Database {
     /// File source for reading/writing files.
     source: Arc<dyn FileSource>,
 
     /// Cached source text keyed by URI.
     files: HashMap<Url, String>,
-
-    /// Import relationships: module -> modules it imports.
-    imports: HashMap<Url, Vec<Url>>,
-
-    /// Reverse dependencies: module -> modules that import it.
-    reverse_deps: HashMap<Url, Vec<Url>>,
 }
 
 impl Database {
@@ -37,8 +30,6 @@ impl Database {
         Database {
             source: Arc::new(crate::bundled_base::BundledSource(source)),
             files: HashMap::new(),
-            imports: HashMap::new(),
-            reverse_deps: HashMap::new(),
         }
     }
 
@@ -102,62 +93,11 @@ impl Database {
         self.source.write(uri, content).await
     }
 
-    /// Record that `module` imports `imported`.
-    pub fn record_import(&mut self, module: &Url, imported: Url) {
-        self.imports
-            .entry(module.clone())
-            .or_default()
-            .push(imported.clone());
-
-        self.reverse_deps
-            .entry(imported)
-            .or_default()
-            .push(module.clone());
-    }
-
-    /// Get modules that `module` imports.
-    pub fn imports_of(&self, module: &Url) -> &[Url] {
-        self.imports
-            .get(module)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
-    }
-
-    /// Get modules that import `module`.
-    pub fn importers_of(&self, module: &Url) -> &[Url] {
-        self.reverse_deps
-            .get(module)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
-    }
-
     /// Invalidate a file's cached content.
     ///
     /// This removes the file from the cache, forcing a re-read on next access.
-    /// It does NOT cascade to reverse dependencies - use `invalidate_cascade` for that.
     pub fn invalidate(&mut self, uri: &Url) {
         self.files.remove(uri);
-        self.imports.remove(uri);
-    }
-
-    /// Invalidate a file and all files that depend on it.
-    pub fn invalidate_cascade(&mut self, uri: &Url) {
-        // Get all reverse deps before mutating
-        let dependents: Vec<Url> = self.importers_of(uri).to_vec();
-
-        // Invalidate this file
-        self.invalidate(uri);
-
-        // Recursively invalidate dependents
-        for dep in dependents {
-            self.invalidate_cascade(&dep);
-        }
-    }
-
-    /// Clear the import graph (useful when rebuilding from scratch).
-    pub fn clear_imports(&mut self) {
-        self.imports.clear();
-        self.reverse_deps.clear();
     }
 
     /// Get the underlying file source (for operations that bypass caching).
@@ -170,29 +110,6 @@ impl Database {
 mod tests {
     use super::*;
     use crate::source::InMemorySource;
-
-    #[tokio::test]
-    async fn test_database_imports() {
-        let mem = InMemorySource::new();
-        let mut db = Database::new(mem);
-
-        let main = Url::parse("file:///test/Main.nash").unwrap();
-        let utils = Url::parse("file:///test/Utils.nash").unwrap();
-        let helpers = Url::parse("file:///test/Helpers.nash").unwrap();
-
-        // Main imports Utils and Helpers
-        db.record_import(&main, utils.clone());
-        db.record_import(&main, helpers.clone());
-
-        // Check imports
-        assert_eq!(db.imports_of(&main).len(), 2);
-        assert!(db.imports_of(&main).contains(&utils));
-        assert!(db.imports_of(&main).contains(&helpers));
-
-        // Check reverse deps
-        assert_eq!(db.importers_of(&utils), std::slice::from_ref(&main));
-        assert_eq!(db.importers_of(&helpers), std::slice::from_ref(&main));
-    }
 
     #[tokio::test]
     async fn test_database_invalidation() {

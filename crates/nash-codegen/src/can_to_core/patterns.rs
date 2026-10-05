@@ -264,8 +264,6 @@ impl<'a> Engine<'a, '_, '_> {
         id: usize,
         name: &'a str,
         binder: Binder<'a>,
-        _node: NodeId,
-        _ctx: &Context<'a>,
     ) -> Result<&'a Core<'a>, Error<'a>> {
         let Source::Destruct { pattern, .. } = self.templates[id].source else {
             return Err(Error::InvalidConstructor);

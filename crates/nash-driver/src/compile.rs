@@ -621,7 +621,7 @@ fn scan_module(
                 .filter(|_| include_tests)
                 .flat_map(|tests| tests.imports.iter()),
         ) {
-            if let Some(uri) = resolve_import(import.import.value, current, known_modules)
+            if let Some(uri) = resolve_import(import.import.value, known_modules)
                 && !imports.contains(&uri)
             {
                 imports.push(uri);
@@ -646,7 +646,7 @@ fn scan_module(
 /// - Package dependencies
 /// - Source directory structure
 /// - Module naming conventions
-fn resolve_import(name: &str, _current: &Url, known_modules: &[Url]) -> Option<Url> {
+fn resolve_import(name: &str, known_modules: &[Url]) -> Option<Url> {
     let bundled = crate::bundled_base::uri(name);
     if known_modules.contains(&bundled) {
         return Some(bundled);

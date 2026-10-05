@@ -119,15 +119,6 @@ impl<'s> Source<'s> {
             .is_none_or(|c| !(c.is_alphanumeric() || c == '_'));
         boundary.then_some((row + 1, 1 + indent as Col))
     }
-
-    /// Elm's `nextLineStartsWithCloseCurly`.
-    pub fn next_line_starts_with_close_curly(&self, row: Row) -> Option<(Row, Col)> {
-        let line = self.line(row.checked_add(1)?)?;
-        let indent = line.bytes().take_while(|b| *b == b' ').count();
-        line[indent..]
-            .starts_with('}')
-            .then_some((row + 1, 1 + indent as Col))
-    }
 }
 
 /// Elm's `Next`.

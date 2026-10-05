@@ -388,7 +388,7 @@ fn parse_exposed_modules(
 ) -> Result<ExposedModules, ConfigError> {
     // Array = flat list
     if let Some(arr) = value.as_array() {
-        let modules = parse_string_array_inner(contents, path, arr, "exposedModules")?;
+        let modules = parse_string_array_inner(contents, path, arr)?;
         return Ok(ExposedModules::List(modules));
     }
 
@@ -420,14 +420,13 @@ fn parse_string_array(
     let arr = value.as_array().ok_or_else(|| {
         ConfigError::expected_array(path, field_name, position_of(contents, value.range()))
     })?;
-    parse_string_array_inner(contents, path, arr, field_name)
+    parse_string_array_inner(contents, path, arr)
 }
 
 fn parse_string_array_inner(
     contents: &str,
     path: &Path,
     arr: &Array,
-    _field_name: &str,
 ) -> Result<Vec<String>, ConfigError> {
     let mut result = Vec::new();
 

@@ -147,10 +147,6 @@ pub struct Mark(u32);
 
 pub const NO_MARK: Mark = Mark(2);
 pub const OCCURS_MARK: Mark = Mark(1);
-/// Reserved in Elm for `getVarNames` visit tracking. Nash's `get_var_names`
-/// uses a per-call seen set instead (see `nash-solve/src/annotation.rs`),
-/// but the mark stays reserved so the mark space matches Elm's.
-pub const GET_VAR_NAMES_MARK: Mark = Mark(0);
 
 impl Mark {
     pub fn next(self) -> Mark {
@@ -222,14 +218,4 @@ pub fn mk_flex_var<'a>(uf: &mut UnionFind<'a>) -> Variable {
 
 pub const fn unnamed_flex_var<'a>() -> Content<'a> {
     Content::FlexVar(None)
-}
-
-// MAKE NAMED VARIABLES
-
-pub fn name_to_flex<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
-    uf.fresh(make_descriptor(Content::FlexVar(Some(name))))
-}
-
-pub fn name_to_rigid<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
-    uf.fresh(make_descriptor(Content::RigidVar(name)))
 }

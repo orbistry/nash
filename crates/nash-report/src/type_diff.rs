@@ -165,12 +165,6 @@ fn builtin(home: ModuleName<'_>, name: &str, want: &str) -> bool {
 pub fn is_bool(h: ModuleName<'_>, n: &str) -> bool {
     builtin(h, n, "bool")
 }
-pub fn is_int(h: ModuleName<'_>, n: &str) -> bool {
-    builtin(h, n, "int")
-}
-pub fn is_string(h: ModuleName<'_>, n: &str) -> bool {
-    builtin(h, n, "string")
-}
 pub fn is_list(h: ModuleName<'_>, n: &str) -> bool {
     builtin(h, n, "list")
 }

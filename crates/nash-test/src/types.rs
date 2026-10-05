@@ -78,7 +78,6 @@ pub enum Failure {
     NoCounterexample,
     InvalidProgram { message: String },
 }
-pub type FailureKind = Failure;
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssertReport {
     pub site: AssertSite,

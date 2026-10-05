@@ -77,3 +77,12 @@ is not evidence that it ran on an async executor thread.
 
 Do not replace these checks with a global test-only `RUST_MIN_STACK` setting:
 that would hide the production stack boundary.
+
+## Maintenance cleanup — 5 October
+
+Removed repository-unused database dependency bookkeeping and recursive
+`DepGraph::depends_on`, unused reporting/type helpers, and the `FailureKind`
+alias. Removed ignored private parameters in config parsing, import resolution,
+and destructuring projection. Actual source-cache invalidation remains covered
+by its existing regression. The language server still supports `root_uri` when
+workspace folders are absent.

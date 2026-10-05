@@ -55,10 +55,6 @@ impl Doc {
         Doc::Text(s)
     }
 
-    pub fn from_int(n: impl std::fmt::Display) -> Doc {
-        Doc::text(n.to_string())
-    }
-
     /// `a <> b`.
     pub fn cat(docs: impl IntoIterator<Item = Doc>) -> Doc {
         Doc::Cat(docs.into_iter().collect())
@@ -160,9 +156,6 @@ impl Doc {
     pub fn cyan(self) -> Doc {
         self.color(BaseColor::Cyan, true)
     }
-    pub fn dullcyan(self) -> Doc {
-        self.color(BaseColor::Cyan, false)
-    }
     pub fn blue(self) -> Doc {
         self.color(BaseColor::Blue, true)
     }
@@ -197,9 +190,6 @@ impl Doc {
                 .chain(chunks),
         )
     }
-    pub fn to_simple_hint(message: &str) -> Doc {
-        Doc::to_fancy_hint(message.split_whitespace().map(Doc::text))
-    }
 
     /// `link word before fileName after`.
     pub fn link(word: &str, before: &str, file_name: &str, after: &str) -> Doc {
@@ -208,14 +198,6 @@ impl Doc {
                 .chain(before.split_whitespace().map(Doc::text))
                 .chain(std::iter::once(Doc::text(make_link(file_name))))
                 .chain(after.split_whitespace().map(Doc::text)),
-        )
-    }
-    pub fn fancy_link(word: &str, before: Vec<Doc>, file_name: &str, after: Vec<Doc>) -> Doc {
-        Doc::fill_sep(
-            std::iter::once(Doc::cat([Doc::text(word).underline(), Doc::text(":")]))
-                .chain(before)
-                .chain(std::iter::once(Doc::text(make_link(file_name))))
-                .chain(after),
         )
     }
     pub fn reflow_link(before: &str, file_name: &str, after: &str) -> Doc {
@@ -259,9 +241,6 @@ impl Doc {
 
 pub fn make_link(file_name: &str) -> String {
     format!("<https://nash-script.dev/hints/{file_name}>")
-}
-pub fn make_naked_link(file_name: &str) -> String {
-    format!("https://nash-script.dev/hints/{file_name}")
 }
 
 /// Elm `args`.
@@ -810,11 +789,6 @@ fn chunks(doc: &Doc, width: usize) -> Vec<Chunk> {
 }
 
 impl Doc {
-    /// Elm's `toLine`: disable optional wrapping, retaining explicit lines.
-    pub fn to_line(&self) -> String {
-        self.render(usize::MAX / 2, false)
-    }
-
     /// Elm's `encode`, including its case-sensitive color names.
     pub fn encode(&self) -> serde_json::Value {
         serde_json::Value::Array(self.chunks(80).into_iter().map(|chunk| match chunk {
