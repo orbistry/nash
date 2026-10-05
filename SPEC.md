@@ -73,7 +73,7 @@ Implementation plans (Plans 08, 09 and 10 are complete):
 
 - [ ] 14 Explicit Big constructor tags: preserve declared Data tags; little tags remain consecutive from zero — [plans/14-explicit-big-constructor-tags.md](plans/14-explicit-big-constructor-tags.md)
 
-- [ ] 15 Silent O2 and application regrouping: O2 automatically removes script traces while preserving success/failure and termination; trace-preserving candidates remain O1 — [plans/15-o2-optimizer.md](plans/15-o2-optimizer.md) (planned)
+- [ ] 15 Silent O2 and application regrouping: silent O2 implemented, including removal of failing/diverging trace messages; broader grouping/motion pending; trace-preserving candidates remain O1 — [plans/15-o2-optimizer.md](plans/15-o2-optimizer.md) (partial)
 
 Later: LSP features, web playground, package registry (pubgrub), TypeScript codegen.
 

@@ -43,3 +43,11 @@ pub fn optimize_with<'a>(b: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
     debug_assert_eq!(original_ty, core.ty);
     core
 }
+
+/// O2 uses the O1 pipeline after removing every Core trace operation.
+pub fn optimize_silent<'a>(
+    arena: &'a Arena,
+    core: &'a Core<'a>,
+) -> Result<&'a Core<'a>, crate::silent::Error> {
+    Ok(optimize(arena, crate::silent::erase(arena, core)?))
+}

@@ -1,0 +1,186 @@
+{
+  "source": {
+    "revision": "400a5f98e632f8889a79c363f252b7cc2d32089c",
+    "rows": [
+      {
+        "core": "letrec\n  loop#14 : int -> int [static []] = \\n#15 : int -> let anf#18 : bool = equalsInteger n#15 0 in\n  case@Bool anf#18 of\n    True -> 42\n    False -> trace \"step\" in let anf#21 : int = subtractInteger n#15 1 in\n    loop#14 anf#21\nin\nloop#14 3",
+        "measurement": {
+          "bytes": 53,
+          "cpu": 2451550,
+          "logs": [
+            "step",
+            "step",
+            "step"
+          ],
+          "memory": 11206,
+          "result": "(con integer 42)"
+        },
+        "mode": "O1 verbose",
+        "uplc": "[(lam builtin_9\n  [(lam loop_8 [loop_8 (con integer 3)])\n    [(lam self_3 [self_3 self_3])\n      (lam self_4\n        (lam n_5\n          [(lam anf_6\n            (case\n              anf_6\n              (force\n                [[builtin_9 (con string \"step\")]\n                  (delay\n                    [(lam anf_7 [[self_4 self_4] anf_7])\n                      [[(builtin subtractInteger) n_5] (con integer 1)]])])\n              (con integer 42)))\n            [[(builtin equalsInteger) n_5] (con integer 0)]]))]])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "let fromInt#3 : int -> int = \\x#5 : int -> x#5 in\nletrec\n  loop#2 : int -> int [static []] = \\n#4 : int -> case@Bool equalsInteger n#4 (fromInt#3 0) of\n    True -> fromInt#3 42\n    False -> loop#2 (subtractInteger n#4 (fromInt#3 1))\nin\nlet main#1 : int = loop#2 (fromInt#3 3) in\nmain#1",
+        "measurement": {
+          "bytes": 47,
+          "cpu": 2113056,
+          "logs": [],
+          "memory": 10110,
+          "result": "(con integer 42)"
+        },
+        "mode": "O0 silent",
+        "uplc": "[(lam fromInt_3\n  [(lam loop_2 [(lam main_1 main_1) [loop_2 [fromInt_3 (con integer 3)]]])\n    [(lam self_6 [self_6 self_6])\n      (lam self_6\n        (lam n_4\n          (case\n            [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]\n            [[self_6 self_6] [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]\n            [fromInt_3 (con integer 42)])))]])\n  (lam x_5 x_5)]"
+      },
+      {
+        "core": "letrec\n  loop#8 : int -> int [static []] = \\n#9 : int -> let anf#12 : bool = equalsInteger n#9 0 in\n  case@Bool anf#12 of\n    True -> 42\n    False -> let anf#14 : int = subtractInteger n#9 1 in\n    loop#8 anf#14\nin\nloop#8 3",
+        "measurement": {
+          "bytes": 39,
+          "cpu": 1921056,
+          "logs": [],
+          "memory": 8910,
+          "result": "(con integer 42)"
+        },
+        "mode": "O1 silent",
+        "uplc": "[(lam loop_10 [loop_10 (con integer 3)])\n  [(lam self_3 [self_3 self_3])\n    (lam self_4\n      (lam n_5\n        [(lam anf_6\n          (case\n            anf_6\n            [(lam anf_7 [[self_4 self_4] anf_7])\n              [[(builtin subtractInteger) n_5] (con integer 1)]]\n            (con integer 42)))\n          [[(builtin equalsInteger) n_5] (con integer 0)]]))]]"
+      },
+      {
+        "core": "letrec\n  loop#3 : int -> int [static []] = \\n#4 : int -> let anf#7 : bool = equalsInteger n#4 0 in\n  case@Bool anf#7 of\n    True -> 42\n    False -> let anf#9 : int = subtractInteger n#4 1 in\n    loop#3 anf#9\nin\nloop#3 3",
+        "measurement": {
+          "bytes": 39,
+          "cpu": 1921056,
+          "logs": [],
+          "memory": 8910,
+          "result": "(con integer 42)"
+        },
+        "mode": "O2 silent",
+        "uplc": "[(lam loop_12 [loop_12 (con integer 3)])\n  [(lam self_5 [self_5 self_5])\n    (lam self_6\n      (lam n_8\n        [(lam anf_10\n          (case\n            anf_10\n            [(lam anf_11 [[self_6 self_6] anf_11])\n              [[(builtin subtractInteger) n_8] (con integer 1)]]\n            (con integer 42)))\n          [[(builtin equalsInteger) n_8] (con integer 0)]]))]]"
+      }
+    ],
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "settings": "Plutus V3/PV11; UPLC 1.1.0; bundled cost model; CPU=100000000; memory=2000000; raw Flat bytes; O2 erases trace messages even if they fail or diverge, then runs O1",
+    "source": "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nloop : int -> int\nloop n =\n    if Builtin.equalsInteger n 0 then\n        42\n    else\n        trace \"step\" (loop (Builtin.subtractInteger n 1))\nmain : int\nmain = loop 3\n"
+  },
+  "builtin": {
+    "revision": "3007d7030b72ccaa8b99657f85df907c29107ae4",
+    "rows": [
+      {
+        "core": "let log#13 : string -> int -> int = trace in\nletrec\n  loop#16 : int -> int [static []] = \\n#17 : int -> let anf#20 : bool = equalsInteger n#17 0 in\n  case@Bool anf#20 of\n    True -> 42\n    False -> let anf#22 : int -> int = log#13 \"step\" in\n    let anf#24 : int = subtractInteger n#17 1 in\n    let anf#25 : int = loop#16 anf#24 in\n    anf#22 anf#25\nin\nloop#16 3",
+        "measurement": {
+          "bytes": 57,
+          "cpu": 2643550,
+          "logs": [
+            "step",
+            "step",
+            "step"
+          ],
+          "memory": 12406,
+          "result": "(con integer 42)"
+        },
+        "mode": "O1 verbose",
+        "uplc": "[(lam builtin_12\n  [(lam loop_11 [loop_11 (con integer 3)])\n    [(lam self_4 [self_4 self_4])\n      (lam self_5\n        (lam n_6\n          [(lam anf_7\n            (case\n              anf_7\n              [(lam anf_8\n                [(lam anf_9 [(lam anf_10 [anf_8 anf_10]) [[self_5 self_5] anf_9]])\n                  [[(builtin subtractInteger) n_6] (con integer 1)]])\n                [builtin_12 (con string \"step\")]]\n              (con integer 42)))\n            [[(builtin equalsInteger) n_6] (con integer 0)]]))]])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "let message#9 : string = \"step\" in\nlet fromInt#3 : int -> int = \\x#7 : int -> x#7 in\nlet log#5 : string -> int -> int = trace in\nlet fromString#6 : string -> string = \\x#8 : string -> x#8 in\nletrec\n  loop#2 : int -> int [static []] = \\n#4 : int -> case@Bool equalsInteger n#4 (fromInt#3 0) of\n    True -> fromInt#3 42\n    False -> log#5 (fromString#6 message#9) (loop#2 (subtractInteger n#4 (fromInt#3 1)))\nin\nlet main#1 : int = loop#2 (fromInt#3 3) in\nmain#1",
+        "measurement": {
+          "bytes": 68,
+          "cpu": 2787550,
+          "logs": [
+            "step",
+            "step",
+            "step"
+          ],
+          "memory": 13306,
+          "result": "(con integer 42)"
+        },
+        "mode": "O0 silent",
+        "uplc": "[(lam message_9\n  [(lam fromInt_3\n    [(lam log_5\n      [(lam fromString_6\n        [(lam loop_2 [(lam main_1 main_1) [loop_2 [fromInt_3 (con integer 3)]]])\n          [(lam self_10 [self_10 self_10])\n            (lam self_10\n              (lam n_4\n                (case\n                  [[(builtin equalsInteger) n_4] [fromInt_3 (con integer 0)]]\n                  [[log_5 [fromString_6 message_9]]\n                    [[self_10 self_10]\n                      [[(builtin subtractInteger) n_4] [fromInt_3 (con integer 1)]]]]\n                  [fromInt_3 (con integer 42)])))]])\n        (lam x_8 x_8)])\n      (force (builtin trace))])\n    (lam x_7 x_7)])\n  (con string \"step\")]"
+      },
+      {
+        "core": "let log#13 : string -> int -> int = trace in\nletrec\n  loop#16 : int -> int [static []] = \\n#17 : int -> let anf#20 : bool = equalsInteger n#17 0 in\n  case@Bool anf#20 of\n    True -> 42\n    False -> let anf#22 : int -> int = log#13 \"step\" in\n    let anf#24 : int = subtractInteger n#17 1 in\n    let anf#25 : int = loop#16 anf#24 in\n    anf#22 anf#25\nin\nloop#16 3",
+        "measurement": {
+          "bytes": 57,
+          "cpu": 2643550,
+          "logs": [
+            "step",
+            "step",
+            "step"
+          ],
+          "memory": 12406,
+          "result": "(con integer 42)"
+        },
+        "mode": "O1 silent",
+        "uplc": "[(lam builtin_12\n  [(lam loop_11 [loop_11 (con integer 3)])\n    [(lam self_4 [self_4 self_4])\n      (lam self_5\n        (lam n_6\n          [(lam anf_7\n            (case\n              anf_7\n              [(lam anf_8\n                [(lam anf_9 [(lam anf_10 [anf_8 anf_10]) [[self_5 self_5] anf_9]])\n                  [[(builtin subtractInteger) n_6] (con integer 1)]])\n                [builtin_12 (con string \"step\")]]\n              (con integer 42)))\n            [[(builtin equalsInteger) n_6] (con integer 0)]]))]])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "letrec\n  loop#9 : int -> int [static []] = \\n#21 : int -> let anf#24 : bool = equalsInteger n#21 0 in\n  case@Bool anf#24 of\n    True -> 42\n    False -> let anf#26 : int = subtractInteger n#21 1 in\n    loop#9 anf#26\nin\nloop#9 3",
+        "measurement": {
+          "bytes": 39,
+          "cpu": 1921056,
+          "logs": [],
+          "memory": 8910,
+          "result": "(con integer 42)"
+        },
+        "mode": "O2 silent",
+        "uplc": "[(lam loop_8 [loop_8 (con integer 3)])\n  [(lam self_3 [self_3 self_3])\n    (lam self_4\n      (lam n_5\n        [(lam anf_6\n          (case\n            anf_6\n            [(lam anf_7 [[self_4 self_4] anf_7])\n              [[(builtin subtractInteger) n_5] (con integer 1)]]\n            (con integer 42)))\n          [[(builtin equalsInteger) n_5] (con integer 0)]]))]]"
+      }
+    ],
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "settings": "Plutus V3/PV11; UPLC 1.1.0; bundled cost model; CPU=100000000; memory=2000000; raw Flat bytes; O2 erases trace messages even if they fail or diverge, then runs O1",
+    "source": "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nlog : string -> int -> int\nlog = Builtin.trace\nloop : int -> int\nloop n =\n    if Builtin.equalsInteger n 0 then\n        42\n    else\n        log \"step\" (loop (Builtin.subtractInteger n 1))\nmain : int\nmain = loop 3\n"
+  },
+  "failure": {
+    "revision": "3007d7030b72ccaa8b99657f85df907c29107ae4",
+    "rows": [
+      {
+        "core": "let log#5 : string -> int -> int = trace in\nlet anf#9 : string = error in\nlog#5 anf#9 42",
+        "measurement": {
+          "bytes": 14,
+          "cpu": 100,
+          "logs": [],
+          "memory": 100,
+          "result": "error: ExplicitErrorTerm"
+        },
+        "mode": "O1 verbose",
+        "uplc": "[(lam builtin_3 [(lam anf_2 [[builtin_3 anf_2] (con integer 42)]) (error)])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "let log#2 : string -> int -> int = trace in\nlet fromInt#3 : int -> int = \\x#4 : int -> x#4 in\nlet main#1 : int = log#2 error (fromInt#3 42) in\nmain#1",
+        "measurement": {
+          "bytes": 19,
+          "cpu": 100,
+          "logs": [],
+          "memory": 100,
+          "result": "error: ExplicitErrorTerm"
+        },
+        "mode": "O0 silent",
+        "uplc": "[(lam log_2\n  [(lam fromInt_3\n    [(lam main_1 main_1) [[log_2 (error)] [fromInt_3 (con integer 42)]]])\n    (lam x_4 x_4)])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "let log#5 : string -> int -> int = trace in\nlet anf#9 : string = error in\nlog#5 anf#9 42",
+        "measurement": {
+          "bytes": 14,
+          "cpu": 100,
+          "logs": [],
+          "memory": 100,
+          "result": "error: ExplicitErrorTerm"
+        },
+        "mode": "O1 silent",
+        "uplc": "[(lam builtin_3 [(lam anf_2 [[builtin_3 anf_2] (con integer 42)]) (error)])\n  (force (builtin trace))]"
+      },
+      {
+        "core": "42",
+        "measurement": {
+          "bytes": 6,
+          "cpu": 16100,
+          "logs": [],
+          "memory": 200,
+          "result": "(con integer 42)"
+        },
+        "mode": "O2 silent",
+        "uplc": "(con integer 42)"
+      }
+    ],
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "settings": "Plutus V3/PV11; UPLC 1.1.0; bundled cost model; CPU=100000000; memory=2000000; raw Flat bytes; O2 erases trace messages even if they fail or diverge, then runs O1",
+    "source": "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nlog : string -> int -> int\nlog = Builtin.trace\nmain : int\nmain = log (fail) 42\n"
+  }
+}

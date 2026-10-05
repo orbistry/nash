@@ -1,0 +1,30 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nmain : int\nmain =\n    let\n        message = fail\n    in\n    Builtin.trace message 42\n"
+---
+--- unoptimized Core
+let fromInt#3 : int -> int = \value#4 : int -> value#4 in
+let message#2 : 'erased = error in
+let main#1 : int = trace message#2 (fromInt#3 42) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam message_2
+      [(lam main_1 main_1)
+        [[(force (builtin trace)) message_2] [fromInt_3 (con integer 42)]]])
+      (error)])
+    (lam value_4 value_4)])
+--- optimized Core (O2)
+let message#3 : 'erased = error in
+42
+--- optimized UPLC (O2)
+(program 1.1.0 [(lam message_1 (con integer 42)) (error)])
+--- O0 result
+error: ExplicitErrorTerm
+--- O0 logs
+[]
+--- O2 result
+error: ExplicitErrorTerm
+--- O2 logs
+[]

@@ -1,6 +1,5 @@
 ---
 source: crates/nash-driver/tests/base_traits.rs
-expression: "format!(\"--- O0\\n{before}\\n--- O1\\n{after}\")"
 ---
 --- O0
 pass: Pass; traces: ["before"]; counterexample: None
@@ -10,3 +9,7 @@ property: Pass; traces: ["generator", "body"]; counterexample: None
 pass: Pass; traces: ["before"]; counterexample: None
 failure: Pass; traces: ["before failure"]; counterexample: None
 property: Pass; traces: ["generator", "body"]; counterexample: None
+--- O2
+pass: Pass; traces: []; counterexample: None
+failure: Pass; traces: []; counterexample: None
+property: Pass; traces: []; counterexample: None

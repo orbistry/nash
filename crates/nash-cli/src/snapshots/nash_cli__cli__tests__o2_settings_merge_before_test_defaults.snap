@@ -1,0 +1,33 @@
+---
+source: crates/nash-cli/src/cli.rs
+---
+build -O2 (default): O2 Silent, compiler traces: false
+build -O2 (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 (compiler traces): O2 does not support compiler traces
+build -O2 --trace-level silent (default): O2 Silent, compiler traces: false
+build -O2 --trace-level silent (verbose project): O2 Silent, compiler traces: false
+build -O2 --trace-level silent (compiler traces): O2 does not support compiler traces
+build -O2 --trace-level compact (default): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 --trace-level compact (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 --trace-level compact (compiler traces): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 --trace-level verbose (default): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 --trace-level verbose (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O2 --trace-level verbose (compiler traces): O2 requires silent tracing; compact and verbose tracing are not supported
+build -O1 (default): O1 Silent, compiler traces: false
+build -O1 (verbose project): O1 Verbose, compiler traces: false
+build -O1 (compiler traces): O1 Silent, compiler traces: true
+test -O2 (default): O2 Silent, compiler traces: false
+test -O2 (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 (compiler traces): O2 does not support compiler traces
+test -O2 --trace-level silent (default): O2 Silent, compiler traces: false
+test -O2 --trace-level silent (verbose project): O2 Silent, compiler traces: false
+test -O2 --trace-level silent (compiler traces): O2 does not support compiler traces
+test -O2 --trace-level compact (default): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 --trace-level compact (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 --trace-level compact (compiler traces): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 --trace-level verbose (default): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 --trace-level verbose (verbose project): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O2 --trace-level verbose (compiler traces): O2 requires silent tracing; compact and verbose tracing are not supported
+test -O1 (default): O1 Verbose, compiler traces: true
+test -O1 (verbose project): O1 Verbose, compiler traces: true
+test -O1 (compiler traces): O1 Silent, compiler traces: true

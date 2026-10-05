@@ -73,9 +73,9 @@ mod name;
 mod parse;
 
 pub use config::{
-    Application, Build, CONFIG_FILE_NAME, Config, Dependency, DependencySource, ExposedModules,
-    GitDep, OptimizationLevel, Package, PathDep, PlutusVersion, TraceLevel, Workspace,
-    WorkspaceDep,
+    Application, Build, BuildConflict, CONFIG_FILE_NAME, Config, Dependency, DependencySource,
+    ExposedModules, GitDep, OptimizationLevel, Package, PathDep, PlutusVersion, TraceLevel,
+    Workspace, WorkspaceDep,
 };
 pub use error::{ConfigError, Position};
 pub use name::{PackageName, PackageNameError};

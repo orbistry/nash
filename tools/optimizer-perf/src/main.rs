@@ -75,10 +75,13 @@ fn main() {
 fn run() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str).unwrap_or("help");
+    if command == "silent-experiment" && args.len() == 2 {
+        return silent_experiment(Path::new(&args[1]));
+    }
     match (command, args.len()) {
         ("measure", 1) | ("check", 1..=2) | ("record", 2) | ("experiment", 2) => {}
         _ => {
-            return Err("usage: nash-optimizer-perf measure | check [baseline.json] | record NEW.json | experiment MODULE.nash\nrecord refuses overwrites; review and copy explicitly to update baselines".into());
+            return Err("usage: nash-optimizer-perf measure | check [baseline.json] | record NEW.json | experiment MODULE.nash | silent-experiment MODULE.nash\nrecord refuses overwrites; review and copy explicitly to update baselines".into());
         }
     }
     let mut sources: BTreeMap<String, String> = source::SUPPORT
@@ -289,6 +292,14 @@ fn measure<'a>(
         nash_codegen::lower::lower(arena, core)
     }
     .expect("lowering");
+    measure_named(arena, named, args)
+}
+
+fn measure_named<'a>(
+    arena: &'a Arena,
+    named: &'a Term<'a, nash_plutus::binder::Name<'a>>,
+    args: &[&'a Term<'a, DeBruijn>],
+) -> Result<Measurement> {
     let term = debruijn::to_debruijn(arena, named).expect("closed UPLC");
     let mut program = Program::new(arena, Version::plutus_v3(arena), term);
     let bytes = flat::encode(program).expect("Flat encoding").len();
@@ -316,6 +327,81 @@ fn measure<'a>(
         logs: eval.info.logs,
     })
 }
+fn silent_experiment(path: &Path) -> Result<()> {
+    use nash_codegen::build::{TraceConfig, TraceLevel};
+    use nash_config::OptimizationLevel;
+    let source = fs::read_to_string(path)?;
+    let arena = Arena::new();
+    let mut rows = Vec::new();
+    for (policy, trace) in [
+        ("verbose", TraceConfig::default()),
+        (
+            "silent",
+            TraceConfig {
+                user: TraceLevel::Silent,
+                compiler: false,
+            },
+        ),
+    ] {
+        let core = source::compile_with_trace(&arena, &source, &["main"], trace)[0];
+        let levels: &[OptimizationLevel] = if policy == "verbose" {
+            &[OptimizationLevel::O1]
+        } else {
+            &[
+                OptimizationLevel::O0,
+                OptimizationLevel::O1,
+                OptimizationLevel::O2,
+            ]
+        };
+        for &level in levels {
+            let compiled = nash_codegen::program::assemble_core_with_options(
+                &arena,
+                core,
+                PlutusVersion::V3,
+                level,
+            )
+            .map_err(|e| e.to_string())?;
+            let optimized = match level {
+                OptimizationLevel::O0 => core,
+                OptimizationLevel::O1 => nash_codegen::optimizer::optimize(&arena, core),
+                OptimizationLevel::O2 => nash_codegen::optimizer::optimize_silent(&arena, core)?,
+            };
+            if level == OptimizationLevel::O2 {
+                let once = flat::encode(compiled.program)?;
+                let mut repeated = optimized;
+                for _ in 0..2 {
+                    let compiled = nash_codegen::program::assemble_core_with_options(
+                        &arena,
+                        repeated,
+                        PlutusVersion::V3,
+                        level,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    assert_eq!(once, flat::encode(compiled.program)?, "O2 must converge");
+                    repeated = nash_codegen::optimizer::optimize_silent(&arena, repeated)?;
+                }
+            }
+            rows.push(serde_json::json!({
+                "mode": format!("O{} {policy}", u8::from(level)),
+                "core": nash_ir::pretty::pretty(optimized),
+                "uplc": pretty::term(compiled.named),
+                "measurement": measure_named(&arena, compiled.named, &[])?,
+            }));
+        }
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "settings": "Plutus V3/PV11; UPLC 1.1.0; bundled cost model; CPU=100000000; memory=2000000; raw Flat bytes; O2 erases trace messages even if they fail or diverge, then runs O1",
+            "source": source,
+            "revision": output("jj", &["log", "-r", "@", "--no-graph", "-T", "commit_id"], Some(repo())),
+            "rustc": output("rustc", &["--version"], None),
+            "rows": rows,
+        }))?
+    );
+    Ok(())
+}
+
 fn ground(term: &Term<'_, DeBruijn>) -> bool {
     match term {
         Term::Constant(_) => true,

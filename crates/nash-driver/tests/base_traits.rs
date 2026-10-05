@@ -139,7 +139,7 @@ async fn optimization_levels_preserve_test_and_property_traces() {
     let memory = InMemorySource::new();
     let mut modules = bundled_base::modules();
     let mut roots = Vec::new();
-    for name in ["Baseline", "Optimized"] {
+    for name in ["Baseline", "Optimized", "Silent"] {
         let uri = Url::parse(&format!("file:///app/src/{name}.nash")).unwrap();
         memory.insert(
             uri.clone(),
@@ -181,10 +181,16 @@ tests
             roots.contains(uri).then_some(nash_config::Build {
                 optimize: if uri.path().ends_with("Baseline.nash") {
                     nash_config::OptimizationLevel::O0
+                } else if uri.path().ends_with("Silent.nash") {
+                    nash_config::OptimizationLevel::O2
                 } else {
                     nash_config::OptimizationLevel::O1
                 },
-                trace_level: nash_config::TraceLevel::Verbose,
+                trace_level: if uri.path().ends_with("Silent.nash") {
+                    nash_config::TraceLevel::Silent
+                } else {
+                    nash_config::TraceLevel::Verbose
+                },
                 trace_level_explicit: true,
                 ..Default::default()
             })
@@ -208,6 +214,7 @@ tests
     };
     let before = render("Baseline");
     let after = render("Optimized");
-    insta::assert_snapshot!(format!("--- O0\n{before}\n--- O1\n{after}"));
+    let silent = render("Silent");
+    insta::with_settings!({omit_expression => true}, { insta::assert_snapshot!(format!("--- O0\n{before}\n--- O1\n{after}\n--- O2\n{silent}")); });
     assert_eq!(before, after);
 }

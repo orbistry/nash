@@ -38,13 +38,14 @@ pub enum TraceLevel {
     Verbose,
 }
 
-/// Optimization is independent of user and compiler trace settings.
+/// O0/O1 preserve the selected trace policy; O2 requires silent scripts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(try_from = "u8", into = "u8")]
 pub enum OptimizationLevel {
     O0,
     #[default]
     O1,
+    O2,
 }
 impl TryFrom<u8> for OptimizationLevel {
     type Error = &'static str;
@@ -52,7 +53,8 @@ impl TryFrom<u8> for OptimizationLevel {
         match value {
             0 => Ok(Self::O0),
             1 => Ok(Self::O1),
-            _ => Err("expected optimization level 0 or 1"),
+            2 => Ok(Self::O2),
+            _ => Err("expected optimization level 0, 1, or 2"),
         }
     }
 }
@@ -61,6 +63,7 @@ impl From<OptimizationLevel> for u8 {
         match value {
             OptimizationLevel::O0 => 0,
             OptimizationLevel::O1 => 1,
+            OptimizationLevel::O2 => 2,
         }
     }
 }
@@ -70,7 +73,8 @@ impl std::str::FromStr for OptimizationLevel {
         match value {
             "0" => Ok(Self::O0),
             "1" => Ok(Self::O1),
-            _ => Err("expected optimization level 0 or 1"),
+            "2" => Ok(Self::O2),
+            _ => Err("expected optimization level 0, 1, or 2"),
         }
     }
 }
@@ -82,7 +86,7 @@ impl OptimizationLevel {
 
 /// Project build settings, stored at the top level of `nash.jsonc`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(from = "BuildFields", into = "BuildFields")]
+#[serde(try_from = "BuildFields", into = "BuildFields")]
 pub struct Build {
     pub optimize: OptimizationLevel,
     pub plutus_version: PlutusVersion,
@@ -105,15 +109,18 @@ struct BuildFields {
     compiler_traces: bool,
 }
 
-impl From<BuildFields> for Build {
-    fn from(fields: BuildFields) -> Self {
-        Self {
+impl TryFrom<BuildFields> for Build {
+    type Error = BuildConflict;
+    fn try_from(fields: BuildFields) -> Result<Self, Self::Error> {
+        let build = Self {
             optimize: fields.optimize,
             plutus_version: fields.plutus_version,
             trace_level: fields.trace_level.unwrap_or_default(),
             trace_level_explicit: fields.trace_level.is_some(),
             compiler_traces: fields.compiler_traces,
-        }
+        };
+        build.validate()?;
+        Ok(build)
     }
 }
 
@@ -129,8 +136,33 @@ impl From<Build> for BuildFields {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum BuildConflict {
+    #[error("O2 requires silent tracing; compact and verbose tracing are not supported")]
+    UserTraces,
+    #[error("O2 does not support compiler traces")]
+    CompilerTraces,
+}
+
 impl Build {
+    /// Validate effective settings after command overrides, before defaults.
+    pub fn validate(self) -> Result<(), BuildConflict> {
+        if self.optimize == OptimizationLevel::O2 {
+            if self.trace_level != TraceLevel::Silent {
+                return Err(BuildConflict::UserTraces);
+            }
+            if self.compiler_traces {
+                return Err(BuildConflict::CompilerTraces);
+            }
+        }
+        Ok(())
+    }
+
     pub fn for_tests(mut self) -> Self {
+        if self.optimize == OptimizationLevel::O2 {
+            // Keep explicit conflicting settings so validation can reject them.
+            return self;
+        }
         if !self.trace_level_explicit {
             self.trace_level = TraceLevel::Verbose;
         }

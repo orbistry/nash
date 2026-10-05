@@ -139,3 +139,7 @@ one, two and three Core optimizations and late-pass idempotence. The original
 195 O0 rows are unchanged. See the
 [application report](../../docs/research/application-packing-trial.md) for the
 reviewed performance changes, including the size tradeoffs.
+
+## Initial O2 silence experiment
+
+`cargo run --release --manifest-path tools/optimizer-perf/Cargo.toml -- silent-experiment MODULE.nash` compares O1 verbose, O0/O1 silent and O2 silent with source/Core/UPLC and costs. O2 discards trace messages even if they fail or diverge; outcomes can therefore differ. This command keeps the existing O0/O1 baseline separate. Fixtures and reviewed results are in `fixtures/o2/`, `trials/o2-silence.json` and [the report](../../docs/research/o2-silence-trial.md).

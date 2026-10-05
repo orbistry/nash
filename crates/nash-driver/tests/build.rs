@@ -392,3 +392,33 @@ async fn roots_select_o0_and_o1_with_the_same_traces() {
     assert_eq!(observations[0], observations[1]);
     assert_ne!(outputs[0].flat, outputs[1].flat);
 }
+
+#[tokio::test]
+async fn o2_validator_settings_and_trace_erasure() {
+    let source = "validator module Main exposing (main)\nimport Builtin\nmain : Data -> unit\nmain _ = trace \"source\" (Builtin.trace \"builtin\" ())\n";
+    for (name, trace_level, compiler_traces) in [
+        ("silent", nash_config::TraceLevel::Silent, false),
+        ("compact", nash_config::TraceLevel::Compact, false),
+        ("verbose", nash_config::TraceLevel::Verbose, false),
+        ("compiler", nash_config::TraceLevel::Silent, true),
+    ] {
+        let result = outputs_result_with(&[("Main", source)], move |_| nash_config::Build {
+            optimize: nash_config::OptimizationLevel::O2,
+            trace_level,
+            compiler_traces,
+            ..Default::default()
+        })
+        .await;
+        let rendered = match result {
+            Ok(outputs) => outputs
+                .into_iter()
+                .map(|output| output.uplc)
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Err(error) => error.to_string(),
+        };
+        insta::with_settings!({description => source, omit_expression => true}, {
+            insta::assert_snapshot!(format!("o2_validator_{name}"), rendered);
+        });
+    }
+}

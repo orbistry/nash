@@ -393,6 +393,7 @@ dependencies = [
  "nash-ast",
  "nash-can",
  "nash-codegen",
+ "nash-config",
  "nash-constrain",
  "nash-ir",
  "nash-nitpick",

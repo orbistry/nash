@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 
 #[derive(clap::Args)]
 pub struct Args {
-    /// Optimization level: 0 (baseline) or 1 (preserves enabled traces).
+    /// Optimization level: 0 (baseline), 1 (preserves traces), or 2 (silent).
     #[arg(short = 'O', long)]
     pub optimize: Option<nash_config::OptimizationLevel>,
     /// Path to the project.
@@ -40,8 +40,44 @@ pub enum PlutusVersionArg {
 }
 
 impl Args {
+    pub(crate) fn resolve_config(
+        &self,
+        mut config: nash_config::Build,
+    ) -> std::result::Result<nash_config::Build, nash_config::BuildConflict> {
+        if let Some(version) = self.plutus_version {
+            config.plutus_version = match version {
+                PlutusVersionArg::V1 => nash_config::PlutusVersion::V1,
+                PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
+                PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
+            };
+        }
+        if let Some(level) = self.optimize {
+            config.optimize = level;
+        }
+        if let Some(level) = self.trace_level {
+            config.trace_level_explicit = true;
+            config.trace_level = match level {
+                TraceLevelArg::Silent => nash_config::TraceLevel::Silent,
+                TraceLevelArg::Compact => nash_config::TraceLevel::Compact,
+                TraceLevelArg::Verbose => nash_config::TraceLevel::Verbose,
+            };
+        }
+        if let Some(enabled) = self.compiler_traces {
+            config.compiler_traces = enabled;
+        }
+        config.validate()?;
+        Ok(config)
+    }
+
     pub async fn exec(self, color: bool) -> Result<()> {
         let project = Project::load(&self.path).await.into_diagnostic()?;
+        // Reject conflicts even when a project/member contains no source roots.
+        self.resolve_config(project.config.build())
+            .into_diagnostic()?;
+        for member in &project.members {
+            self.resolve_config(member.config.build())
+                .into_diagnostic()?;
+        }
         let db = Arc::new(Mutex::new(Database::new(FileSystemSource::new())));
         let modules = project
             .discover_modules_production(&*db.lock().await)
@@ -76,34 +112,15 @@ impl Args {
                     .to_file_path()
                     .expect("discovered source has a file URL");
                 let path = path.canonicalize().unwrap_or(path);
-                let mut config = member_settings
+                let config = member_settings
                     .iter()
                     .filter(|(directory, _)| path.starts_with(directory))
                     .max_by_key(|(directory, _)| directory.components().count())
                     .map_or_else(|| project.config.build(), |(_, config)| *config);
-                if let Some(version) = self.plutus_version {
-                    config.plutus_version = match version {
-                        PlutusVersionArg::V1 => nash_config::PlutusVersion::V1,
-                        PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
-                        PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
-                    };
-                }
-                if let Some(level) = self.optimize {
-                    config.optimize = level;
-                }
-                if let Some(level) = self.trace_level {
-                    config.trace_level = match level {
-                        TraceLevelArg::Silent => nash_config::TraceLevel::Silent,
-                        TraceLevelArg::Compact => nash_config::TraceLevel::Compact,
-                        TraceLevelArg::Verbose => nash_config::TraceLevel::Verbose,
-                    };
-                }
-                if let Some(enabled) = self.compiler_traces {
-                    config.compiler_traces = enabled;
-                }
-                (uri.clone(), config)
+                Ok((uri.clone(), self.resolve_config(config)?))
             })
-            .collect();
+            .collect::<std::result::Result<_, nash_config::BuildConflict>>()
+            .into_diagnostic()?;
         let (report, output) = build_with(db, &graph, &modules, move |solved| {
             nash_driver::build::build_validators_matching_with(solved, |uri| {
                 configs.get(uri).copied()

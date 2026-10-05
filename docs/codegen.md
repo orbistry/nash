@@ -1044,12 +1044,27 @@ outside an eligible packed prefix. Cleanup and packing reach a shrinking fixed
 point without reversing packs. These are O1 rules in Plan 08; they preserve traces,
 failure and termination. See the [measured report](research/application-packing-trial.md).
 
-The final configuration remains O0/O1 only. Build and test default to O1; `-O0`,
-`-O1` and `--optimize 0|1` override the owning project's integer `optimize: 0|1`.
-O0 retains ordinary lowering with only required recursion encoding. Explicit
-comptime evaluation remains O0, and enabled trace generation/order is independent
-of optimization level for the currently implemented O0/O1 modes. Planned O2
-will automatically disable script traces while preserving success/failure and
-termination; see [Plan 15](../plans/15-o2-optimizer.md). O2 is not implemented yet,
-and no per-pass configuration is exposed. Runtime budget
-regression checks remain in the separate explicit performance workspace.
+Build and test default to O1. `-O0`, `-O1`, `-O2` and `--optimize 0|1|2`
+override the owning project's integer `optimize` setting. O0 retains ordinary
+lowering with only required recursion encoding. Explicit comptime evaluation
+remains O0. O0/O1 preserve their selected trace policy.
+
+O2 requires silent tracing: explicit compact/verbose tracing and compiler traces
+are configuration errors. Test defaults are applied after command overrides and
+do not enable traces for O2. Source user/compiler traces are disabled during
+code generation. `optimizer::optimize_silent` removes Core traces and direct or
+aliased builtin trace messages before the unchanged O1 pipeline. The emitted UPLC
+contains no trace builtin, including inside lambdas and delays.
+
+O2 deliberately discards a trace's message computation even if it fails or
+diverges. Its returned value still evaluates. Independently bound work outside
+the trace remains strict; first-class trace values become typed no-log functions.
+For example, `Builtin.trace (fail) 42` becomes `42`, but a separate strict
+`let message = fail in Builtin.trace message 42` still fails. A message evaluated
+by an ordinary higher-order caller also stays strict: erasure does not make
+ordinary function arguments lazy. Erasure runs before O1 inlining.
+This is an explicit semantic relaxation, so O0/O1 failure equivalence does not
+apply to discarded trace messages. See [Plan 15](../plans/15-o2-optimizer.md) and
+[measurements](research/o2-silence-trial.md). Broader grouping/motion remains future
+work. There are no per-pass settings. Cost regressions remain in the separate
+explicit performance workspace.

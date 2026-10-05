@@ -1,0 +1,26 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nmain : int\nmain = Builtin.trace (fail) 42\n"
+---
+--- unoptimized Core
+let fromInt#2 : int -> int = \value#3 : int -> value#3 in
+let main#1 : int = trace error (fromInt#2 42) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam fromInt_2
+    [(lam main_1 main_1)
+      [[(force (builtin trace)) (error)] [fromInt_2 (con integer 42)]]])
+    (lam value_3 value_3)])
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+error: ExplicitErrorTerm
+--- O0 logs
+[]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

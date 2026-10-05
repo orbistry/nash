@@ -1,6 +1,8 @@
 //! Source-to-optimized snapshots reuse the normal Base fixture compiler.
 use super::*;
+use nash_config::OptimizationLevel;
 use nash_ir::{anf, build::Builder, hygiene, pretty::pretty};
+use nash_plutus::{builtin::DefaultFunction as F, machine::PlutusVersion, term::Term};
 
 macro_rules! boolean_case_snapshot {
     ($name:ident, $source:literal) => {
@@ -230,3 +232,243 @@ fn application_failure_precedes_later_argument() {
         fixture.assert_equivalent(arena);
     });
 }
+
+fn check_silent(arena: &Arena, name: &str, core: &Core<'_>, source: &str, fails: bool) {
+    let after = crate::optimizer::optimize_silent(arena, core).unwrap();
+    let before_program = crate::program::assemble_core(arena, core).unwrap();
+    let after_program = crate::program::assemble_core_with_options(
+        arena,
+        core,
+        PlutusVersion::V3,
+        OptimizationLevel::O2,
+    )
+    .unwrap();
+    let baseline = crate::harness::eval_named(arena, before_program.named);
+    let optimized = crate::harness::eval_named(arena, after_program.named);
+    assert_eq!(optimized.result.starts_with("error:"), fails);
+    insta::with_settings!({description => source, omit_expression => true}, {
+        insta::assert_snapshot!(name, format!("--- unoptimized Core\n{}\n--- unoptimized UPLC\n{}\n--- optimized Core (O2)\n{}\n--- optimized UPLC (O2)\n{}\n--- O0 result\n{}\n--- O0 logs\n{:?}\n--- O2 result\n{}\n--- O2 logs\n{:?}", pretty(core), baseline.uplc, pretty(after), optimized.uplc, baseline.result, baseline.logs, optimized.result, optimized.logs));
+    });
+    // O2 intentionally drops failures in trace messages. Value failures remain
+    // covered by the success/error guard and the evaluated snapshot.
+    assert_eq!(core.ty, after.ty);
+    nash_ir::hygiene::validate(after, &[]).unwrap();
+    nash_ir::anf::validate(after).unwrap();
+    assert_silent(after_program.named);
+    let twice = crate::program::assemble_core_with_options(
+        arena,
+        after,
+        PlutusVersion::V3,
+        OptimizationLevel::O2,
+    )
+    .unwrap();
+    assert_eq!(
+        nash_plutus::flat::encode(after_program.program).unwrap(),
+        nash_plutus::flat::encode(twice.program).unwrap()
+    );
+}
+fn assert_silent(root: &Term<'_, nash_plutus::binder::Name<'_>>) {
+    let mut pending = vec![root];
+    while let Some(term) = pending.pop() {
+        match term {
+            Term::Builtin(F::Trace) => panic!("O2 emitted a trace builtin"),
+            Term::Lambda { body, .. } | Term::Delay(body) | Term::Force(body) => pending.push(body),
+            Term::Apply { function, argument } => pending.extend([*function, *argument]),
+            Term::Constr { fields, .. } => pending.extend(fields.iter().copied()),
+            Term::Case { constr, branches } => {
+                pending.push(constr);
+                pending.extend(branches.iter().copied());
+            }
+            _ => {}
+        }
+    }
+}
+
+macro_rules! silent_case_snapshot {
+    ($name:ident, $fails:literal, $source:literal) => {
+        #[test]
+        fn $name() {
+            let source = indoc::indoc!($source);
+            with_base(source, |arena, build, root| {
+                let compiled = build
+                    .compile(
+                        arena,
+                        root,
+                        None,
+                        TraceConfig {
+                            user: TraceLevel::Silent,
+                            compiler: false,
+                        },
+                    )
+                    .unwrap();
+                check_silent(arena, stringify!($name), compiled.core, source, $fails);
+            });
+        }
+    };
+}
+silent_case_snapshot!(
+    o2_source_and_builtin,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    main : int
+    main = trace "source" (Builtin.trace "builtin" 42)
+"#
+);
+silent_case_snapshot!(
+    o2_first_class_and_partial,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    log : string -> int -> int
+    log = Builtin.trace
+    main : int
+    main =
+        let
+            partial = log "partial"
+        in
+        partial (log "inner" 42)
+"#
+);
+silent_case_snapshot!(
+    o2_discards_message_failure,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    main : int
+    main = Builtin.trace (fail) 42
+"#
+);
+silent_case_snapshot!(
+    o2_strict_value_failure,
+    true,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    main : int
+    main = Builtin.trace "failure" (fail)
+"#
+);
+silent_case_snapshot!(
+    o2_discards_partial_message_failure,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    partial : int -> int
+    partial = Builtin.trace (fail)
+    main : int
+    main =
+        let
+            unused = partial
+        in
+        42
+"#
+);
+silent_case_snapshot!(
+    o2_source_message_is_omitted,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    main : int
+    main = trace (fail) 42
+"#
+);
+
+silent_case_snapshot!(
+    o2_discards_aliased_message_failure,
+    false,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    log : string -> int -> int
+    log = Builtin.trace
+    main : int
+    main = log (fail) 42
+"#
+);
+
+#[test]
+fn o2_discards_diverging_message() {
+    let source = indoc::indoc!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        import Builtin
+        loop : unit -> string
+        loop _ = loop ()
+        main : int
+        main = Builtin.trace (loop ()) 42
+    "#
+    );
+    with_base(source, |arena, build, root| {
+        let core = build
+            .compile(
+                arena,
+                root,
+                None,
+                TraceConfig {
+                    user: TraceLevel::Silent,
+                    compiler: false,
+                },
+            )
+            .unwrap()
+            .core;
+        let before = crate::program::assemble_core(arena, core).unwrap();
+        let after = crate::optimizer::optimize_silent(arena, core).unwrap();
+        let compiled = crate::program::assemble_core_with_options(
+            arena,
+            core,
+            nash_plutus::machine::PlutusVersion::V3,
+            nash_config::OptimizationLevel::O2,
+        )
+        .unwrap();
+        let evaluated = crate::harness::eval_named(arena, compiled.named);
+        assert!(!evaluated.result.starts_with("error:"));
+        insta::with_settings!({description => source, omit_expression => true}, {
+            insta::assert_snapshot!(format!("--- unoptimized Core\n{}\n--- unoptimized UPLC (not evaluated: diverging message)\n{}\n--- optimized Core (O2)\n{}\n--- optimized UPLC (O2)\n{}\n--- result\n{}\n--- logs\n{:?}", pretty(core), nash_plutus::pretty::term(before.named), pretty(after), evaluated.uplc, evaluated.result, evaluated.logs));
+        });
+        assert_eq!(core.ty, after.ty);
+        hygiene::validate(after, &[]).unwrap();
+        anf::validate(after).unwrap();
+    });
+}
+
+silent_case_snapshot!(
+    o2_retains_separate_message_binding,
+    true,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    main : int
+    main =
+        let
+            message = fail
+        in
+        Builtin.trace message 42
+"#
+);
+silent_case_snapshot!(
+    o2_retains_indirect_caller_work,
+    true,
+    r#"
+    module Main exposing (..)
+    import Primitive exposing (..)
+    import Builtin
+    call : (string -> int -> int) -> int
+    call logger = logger (fail) 42
+    main : int
+    main = call Builtin.trace
+"#
+);

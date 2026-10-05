@@ -1,0 +1,23 @@
+---
+source: crates/nash-codegen/src/silent/tests.rs
+description: Hand-built Core
+---
+--- unoptimized Core
+delay (trace "message" in error)
+--- unoptimized UPLC
+(program 1.1.0
+  (delay
+    (force [[(force (builtin trace)) (con string "message")] (delay (error))])))
+--- optimized Core (O2)
+delay error
+--- optimized UPLC (O2)
+(program 1.1.0 (delay (error)))
+--- O0 result
+(delay
+  (force [[(force (builtin trace)) (con string "message")] (delay (error))]))
+--- O0 logs
+[]
+--- O2 result
+(delay (error))
+--- O2 logs
+[]

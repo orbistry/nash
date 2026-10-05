@@ -1,0 +1,7 @@
+module Main exposing (..)
+import Primitive exposing (..)
+import Builtin
+log : string -> int -> int
+log = Builtin.trace
+main : int
+main = log (fail) 42

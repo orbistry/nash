@@ -1,0 +1,33 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nmain : int\nmain = trace \"source\" (Builtin.trace \"builtin\" 42)\n"
+---
+--- unoptimized Core
+let message#6 : string = "builtin" in
+let fromString#2 : string -> string = \value#4 : string -> value#4 in
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+let main#1 : int = trace (fromString#2 message#6) (fromInt#3 42) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam message_6
+    [(lam fromString_2
+      [(lam fromInt_3
+        [(lam main_1 main_1)
+          [[(force (builtin trace)) [fromString_2 message_6]]
+            [fromInt_3 (con integer 42)]]])
+        (lam value_5 value_5)])
+      (lam value_4 value_4)])
+    (con string "builtin")])
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+(con integer 42)
+--- O0 logs
+["builtin"]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

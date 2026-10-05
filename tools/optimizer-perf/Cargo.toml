@@ -22,6 +22,7 @@ nash-parse = { path = "../../crates/nash-parse" }
 nash-constrain = { path = "../../crates/nash-constrain" }
 nash-solve = { path = "../../crates/nash-solve" }
 nash-nitpick = { path = "../../crates/nash-nitpick" }
+nash-config = { path = "../../crates/nash-config" }
 nash-codegen = { path = "../../crates/nash-codegen" }
 nash-ir = { path = "../../crates/nash-ir" }
 nash-plutus = { path = "../../crates/nash-plutus" }

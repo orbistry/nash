@@ -2,7 +2,7 @@
 
 ## Status and confirmed contract
 
-**O2 planned, not implemented (5 October 2026).** Application fusion,
+**Initial silent O2 implemented (5 October 2026); broader motion remains planned.** Application fusion,
 values-only native packing and late UPLC binding cleanup belong to
 [Plan 08](08-optimizer.md), as confirmed by the user. This plan retains O2 silence
 and the broader grouping/motion investigations.
@@ -10,21 +10,26 @@ and the broader grouping/motion investigations.
 User decisions:
 
 - O2 automatically runs silently: no user or compiler traces in emitted scripts.
-- O2 preserves success/failure and termination. Removing traces is the only
-  authorized semantic relaxation; moving failure or divergence under an unused
-  lambda is not allowed merely because traces are disabled.
+- O2 discards trace message computations even if they fail or diverge, as
+  explicitly confirmed by the user. The value returned by a trace still evaluates.
+  Unrelated failure or divergence must not move under an unused lambda.
 - Rewrites that preserve the full O1 contract, including traces, belong in O1.
 - Optimization continues until unchanged. Do not introduce attempt, execution,
   payload, depth, node, growth or iteration cutoffs without a separate decision.
 
 Keep the current O1 default. O2 is an explicit build/test/project setting when
-implemented. Its effective trace policy overrides trace settings and test defaults;
-this must not rewrite saved user configuration. O0 and O1 retain their trace policy.
+used. Explicit compact/verbose tracing or compiler traces with O2 are errors.
+Merge command overrides before applying test defaults; O2 tests remain silent.
+Do not rewrite saved configuration. O0 and O1 retain their trace policy.
 
 Compare O2 with O0 under the same silent source semantics. Source trace syntax
 already omits its message computation in silent mode. Direct `Builtin.Trace` is
-an ordinary strict function: remove its logging without silently discarding the
-strict evaluation of its arguments. Document and test this distinction.
+strict under O0/O1. O2 explicitly removes its message expression, including
+failure or divergence, for direct and aliased calls. Preserve evaluation of its
+returned value. Separately evaluated expressions outside the trace remain strict.
+A first-class trace value becomes a correctly typed no-log function. Calls through
+unknown function parameters remain ordinary strict caller work; no lazy calling
+convention is introduced. Erasure precedes O1 inlining.
 
 ## Current source findings
 
@@ -100,9 +105,15 @@ Their source measurements and semantic boundaries are in the
 [application report](../docs/research/application-packing-trial.md). They are not
 pending O2 features. Continue broader grouping only from those validated rules.
 
-## Chunk 2 — Automatic O2 silence
+## Chunk 2 — Automatic O2 silence (complete)
 
-Implement the confirmed mode contract through all entry points:
+Implemented through config, CLI settings resolution, driver, test compilation and
+public Core assembly. Source and Core snapshots cover failure erasure, retained
+value failure, partial/aliased trace references, and lambda/delay bodies. The
+[three-case report](../docs/research/o2-silence-trial.md) compares O1 verbose,
+O0/O1 silent and O2 silent. No broader grouping or motion is added.
+
+Completed scope:
 
 - Add O2 numeric parsing/serialization and CLI help for `-O2` / `--optimize 2`.
 - Resolve effective silence after project settings, command defaults and overrides.
@@ -111,11 +122,13 @@ Implement the confirmed mode contract through all entry points:
   trace expressions can be omitted under existing silent syntax semantics.
 - At the Core/assembly boundary, handle both `CoreKind::Trace` and direct builtin
   Trace, including saturated, partial, aliased and first-class uses.
-- Replace direct builtin Trace with a correctly typed strict no-log function;
-  preserve argument evaluation, saturation and type views.
+- Remove trace message expressions, even failing/diverging ones. Replace bare
+  builtin references with typed no-log functions; retain returned-value evaluation,
+  remaining applications and type views.
 - Check emitted UPLC, including lambda and delay bodies, contains no Trace builtin.
 
-Test both build and test with O2 plus explicit verbose/compiler-trace settings,
+Reject explicit compact/verbose/compiler-trace settings for O2 in build and test.
+Test
 nested project ownership and direct assembly of hand-built Core. Test successful
 values, failing messages, partial calls and unused functions. Do not confuse test
 runner diagnostics with script traces. Explicit `comptime` evaluation is a separate
@@ -156,7 +169,8 @@ shape before proposing a separate pass.
 - Check one/two/three optimizer runs produce the same closed code, including cases
   exposed by interactions between grouping, lifting, parameter removal and folding.
 - For O1 compare values, failures, traces and termination against O0. For O2 compare
-  against silent O0, assert no emitted traces, and preserve failures/termination.
+  against silent O0, assert no emitted traces, and preserve failures/termination
+  outside discarded trace message computations.
   Render deliberate divergent cases; use isolated bounded observations for runtime
   experiments without introducing optimizer execution limits.
 - Review changed performance rows explicitly; preserve result evidence and distinguish

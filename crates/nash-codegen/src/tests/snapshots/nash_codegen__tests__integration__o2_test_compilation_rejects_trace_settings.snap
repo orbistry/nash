@@ -1,0 +1,6 @@
+---
+source: crates/nash-codegen/src/tests/integration.rs
+---
+TraceConfig { user: Compact, compiler: false }: O2 requires silent tracing; compact and verbose tracing are not supported
+TraceConfig { user: Verbose, compiler: false }: O2 requires silent tracing; compact and verbose tracing are not supported
+TraceConfig { user: Silent, compiler: true }: O2 does not support compiler traces

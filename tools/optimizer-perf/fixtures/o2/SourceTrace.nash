@@ -1,0 +1,11 @@
+module Main exposing (..)
+import Primitive exposing (..)
+import Builtin
+loop : int -> int
+loop n =
+    if Builtin.equalsInteger n 0 then
+        42
+    else
+        trace "step" (loop (Builtin.subtractInteger n 1))
+main : int
+main = loop 3

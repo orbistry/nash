@@ -98,8 +98,15 @@ pub enum ConfigError {
         expected: &'static str,
     },
 
-    #[error("'{path}' at {pos}: 'optimize' must be the integer 0 or 1")]
+    #[error("'{path}' at {pos}: 'optimize' must be the integer 0, 1, or 2")]
     InvalidOptimization { path: PathBuf, pos: Position },
+
+    #[error("'{path}' at {pos}: {source}")]
+    BuildConflict {
+        path: PathBuf,
+        pos: Position,
+        source: crate::BuildConflict,
+    },
 
     #[error(
         "'{path}' at {pos}: '{field}' must be set in workspace members, not the workspace config"

@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/silent/tests.rs
+description: Hand-built Core
+---
+--- unoptimized Core
+trace "message" in 42
+--- unoptimized UPLC
+(program 1.1.0
+  (force
+    [[(force (builtin trace)) (con string "message")] (delay (con integer 42))]))
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+(con integer 42)
+--- O0 logs
+["message"]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

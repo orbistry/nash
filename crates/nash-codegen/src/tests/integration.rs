@@ -557,3 +557,41 @@ fn rejected_generator_does_not_initialize_later_generators() {
     ));
     assert_eq!(evaluated.logs, ["first"]);
 }
+
+#[test]
+fn o2_test_compilation_rejects_trace_settings() {
+    let arena = Arena::new();
+    let build = Build::new(std::iter::empty());
+    let mut rows = Vec::new();
+    for trace in [
+        TraceConfig {
+            user: TraceLevel::Compact,
+            compiler: false,
+        },
+        TraceConfig {
+            user: TraceLevel::Verbose,
+            compiler: false,
+        },
+        TraceConfig {
+            user: TraceLevel::Silent,
+            compiler: true,
+        },
+    ] {
+        let result = compile_tests_matching_optimized(
+            &arena,
+            &build,
+            primitives::primitive_home(),
+            "",
+            Path::new("Main.nash"),
+            PlutusVersion::V3,
+            trace,
+            nash_config::OptimizationLevel::O2,
+            |_| true,
+        );
+        let Err(error) = result else {
+            panic!("conflicting settings must fail before compilation");
+        };
+        rows.push(format!("{trace:?}: {error}"));
+    }
+    insta::with_settings!({omit_expression => true}, { insta::assert_snapshot!(rows.join("\n")); });
+}

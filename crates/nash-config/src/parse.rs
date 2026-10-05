@@ -157,13 +157,24 @@ fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, Confi
                 pos: position_of(contents, prop.value.range()),
             })?,
     };
-    Ok(Build {
+    let build = Build {
         optimize,
         plutus_version,
         trace_level,
         trace_level_explicit: find_property(obj, "traceLevel").is_some(),
         compiler_traces,
-    })
+    };
+    build
+        .validate()
+        .map_err(|source| ConfigError::BuildConflict {
+            path: path.into(),
+            pos: position_of(
+                contents,
+                find_property(obj, "optimize").unwrap().value.range(),
+            ),
+            source,
+        })?;
+    Ok(build)
 }
 
 fn parse_package(contents: &str, path: &Path, obj: &Object) -> Result<Package, ConfigError> {
@@ -868,6 +879,34 @@ mod build_tests {
     }
 
     #[test]
+    fn silent_o2_roundtrip_and_test_defaults() {
+        for source in [
+            r#"{"type":"application","optimize":2}"#,
+            r#"{"type":"application","optimize":2,"traceLevel":"silent"}"#,
+            r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[],"optimize":2}"#,
+        ] {
+            let config = parse(source, "nash.jsonc").expect("silent O2 is valid");
+            assert_config_roundtrip_snapshot!(source, config);
+            let build = config.build();
+            assert_eq!(build, build.for_tests());
+            assert_eq!(build.for_tests(), build.for_tests().for_tests());
+        }
+    }
+
+    config_error_snapshot!(
+        o2_compact,
+        r#"{"type":"application","optimize":2,"traceLevel":"compact"}"#
+    );
+    config_error_snapshot!(
+        o2_verbose,
+        r#"{"type":"application","optimize":2,"traceLevel":"verbose"}"#
+    );
+    config_error_snapshot!(
+        o2_compiler_traces,
+        r#"{"type":"application","optimize":2,"compilerTraces":true}"#
+    );
+
+    #[test]
     fn build_defaults() {
         for source in [
             r#"{"type":"application"}"#,
@@ -971,7 +1010,7 @@ mod build_tests {
         compiler_traces_wrong_type,
         r#"{"type":"application","compilerTraces":"true"}"#
     );
-    config_error_snapshot!(invalid_optimizer, r#"{"type":"application","optimize":2}"#);
+    config_error_snapshot!(invalid_optimizer, r#"{"type":"application","optimize":3}"#);
     config_error_snapshot!(
         workspace_invalid_optimizer,
         r#"{"type":"workspace","members":[],"optimize":2}"#

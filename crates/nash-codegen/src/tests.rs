@@ -21,6 +21,8 @@ pub enum Error<'a> {
     #[error("unknown test module {0:?}")]
     UnknownModule(ModuleName<'a>),
     #[error("{0}")]
+    Settings(#[from] nash_config::BuildConflict),
+    #[error("{0}")]
     Build(crate::build::Error<'a>),
     #[error("{0}")]
     Program(crate::program::Error<'a>),
@@ -91,6 +93,17 @@ pub fn compile_tests_matching_optimized<'a>(
     optimize: nash_config::OptimizationLevel,
     mut include: impl FnMut(&nash_ast::Test<'a>) -> bool,
 ) -> Result<Vec<TestProgram>, Error<'a>> {
+    nash_config::Build {
+        optimize,
+        trace_level: match trace.user {
+            crate::build::TraceLevel::Silent => nash_config::TraceLevel::Silent,
+            crate::build::TraceLevel::Compact => nash_config::TraceLevel::Compact,
+            crate::build::TraceLevel::Verbose => nash_config::TraceLevel::Verbose,
+        },
+        compiler_traces: trace.compiler,
+        ..Default::default()
+    }
+    .validate()?;
     let input = build
         .inputs
         .iter()

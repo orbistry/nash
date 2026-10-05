@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\npartial : int -> int\npartial = Builtin.trace (fail)\nmain : int\nmain =\n    let\n        unused = partial\n    in\n    42\n"
+---
+--- unoptimized Core
+let fromInt#3 : int -> int = \value#5 : int -> value#5 in
+let partial#4 : int -> int = trace error in
+let unused#2 : int -> int = partial#4 in
+let main#1 : int = fromInt#3 42 in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam fromInt_3
+    [(lam partial_4
+      [(lam unused_2 [(lam main_1 main_1) [fromInt_3 (con integer 42)]]) partial_4])
+      [(force (builtin trace)) (error)]])
+    (lam value_5 value_5)])
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+error: ExplicitErrorTerm
+--- O0 logs
+[]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

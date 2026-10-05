@@ -18,6 +18,7 @@ pub mod evidence;
 pub mod comptime;
 pub mod optimizer;
 pub mod program;
+pub mod silent;
 pub mod uplc_optimizer;
 
 mod assertion;

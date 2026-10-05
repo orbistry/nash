@@ -1889,7 +1889,8 @@ Production `nash-codegen::optimizer` owns the accepted Core pipeline; snapshots
 and performance measurements reuse it. Build/test accept `-O0`/`-O1` and
 `--optimize 0|1`; application/package config accepts integer `optimize: 0|1`.
 The build/test default is O1. Workspace members own these settings, as with trace/target
-settings. CLI overrides each owning project's level. No O2 is defined.
+settings. CLI overrides each owning project's level. O2 was not part of this
+integration; silent O2 is now implemented separately in [Plan 15](15-o2-optimizer.md).
 O1 preserves enabled traces and their order; trace generation remains independent.
 Representation cancellation and bound-constructor folding run only in the
 cleanup loops after the single ANF normalization.

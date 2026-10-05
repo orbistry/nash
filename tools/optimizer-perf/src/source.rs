@@ -13,6 +13,15 @@ struct Module<'a> {
 }
 
 pub fn compile<'a>(arena: &'a Arena, source: &str, roots: &[&str]) -> Vec<&'a Core<'a>> {
+    compile_with_trace(arena, source, roots, TraceConfig::default())
+}
+
+pub fn compile_with_trace<'a>(
+    arena: &'a Arena,
+    source: &str,
+    roots: &[&str],
+    trace: TraceConfig,
+) -> Vec<&'a Core<'a>> {
     let bump = arena.as_bump();
     let mut interfaces = BTreeMap::from([("Builtin", nash_can::kinds::builtin_interface(bump))]);
     let mut modules = Vec::new();
@@ -40,7 +49,7 @@ pub fn compile<'a>(arena: &'a Arena, source: &str, roots: &[&str]) -> Vec<&'a Co
                         name: bump.alloc_str(name),
                     },
                     None,
-                    TraceConfig::default(),
+                    trace,
                 )
                 .expect("fixture codegen")
                 .core

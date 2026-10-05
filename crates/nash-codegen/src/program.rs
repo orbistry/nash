@@ -34,6 +34,8 @@ pub enum Error<'a> {
     #[error("{0}")]
     DeBruijn(debruijn::FreeVariable<'a>),
     #[error("{0}")]
+    Silent(#[from] crate::silent::Error),
+    #[error("{0}")]
     Target(#[from] script::TargetError),
 }
 
@@ -70,7 +72,7 @@ pub fn assemble_core_for_version<'a>(
     assemble_core_with_options(arena, core, version, nash_config::OptimizationLevel::O0)
 }
 
-/// Assemble at the selected optimization level without changing trace policy.
+/// Assemble at the selected level. O2 removes all logging before O1 optimization.
 pub fn assemble_core_with_options<'a>(
     arena: &'a Arena,
     core: &'a Core<'a>,
@@ -83,12 +85,13 @@ pub fn assemble_core_with_options<'a>(
     let core = match optimize {
         nash_config::OptimizationLevel::O0 => core,
         nash_config::OptimizationLevel::O1 => crate::optimizer::optimize(arena, core),
+        nash_config::OptimizationLevel::O2 => crate::optimizer::optimize_silent(arena, core)?,
     };
     let build = Builder::new(arena);
     let core = crate::recursion::rewrite(&build, core)?;
     let named = match optimize {
         nash_config::OptimizationLevel::O0 => crate::lower::lower(arena, core)?,
-        nash_config::OptimizationLevel::O1 => {
+        nash_config::OptimizationLevel::O1 | nash_config::OptimizationLevel::O2 => {
             let core = nash_ir::hygiene::freshen(&build, core);
             crate::lower::lower_optimized(arena, core)?
         }

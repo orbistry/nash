@@ -1,0 +1,41 @@
+---
+source: crates/nash-codegen/src/build/tests/optimizer.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin\nlog : string -> int -> int\nlog = Builtin.trace\nmain : int\nmain =\n    let\n        partial = log \"partial\"\n    in\n    partial (log \"inner\" 42)\n"
+---
+--- unoptimized Core
+let message#8 : string = "partial" in
+let message#9 : string = "inner" in
+let log#3 : string -> int -> int = trace in
+let fromString#4 : string -> string = \value#6 : string -> value#6 in
+let fromInt#5 : int -> int = \value#7 : int -> value#7 in
+let partial#2 : int -> int = log#3 (fromString#4 message#8) in
+let main#1 : int = partial#2 (log#3 (fromString#4 message#9) (fromInt#5 42)) in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam message_8
+    [(lam message_9
+      [(lam log_3
+        [(lam fromString_4
+          [(lam fromInt_5
+            [(lam partial_2
+              [(lam main_1 main_1)
+                [partial_2 [[log_3 [fromString_4 message_9]] [fromInt_5 (con integer 42)]]]])
+              [log_3 [fromString_4 message_8]]])
+            (lam value_7 value_7)])
+          (lam value_6 value_6)])
+        (force (builtin trace))])
+      (con string "inner")])
+    (con string "partial")])
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+(con integer 42)
+--- O0 logs
+["inner", "partial"]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

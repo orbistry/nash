@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/build.rs
+description: "validator module Main exposing (main)\nimport Builtin\nmain : Data -> unit\nmain _ = trace \"source\" (Builtin.trace \"builtin\" ())\n"
+---
+(program 1.1.0 (lam arg_1 (con unit ())))

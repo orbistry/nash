@@ -57,6 +57,10 @@ pub fn build_validators_matching_with(
         let Some(config) = config_for(&module.uri) else {
             continue;
         };
+        config.validate().map_err(|error| BuildError {
+            module: module.module.name.name.to_owned(),
+            message: error.to_string(),
+        })?;
         let trace = TraceConfig {
             user: match config.trace_level {
                 nash_config::TraceLevel::Silent => nash_codegen::build::TraceLevel::Silent,
@@ -306,13 +310,17 @@ pub fn compile_tests_matching_with(
             continue;
         };
         let config = config.for_tests();
+        config.validate().map_err(|error| BuildError {
+            module: module.module.name.name.to_owned(),
+            message: error.to_string(),
+        })?;
         let trace = TraceConfig {
             user: match config.trace_level {
                 nash_config::TraceLevel::Silent => nash_codegen::build::TraceLevel::Silent,
                 nash_config::TraceLevel::Compact => nash_codegen::build::TraceLevel::Compact,
                 nash_config::TraceLevel::Verbose => nash_codegen::build::TraceLevel::Verbose,
             },
-            compiler: true,
+            compiler: config.compiler_traces,
         };
         let path = module
             .uri

@@ -1,0 +1,22 @@
+---
+source: crates/nash-codegen/src/silent/tests.rs
+description: Hand-built Core
+---
+--- unoptimized Core
+let unused#1 : int -> int = trace error in
+42
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam unused_1 (con integer 42)) [(force (builtin trace)) (error)]])
+--- optimized Core (O2)
+42
+--- optimized UPLC (O2)
+(program 1.1.0 (con integer 42))
+--- O0 result
+error: ExplicitErrorTerm
+--- O0 logs
+[]
+--- O2 result
+(con integer 42)
+--- O2 logs
+[]

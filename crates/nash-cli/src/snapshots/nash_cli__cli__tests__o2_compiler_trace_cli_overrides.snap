@@ -1,0 +1,5 @@
+---
+source: crates/nash-cli/src/cli.rs
+---
+--compiler-traces: O2 does not support compiler traces
+--compiler-traces=false: O2; compiler traces: false
