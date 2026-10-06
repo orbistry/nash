@@ -36,7 +36,8 @@ tower-lsp-server = { version = "0.23.0", default-features = false, features = [
 ] }
 url = "2"
 xz2 = "0.1"
-zip = "2"
+# Keep zip 2 defaults except unused Bzip2 support.
+zip = { version = "2", default-features = false, features = ["aes-crypto", "deflate64", "deflate", "lzma", "time", "zstd", "xz"] }
 
 # Optimize insta/similar in dev for faster diffs
 [profile.dev.package]

@@ -26,3 +26,14 @@ The codegen snapshots and serialized artifact tests apply exactly one context
 and exercise successful and failed claims and cancellations. The snapshots
 compare unoptimized and optimized Core/UPLC and execution outcomes. Budget
 regressions run separately in `tools/optimizer-perf`.
+
+Run the example's Nash tests from the repository root:
+
+```sh
+cargo run -p nash-cli -- test examples/vesting
+```
+
+`VestingTests.nash` calls both validator entry points with synthetic V3 contexts.
+It checks claim deadline boundaries, owner and non-owner cancellations, and the
+parameterized minimum lock. Tests marked `fail` pass when the validator rejects
+the context.

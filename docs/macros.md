@@ -10,6 +10,22 @@ output, hygienic, `@derive(..)` on declarations, `name!(args)` in
 expressions, expand-then-recheck loop per module, deriving implemented as
 macros.
 
+## Implementation sequence and testing migration
+
+Plan 11 now starts with a small complete expression-macro path: resolve an
+imported macro, transport typed syntax, execute ordinary Nash on CEK, decode
+hygienic output, and strictly recheck it. AST builders suffice for this first
+slice; quote/splice and deriving follow. Binding/case-shaped inputs then establish
+scope-preserving composition before library property macros are introduced.
+
+The accepted direction is to move property preparation/callback generation and
+power-assert expansion from dedicated codegen into macros. This is separate work
+tracked in Plan 11 chunk 15. Public syntax, generated private-root discovery,
+interleaved generation semantics, optional Show evidence, and operand source
+origins must be defined before their respective migration steps. The generic
+macro shapes below do not by themselves solve those contracts. Runtime generation,
+replay, shrinking, execution budgets and reporting remain library/runner work.
+
 ## Concepts
 
 | Term | Meaning |
@@ -18,7 +34,7 @@ macros.
 | Invocation | `@name(args)` before a declaration, or `name!(args)` in an expression. |
 | Reification | Turning compiler AST into `Ast.*` values (little ADTs, so they are UPLC `constr` terms at runtime) and back. |
 | Expansion round | One pass: find every invocation in a module, run each macro, splice results. |
-| Hygiene | Binders created by a macro cannot capture or be captured by user names unless the macro asks for it with `Ast.raw`. |
+| Hygiene | Fresh binding identities prevent accidental capture; caller dependencies are explicit inputs. |
 | Comptime | `comptime e`: evaluate `e` on the CEK machine at compile time, splice the resulting constant. |
 
 ## Declaring a macro
@@ -255,7 +271,9 @@ directly as `nash_plutus::Term::Constr` nodes, applies the macro program
 to it, and walks the resulting `constr` tree back into surface AST; no
 `Data` encoding is involved. One family of types serves both input
 (typed) and output (surface). Type information lives in `option` slots
-that are `Some` on input and are ignored on output. Child lists are
+that are `Some` when resolved on input and are ignored on output. Provisional
+unresolved syntax retains names, lexical references and origins with absent type
+metadata; it must not be erased into a payload-free hole. Child lists are
 `cons` ([stdlib.md](stdlib.md) "`Cons`") because `list` elements must be
 `Storable` and `Ast` nodes are `Term`.
 
@@ -391,8 +409,9 @@ Input conventions (reification, `nash-macro`):
   `kind = Some`. `representation` is `Some` where known, independently of
   the kind. A transparent alias uses its substituted body. Parameter
   `repr` preserves the source representation annotation, if present.
-- Local variables and their binders are `Raw "x"`. Copying an input
-  subtree into output keeps it resolving as the user wrote it.
+- Local variables and their binders retain lexical identity. Copying bound
+  syntax freshens binders and their uses together; free caller references retain
+  their original identity. A raw spelling alone cannot encode this relationship.
 - Top-level, foreign, constructor, and operator references are
   `Global modname name`. `BinOp` carries the operator's *function* name.
 - `if` chains are nested `If`. `let` with several definitions is one `Let`
@@ -406,8 +425,9 @@ Input conventions (reification, `nash-macro`):
 
 Output conventions (the walk back to surface AST):
 
-- `span` is ignored. Every spliced node gets the invocation site's region
-  so diagnostics point at the `@derive(..)` or `name!(..)`.
+- Preserve original spans on supplied syntax. Generated syntax without an
+  original caller location uses the invocation region. Attach expansion history
+  separately, as specified under Source locations and expansion origins.
 - `typ` is ignored.
 - `name` decides resolution as described under Hygiene.
 - Inferred `kind` and `representation` slots are ignored. Kinds and
@@ -458,7 +478,20 @@ macros:
 | `name! pattern = value` | Pattern, value, and remaining lexical body |
 | `name! subject of` followed by normal arms | Subject and ordered pattern/body arms |
 
-For example, a library could later offer `expect! Some x = value` or:
+These shapes remain required in milestone B, before the property migration.
+For example, a binding macro can use `expect! Some x = value`, and a case-shaped
+macro can use:
+
+```nash
+dispatch! subject of
+    0 -> first
+    1 -> second
+```
+
+The case form does not itself select the explicit positional IntegerDispatch
+operation. That operation also retains its call-shaped interface
+`dispatch!(n, [branch0, branch1])`; library arm/fallback semantics remain to be
+specified. Another case-shaped macro could use:
 
 ```nash
 decodeIf! valueData of
@@ -523,31 +556,48 @@ Semantics:
 `quote type (t)`, `quote pattern (p)`, and `quote decl (d)` are deferred
 shorthand extensions, not prerequisites for constructing those AST values.
 
+## Source locations and expansion origins
+
+**Settled contract (6 October 2026):** preserve original locations when supplied
+syntax is moved or copied, down to individual operands. Freshening bindings does
+not change their source origins. Attach invocation provenance and nested expansion
+history separately. Generated syntax without an original caller location points
+to the macro invocation. Diagnostics retain access to the expansion chain.
+
+The concrete encoding is still to be chosen. Older output-span sketches must not
+be implemented as unconditional replacement of supplied spans by invocation spans.
+This is a syntax-metadata preservation rule, not a requirement to share storage
+with comments.
+
 ## Hygiene
 
-Names in macro output carry a resolution mode (`Ast.name`). The walk back
-to surface AST applies it when splicing:
+**Settled binding contract (6 October 2026):** freshen each copied or generated
+binder and all references bound by it, preserving lexical scope. Free caller
+references keep their original binding identities. Equal display names do not
+imply equal identities. In particular, a supplied pattern and body must be
+freshened together so the body still refers to that pattern's bindings.
 
-| Name | Binder position | Reference position |
-|---|---|---|
-| `Local s` | Renamed to `s·N` where `N` is unique to this expansion | Renamed to the same `s·N`; a `Local s` reference with no `Local s` binder in the output is an error (`MacroUnboundLocal`) |
-| `Raw s` | Spliced as `s` | Spliced as `s`; resolves in the invocation module's scope like user code |
-| `Global m s` | Not allowed as a binder (`MacroGlobalBinder`) | Resolves to `m.s` through the build's interface table, ignoring the invocation module's imports and aliases |
+The name modes below describe resolution intent. Their historical string-based
+encoding is illustrative and must be revised to carry this identity contract;
+fresh names alone are not a scope-tracking algorithm. The concrete encoding and
+explicit caller-visible binding API remain design work.
 
-Consequences:
+**Settled resolution contract (6 October 2026):**
 
-- A macro that writes `\x -> ... x ...` with `Ast.name "x"` can never
-  capture a user's `x`, and user code passed in as `Raw "x"` can never be
-  captured by it.
-- A macro that wants to bind a name the user will refer to (an
-  anaphoric macro) uses `Ast.raw`.
-- Top-level declarations emitted by a declaration macro use `Raw` names
-  for anything the user must be able to call (`impl` method names, the
-  generated function in `@memoize`), and `Local` names for helpers. A
-  `Local` top-level name is renamed and is not exported.
-- The renamed form `x·1` contains a character that is not a valid
-  identifier character, so it cannot collide with source text. Diagnostics
-  print `x` and mention the macro when a renamed name appears.
+| Name source | Resolution |
+|---|---|
+| Macro-written global | Macro defining module; preserve the resolved global identity |
+| Supplied caller reference | Original caller binding/global identity |
+| Copied or generated local binder | Fresh identity with consistently updated bound references |
+| Supplied pattern and remaining body | Preserve their binding relationship while freshening together |
+| Named generated declaration or trait method | Explicit declaration API, distinct from reference lookup |
+
+Arbitrary caller-scope lookup by string and implicit anaphoric bindings are
+deferred. Caller dependencies must be passed explicitly. Historical `Raw` and
+`Ast.raw` signatures in the AST/builder sketches are not an initial public lookup
+API: separate unresolved input spelling from bindings, globals, and declaration
+names when finalizing that encoding. Reading an attribute argument's spelling
+is not permission to resolve a generated reference in the caller's scope.
 
 The gensym pass runs on the decoded surface AST before canonicalization,
 see plan chunk "Hygiene".
@@ -711,21 +761,22 @@ Semantics:
   the one place the two mechanisms differ: a macro result is an `Ast`
   `constr` tree that the compiler walks, while a `comptime` result is
   spliced as a constant into the program.
-- `e` must be **closed**: it may not mention local variables of the
-  enclosing function (lambda parameters, `let` bindings, pattern
-  variables). Top-level values and imports are allowed. Violation is
-  `ComptimeNotClosed` naming the variable.
+- `e` must be **closed after including its reachable dependencies**. Top-level
+  values, imports, and closed local dependencies are allowed. Capturing an
+  enclosing runtime parameter is rejected. Preserve the existing dependency
+  closure behavior rather than rejecting all local bindings syntactically.
 - `e` may not contain `comptime` (they are nested constants anyway) or an
   unexpanded macro invocation (expansion runs first, so this cannot
   happen).
 - Evaluation: `nash-codegen` compiles `e` plus its dependencies to a
-  standalone program and runs it on the CEK machine with the
-  `comptimeBudget` (default 10x the mainnet transaction budget, settable
-  in `nash.jsonc` and by `--comptime-budget`).
+  standalone program and runs it on the CEK machine. The current implementation
+  uses V3 and `ExBudget::default()`. Configurable `comptimeBudget` and a
+  `--comptime-budget` flag are not implemented and are not prerequisites for the
+  first macro slice; any addition needs an explicit configuration contract.
 - The resulting `Constant` is spliced as a `Core::Lit` node. Failures
   are `ComptimeFailed` with the machine error and the last trace line.
-- Traces emitted during comptime are printed at compile time only with
-  `--trace-comptime`.
+- Current comptime failures include captured traces. A `--trace-comptime` flag
+  for successful evaluation is not implemented.
 - Comptime happens per use site, during lowering to Core. Two identical
   `comptime` expressions evaluate twice (v1; content-hash caching is an
   open question).
@@ -824,9 +875,9 @@ Notes on the sketch:
 
 - `ctor.name` from the input is `Global`, so the generated patterns match
   the right constructors even if the user's module renames them on import.
-- The trait name and the method name are `Raw`: `Eq` must resolve at the
-  invocation site (it is in the prelude), and `eq` is the method the trait
-  declares.
+- The historical `Raw` uses in this sketch must be replaced: the Eq trait
+  reference resolves in the deriving macro module, while `eq` is an explicit
+  declaration of that trait method. Neither needs arbitrary caller lookup.
 - `x0`, `y0`, `a`, `b` are `Local` and get renamed, so a field named `a`
   cannot interfere.
 - `Union { name, params, ctors }` is the labeled-constructor pattern sugar

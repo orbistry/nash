@@ -4,9 +4,199 @@ Goal: implement [docs/macros.md](../docs/macros.md): `macro` declarations,
 `@attr` and `name!()` invocations, `quote`/`~`, the `Ast` reification in a
 new `nash-macro` crate, the expansion loop in `nash-driver`, hygiene,
 `comptime`, `@derive` in `nash/base`, diagnostics, and expansion snapshot
-tests, and explicit native integer dispatch through a library macro.
+tests, explicit native integer dispatch through a library macro, and a staged
+migration of property/assertion expansion from codegen into Nash macros.
 
-## Current baseline and scope (26 September 2026)
+## Execution strategy: establish macro basics first
+
+This section sets implementation order. The numbered chunks below are component
+work packages, not a requirement to finish each layer in isolation before running
+a macro. Older code sketches illustrate shapes; current compiler APIs and the
+contracts below take precedence. No implementation is marked complete by this revision.
+
+A compiler macro is a function from syntax to syntax, executed during compilation.
+The minimum complete path must answer six questions:
+
+| Basic responsibility | Required result |
+|---|---|
+| Parse and resolve | Distinguish an imported macro declaration from an ordinary value and resolve an invocation to it. |
+| Transport syntax | Supply structured expression nodes, source origins, lexical references, and available types without evaluating the argument. |
+| Execute | Compile the macro through ordinary Nash codegen and run it with the existing bounded CEK evaluator. |
+| Decode and bind | Validate returned AST and preserve caller references while giving generated bindings distinct identities. |
+| Expand and check | Replace the invocation, then canonicalize and infer from fresh state; strictly check the final program. |
+| Explain failures | Report the invocation, macro identity, and useful expansion/evaluation errors. |
+
+Quote syntax is convenient AST construction, not the execution mechanism.
+Deriving, property syntax, and integer dispatch are clients of this mechanism.
+Neither a second evaluator nor property-specific logic belongs in the macro core.
+
+### Milestone A: one imported expression macro, end to end
+
+Start with the call-shaped interface and a small test macro module. Use AST
+builders first; quote/splice, attributes, deriving, binding/case forms, and the
+property migration need not block this first working slice. This is a development
+milestone, not a reduction of the final AST coverage or accepted Plan 11 scope.
+
+1. [ ] Inventory the current source/canonical variants and define the initial
+   shared `Ast` encoding with Plan 12. Specify source origins and lexical identity
+   before writing the reifier. `NodeId` identifies a syntax node, not its binder.
+2. [ ] Add annotated macro declarations and exported macro shape metadata. Keep
+   the existing imported-only invocation rule; test same-module and wrong-shape
+   errors. Parse/format the supported syntax through the existing frontend.
+3. [ ] Compile a real imported identity macro through `Build` and ordinary closed
+   program assembly. Execute it on syntax with the CEK machine; no host callback
+   or hardcoded macro name may substitute for the Nash macro.
+4. [ ] Integrate invocation replacement into the driver. Infer available argument
+   types, keep provisional macro-result types separate, and rebuild canonical
+   nodes and `SolvedTypes` after expansion. Never reuse pointer-keyed evidence
+   from an earlier round. Final strict inference and coverage are mandatory.
+5. [ ] Demonstrate both identity expansion and AST construction with a generated
+   local binding. Preserve free caller references and resolve macro-definition
+   globals even when the caller does not import them. Include nested shadowing
+   and a caller/generated-name collision.
+6. [ ] Reject malformed macro output, preserve real input type errors, report
+   evaluation/budget failures, and bound repeated expansion. Unsupported input
+   variants in an intermediate slice must produce a diagnostic, never a panic.
+
+Acceptance: snapshot source, typed macro input, expanded AST, and ordinary Core/
+UPLC for these fixtures, then check execution equivalence and lexical scope.
+A trace-bearing argument must not execute during expansion and must execute only
+as directed by the expanded program. Follow repository snapshot rules: no duplicate
+expected-output assertions; independent semantic checks follow the snapshot.
+
+Milestone A crosses chunks 1–8 and 11–12 in small validated slices. Diagnostics
+and expansion snapshots are part of the first slice, not work deferred until derive.
+
+### Milestone B: bindings, provisional checking, and full transport
+
+The revised order retains all three required invocation shapes. In particular,
+`expect!`-style bindings and `dispatch!`-style cases are required capabilities,
+not optional follow-up work after the property migration:
+
+```nash
+someMacro!(argument)
+
+-- In a let/do binding context; x is available to the remaining body.
+expect! Some x = value
+
+-- An expression with ordered pattern/body arms.
+dispatch! subject of
+    0 -> first
+    1 -> second
+```
+
+The compiler recognizes the call, binding, and case shapes, not these library
+names. Demonstrate each shape with a real Nash macro before completing B, including
+qualified invocations. The binding macro receives the remaining lexical body;
+the case macro receives the subject and independent arm scopes. Neither input
+is evaluated merely to pass syntax to the macro.
+
+Keep `dispatch!(n, [branch0, branch1])` from chunk 13 as well: it constructs the
+explicit positional IntegerDispatch operation. Case-shaped syntax does not by
+itself choose positional dispatch, decode Data, insert bounds checks, or define
+fallback behavior. Public `expect` failure semantics and `dispatch` arm rules
+remain library decisions to settle before shipping those library macros.
+
+- [ ] Extend the same transport to the complete required AST inventory; keep the
+  Nash constructors and host tags synchronized. Use bounded-stack traversal for
+  deep syntax, consistent with the current compiler maintenance.
+- [ ] Implement scoped binding identity, unresolved-name transport, and precise
+  predicate deferral. Missing provisional information is explicit; real
+  unification errors remain errors. Do not erase unknown names into a payload-free
+  hole that cannot be reconstructed by a macro.
+- [ ] Add binding-shaped input with an explicit remaining-body boundary. Prove two
+  nested bindings, dependent values, shadowing, and evaluate-once behavior using
+  test-only macros. Their resulting AST controls execution order.
+- [ ] Add case-shaped input with independent arm scopes and final-only coverage.
+  Do not prematurely unify an input subject with patterns awaiting conversion.
+- [ ] Prove nested expansion, module import/export behavior, and fresh dependency
+  analysis using generated declarations/impls; complete attribute support.
+
+This is chunks 2–6, 8, and 14 together. The initial identity example does not
+justify declaring general hygiene or lenient checking complete.
+
+### Milestone C: a property macro as the first substantial client
+
+After binding expansion works, implement chunk 15's smallest property slice:
+two dependent draws and a computed label become ordinary generator composition
+and body/display callbacks. Settle how the runner discovers the generated private
+root before implementing this slice. Preserve the existing runtime protocol first;
+do not redesign shrinking while replacing syntax expansion.
+
+The acceptance evidence includes deleting the replaced property-specific Core
+construction, not merely adding macros alongside it. Assertion migration follows
+only after source capture and optional display evidence have defined contracts.
+
+### Milestone D: complete remaining accepted capabilities
+
+Complete quote/splice, full declaration expansion, Ast/Derive, explicit integer
+dispatch, diagnostics/tooling, and the remaining expansion corpus. Quote may be
+added earlier when useful; it is not a prerequisite for the first executable
+macro. Existing comptime integration stays covered throughout. These remain Plan
+11 requirements; the staged order does not silently drop them.
+
+### Settled: fresh lexical bindings (6 October 2026)
+
+Use the same scope-preserving freshening principle as compiler optimization.
+Every copied or generated binder gets a fresh identity, and its bound references
+are updated consistently. Free references in supplied caller syntax retain their
+original binding identity. Distinct scopes never share a binder merely because
+its display spelling matches. Source names are for display, not identity.
+
+This settles the hygiene behavior, not the concrete AST encoding. Preserve the
+relationship between a supplied pattern and its remaining body when freshening
+both. The older `Local string`/gensym sketches below must implement this contract;
+a global string rename or one identity per spelling per expansion is insufficient.
+The concrete source-origin encoding and explicit caller-visible binding APIs
+remain to be settled separately.
+
+### Settled: source locations and expansion origins (6 October 2026)
+
+Moving or copying supplied syntax preserves its original source locations,
+including individual operands. Freshening lexical bindings does not replace
+those locations. Track the macro invocation and nested expansion history
+separately. Generated syntax without an original caller location uses its macro
+invocation as the diagnostic location. This follows the preservation principle
+used for attached syntax information; it does not require reusing comment storage.
+
+Diagnostics should point to supplied syntax where applicable and make the
+expansion chain available. The concrete origin encoding remains implementation
+design work; do not collapse every output span to the invocation region.
+
+### Settled: explicit inputs and global resolution (6 October 2026)
+
+Macro-written globals resolve in the macro's defining module. Supplied caller
+syntax preserves the caller's lexical/global resolution. Pass caller dependencies
+explicitly as arguments; arbitrary caller-scope lookup by a generated string and
+implicit anaphoric bindings are deferred from the initial implementation.
+
+Caller-supplied binding patterns remain supported: `expect! Some x = value`
+transports the relationship between x and its remaining body. Named generated
+declarations and trait methods also remain supported through declaration APIs;
+declaring a name is not an escape for looking up arbitrary caller locals.
+
+Historical `Raw`/`Ast.raw` sketches below are not the accepted initial lookup API.
+Revise them to distinguish unresolved input spelling, lexical binding identity,
+resolved globals, and declared names. Unresolved attribute-name syntax may be
+inspected as input without granting implicit caller lookup in generated output.
+Deriving uses resolved trait references and explicit method declarations.
+
+### Decisions required before their dependent implementation
+
+| Decision | Resolve before |
+|---|---|
+| Fresh binding and source-origin behavior settled above; choose their concrete encoding | Milestone A reifier/unreifier |
+| Representation of unresolved names/types and exact deferred relationships | General provisional checking in B |
+| Binding/case payload signatures and remaining-body boundaries | Structured forms in B |
+| Property syntax, private-root discovery, metadata, and interleaved execution semantics | Property migration in C |
+| Optional `Show` evidence and operand-level source fidelity | Power-assert migration |
+
+Prefer extending existing representations and library protocols. Record each
+settled contract in `docs/macros.md` and the relevant testing spec; do not create
+parallel type registries, inference engines, or alternate production paths merely
+to get a demonstration running.
+
+## Current baseline and scope (6 October 2026)
 
 Procedural macros remain pending. "Initial scope" means this plan's first
 implementation, not a language release or Plutus version. This section supersedes
@@ -25,7 +215,8 @@ historical implementation sketches below.
   `lower_value(&ModuleSet, ...)` or `Core::Const` APIs merely to match this sketch.
 - Chunks 1–8, 10–13 are pending macro work. Chunk 9 is existing comptime plus
   integration checks. Chunk 14 requires reusable structured invocation forms, without defining
-  library macro behavior.
+  library macro behavior. Chunk 15 defines the testing migration milestones; its
+  public syntax and discovery contract must be settled before that migration.
 
 AST builders construct expressions, patterns, arms, types, functions, and
 declarations. Initial quote/splice shorthand handles expressions only;
@@ -847,7 +1038,10 @@ impl<'p, 'a> Reifier<'p, 'a> {
                 &[self.global(*reference), self.cons_list(arguments.iter().map(|a| self.expr(a)))],
             ),
             CanExpr::Comptime(inner) => self.constr(tags::expr::COMPTIME, &[self.expr(inner)]),
-            CanExpr::Hole => unreachable!("holes never survive to reification: strict pass ran"),
+            // Provisional unresolved syntax must retain its name, scope and origin.
+            // Encode that metadata with an absent type; the concrete node shape
+            // is defined by the shared transport contract before implementation.
+            // A payload-free Hole/unreachable arm is not a valid implementation.
         };
         self.constr(0, &[meta, node])   // `Expr meta node`
     }
@@ -1267,28 +1461,16 @@ None. Conceptually Racket's "marks", simplified to one mark per expansion.
 applies it to the reified input terms under a budget and returns the
 result `Term` (the discharged value) or the failure message.
 
-**Code**
+**Compilation contract**
 
-```rust
-// crates/nash-codegen/src/macro_.rs
-/// Compile one macro definition to a closed program: the macro's Core
-/// term with all dependencies inlined. Arguments are little `Ast` values,
-/// i.e. `constr` terms applied directly, so no wrapper conversion is needed.
-pub fn compile_macro<'p>(
-    arena: &'p Arena,
-    set: &ModuleSet<'_>,
-    module: ModuleName<'_>,
-    macro_def: &MacroDef<'_>,
-) -> &'p Program<'p, DeBruijn> {
-    let term = lower_value(arena, set, QualifiedName { home: module, name: macro_def.name.value });
-    Program::new(arena, Version::plutus_v3(arena), term)
-}
+Use the current `Build` specialization and dependency closure, followed by
+ordinary closed Core assembly and Flat encoding. Compile an exported macro root
+with its reachable definitions; do not inline every dependency or recreate the
+removed `ModuleSet`/`lower_value` APIs. Retain owned encoded programs across module
+arenas and use shape metadata from the defining module's interface.
 
-/// Serialized so the driver can keep it across module arenas.
-pub fn encode_macro(program: &Program<'_, DeBruijn>) -> Vec<u8> {
-    nash_plutus::flat::encode(program)
-}
-```
+The following execution sketch illustrates the CEK boundary; adapt signatures and
+errors to the current APIs rather than introducing a second evaluator.
 
 ```rust
 // crates/nash-macro/src/run.rs
@@ -1350,7 +1532,7 @@ definition with its dependencies to a `Program`), `crates/aiken-project/src/lib.
 - Budget exhaustion returns `Failed` with the machine's budget error.
 
 **Done when** tests pass through current Build specialization and closed Core
-program assembly. Adapt the historical compilation sketch above to those APIs.
+program assembly, including invocation through the real driver expansion path.
 
 ---
 
@@ -1937,7 +2119,8 @@ semantics in the parser, solver, or lowerer.
 
 ### Deliberately not decided here
 
-No public `expect`, `decodeIf`, `clauses`, or assertion migration is specified.
+This capability chunk specifies no public `expect`, `decodeIf`, or `clauses` API.
+Testing/assertion migration is staged separately in chunk 15.
 Failure/fallback rules, validation depth (including ignored fields), target-type
 selection, accepted dispatch arms, and library treatment of irrefutable patterns
 remain library design decisions. Do not replace current power-assert reporting,
@@ -1949,20 +2132,81 @@ it does not require Plan 08 or implementation of particular standard macros.
 
 ---
 
+## Chunk 15: move property and assertion expansion into Nash macros
+
+**Accepted direction, implementation pending.** Replace testing-specific syntax
+expansion and Core construction with macros that emit ordinary typed Nash. This
+chunk extends the earlier plan; completing generic macros alone does not complete
+the migration. It does not yet choose the public replacement spelling for `prop`,
+`via`, or `assert`.
+
+### First property slice
+
+- [ ] Specify how a generated private test root is discovered without exposing it
+  as an ordinary public definition. Retain name, expected failure, budgets, source
+  origin, selected-test behavior, and counterexample display metadata. Choose a
+  thin compiler/driver discovery contract or library descriptor representation;
+  expression output alone does not register a test.
+- [ ] Define the property block's syntax and lexical boundaries using generic
+  macro input forms. Existing `via` is not automatically valid macro input. Do
+  not add parser/solver/codegen rules keyed to a particular library macro name.
+- [ ] Define interleaving: bindings that depend on earlier draws, ordinary lets,
+  conditional draws, statements/assertions before later draws, and draws inside
+  called functions. Preserve the chosen evaluation order; do not blindly hoist
+  generation across branches or effects. Explicitly delimit any deferred forms.
+- [ ] Implement a real library macro producing generator composition plus
+  property/display callbacks. Begin with two dependent draws and a computed
+  label, then test execution order and failures according to the settled contract.
+- [ ] Reuse `Test.prepare`, `Test.both` where suitable, and `Prop` composition.
+  Preserve the preparation/body/display protocol unless a documented semantic
+  requirement necessitates a coordinated change. Binding macros do not by
+  themselves settle the property block's preparation boundary.
+- [ ] Execute through `nash test`, including selection, expected failure, budget,
+  labels, counterexample display, and deterministic replay/shrinking regressions.
+- [ ] Remove replaced generator/callback Core construction in
+  `nash-codegen/src/tests.rs` and obsolete frontend special cases as consumers
+  migrate. Keep only necessary root compilation/discovery. Do not declare this
+  done while both production expansion implementations remain.
+
+### Power-assert migration
+
+- [ ] Define how a macro obtains operand syntax/origins and decides whether `Show`
+  evidence exists. Typed AST alone does not provide today's optional trait probe.
+  Choose a generic capability or an explicit library policy, not an assertion-name
+  exception in codegen. Preserve caller operand spans separately from generated
+  invocation spans.
+- [ ] Preserve evaluate-once behavior, short circuiting, trace order, failure-only
+  display, and source-linked capture metadata. Test values with and without Show.
+- [ ] Generate ordinary calls to assertion/reporting helpers and delete replaced
+  capture instrumentation in `nash-codegen/src/assertion.rs` after parity checks.
+  Any intentional output change must be separately specified and snapshot-reviewed.
+
+### Responsibilities that remain
+
+The runner still discovers/selects roots through the chosen contract, evaluates
+programs, enforces budgets/expected outcomes, and reports results. `Prop` and the
+Rust runner retain choice recording, replay, shrinking, and seed management.
+Macros transform syntax; they do not perform random sampling at compile time.
+The ordinary backend still compiles the emitted functions and the macro programs.
+
+Update `docs/testing.md`, Plan 10's migration notes, examples and fixtures when the
+new public contract is settled. Plan 10's completed current implementation stays
+recorded as completed; this new migration is tracked here.
+
 ## Order and dependencies
 
-```
-1 syntax ─┐
-2 can ────┼─ 3 node types ─ 4 reifier ─ 5 unreifier ─ 6 hygiene ─┐
-           │                                                   ├─ 8 driver loop ─ 10 derive ─ 12 snapshots
-7 codegen (needs plans/07) ────────────────────────────────────┘        │
-9 comptime (needs plans/02, plans/07)                                   11 diagnostics
-```
+Follow milestones A → B → C → D above, using the numbered chunks as component
+checklists. Cross-layer slices must compile and execute real macros early.
 
-Chunks 1–6 can land before plans/07; chunks 7–10 need it. Chunk 11 can
-land any time after 8; chunk 12 after 10.
-
-Chunk 13 requires chunks 2–8 and Plan 12 Ast coordination, not Plan 08 or deriving.
-Chunk 14 extends generic parsing, AST transport, hygiene, and checking with
-binding/case-shaped inputs; no particular library macro or extra quote syntax
-is required.
+- A combines declaration/call syntax, typed input, minimal transport, hygiene,
+  imported macro compilation, driver replacement, diagnostics, and snapshots.
+- B completes transport and provisional checking, adds structured binding/case
+  forms, and establishes declaration expansion. Coordinate chunk 14 across all
+  earlier shape definitions rather than bolting it on after a two-shape design.
+- C uses those capabilities for chunk 15. Discovery and assertion capabilities
+  are explicit gates, not assumed consequences of expression macros.
+- D completes the remaining accepted scope. Chunk 13's explicit dispatch needs
+  the generic macro path and AST/Core support; it does not depend on deriving.
+- Chunk 9 preserves existing comptime throughout. Ast encoding and Plan 12's Ast/
+  Derive work must stay synchronized. Macro-free modules retain the ordinary
+  single strict checking path; do not impose repeated provisional passes on them.

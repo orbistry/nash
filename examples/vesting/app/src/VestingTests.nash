@@ -1,0 +1,102 @@
+module VestingTests exposing ( context )
+
+
+import Builtin exposing (..)
+import Vesting
+import VestingParam
+
+
+constr : ( int, list Data ) -> Data
+constr ( tag, fields ) = Builtin.constrData tag fields
+
+
+-- Synthetic V3 spending context, matching the application's Data encoding.
+-- The deadline is 10 ms; the owner is deliberately the second signatory.
+context : int -> int -> list Data -> Data
+context action time signers =
+    let
+        empty = List []
+
+        emptyMap = Map []
+
+        txId =
+            B
+                #"0000000000000000000000000000000000000000000000000000000000000000"
+
+        closed = constr ( 1, [] )
+
+        lowerBound = constr ( 0, [ constr ( 1, [ I time ] ), closed ] )
+
+        upperBound = constr ( 0, [ constr ( 2, [] ), closed ] )
+
+        tx =
+            constr
+                ( 0
+                , [ empty
+                , empty
+                , empty
+                , I 0
+                , emptyMap
+                , empty
+                , emptyMap
+                , constr ( 0, [ lowerBound, upperBound ] )
+                , List signers
+                , emptyMap
+                , emptyMap
+                , txId
+                , emptyMap
+                , empty
+                , constr ( 1, [] )
+                , constr ( 1, [] )
+                ]
+                )
+
+        datum = constr ( 0, [ B #"aa", I 10 ] )
+
+        reference = constr ( 0, [ txId, I 0 ] )
+
+        spending = constr ( 1, [ reference, constr ( 0, [ datum ] ) ] )
+    in
+        constr ( 0, [ tx, constr ( action, [] ), spending ] )
+
+
+tests
+    test "claim after deadline succeeds" =
+        do
+            Vesting.main (context 0 11 [])
+
+    test "claim at deadline fails" fail =
+        do
+            Vesting.main (context 0 10 [])
+
+    test "claim before deadline fails" fail =
+        do
+            Vesting.main (context 0 9 [])
+
+    test "owner can cancel before deadline" =
+        do
+            Vesting.main (context 1 0 [ B #"bb", B #"aa" ])
+
+    test "another signer cannot cancel" fail =
+        do
+            Vesting.main (context 1 20 [ B #"bb" ])
+
+    test "unsigned cancellation fails" fail =
+        do
+            Vesting.main (context 1 20 [])
+
+    test "parameterized claim after lock succeeds" =
+        do
+            VestingParam.main 5 (context 0 16 [])
+
+    test "parameterized claim at lock boundary fails" fail =
+        do
+            VestingParam.main 5 (context 0 15 [])
+
+    test "minimum lock does not prevent owner cancellation" =
+        do
+            VestingParam.main 5 (context 1 0 [ B #"bb", B #"aa" ])
+
+    test "minimum lock does not authorize another signer" fail =
+        do
+            VestingParam.main 5 (context 1 20 [ B #"bb" ])

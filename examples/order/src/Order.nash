@@ -2,7 +2,7 @@ module Order exposing (compare, invert, sort)
 
 import Prelude exposing (..)
 import Literal
-import Bool exposing (not)
+import Logic exposing (not)
 import Ord exposing (Ord)
 import Ordering exposing (type ordering(..))
 
