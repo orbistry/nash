@@ -1,6 +1,6 @@
 [package]
 name = "nash-plutus"
-version = "0.3.3"
+version = "0.3.4"
 edition.workspace = true
 description = "Untyped Plutus Core CEK Machine"
 homepage.workspace = true

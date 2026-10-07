@@ -1,5 +1,19 @@
 # nash-codegen
 
+## 0.6.0 — 2026-10-07
+
+### Minor changes
+
+- [1ef1f880](https://github.com/orbistry/nash/commit/1ef1f880fb69765219beb822b27b59c5fecde3f2) Make trace-preserving O1 optimization the default for builds and tests, with explicit O0/O1 CLI and project settings. Share the accepted optimizer with snapshots and measurements, and include direct integer representation cancellation before ANF.
+  
+  Print deep UPLC term trees with an explicit work stack. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [07c328f2](https://github.com/orbistry/nash/commit/07c328f276a4e36f227fae4068430dfae5d8fb49) Replace recursive Core and UPLC assembly traversals with heap work lists. Remove the O1 stack enlargement while preserving traversal order, generated code, traces, and lowering diagnostics. — Thanks @MicroProofs!
+- [a14c3c6b](https://github.com/orbistry/nash/commit/a14c3c6bfc5627beb76238816c3260abdaa14440) Cancel proven integer, byte, list, map and UTF-8 representation round trips, including let-bound operands and constructor Data projections/reconstruction, while preserving validation, traces and evaluation order. Run cancellation in the O1 cleanup loop as well as before normalization. — Thanks @MicroProofs!
+- Updated dependencies: nash-config@0.6.0, nash-ir@0.5.0, nash-plutus@0.3.4, nash-test@0.4.3
+
 ## 0.5.0 — 2026-09-30
 
 ### Minor changes

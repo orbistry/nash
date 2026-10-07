@@ -1,5 +1,14 @@
 # nash-plutus
 
+## 0.3.4 — 2026-10-07
+
+### Patch changes
+
+- [1ef1f880](https://github.com/orbistry/nash/commit/1ef1f880fb69765219beb822b27b59c5fecde3f2) Make trace-preserving O1 optimization the default for builds and tests, with explicit O0/O1 CLI and project settings. Share the accepted optimizer with snapshots and measurements, and include direct integer representation cancellation before ANF.
+  
+  Print deep UPLC term trees with an explicit work stack. — Thanks @MicroProofs!
+- [07c328f2](https://github.com/orbistry/nash/commit/07c328f276a4e36f227fae4068430dfae5d8fb49) Replace recursive Core and UPLC assembly traversals with heap work lists. Remove the O1 stack enlargement while preserving traversal order, generated code, traces, and lowering diagnostics. — Thanks @MicroProofs!
+
 ## 0.3.3 — 2026-09-27
 
 ### Patch changes

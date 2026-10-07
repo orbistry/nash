@@ -1,5 +1,23 @@
 # nash-ir
 
+## 0.5.0 — 2026-10-07
+
+### Minor changes
+
+- [31f81190](https://github.com/orbistry/nash/commit/31f811909464bb3abe0b6ffca835031803c20c2f) Fold field accesses on known native constructors while preserving strict field evaluation, escaping values, and malformed runtime shapes. — Thanks @MicroProofs!
+- [d362d7f6](https://github.com/orbistry/nash/commit/d362d7f64602d149d40d3545fa675b2dff6dfccc) Add an isolated integer representation cancellation pass with structural runtime-shape evidence and preserved operand evaluation. — Thanks @MicroProofs!
+- [365ec7e3](https://github.com/orbistry/nash/commit/365ec7e304e52c7e8c1c8bfb66cea6da5e72dce2) Fold known native integer and byte case subjects while preserving invalid tables, runtime failures, and strict evaluation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [a192b185](https://github.com/orbistry/nash/commit/a192b1855a37ec9c8bd65008a348086891e57074) Render deep Core term trees with a heap work list while preserving diagnostic and snapshot formatting. — Thanks @MicroProofs!
+- [1ef1f880](https://github.com/orbistry/nash/commit/1ef1f880fb69765219beb822b27b59c5fecde3f2) Make trace-preserving O1 optimization the default for builds and tests, with explicit O0/O1 CLI and project settings. Share the accepted optimizer with snapshots and measurements, and include direct integer representation cancellation before ANF.
+  
+  Print deep UPLC term trees with an explicit work stack. — Thanks @MicroProofs!
+- [07c328f2](https://github.com/orbistry/nash/commit/07c328f276a4e36f227fae4068430dfae5d8fb49) Replace recursive Core and UPLC assembly traversals with heap work lists. Remove the O1 stack enlargement while preserving traversal order, generated code, traces, and lowering diagnostics. — Thanks @MicroProofs!
+- [a14c3c6b](https://github.com/orbistry/nash/commit/a14c3c6bfc5627beb76238816c3260abdaa14440) Cancel proven integer, byte, list, map and UTF-8 representation round trips, including let-bound operands and constructor Data projections/reconstruction, while preserving validation, traces and evaluation order. Run cancellation in the O1 cleanup loop as well as before normalization. — Thanks @MicroProofs!
+- Updated dependencies: nash-plutus@0.3.4
+
 ## 0.4.0 — 2026-09-30
 
 ### Minor changes

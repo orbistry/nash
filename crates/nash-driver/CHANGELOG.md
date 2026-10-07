@@ -1,5 +1,17 @@
 # nash-driver
 
+## 0.13.0 — 2026-10-07
+
+### Minor changes
+
+- [1ef1f880](https://github.com/orbistry/nash/commit/1ef1f880fb69765219beb822b27b59c5fecde3f2) Make trace-preserving O1 optimization the default for builds and tests, with explicit O0/O1 CLI and project settings. Share the accepted optimizer with snapshots and measurements, and include direct integer representation cancellation before ANF.
+  
+  Print deep UPLC term trees with an explicit work stack. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-codegen@0.6.0, nash-config@0.6.0, nash-plutus@0.3.4, nash-test@0.4.3
+
 ## 0.12.1 — 2026-09-30
 
 ### Patch changes

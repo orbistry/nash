@@ -1,5 +1,13 @@
 # nash-config
 
+## 0.6.0 — 2026-10-07
+
+### Minor changes
+
+- [1ef1f880](https://github.com/orbistry/nash/commit/1ef1f880fb69765219beb822b27b59c5fecde3f2) Make trace-preserving O1 optimization the default for builds and tests, with explicit O0/O1 CLI and project settings. Share the accepted optimizer with snapshots and measurements, and include direct integer representation cancellation before ANF.
+  
+  Print deep UPLC term trees with an explicit work stack. — Thanks @MicroProofs!
+
 ## 0.5.0 — 2026-09-20
 
 ### Minor changes
