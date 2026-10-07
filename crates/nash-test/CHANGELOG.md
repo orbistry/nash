@@ -1,5 +1,11 @@
 # nash-test
 
+## 0.4.3 — 2026-10-07
+
+### Patch changes
+
+- Updated dependencies: nash-config@0.6.0, nash-plutus@0.3.4
+
 ## 0.4.2 — 2026-09-27
 
 ### Patch changes
