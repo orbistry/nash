@@ -39,9 +39,19 @@ xz2 = "0.1"
 # Keep zip 2 defaults except unused Bzip2 support.
 zip = { version = "2", default-features = false, features = ["aes-crypto", "deflate64", "deflate", "lzma", "time", "zstd", "xz"] }
 
-# Optimize insta/similar in dev for faster diffs
+# Optimize the compiler crates and insta/similar in dev for faster tests and diffs
 [profile.dev.package]
+bumpalo.opt-level = 3
 insta.opt-level = 3
+nash-ast.opt-level = 3
+nash-can.opt-level = 3
+nash-codegen.opt-level = 3
+nash-constrain.opt-level = 3
+nash-ir.opt-level = 3
+nash-nitpick.opt-level = 3
+nash-parse.opt-level = 3
+nash-plutus.opt-level = 3
+nash-solve.opt-level = 3
 similar.opt-level = 3
 
 # The profile that 'dist' will build with
