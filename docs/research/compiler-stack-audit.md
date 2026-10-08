@@ -1,5 +1,19 @@
 # Compiler stack audit — 2026-09-29
 
+## Stack model — 2026-10-08
+
+This audit planned one explicit work stack for each recursive path. That
+direction is superseded. Compiler work now runs on threads with one large
+reserved stack (`nash_driver::stack::run`, 128 MiB), and a traversal recurses in
+Elm's shape. rustc made the same change in rust-lang/rust#160535; the reasons
+are in rust-lang/compiler-team#1011. The parser nesting limit of 64 is removed.
+There is no stack check: input that is too deep ends the process with a stack
+overflow.
+
+The sections below are the record of 2026-09-29. The candidates and the
+follow-up order are not planned work. The work stacks under "Reproduced
+failures" stay until a later change converts them back to recursion.
+
 Default O1 exposed a stack overflow in the driver `ledger_contexts` fixture.
 This audit distinguishes reproduced failures from recursive paths that still
 need depth regressions. Passing the fixture does not establish a universal

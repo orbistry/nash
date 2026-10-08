@@ -31,11 +31,12 @@ Name suggestions merge visible bindings in sorted order.
 The driver returns in-memory interface summaries with exports, kinds, and
 contract fingerprints. It has no persistent interface cache or cache metadata.
 
-The parser permits at most 64 simultaneous recursive expression, pattern, and
-type entries, counted together. Beyond this limit it reports excessive nesting
-at the first exhausted position. Backtracking cannot clear that failure. This
-limit is checked on a 2 MiB stack in debug and release tests. Flat sequences and
-nested comments iterate instead of consuming stack per item.
+Compiler passes recurse over source structure, as Elm's do. Every thread that
+runs compiler work reserves a 128 MiB stack through `nash_driver::stack::run`:
+the driver's compile and import-scan threads, and the CLI's command, format, and
+docs threads. There is no nesting limit and no stack check: input that needs
+more stack ends the process with a stack overflow. In the parser, flat sequences
+and nested comments iterate instead of consuming stack per item.
 
 ## Status
 

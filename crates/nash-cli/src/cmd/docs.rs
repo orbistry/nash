@@ -39,56 +39,58 @@ impl Args {
         let success = docs.compiler.is_success();
         // Render diagnostics off the executor just like documentation pages.
         let (files, diagnostics) = spawn_blocking(move || {
-            let mut diagnostics = String::new();
-            for module in docs.compiler.ordered_reports() {
-                let source = nash_report::Source::new(&module.source);
-                for report in &module.reports {
+            nash_driver::stack::run(move || {
+                let mut diagnostics = String::new();
+                for module in docs.compiler.ordered_reports() {
+                    let source = nash_report::Source::new(&module.source);
+                    for report in &module.reports {
+                        diagnostics.push_str(&format!(
+                            "{:?}\n",
+                            miette::Report::new(report.render(&source, &module.path, color))
+                        ));
+                    }
+                }
+                for (uri, state) in &docs.compiler.modules {
+                    if let nash_driver::ModuleResult::SourceUnavailable { message } = state {
+                        diagnostics.push_str(&format!("Could not read {uri}: {message}\n"));
+                    }
+                }
+                for warning in &docs.warnings {
+                    let mut report = nash_report::Report::snippet(
+                        "DOCUMENTATION WARNING",
+                        nash_region::Region::zero(),
+                        None,
+                        nash_report::Doc::text(format!(
+                            "{}.{}: {}",
+                            warning.module, warning.name, warning.message
+                        )),
+                        nash_report::Doc::Empty,
+                    )
+                    .warning();
+                    report.primary_label = None;
+                    report.context = None;
                     diagnostics.push_str(&format!(
                         "{:?}\n",
-                        miette::Report::new(report.render(&source, &module.path, color))
+                        miette::Report::new(report.render(
+                            &nash_report::Source::new(""),
+                            &warning.module,
+                            color
+                        ))
                     ));
                 }
-            }
-            for (uri, state) in &docs.compiler.modules {
-                if let nash_driver::ModuleResult::SourceUnavailable { message } = state {
-                    diagnostics.push_str(&format!("Could not read {uri}: {message}\n"));
-                }
-            }
-            for warning in &docs.warnings {
-                let mut report = nash_report::Report::snippet(
-                    "DOCUMENTATION WARNING",
-                    nash_region::Region::zero(),
-                    None,
-                    nash_report::Doc::text(format!(
-                        "{}.{}: {}",
-                        warning.module, warning.name, warning.message
-                    )),
-                    nash_report::Doc::Empty,
+                let format = match self.format {
+                    Format::Html => nash_docs::Format::Html,
+                    Format::Markdown => nash_docs::Format::Markdown,
+                };
+                (
+                    if success {
+                        nash_docs::render(&docs.modules, format)
+                    } else {
+                        Default::default()
+                    },
+                    diagnostics,
                 )
-                .warning();
-                report.primary_label = None;
-                report.context = None;
-                diagnostics.push_str(&format!(
-                    "{:?}\n",
-                    miette::Report::new(report.render(
-                        &nash_report::Source::new(""),
-                        &warning.module,
-                        color
-                    ))
-                ));
-            }
-            let format = match self.format {
-                Format::Html => nash_docs::Format::Html,
-                Format::Markdown => nash_docs::Format::Markdown,
-            };
-            (
-                if success {
-                    nash_docs::render(&docs.modules, format)
-                } else {
-                    Default::default()
-                },
-                diagnostics,
-            )
+            })
         })
         .await
         .into_diagnostic()?;

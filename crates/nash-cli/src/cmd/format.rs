@@ -25,9 +25,11 @@ impl Args {
                 .read_to_string(&mut source)
                 .await
                 .into_diagnostic()?;
-            let formatted = spawn_blocking(move || format_source(&source, "<stdin>", color))
-                .await
-                .into_diagnostic()??;
+            let formatted = spawn_blocking(move || {
+                nash_driver::stack::run(move || format_source(&source, "<stdin>", color))
+            })
+            .await
+            .into_diagnostic()??;
             let mut stdout = tokio::io::stdout();
             stdout
                 .write_all(formatted.as_bytes())
@@ -76,19 +78,21 @@ fn format_source(source: &str, name: &str, color: bool) -> Result<String> {
 async fn format_file(path: PathBuf, name: String, check: bool, color: bool) -> Result<()> {
     let source = tokio::fs::read_to_string(&path).await.into_diagnostic()?;
     let formatted = spawn_blocking(move || {
-        let formatted = format_source(&source, &name, color)?;
-        if check {
-            if let Some(report) = nash_report::format::difference(&name, &source, &formatted) {
-                return Err(miette::Report::new(report.render(
-                    &nash_report::Source::new(&source),
-                    &name,
-                    color,
-                )));
+        nash_driver::stack::run(move || {
+            let formatted = format_source(&source, &name, color)?;
+            if check {
+                if let Some(report) = nash_report::format::difference(&name, &source, &formatted) {
+                    return Err(miette::Report::new(report.render(
+                        &nash_report::Source::new(&source),
+                        &name,
+                        color,
+                    )));
+                }
+                Ok(None)
+            } else {
+                Ok((source != formatted).then_some(formatted))
             }
-            Ok(None)
-        } else {
-            Ok((source != formatted).then_some(formatted))
-        }
+        })
     })
     .await
     .into_diagnostic()??;

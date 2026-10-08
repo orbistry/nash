@@ -5,17 +5,6 @@ use crate::render_plain;
 use nash_parse::error::*;
 
 #[test]
-fn variant_excessive_nesting() {
-    let input = "f = (((1)))";
-    let source = Source::new(input);
-    let error = Module::Space(Space::TooDeep, 1, 7);
-    let report = module::to_parse_error_report(&source, &error);
-    insta::with_settings!({ description => input, omit_expression => true }, {
-        insta::assert_snapshot!(render_plain(&report, &source, "src/Main.nash"));
-    });
-}
-
-#[test]
 fn variant_module_space() {
     let input = "f =\t1";
     let source = Source::new(input);

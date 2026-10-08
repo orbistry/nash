@@ -571,7 +571,6 @@ pub enum Number {
 
 #[derive(Debug)]
 pub enum Space {
-    TooDeep,
     HasTab,
     EndlessMultiComment(Position),
 }

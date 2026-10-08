@@ -172,13 +172,6 @@ fn unclosed_literal(
 
 pub(crate) fn to_space_report(_source: &Source<'_>, space: &Space, row: Row, col: Col) -> Report {
     match space {
-        Space::TooDeep => problem(
-            "EXCESSIVE NESTING",
-            row,
-            col,
-            "Nesting limit exceeded.",
-            "Split this expression, pattern, or type into smaller definitions.",
-        ),
         Space::HasTab => problem(
             "NO TABS",
             row,

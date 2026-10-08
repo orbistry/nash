@@ -42,10 +42,6 @@ impl<'a> Parser<'a> {
     ///       oneOfWithFallback [ arrow... ] term1
     /// ```
     pub fn type_expr(&mut self) -> Result<(&'a Located<Type<'a>>, Position), error::Type<'a>> {
-        self.with_depth(error::Type::Space, Self::type_expr_inner)
-    }
-
-    fn type_expr_inner(&mut self) -> Result<(&'a Located<Type<'a>>, Position), error::Type<'a>> {
         let start = self.get_position();
 
         // Parse first term - either type application or simple term
@@ -247,10 +243,6 @@ impl<'a> Parser<'a> {
     /// - Tuples: `()`, `(Int, String)`
     /// - Records: `{}`, `{ name : String }`
     pub fn type_term(&mut self) -> Result<&'a Located<Type<'a>>, error::Type<'a>> {
-        self.with_depth(error::Type::Space, Self::type_term_inner)
-    }
-
-    fn type_term_inner(&mut self) -> Result<&'a Located<Type<'a>>, error::Type<'a>> {
         let start = self.get_position();
 
         self.one_of(

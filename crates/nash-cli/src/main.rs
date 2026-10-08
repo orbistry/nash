@@ -5,15 +5,18 @@ fn main() -> miette::Result<()> {
     // process is single-threaded — so it runs before the runtime starts.
     let proxied = nash_cli::proxy::proxy_guard()?;
 
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .into_diagnostic()?
-        .block_on(async {
-            if !proxied {
-                nash_cli::proxy::maybe_proxy().await?;
-            }
+    // Commands render and drop compiler results on this thread.
+    nash_driver::stack::run(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .into_diagnostic()?
+            .block_on(async {
+                if !proxied {
+                    nash_cli::proxy::maybe_proxy().await?;
+                }
 
-            nash_cli::Cli::default().exec().await
-        })
+                nash_cli::Cli::default().exec().await
+            })
+    })
 }

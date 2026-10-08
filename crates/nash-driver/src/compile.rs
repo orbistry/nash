@@ -118,9 +118,9 @@ struct CompileOutput {
 
 /// Compile all modules through the full pipeline, in dependency order.
 ///
-/// The async part only fetches sources; the CPU-bound compilation runs on
-/// tokio's blocking pool (`spawn_blocking`) so no executor worker is ever
-/// stalled.
+/// The async part only fetches sources; the CPU-bound compilation runs on a
+/// compiler thread (`stack::run`) behind tokio's blocking pool, so no executor
+/// worker is ever stalled.
 /// `origins` must contain every module in the graph, including applications.
 pub async fn build(
     db: Arc<Mutex<Database>>,
@@ -189,13 +189,15 @@ where
     let edges = graph.edges.clone();
     let test_modules = graph.test_modules.clone();
     tokio::task::spawn_blocking(move || {
-        build_sync_with_policy(
-            sources,
-            &edges,
-            exclude_tests,
-            test_modules.as_ref(),
-            finish,
-        )
+        crate::stack::run(move || {
+            build_sync_with_policy(
+                sources,
+                &edges,
+                exclude_tests,
+                test_modules.as_ref(),
+                finish,
+            )
+        })
     })
     .await
     .expect("compile task panicked")
@@ -553,13 +555,15 @@ pub async fn build_graph_with_tests(
             let (uri, known) = (uri.clone(), known.clone());
             let include_tests = test_modules.contains(&uri);
             tokio::task::spawn_blocking(move || {
-                // Retain unreadable nodes: the build reports their I/O failure and
-                // blocks dependents while continuing independent modules.
-                let imports = match source {
-                    Ok(source) => scan_module(&source, &uri, &known, include_tests)?,
-                    Err(_) => vec![],
-                };
-                Ok::<_, DriverError>((uri, imports))
+                crate::stack::run(move || {
+                    // Retain unreadable nodes: the build reports their I/O failure and
+                    // blocks dependents while continuing independent modules.
+                    let imports = match source {
+                        Ok(source) => scan_module(&source, &uri, &known, include_tests)?,
+                        Err(_) => vec![],
+                    };
+                    Ok::<_, DriverError>((uri, imports))
+                })
             })
         })
         .collect();

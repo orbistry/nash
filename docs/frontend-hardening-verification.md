@@ -15,7 +15,7 @@ rebases; use `jj log -r <change-id>` for the current commit hash.
 | `lrnzrllu` | Remove parser accumulator copies |
 | `tsqsspqw` | Require valid UTF-8 input |
 | `wplqvsku` | Widen source coordinates |
-| `rnvunqnt` | Bound parser nesting and iterate flat sequences |
+| `rnvunqnt` | Bound parser nesting and iterate flat sequences (the nesting bound was removed on 2026-10-08, see `docs/overview.md`) |
 | `otpvxozr` | Remove inactive interface-cache machinery |
 | `ovwmkvpo` | Borrow canonical local scopes |
 | `npksuwvn` | Bound trait candidate traversal |
@@ -41,8 +41,7 @@ cargo test --release -p nash-parse
 ```
 
 The parser tests cover Unicode and escapes, coordinates beyond 65,535,
-arbitrary lookahead, oversized Unicode escapes, nesting on a 2 MiB stack, and
-long flat sequences. Scope regressions cover shadowing and error recovery.
+arbitrary lookahead, oversized Unicode escapes, and long flat sequences. Scope regressions cover shadowing and error recovery.
 Trait traversal compares candidate keys and payload identity with the original
 ordered full-map filter, including missing traits and empty heads.
 

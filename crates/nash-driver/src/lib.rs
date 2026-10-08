@@ -50,6 +50,7 @@ pub mod graph;
 pub mod interface;
 pub mod project;
 pub mod source;
+pub mod stack;
 
 // Re-export main types
 pub use compile::{
