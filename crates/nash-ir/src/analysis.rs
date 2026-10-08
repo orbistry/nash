@@ -71,117 +71,114 @@ impl<'a> Collector<'a> {
         self.scope.push(id);
     }
 
+    fn within(&mut self, boundary: Boundary, body: &Core<'a>) {
+        self.boundaries.push(boundary);
+        self.visit(body);
+        self.boundaries.pop();
+    }
+
     fn visit(&mut self, core: &Core<'a>) {
-        enum Task<'t, 'a> {
-            Visit(&'t Core<'a>),
-            Bind(Binder<'a>),
-            Boundary(Boundary),
-            Restore(usize, usize),
-        }
-        let mut pending = vec![Task::Visit(core)];
-        let mut children = Vec::new();
-        while let Some(task) = pending.pop() {
-            let core = match task {
-                Task::Visit(core) => core,
-                Task::Bind(binder) => {
-                    self.bind(binder);
-                    continue;
-                }
-                Task::Boundary(boundary) => {
-                    self.boundaries.push(boundary);
-                    continue;
-                }
-                Task::Restore(scope, boundaries) => {
-                    self.scope.truncate(scope);
-                    self.boundaries.truncate(boundaries);
-                    continue;
-                }
-            };
-            let node = self.next_node;
-            self.next_node += 1;
-            let depth = self.scope.len();
-            let boundaries = self.boundaries.len();
-            pending.push(Task::Restore(depth, boundaries));
-            match &core.kind {
-                CoreKind::Var(name) => {
-                    let binding = self
-                        .scope
-                        .iter()
-                        .rev()
-                        .copied()
-                        .find(|&id| self.report.bindings[id].name.unique == name.unique);
-                    self.report.uses.push(Occurrence {
-                        name: *name,
-                        binding,
-                        node,
-                        scope: self.scope.clone(),
-                        execution_scope: self.boundaries.clone(),
-                    });
-                }
-                CoreKind::Lam { params, body } => {
-                    if !params.is_empty() {
-                        self.boundaries.push(Boundary::Lambda(node));
+        let node = self.next_node;
+        self.next_node += 1;
+        let depth = self.scope.len();
+        match &core.kind {
+            CoreKind::Var(name) => {
+                let binding = self
+                    .scope
+                    .iter()
+                    .rev()
+                    .copied()
+                    .find(|&id| self.report.bindings[id].name.unique == name.unique);
+                self.report.uses.push(Occurrence {
+                    name: *name,
+                    binding,
+                    node,
+                    scope: self.scope.clone(),
+                    execution_scope: self.boundaries.clone(),
+                });
+            }
+            CoreKind::Lam { params, body } => {
+                if params.is_empty() {
+                    self.visit(body);
+                } else {
+                    self.boundaries.push(Boundary::Lambda(node));
+                    for p in *params {
+                        self.bind(*p);
                     }
-                    for param in *params {
-                        self.bind(*param);
-                    }
-                    pending.push(Task::Visit(body));
-                }
-                CoreKind::Let {
-                    binder,
-                    value,
-                    body,
-                } => {
-                    pending.push(Task::Visit(body));
-                    pending.push(Task::Bind(*binder));
-                    pending.push(Task::Visit(value));
-                }
-                CoreKind::LetRec { binders, body } => {
-                    for rb in *binders {
-                        self.bind(rb.binder);
-                    }
-                    let group_depth = self.scope.len();
-                    pending.push(Task::Visit(body));
-                    for (index, rb) in binders.iter().enumerate().rev() {
-                        pending.push(Task::Restore(group_depth, boundaries));
-                        pending.push(Task::Visit(rb.body));
-                        pending.extend(rb.params.iter().rev().map(|p| Task::Bind(*p)));
-                        pending.push(Task::Boundary(Boundary::RecursiveBody { node, index }));
-                    }
-                }
-                CoreKind::Case {
-                    scrutinee,
-                    branches,
-                    default,
-                    ..
-                } => {
-                    if let Some(body) = default {
-                        pending.push(Task::Restore(depth, boundaries));
-                        pending.push(Task::Visit(body));
-                        pending.push(Task::Boundary(Boundary::Branch { node, index: None }));
-                    }
-                    for (index, branch) in branches.iter().enumerate().rev() {
-                        pending.push(Task::Restore(depth, boundaries));
-                        pending.push(Task::Visit(branch.body));
-                        pending.extend(branch.binders.iter().rev().map(|p| Task::Bind(*p)));
-                        pending.push(Task::Boundary(Boundary::Branch {
-                            node,
-                            index: Some(index),
-                        }));
-                    }
-                    pending.push(Task::Visit(scrutinee));
-                }
-                CoreKind::Delay(body) => {
-                    self.boundaries.push(Boundary::Delay(node));
-                    pending.push(Task::Visit(body));
-                }
-                _ => {
-                    children.clear();
-                    core.push_children_reversed(&mut children);
-                    pending.extend(children.iter().map(|child| Task::Visit(child)));
+                    self.visit(body);
+                    self.boundaries.pop();
                 }
             }
+            CoreKind::Let {
+                binder,
+                value,
+                body,
+            } => {
+                self.visit(value);
+                self.bind(*binder);
+                self.visit(body);
+            }
+            CoreKind::LetRec { binders, body } => {
+                for rb in *binders {
+                    self.bind(rb.binder);
+                }
+                let group_depth = self.scope.len();
+                for (index, rb) in binders.iter().enumerate() {
+                    self.boundaries
+                        .push(Boundary::RecursiveBody { node, index });
+                    for p in rb.params {
+                        self.bind(*p);
+                    }
+                    self.visit(rb.body);
+                    self.boundaries.pop();
+                    self.scope.truncate(group_depth);
+                }
+                self.visit(body);
+            }
+            CoreKind::Case {
+                scrutinee,
+                branches,
+                default,
+                ..
+            } => {
+                self.visit(scrutinee);
+                for (index, branch) in branches.iter().enumerate() {
+                    self.boundaries.push(Boundary::Branch {
+                        node,
+                        index: Some(index),
+                    });
+                    for p in branch.binders {
+                        self.bind(*p);
+                    }
+                    self.visit(branch.body);
+                    self.boundaries.pop();
+                    self.scope.truncate(depth);
+                }
+                if let Some(body) = default {
+                    self.within(Boundary::Branch { node, index: None }, body);
+                }
+            }
+            CoreKind::App { func, args } => {
+                self.visit(func);
+                for arg in *args {
+                    self.visit(arg);
+                }
+            }
+            CoreKind::Constr { fields: args, .. } | CoreKind::Builtin { args, .. } => {
+                for arg in *args {
+                    self.visit(arg);
+                }
+            }
+            CoreKind::Field { record, .. } => self.visit(record),
+            CoreKind::Trace { message, body } => {
+                self.visit(message);
+                self.visit(body);
+            }
+            CoreKind::Delay(body) => self.within(Boundary::Delay(node), body),
+            CoreKind::Force(body) => self.visit(body),
+            CoreKind::Lit(_) | CoreKind::Error => {}
         }
+        self.scope.truncate(depth);
     }
 }
 
@@ -190,27 +187,22 @@ impl<'a> Collector<'a> {
 /// in the surrounding environment. Does not prove duplication or motion safe.
 /// Saturated builtins and arbitrary calls are deliberately not evaluated here.
 pub fn safe_to_discard(core: &Core<'_>) -> bool {
-    let mut pending = vec![core];
-    while let Some(core) = pending.pop() {
-        match &core.kind {
-            CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Delay(_) => {}
-            CoreKind::Lam { params, body } => {
-                if params.is_empty() {
-                    pending.push(body);
-                }
-            }
-            CoreKind::Builtin { func, args } if args.len() < func.arity() => {
-                pending.extend(args.iter().rev().copied())
-            }
-            CoreKind::Constr { fields, .. } => pending.extend(fields.iter().rev().copied()),
-            CoreKind::Let { value, body, .. } => {
-                pending.push(body);
-                pending.push(value);
-            }
-            _ => return false,
+    match &core.kind {
+        CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Delay(_) => true,
+        CoreKind::Lam { params, body } => !params.is_empty() || safe_to_discard(body),
+        CoreKind::Builtin { func, args } => {
+            args.len() < func.arity() && args.iter().all(|a| safe_to_discard(a))
         }
+        CoreKind::Constr { fields, .. } => fields.iter().all(|a| safe_to_discard(a)),
+        CoreKind::Let { value, body, .. } => safe_to_discard(value) && safe_to_discard(body),
+        CoreKind::App { .. }
+        | CoreKind::LetRec { .. }
+        | CoreKind::Case { .. }
+        | CoreKind::Field { .. }
+        | CoreKind::Trace { .. }
+        | CoreKind::Error
+        | CoreKind::Force(_) => false,
     }
-    true
 }
 
 /// Structural size only. Counts repeated subtree occurrences, includes LetRec,
@@ -240,89 +232,87 @@ pub fn size_estimate(core: &Core<'_>) -> CoreSize {
 /// Free runtime names in deterministic source traversal order. Name identity
 /// follows the unique number, exactly as UPLC De Bruijn conversion does.
 pub fn free_variables<'a>(core: &Core<'a>) -> Vec<Name<'a>> {
-    enum Task<'t, 'a> {
-        Visit(&'t Core<'a>),
-        Bind(u32),
-        Restore(usize),
-    }
-    let mut pending = vec![Task::Visit(core)];
-    let mut scope = Vec::new();
-    let mut seen = HashSet::new();
     let mut result = Vec::new();
-    let mut children = Vec::new();
-    while let Some(task) = pending.pop() {
-        let core = match task {
-            Task::Visit(core) => core,
-            Task::Bind(id) => {
-                scope.push(id);
-                continue;
-            }
-            Task::Restore(depth) => {
-                scope.truncate(depth);
-                continue;
-            }
-        };
-        let depth = scope.len();
-        pending.push(Task::Restore(depth));
-        match &core.kind {
-            CoreKind::Var(name) => {
-                if !scope.contains(&name.unique) && seen.insert(name.unique) {
-                    result.push(*name);
-                }
-            }
-            CoreKind::Lam { params, body } => {
-                scope.extend(params.iter().map(|p| p.name.unique));
-                pending.push(Task::Visit(body));
-            }
-            CoreKind::Let {
-                binder,
-                value,
-                body,
-            } => {
-                pending.push(Task::Visit(body));
-                pending.push(Task::Bind(binder.name.unique));
-                pending.push(Task::Visit(value));
-            }
-            CoreKind::LetRec { binders, body } => {
-                scope.extend(binders.iter().map(|b| b.binder.name.unique));
-                let group_depth = scope.len();
-                pending.push(Task::Visit(body));
-                for rb in binders.iter().rev() {
-                    pending.push(Task::Restore(group_depth));
-                    pending.push(Task::Visit(rb.body));
-                    pending.extend(rb.params.iter().rev().map(|p| Task::Bind(p.name.unique)));
-                }
-            }
-            CoreKind::Case {
-                scrutinee,
-                branches,
-                default,
-                ..
-            } => {
-                if let Some(body) = default {
-                    pending.push(Task::Visit(body));
-                }
-                for branch in branches.iter().rev() {
-                    pending.push(Task::Restore(depth));
-                    pending.push(Task::Visit(branch.body));
-                    pending.extend(
-                        branch
-                            .binders
-                            .iter()
-                            .rev()
-                            .map(|p| Task::Bind(p.name.unique)),
-                    );
-                }
-                pending.push(Task::Visit(scrutinee));
-            }
-            _ => {
-                children.clear();
-                core.push_children_reversed(&mut children);
-                pending.extend(children.iter().map(|child| Task::Visit(child)));
+    free(core, &mut Vec::new(), &mut HashSet::new(), &mut result);
+    result
+}
+fn free<'a>(
+    core: &Core<'a>,
+    scope: &mut Vec<u32>,
+    seen: &mut HashSet<u32>,
+    out: &mut Vec<Name<'a>>,
+) {
+    let depth = scope.len();
+    match &core.kind {
+        CoreKind::Var(name) => {
+            if !scope.contains(&name.unique) && seen.insert(name.unique) {
+                out.push(*name);
             }
         }
+        CoreKind::Lam { params, body } => {
+            scope.extend(params.iter().map(|p| p.name.unique));
+            free(body, scope, seen, out);
+        }
+        CoreKind::App { func, args } => {
+            free(func, scope, seen, out);
+            for arg in *args {
+                free(arg, scope, seen, out);
+            }
+        }
+        CoreKind::Let {
+            binder,
+            value,
+            body,
+        } => {
+            free(value, scope, seen, out);
+            scope.push(binder.name.unique);
+            free(body, scope, seen, out);
+        }
+        CoreKind::LetRec { binders, body } => {
+            scope.extend(binders.iter().map(|rb| rb.binder.name.unique));
+            let group_depth = scope.len();
+            for rb in *binders {
+                scope.extend(rb.params.iter().map(|p| p.name.unique));
+                free(rb.body, scope, seen, out);
+                scope.truncate(group_depth);
+            }
+            free(body, scope, seen, out);
+        }
+        CoreKind::Case {
+            scrutinee,
+            branches,
+            default,
+            ..
+        } => {
+            free(scrutinee, scope, seen, out);
+            for branch in *branches {
+                scope.extend(branch.binders.iter().map(|p| p.name.unique));
+                free(branch.body, scope, seen, out);
+                scope.truncate(depth);
+            }
+            if let Some(body) = default {
+                free(body, scope, seen, out);
+            }
+        }
+        CoreKind::Constr { fields, .. } => {
+            for field in *fields {
+                free(field, scope, seen, out);
+            }
+        }
+        CoreKind::Builtin { args, .. } => {
+            for arg in *args {
+                free(arg, scope, seen, out);
+            }
+        }
+        CoreKind::Field { record, .. } => free(record, scope, seen, out),
+        CoreKind::Trace { message, body } => {
+            free(message, scope, seen, out);
+            free(body, scope, seen, out);
+        }
+        CoreKind::Delay(body) | CoreKind::Force(body) => free(body, scope, seen, out),
+        CoreKind::Lit(_) | CoreKind::Error => {}
     }
-    result
+    scope.truncate(depth);
 }
 
 #[cfg(test)]

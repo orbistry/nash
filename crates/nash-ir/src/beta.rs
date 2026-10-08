@@ -86,21 +86,17 @@ fn splice<'a>(
     value: &'a Core<'a>,
     finish: &mut impl FnMut(&'a Core<'a>) -> &'a Core<'a>,
 ) -> &'a Core<'a> {
-    let mut frames = Vec::new();
-    let mut value = value;
-    while let CoreKind::Let { body, .. } | CoreKind::LetRec { body, .. } = value.kind {
-        frames.push(value);
-        value = b.with_type(body, value.ty);
+    match value.kind {
+        CoreKind::Let {
+            binder,
+            value: rhs,
+            body,
+        } => b.let_(binder, rhs, splice(b, b.with_type(body, value.ty), finish)),
+        CoreKind::LetRec { binders, body } => {
+            b.let_rec(binders, splice(b, b.with_type(body, value.ty), finish))
+        }
+        _ => finish(value),
     }
-    let mut result = finish(value);
-    for frame in frames.into_iter().rev() {
-        result = match frame.kind {
-            CoreKind::Let { binder, value, .. } => b.let_(binder, value, result),
-            CoreKind::LetRec { binders, .. } => b.let_rec(binders, result),
-            _ => unreachable!(),
-        };
-    }
-    result
 }
 
 #[cfg(test)]

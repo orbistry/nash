@@ -174,35 +174,3 @@ fn visitor_observes_mapped_children_and_identity_replacement_is_a_noop() {
     });
     assert!(std::ptr::eq(mapped, result));
 }
-
-#[test]
-fn deep_walk_and_map_use_heap_work_lists() {
-    std::thread::Builder::new()
-        .stack_size(128 * 1024)
-        .spawn(|| {
-            let arena = Arena::new();
-            let b = Builder::new(&arena);
-            let mut core = b.int(1);
-            for _ in 0..20_000 {
-                core = b.alloc(core.ty, CoreKind::Force(core));
-            }
-            let mut nodes = 0;
-            core.walk(&mut |_| nodes += 1);
-            assert_eq!(nodes, 20_001);
-            assert!(std::ptr::eq(core, core.map(&b, &mut |_| None)));
-            let mapped = core.map(&b, &mut |node| {
-                matches!(node.kind, CoreKind::Lit(_)).then(|| b.int(2))
-            });
-            let mut cursor = mapped;
-            for _ in 0..20_000 {
-                let CoreKind::Force(body) = cursor.kind else {
-                    panic!("missing force")
-                };
-                cursor = body;
-            }
-            assert!(matches!(cursor.kind, CoreKind::Lit(_)));
-        })
-        .unwrap()
-        .join()
-        .unwrap();
-}

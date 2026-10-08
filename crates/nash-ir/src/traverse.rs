@@ -13,43 +13,19 @@ pub fn map<'a>(
     core: &'a Core<'a>,
     f: &mut impl FnMut(&'a Core<'a>) -> Option<&'a Core<'a>>,
 ) -> &'a Core<'a> {
-    let mut pending = vec![(core, false)];
-    let mut results = Vec::new();
-    let mut children = Vec::new();
-    while let Some((node, finish)) = pending.pop() {
-        children.clear();
-        node.push_children_reversed(&mut children);
-        if !finish {
-            pending.push((node, true));
-            pending.extend(children.iter().map(|child| (*child, false)));
-        } else {
-            let start = results.len() - children.len();
-            let mapped = rebuild(build, node, &mut results.drain(start..), f);
-            results.push(mapped);
-        }
-    }
-    results.pop().unwrap()
-}
-
-pub(crate) fn rebuild<'a>(
-    build: &Builder<'a>,
-    core: &'a Core<'a>,
-    children: &mut impl Iterator<Item = &'a Core<'a>>,
-    f: &mut impl FnMut(&'a Core<'a>) -> Option<&'a Core<'a>>,
-) -> &'a Core<'a> {
     let changed = match &core.kind {
         CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => None,
         CoreKind::Lam { params, body } => {
-            let mapped = children.next().unwrap();
+            let mapped = map(build, body, f);
             (!ptr::eq(*body, mapped)).then_some(CoreKind::Lam {
                 params,
                 body: mapped,
             })
         }
         CoreKind::App { func, args } => {
-            let mapped = children.next().unwrap();
+            let mapped = map(build, func, f);
             let mapped_args = map_slice(build, args, |arg| {
-                let value = children.next().unwrap();
+                let value = map(build, arg, f);
                 (value, !ptr::eq(arg, value))
             });
             (!ptr::eq(*func, mapped) || !ptr::eq(*args, mapped_args)).then_some(CoreKind::App {
@@ -62,8 +38,8 @@ pub(crate) fn rebuild<'a>(
             value,
             body,
         } => {
-            let v = children.next().unwrap();
-            let t = children.next().unwrap();
+            let v = map(build, value, f);
+            let t = map(build, body, f);
             (!ptr::eq(*value, v) || !ptr::eq(*body, t)).then_some(CoreKind::Let {
                 binder: *binder,
                 value: v,
@@ -72,10 +48,10 @@ pub(crate) fn rebuild<'a>(
         }
         CoreKind::LetRec { binders, body } => {
             let mapped = map_slice(build, binders, |rb| {
-                let body = children.next().unwrap();
+                let body = map(build, rb.body, f);
                 (RecBinder { body, ..rb }, !ptr::eq(rb.body, body))
             });
-            let t = children.next().unwrap();
+            let t = map(build, body, f);
             (!ptr::eq(*binders, mapped) || !ptr::eq(*body, t)).then_some(CoreKind::LetRec {
                 binders: mapped,
                 body: t,
@@ -87,12 +63,12 @@ pub(crate) fn rebuild<'a>(
             branches,
             default,
         } => {
-            let s = children.next().unwrap();
+            let s = map(build, scrutinee, f);
             let bs = map_slice(build, branches, |branch| {
-                let body = children.next().unwrap();
+                let body = map(build, branch.body, f);
                 (Branch { body, ..branch }, !ptr::eq(branch.body, body))
             });
-            let d = default.map(|_| children.next().unwrap());
+            let d = default.map(|body| map(build, body, f));
             let same_default = match (default, d) {
                 (Some(a), Some(b)) => ptr::eq(*a, b),
                 (None, None) => true,
@@ -109,7 +85,7 @@ pub(crate) fn rebuild<'a>(
         }
         CoreKind::Constr { tag, fields } => {
             let mapped = map_slice(build, fields, |arg| {
-                let value = children.next().unwrap();
+                let value = map(build, arg, f);
                 (value, !ptr::eq(arg, value))
             });
             (!ptr::eq(*fields, mapped)).then_some(CoreKind::Constr {
@@ -122,7 +98,7 @@ pub(crate) fn rebuild<'a>(
             index,
             arity,
         } => {
-            let mapped = children.next().unwrap();
+            let mapped = map(build, record, f);
             (!ptr::eq(*record, mapped)).then_some(CoreKind::Field {
                 record: mapped,
                 index: *index,
@@ -131,7 +107,7 @@ pub(crate) fn rebuild<'a>(
         }
         CoreKind::Builtin { func, args } => {
             let mapped = map_slice(build, args, |arg| {
-                let value = children.next().unwrap();
+                let value = map(build, arg, f);
                 (value, !ptr::eq(arg, value))
             });
             (!ptr::eq(*args, mapped)).then_some(CoreKind::Builtin {
@@ -140,19 +116,19 @@ pub(crate) fn rebuild<'a>(
             })
         }
         CoreKind::Trace { message, body } => {
-            let m = children.next().unwrap();
-            let t = children.next().unwrap();
+            let m = map(build, message, f);
+            let t = map(build, body, f);
             (!ptr::eq(*message, m) || !ptr::eq(*body, t)).then_some(CoreKind::Trace {
                 message: m,
                 body: t,
             })
         }
         CoreKind::Delay(body) => {
-            let mapped = children.next().unwrap();
+            let mapped = map(build, body, f);
             (!ptr::eq(*body, mapped)).then_some(CoreKind::Delay(mapped))
         }
         CoreKind::Force(body) => {
-            let mapped = children.next().unwrap();
+            let mapped = map(build, body, f);
             (!ptr::eq(*body, mapped)).then_some(CoreKind::Force(mapped))
         }
     };

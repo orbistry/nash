@@ -18,7 +18,9 @@ Converted back so far: Flat term encoding and decoding (`encode_term`,
 `decode_term`) recurse again, as in the imported code. `nash test` decodes
 programs on its worker pool, so the CLI gives those workers the compiler stack.
 The UPLC term printer, De Bruijn conversion, and target validation
-(`pretty::term`, `to_debruijn`, `validate_*`) recurse again.
+(`pretty::term`, `to_debruijn`, `validate_*`) recurse again. So do the Core
+traversals of `nash-ir`: `walk`, `map`, occurrence and free-variable analysis,
+discard checks, hygiene, ANF, beta splicing, and Core printing.
 
 Default O1 exposed a stack overflow in the driver `ledger_contexts` fixture.
 This audit distinguishes reproduced failures from recursive paths that still

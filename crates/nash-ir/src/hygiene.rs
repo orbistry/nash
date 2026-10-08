@@ -49,7 +49,7 @@ pub fn validate<'a>(core: &Core<'a>, external: &[Name<'a>]) -> Result<(), Vec<Hy
 /// whole program's shared Builder when reinserting into an enclosing program.
 /// Validate separately to diagnose bad input.
 pub fn freshen<'a>(build: &Builder<'a>, core: &'a Core<'a>) -> &'a Core<'a> {
-    Rewriter::new(build, &[core]).term(core, None)
+    Rewriter::new(build, &[core]).term(core, &HashMap::new(), None)
 }
 
 /// Replace free occurrences of `target` with `replacement`. Binders in both the
@@ -69,7 +69,11 @@ pub fn substitute<'a>(
     target: u32,
     replacement: &'a Core<'a>,
 ) -> &'a Core<'a> {
-    Rewriter::new(build, &[core, replacement]).term(core, Some((target, replacement)))
+    Rewriter::new(build, &[core, replacement]).term(
+        core,
+        &HashMap::new(),
+        Some((target, replacement)),
+    )
 }
 
 struct Rewriter<'b, 'a> {
@@ -126,288 +130,139 @@ impl<'b, 'a> Rewriter<'b, 'a> {
         self.build.arena.alloc_slice_copy(&binders)
     }
 
+    fn terms(
+        &mut self,
+        terms: &[&'a Core<'a>],
+        scope: &HashMap<u32, Name<'a>>,
+        substitution: Option<(u32, &'a Core<'a>)>,
+    ) -> Vec<&'a Core<'a>> {
+        terms
+            .iter()
+            .map(|t| self.term(t, scope, substitution))
+            .collect()
+    }
+
     fn term(
         &mut self,
-        root: &'a Core<'a>,
+        core: &'a Core<'a>,
+        scope: &HashMap<u32, Name<'a>>,
         substitution: Option<(u32, &'a Core<'a>)>,
     ) -> &'a Core<'a> {
-        enum Task<'a> {
-            Visit(&'a Core<'a>, Option<(u32, &'a Core<'a>)>),
-            Finish(&'a Core<'a>, usize),
-            LetBody(&'a Core<'a>, usize, Option<(u32, &'a Core<'a>)>),
-            Restore(HashMap<u32, Name<'a>>),
-            Retype(crate::ty::Ty<'a>),
-            RecNext {
-                core: &'a Core<'a>,
-                names: Vec<Binder<'a>>,
-                recs: Vec<RecBinder<'a>>,
-                sub: Option<(u32, &'a Core<'a>)>,
-            },
-            RecBody {
-                core: &'a Core<'a>,
-                names: Vec<Binder<'a>>,
-                recs: Vec<RecBinder<'a>>,
-                params: &'a [Binder<'a>],
-                sub: Option<(u32, &'a Core<'a>)>,
-            },
-            RecFinish {
-                core: &'a Core<'a>,
-                recs: Vec<RecBinder<'a>>,
-            },
-            CaseNext {
-                core: &'a Core<'a>,
-                scrutinee: Option<&'a Core<'a>>,
-                branches: Vec<Branch<'a>>,
-                sub: Option<(u32, &'a Core<'a>)>,
-            },
-            CaseBody {
-                core: &'a Core<'a>,
-                scrutinee: &'a Core<'a>,
-                branches: Vec<Branch<'a>>,
-                binders: &'a [Binder<'a>],
-                sub: Option<(u32, &'a Core<'a>)>,
-            },
-            CaseFinish {
-                core: &'a Core<'a>,
-                scrutinee: &'a Core<'a>,
-                branches: Vec<Branch<'a>>,
-            },
-        }
         let b = self.build;
-        let mut scope = HashMap::new();
-        let mut pending = vec![Task::Visit(root, substitution)];
-        let mut results = Vec::new();
-        let mut children = Vec::new();
-        while let Some(task) = pending.pop() {
-            match task {
-                Task::Restore(previous) => scope = previous,
-                Task::Retype(ty) => {
-                    let value = results.pop().unwrap();
-                    results.push(b.with_type(value, ty));
+        let rewritten = match &core.kind {
+            CoreKind::Var(name) => {
+                if let Some(renamed) = scope.get(&name.unique) {
+                    return b.var(*renamed, core.ty);
                 }
-                Task::Finish(core, start) => {
-                    let rebuilt =
-                        crate::traverse::rebuild(b, core, &mut results.drain(start..), &mut |_| {
-                            None
-                        });
-                    results.push(rebuilt);
+                if let Some((target, replacement)) = substitution
+                    && name.unique == target
+                {
+                    let replacement = self.term(replacement, &HashMap::new(), None);
+                    return b.with_type(replacement, core.ty);
                 }
-                Task::LetBody(core, start, sub) => {
-                    let CoreKind::Let {
-                        binder,
-                        value,
-                        body,
-                    } = core.kind
-                    else {
-                        unreachable!()
-                    };
-                    let previous = scope.clone();
-                    let binder = self.binder(binder, &mut scope);
-                    pending.push(Task::Restore(previous));
-                    pending.push(Task::Finish(
-                        b.alloc(
-                            core.ty,
-                            CoreKind::Let {
-                                binder,
-                                value,
-                                body,
-                            },
-                        ),
-                        start,
-                    ));
-                    pending.push(Task::Visit(body, sub));
-                }
-                Task::RecNext {
-                    core,
-                    names,
-                    recs,
-                    sub,
-                } => {
-                    let CoreKind::LetRec { binders, body } = core.kind else {
-                        unreachable!()
-                    };
-                    if recs.len() == binders.len() {
-                        pending.push(Task::RecFinish { core, recs });
-                        pending.push(Task::Visit(body, sub));
-                    } else {
-                        let rec = binders[recs.len()];
-                        let previous = scope.clone();
-                        let params = self.binders(rec.params, &mut scope);
-                        pending.push(Task::RecBody {
-                            core,
-                            names,
-                            recs,
-                            params,
-                            sub,
-                        });
-                        pending.push(Task::Restore(previous));
-                        pending.push(Task::Visit(rec.body, sub));
-                    }
-                }
-                Task::RecBody {
-                    core,
-                    names,
-                    mut recs,
-                    params,
-                    sub,
-                } => {
-                    let CoreKind::LetRec { binders, .. } = core.kind else {
-                        unreachable!()
-                    };
-                    recs.push(RecBinder {
-                        binder: names[recs.len()],
-                        params,
-                        body: results.pop().unwrap(),
-                        ..binders[recs.len()]
-                    });
-                    pending.push(Task::RecNext {
-                        core,
-                        names,
-                        recs,
-                        sub,
-                    });
-                }
-                Task::RecFinish { core, recs } => {
-                    let body = results.pop().unwrap();
-                    results.push(b.with_type(b.let_rec(&recs, body), core.ty));
-                }
-                Task::CaseNext {
-                    core,
-                    scrutinee,
-                    branches,
-                    sub,
-                } => {
-                    let scrutinee = scrutinee.unwrap_or_else(|| results.pop().unwrap());
-                    let CoreKind::Case {
-                        branches: original,
-                        default,
-                        ..
-                    } = core.kind
-                    else {
-                        unreachable!()
-                    };
-                    if branches.len() == original.len() {
-                        pending.push(Task::CaseFinish {
-                            core,
-                            scrutinee,
-                            branches,
-                        });
-                        if let Some(body) = default {
-                            pending.push(Task::Visit(body, sub));
-                        }
-                    } else {
-                        let branch = original[branches.len()];
-                        let previous = scope.clone();
-                        let binders = self.binders(branch.binders, &mut scope);
-                        pending.push(Task::CaseBody {
-                            core,
-                            scrutinee,
-                            branches,
-                            binders,
-                            sub,
-                        });
-                        pending.push(Task::Restore(previous));
-                        pending.push(Task::Visit(branch.body, sub));
-                    }
-                }
-                Task::CaseBody {
-                    core,
-                    scrutinee,
-                    mut branches,
-                    binders,
-                    sub,
-                } => {
-                    let CoreKind::Case {
-                        branches: original, ..
-                    } = core.kind
-                    else {
-                        unreachable!()
-                    };
-                    branches.push(Branch {
-                        binders,
-                        body: results.pop().unwrap(),
-                        ..original[branches.len()]
-                    });
-                    pending.push(Task::CaseNext {
-                        core,
-                        scrutinee: Some(scrutinee),
-                        branches,
-                        sub,
-                    });
-                }
-                Task::CaseFinish {
-                    core,
-                    scrutinee,
-                    branches,
-                } => {
-                    let CoreKind::Case { kind, default, .. } = core.kind else {
-                        unreachable!()
-                    };
-                    let default = default.map(|_| results.pop().unwrap());
-                    results.push(b.case(kind, scrutinee, &branches, default, core.ty));
-                }
-                Task::Visit(core, sub) => match core.kind {
-                    CoreKind::Var(name) => {
-                        if let Some(renamed) = scope.get(&name.unique) {
-                            results.push(b.var(*renamed, core.ty));
-                        } else if let Some((target, replacement)) = sub
-                            && name.unique == target
-                        {
-                            pending.push(Task::Restore(std::mem::take(&mut scope)));
-                            pending.push(Task::Retype(core.ty));
-                            pending.push(Task::Visit(replacement, None));
-                        } else {
-                            results.push(core);
-                        }
-                    }
-                    CoreKind::Lit(_) | CoreKind::Error => results.push(core),
-                    CoreKind::Lam { params, body } => {
-                        let previous = scope.clone();
-                        let params = self.binders(params, &mut scope);
-                        pending.push(Task::Restore(previous));
-                        pending.push(Task::Finish(
-                            b.alloc(core.ty, CoreKind::Lam { params, body }),
-                            results.len(),
-                        ));
-                        pending.push(Task::Visit(body, sub));
-                    }
-                    CoreKind::Let { value, .. } => {
-                        pending.push(Task::LetBody(core, results.len(), sub));
-                        pending.push(Task::Visit(value, sub));
-                    }
-                    CoreKind::LetRec { binders, .. } => {
-                        let previous = scope.clone();
-                        let names = binders
-                            .iter()
-                            .map(|rec| self.binder(rec.binder, &mut scope))
-                            .collect();
-                        pending.push(Task::Restore(previous));
-                        pending.push(Task::RecNext {
-                            core,
-                            names,
-                            recs: Vec::new(),
-                            sub,
-                        });
-                    }
-                    CoreKind::Case { scrutinee, .. } => {
-                        pending.push(Task::CaseNext {
-                            core,
-                            scrutinee: None,
-                            branches: Vec::new(),
-                            sub,
-                        });
-                        pending.push(Task::Visit(scrutinee, sub));
-                    }
-                    _ => {
-                        pending.push(Task::Finish(core, results.len()));
-                        children.clear();
-                        core.push_children_reversed(&mut children);
-                        pending.extend(children.iter().map(|child| Task::Visit(child, sub)));
-                    }
-                },
+                core
             }
-        }
-        results.pop().unwrap()
+            CoreKind::Lit(_) | CoreKind::Error => core,
+            CoreKind::Lam { params, body } => {
+                let mut inner = scope.clone();
+                let params = self.binders(params, &mut inner);
+                let body = self.term(body, &inner, substitution);
+                b.lam(params, body)
+            }
+            CoreKind::Let {
+                binder,
+                value,
+                body,
+            } => {
+                let value = self.term(value, scope, substitution);
+                let mut inner = scope.clone();
+                let binder = self.binder(*binder, &mut inner);
+                let body = self.term(body, &inner, substitution);
+                b.let_(binder, value, body)
+            }
+            CoreKind::LetRec { binders, body } => {
+                let mut group = scope.clone();
+                let names: Vec<_> = binders
+                    .iter()
+                    .map(|r| self.binder(r.binder, &mut group))
+                    .collect();
+                let recs: Vec<_> = binders
+                    .iter()
+                    .zip(names)
+                    .map(|(rec, binder)| {
+                        let mut inner = group.clone();
+                        let params = self.binders(rec.params, &mut inner);
+                        let body = self.term(rec.body, &inner, substitution);
+                        RecBinder {
+                            binder,
+                            params,
+                            body,
+                            ..*rec
+                        }
+                    })
+                    .collect();
+                let body = self.term(body, &group, substitution);
+                b.let_rec(&recs, body)
+            }
+            CoreKind::Case {
+                kind,
+                scrutinee,
+                branches,
+                default,
+            } => {
+                let scrutinee = self.term(scrutinee, scope, substitution);
+                let branches: Vec<_> = branches
+                    .iter()
+                    .map(|branch| {
+                        let mut inner = scope.clone();
+                        let binders = self.binders(branch.binders, &mut inner);
+                        let body = self.term(branch.body, &inner, substitution);
+                        Branch {
+                            binders,
+                            body,
+                            ..*branch
+                        }
+                    })
+                    .collect();
+                let default = default.map(|d| self.term(d, scope, substitution));
+                b.case(*kind, scrutinee, &branches, default, core.ty)
+            }
+            CoreKind::App { func, args } => {
+                let func = self.term(func, scope, substitution);
+                let args = self.terms(args, scope, substitution);
+                b.app(func, &args, core.ty)
+            }
+            CoreKind::Constr { tag, fields } => {
+                let fields = self.terms(fields, scope, substitution);
+                b.constr(*tag, &fields, core.ty)
+            }
+            CoreKind::Builtin { func, args } => {
+                let args = self.terms(args, scope, substitution);
+                b.builtin(*func, &args, core.ty)
+            }
+            CoreKind::Field {
+                record,
+                index,
+                arity,
+            } => {
+                let record = self.term(record, scope, substitution);
+                b.field(record, *index, *arity, core.ty)
+            }
+            CoreKind::Trace { message, body } => {
+                let message = self.term(message, scope, substitution);
+                let body = self.term(body, scope, substitution);
+                b.trace(message, body)
+            }
+            CoreKind::Delay(body) => {
+                let body = self.term(body, scope, substitution);
+                b.delay(body)
+            }
+            CoreKind::Force(body) => {
+                let body = self.term(body, scope, substitution);
+                b.force(body, core.ty)
+            }
+        };
+        b.with_type(rewritten, core.ty)
     }
 }
 

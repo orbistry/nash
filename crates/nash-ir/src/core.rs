@@ -137,10 +137,57 @@ impl<'a> Core<'a> {
     /// arguments, binding values then continuation, scrutinee then branches
     /// then default. Shared subtrees are visited once per occurrence.
     pub fn walk<'tree>(&'tree self, f: &mut impl FnMut(&'tree Core<'a>)) {
-        let mut pending = vec![self];
-        while let Some(node) = pending.pop() {
-            f(node);
-            node.push_children_reversed(&mut pending);
+        f(self);
+        match &self.kind {
+            CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => {}
+            CoreKind::Lam { body, .. } | CoreKind::Delay(body) | CoreKind::Force(body) => {
+                body.walk(f)
+            }
+            CoreKind::App { func, args } => {
+                func.walk(f);
+                for arg in *args {
+                    arg.walk(f);
+                }
+            }
+            CoreKind::Let { value, body, .. } => {
+                value.walk(f);
+                body.walk(f);
+            }
+            CoreKind::LetRec { binders, body } => {
+                for binder in *binders {
+                    binder.body.walk(f);
+                }
+                body.walk(f);
+            }
+            CoreKind::Case {
+                scrutinee,
+                branches,
+                default,
+                ..
+            } => {
+                scrutinee.walk(f);
+                for branch in *branches {
+                    branch.body.walk(f);
+                }
+                if let Some(body) = default {
+                    body.walk(f);
+                }
+            }
+            CoreKind::Constr { fields, .. } => {
+                for field in *fields {
+                    field.walk(f);
+                }
+            }
+            CoreKind::Builtin { args, .. } => {
+                for arg in *args {
+                    arg.walk(f);
+                }
+            }
+            CoreKind::Field { record, .. } => record.walk(f),
+            CoreKind::Trace { message, body } => {
+                message.walk(f);
+                body.walk(f);
+            }
         }
     }
 

@@ -21,179 +21,156 @@ fn newline(out: &mut String, indent: usize) {
         out.push_str("  ");
     }
 }
-fn lambda(out: &mut String, params: &[Binder<'_>]) {
-    out.push('\\');
-    for (index, p) in params.iter().enumerate() {
-        if index > 0 {
-            out.push(' ');
-        }
-        // Separate function-valued parameters from the body arrow.
-        let parens = matches!(p.ty, crate::ty::Ty::Term(crate::ty::TermTy::Fun(_, _)));
-        if parens {
-            out.push('(');
-        }
-        binder(out, *p);
-        if parens {
-            out.push(')');
-        }
+fn write_core(out: &mut String, core: &Core<'_>, indent: usize, context: u8) {
+    let precedence = match &core.kind {
+        CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => 2,
+        CoreKind::App { args, .. } | CoreKind::Builtin { args, .. } if args.is_empty() => 2,
+        CoreKind::App { .. }
+        | CoreKind::Builtin { .. }
+        | CoreKind::Constr { .. }
+        | CoreKind::Field { .. }
+        | CoreKind::Delay(_)
+        | CoreKind::Force(_) => 1,
+        _ => 0,
+    };
+    let parens = precedence < context;
+    if parens {
+        out.push('(');
     }
-    out.push_str(" -> ");
-}
-
-enum Task<'a> {
-    Core(&'a Core<'a>, usize, u8),
-    Text(&'static str),
-    Newline(usize),
-    Rec(&'a RecBinder<'a>, usize),
-    Branch(&'a Branch<'a>, usize),
-}
-
-fn arguments<'a>(pending: &mut Vec<Task<'a>>, args: &[&'a Core<'a>], indent: usize) {
-    for arg in args.iter().rev() {
-        pending.push(Task::Core(arg, indent, 2));
-        pending.push(Task::Text(" "));
-    }
-}
-
-fn write_core<'a>(out: &mut String, core: &'a Core<'a>, indent: usize, context: u8) {
-    let mut pending = vec![Task::Core(core, indent, context)];
-    while let Some(task) = pending.pop() {
-        let (core, indent, context) = match task {
-            Task::Text(text) => {
-                out.push_str(text);
-                continue;
+    match &core.kind {
+        CoreKind::Var(n) => name(out, *n),
+        CoreKind::Lit(c) => match c {
+            nash_plutus::constant::Constant::Integer(i) => write!(out, "{i}").unwrap(),
+            nash_plutus::constant::Constant::String(s) => write!(out, "{s:?}").unwrap(),
+            nash_plutus::constant::Constant::Boolean(b) => write!(out, "{b}").unwrap(),
+            nash_plutus::constant::Constant::Unit => out.push_str("()"),
+            _ => out.push_str(&nash_plutus::pretty::constant(c)),
+        },
+        CoreKind::Lam { params, body } => {
+            out.push('\\');
+            for (index, p) in params.iter().enumerate() {
+                if index > 0 {
+                    out.push(' ');
+                }
+                // Parentheses separate function-valued parameters from the body arrow.
+                let parens = matches!(p.ty, crate::ty::Ty::Term(crate::ty::TermTy::Fun(_, _)));
+                if parens {
+                    out.push('(');
+                }
+                binder(out, *p);
+                if parens {
+                    out.push(')');
+                }
             }
-            Task::Newline(indent) => {
-                newline(out, indent);
-                continue;
-            }
-            Task::Rec(rec, indent) => {
-                newline(out, indent);
+            out.push_str(" -> ");
+            write_core(out, body, indent, 0);
+        }
+        CoreKind::App { func, args } => {
+            write_core(out, func, indent, 1);
+            arguments(out, args, indent);
+        }
+        CoreKind::Let {
+            binder: b,
+            value,
+            body,
+        } => {
+            out.push_str("let ");
+            binder(out, *b);
+            out.push_str(" = ");
+            write_core(out, value, indent, 0);
+            out.push_str(" in");
+            newline(out, indent);
+            write_core(out, body, indent, 0);
+        }
+        CoreKind::LetRec { binders, body } => {
+            out.push_str("letrec");
+            for rec in *binders {
+                newline(out, indent + 1);
                 binder(out, rec.binder);
                 write!(out, " [static {:?}] = ", rec.static_params).unwrap();
-                lambda(out, rec.params);
-                pending.push(Task::Core(rec.body, indent, 0));
-                continue;
+                write_core(
+                    out,
+                    &Core {
+                        ty: rec.binder.ty,
+                        kind: CoreKind::Lam {
+                            params: rec.params,
+                            body: rec.body,
+                        },
+                    },
+                    indent + 1,
+                    0,
+                );
             }
-            Task::Branch(branch, indent) => {
-                newline(out, indent);
+            newline(out, indent);
+            out.push_str("in");
+            newline(out, indent);
+            write_core(out, body, indent, 0);
+        }
+        CoreKind::Case {
+            kind,
+            scrutinee,
+            branches,
+            default,
+        } => {
+            write!(out, "case@{kind:?} ").unwrap();
+            write_core(out, scrutinee, indent, 1);
+            out.push_str(" of");
+            for branch in *branches {
+                newline(out, indent + 1);
                 test(out, branch.test);
                 for b in branch.binders {
                     out.push(' ');
                     name(out, b.name);
                 }
                 out.push_str(" -> ");
-                pending.push(Task::Core(branch.body, indent, 0));
-                continue;
+                write_core(out, branch.body, indent + 1, 0);
             }
-            Task::Core(core, indent, context) => (core, indent, context),
-        };
-        let precedence = match &core.kind {
-            CoreKind::Var(_) | CoreKind::Lit(_) | CoreKind::Error => 2,
-            CoreKind::App { args, .. } | CoreKind::Builtin { args, .. } if args.is_empty() => 2,
-            CoreKind::App { .. }
-            | CoreKind::Builtin { .. }
-            | CoreKind::Constr { .. }
-            | CoreKind::Field { .. }
-            | CoreKind::Delay(_)
-            | CoreKind::Force(_) => 1,
-            _ => 0,
-        };
-        if precedence < context {
-            out.push('(');
-            pending.push(Task::Text(")"));
-        }
-        match core.kind {
-            CoreKind::Var(n) => name(out, n),
-            CoreKind::Lit(c) => match c {
-                nash_plutus::constant::Constant::Integer(i) => write!(out, "{i}").unwrap(),
-                nash_plutus::constant::Constant::String(s) => write!(out, "{s:?}").unwrap(),
-                nash_plutus::constant::Constant::Boolean(b) => write!(out, "{b}").unwrap(),
-                nash_plutus::constant::Constant::Unit => out.push_str("()"),
-                _ => out.push_str(&nash_plutus::pretty::constant(c)),
-            },
-            CoreKind::Lam { params, body } => {
-                lambda(out, params);
-                pending.push(Task::Core(body, indent, 0));
-            }
-            CoreKind::App { func, args } => {
-                arguments(&mut pending, args, indent);
-                pending.push(Task::Core(func, indent, 1));
-            }
-            CoreKind::Let {
-                binder: b,
-                value,
-                body,
-            } => {
-                out.push_str("let ");
-                binder(out, b);
-                out.push_str(" = ");
-                pending.push(Task::Core(body, indent, 0));
-                pending.push(Task::Newline(indent));
-                pending.push(Task::Text(" in"));
-                pending.push(Task::Core(value, indent, 0));
-            }
-            CoreKind::LetRec { binders, body } => {
-                out.push_str("letrec");
-                pending.push(Task::Core(body, indent, 0));
-                pending.push(Task::Newline(indent));
-                pending.push(Task::Text("in"));
-                pending.push(Task::Newline(indent));
-                pending.extend(binders.iter().rev().map(|rec| Task::Rec(rec, indent + 1)));
-            }
-            CoreKind::Case {
-                kind,
-                scrutinee,
-                branches,
-                default,
-            } => {
-                write!(out, "case@{kind:?} ").unwrap();
-                if let Some(body) = default {
-                    pending.push(Task::Core(body, indent + 1, 0));
-                    pending.push(Task::Text("_ -> "));
-                    pending.push(Task::Newline(indent + 1));
-                }
-                pending.extend(
-                    branches
-                        .iter()
-                        .rev()
-                        .map(|branch| Task::Branch(branch, indent + 1)),
-                );
-                pending.push(Task::Text(" of"));
-                pending.push(Task::Core(scrutinee, indent, 1));
-            }
-            CoreKind::Constr { tag, fields } => {
-                write!(out, "constr {tag}").unwrap();
-                arguments(&mut pending, fields, indent);
-            }
-            CoreKind::Field {
-                record,
-                index,
-                arity,
-            } => {
-                write!(out, "field@{index}/{arity} ").unwrap();
-                pending.push(Task::Core(record, indent, 2));
-            }
-            CoreKind::Builtin { func, args } => {
-                out.push_str(nash_plutus::pretty::builtin(func));
-                arguments(&mut pending, args, indent);
-            }
-            CoreKind::Trace { message, body } => {
-                out.push_str("trace ");
-                pending.push(Task::Core(body, indent, 0));
-                pending.push(Task::Text(" in "));
-                pending.push(Task::Core(message, indent, 2));
-            }
-            CoreKind::Error => out.push_str("error"),
-            CoreKind::Delay(body) | CoreKind::Force(body) => {
-                out.push_str(if matches!(core.kind, CoreKind::Delay(_)) {
-                    "delay "
-                } else {
-                    "force "
-                });
-                pending.push(Task::Core(body, indent, 2));
+            if let Some(body) = default {
+                newline(out, indent + 1);
+                out.push_str("_ -> ");
+                write_core(out, body, indent + 1, 0);
             }
         }
+        CoreKind::Constr { tag, fields } => {
+            write!(out, "constr {tag}").unwrap();
+            arguments(out, fields, indent);
+        }
+        CoreKind::Field {
+            record,
+            index,
+            arity,
+        } => {
+            write!(out, "field@{index}/{arity} ").unwrap();
+            write_core(out, record, indent, 2);
+        }
+        CoreKind::Builtin { func, args } => {
+            out.push_str(nash_plutus::pretty::builtin(*func));
+            arguments(out, args, indent);
+        }
+        CoreKind::Trace { message, body } => {
+            out.push_str("trace ");
+            write_core(out, message, indent, 2);
+            out.push_str(" in ");
+            write_core(out, body, indent, 0);
+        }
+        CoreKind::Error => out.push_str("error"),
+        CoreKind::Delay(body) => {
+            out.push_str("delay ");
+            write_core(out, body, indent, 2);
+        }
+        CoreKind::Force(body) => {
+            out.push_str("force ");
+            write_core(out, body, indent, 2);
+        }
+    }
+    if parens {
+        out.push(')');
+    }
+}
+fn arguments(out: &mut String, args: &[&Core<'_>], indent: usize) {
+    for arg in args {
+        out.push(' ');
+        write_core(out, arg, indent, 2);
     }
 }
 fn test(out: &mut String, test: Test<'_>) {
@@ -233,33 +210,6 @@ mod tests {
             },
             ty: Ty::Const(&ConstTy::Int),
         }
-    }
-
-    #[test]
-    fn deep_core_prints_on_a_small_stack() {
-        std::thread::Builder::new()
-            .stack_size(128 * 1024)
-            .spawn(|| {
-                let arena = Arena::new();
-                let b = Builder::new(&arena);
-                let depth = 20_000;
-                let mut core = b.int(1);
-                for _ in 0..depth {
-                    core = b.alloc(core.ty, CoreKind::Force(core));
-                }
-                let rendered = pretty(core);
-                // Structural depth/parenthesis check; ordinary formatting is covered
-                // by the snapshots without storing a huge depth-test snapshot.
-                let expected = format!(
-                    "{}force 1{}",
-                    "force (".repeat(depth - 1),
-                    ")".repeat(depth - 1)
-                );
-                assert_eq!(rendered, expected);
-            })
-            .unwrap()
-            .join()
-            .unwrap();
     }
 
     #[test]
