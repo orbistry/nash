@@ -81,60 +81,41 @@ pub(super) fn share<'a>(lower: &mut Lower<'a>, root: Uplc<'a>) -> Result<Uplc<'a
 }
 
 fn rewrite<'a>(lower: &Lower<'a>, term: Uplc<'a>, entries: &[Entry<'a>]) -> Uplc<'a> {
-    let mut pending = vec![(term, false, 0)];
-    let mut results: Vec<Uplc<'a>> = Vec::new();
-    let a = lower.arena;
-    while let Some((term, finish, start)) = pending.pop() {
-        if !finish {
-            if let Some((func, literal)) = prefix(lower, term)
-                && let Some(entry) = entries
-                    .iter()
-                    .find(|e| e.func == func && e.literal == literal)
-            {
-                results.push(Term::var(a, entry.name.unwrap()));
-                continue;
-            }
-            pending.push((term, true, results.len()));
-            match term {
-                Term::Apply { function, argument } => {
-                    pending.push((argument, false, 0));
-                    pending.push((function, false, 0));
-                }
-                Term::Lambda { body, .. } | Term::Force(body) | Term::Delay(body) => {
-                    pending.push((body, false, 0))
-                }
-                Term::Case { constr, branches } => {
-                    pending.push((constr, false, 0));
-                    pending.extend(branches.iter().rev().map(|t| (*t, false, 0)));
-                }
-                Term::Constr { fields, .. } => {
-                    pending.extend(fields.iter().rev().map(|t| (*t, false, 0)))
-                }
-                _ => {}
-            }
-        } else {
-            let mut children = results.drain(start..);
-            let result = match term {
-                Term::Apply { .. } => children.next().unwrap().apply(a, children.next().unwrap()),
-                Term::Lambda { parameter, .. } => children.next().unwrap().lambda(a, parameter),
-                Term::Force(_) => children.next().unwrap().force(a),
-                Term::Delay(_) => children.next().unwrap().delay(a),
-                Term::Case { branches, .. } => {
-                    let branches: Vec<_> = children.by_ref().take(branches.len()).collect();
-                    Term::case(a, children.next().unwrap(), a.alloc_slice_copy(&branches))
-                }
-                Term::Constr { tag, .. } => Term::constr(
-                    a,
-                    *tag,
-                    a.alloc_slice_copy(&children.by_ref().collect::<Vec<_>>()),
-                ),
-                _ => term,
-            };
-            drop(children);
-            results.push(result);
-        }
+    if let Some((func, literal)) = prefix(lower, term)
+        && let Some(entry) = entries
+            .iter()
+            .find(|e| e.func == func && e.literal == literal)
+    {
+        return Term::var(lower.arena, entry.name.unwrap());
     }
-    results.pop().unwrap()
+    let a = lower.arena;
+    match term {
+        Term::Apply { function, argument } => {
+            rewrite(lower, function, entries).apply(a, rewrite(lower, argument, entries))
+        }
+        Term::Lambda { parameter, body } => rewrite(lower, body, entries).lambda(a, parameter),
+        Term::Force(body) => rewrite(lower, body, entries).force(a),
+        Term::Delay(body) => rewrite(lower, body, entries).delay(a),
+        Term::Case { constr, branches } => {
+            let branches: Vec<_> = branches
+                .iter()
+                .map(|branch| rewrite(lower, branch, entries))
+                .collect();
+            Term::case(
+                a,
+                rewrite(lower, constr, entries),
+                a.alloc_slice_copy(&branches),
+            )
+        }
+        Term::Constr { tag, fields } => {
+            let fields: Vec<_> = fields
+                .iter()
+                .map(|field| rewrite(lower, field, entries))
+                .collect();
+            Term::constr(a, *tag, a.alloc_slice_copy(&fields))
+        }
+        _ => term,
+    }
 }
 
 #[cfg(test)]

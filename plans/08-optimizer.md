@@ -1897,9 +1897,9 @@ cleanup loops after the single ANF normalization.
 Post-recursion work is freshening and optimized lowering with builtin/constant
 sharing, never a second normalization. Explicit comptime execution remains O0.
 Chunks 9–10 and the final convergence review are complete.
-Default-O1 validation exposed deep-tree stack overflows; assembly traversals now use
-heap work lists, with no stack enlargement; UPLC term printing is also iterative. Remaining depth risks and
-follow-up probes are recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
+Default-O1 validation exposed deep-tree stack overflows; compiler work now runs on
+a 128 MiB stack (`nash_driver::stack`) and the assembly traversals recurse. The stack
+model is recorded in [the compiler stack audit](../docs/research/compiler-stack-audit.md).
 
 Compose only the accepted passes. Establish their actual order from interactions:
 inlining exposes dead code and known cases, sharing can conflict with inlining,
