@@ -15,6 +15,7 @@ pub fn run_all(tests: Vec<TestProgram>, config: &Config) -> Vec<Outcome> {
     };
     match rayon::ThreadPoolBuilder::new()
         .num_threads(config.jobs.max(1))
+        .stack_size(config.worker_stack)
         .build()
     {
         Ok(pool) => pool.install(run),

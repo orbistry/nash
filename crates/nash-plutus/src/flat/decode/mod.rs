@@ -51,98 +51,77 @@ fn decode_term<'a, V>(
 where
     V: Binder<'a>,
 {
-    // Flat terms can be much deeper than the host call stack. Keep unfinished
-    // parents explicitly, just as the encoder does.
-    enum Frame<'a, V> {
-        Delay,
-        Force,
-        Lambda(&'a V),
-        Function,
-        Argument(&'a Term<'a, V>),
-        Subject,
-        Fields(usize, BumpVec<'a, &'a Term<'a, V>>),
-        Branches(&'a Term<'a, V>, BumpVec<'a, &'a Term<'a, V>>),
-    }
+    let tag = decoder.bits8(TERM_TAG_WIDTH)?;
 
-    let mut frames = Vec::new();
-    'next: loop {
-        let mut term = match decoder.bits8(TERM_TAG_WIDTH)? {
-            tag::VAR => Term::var(ctx.arena, V::var_decode(ctx.arena, decoder)?),
-            tag::DELAY => {
-                frames.push(Frame::Delay);
-                continue;
-            }
-            tag::LAMBDA => {
-                frames.push(Frame::Lambda(V::parameter_decode(ctx.arena, decoder)?));
-                continue;
-            }
-            tag::APPLY => {
-                frames.push(Frame::Function);
-                continue;
-            }
-            tag::CONSTANT => Term::constant(ctx.arena, decode_constant(ctx, decoder)?),
-            tag::FORCE => {
-                frames.push(Frame::Force);
-                continue;
-            }
-            tag::ERROR => Term::error(ctx.arena),
-            tag::BUILTIN => {
-                let builtin_tag = decoder.bits8(BUILTIN_TAG_WIDTH)?;
-                Term::builtin(ctx.arena, builtin::try_from_tag(ctx.arena, builtin_tag)?)
-            }
-            tag::CONSTR => {
-                let tag = decoder.word()?;
-                let fields = BumpVec::new_in(ctx.arena.as_bump());
-                if decoder.bit()? {
-                    frames.push(Frame::Fields(tag, fields));
-                    continue;
-                }
-                Term::constr(ctx.arena, tag, fields.into_bump_slice())
-            }
-            tag::CASE => {
-                frames.push(Frame::Subject);
-                continue;
-            }
-            tag => return Err(FlatDecodeError::UnknownTermConstructor(tag)),
-        };
+    match tag {
+        // Var
+        tag::VAR => Ok(Term::var(ctx.arena, V::var_decode(ctx.arena, decoder)?)),
+        // Delay
+        tag::DELAY => {
+            let term = decode_term(ctx, decoder)?;
 
-        loop {
-            term = match frames.pop() {
-                None => return Ok(term),
-                Some(Frame::Delay) => term.delay(ctx.arena),
-                Some(Frame::Force) => term.force(ctx.arena),
-                Some(Frame::Lambda(param)) => term.lambda(ctx.arena, param),
-                Some(Frame::Function) => {
-                    frames.push(Frame::Argument(term));
-                    continue 'next;
-                }
-                Some(Frame::Argument(function)) => function.apply(ctx.arena, term),
-                Some(Frame::Subject) => {
-                    let branches = BumpVec::new_in(ctx.arena.as_bump());
-                    if decoder.bit()? {
-                        frames.push(Frame::Branches(term, branches));
-                        continue 'next;
-                    }
-                    Term::case(ctx.arena, term, branches.into_bump_slice())
-                }
-                Some(Frame::Fields(tag, mut fields)) => {
-                    fields.push(term);
-                    if decoder.bit()? {
-                        frames.push(Frame::Fields(tag, fields));
-                        continue 'next;
-                    }
-                    Term::constr(ctx.arena, tag, fields.into_bump_slice())
-                }
-                Some(Frame::Branches(subject, mut branches)) => {
-                    branches.push(term);
-                    if decoder.bit()? {
-                        frames.push(Frame::Branches(subject, branches));
-                        continue 'next;
-                    }
-                    Term::case(ctx.arena, subject, branches.into_bump_slice())
-                }
-            };
+            Ok(term.delay(ctx.arena))
         }
+        // Lambda
+        tag::LAMBDA => {
+            let param = V::parameter_decode(ctx.arena, decoder)?;
+
+            let term = decode_term(ctx, decoder)?;
+
+            Ok(term.lambda(ctx.arena, param))
+        }
+        // Apply
+        tag::APPLY => {
+            let function = decode_term(ctx, decoder)?;
+            let argument = decode_term(ctx, decoder)?;
+
+            let term = function.apply(ctx.arena, argument);
+
+            Ok(term)
+        }
+        // Constant
+        tag::CONSTANT => {
+            let constant = decode_constant(ctx, decoder)?;
+
+            Ok(Term::constant(ctx.arena, constant))
+        }
+        // Force
+        tag::FORCE => {
+            let term = decode_term(ctx, decoder)?;
+
+            Ok(term.force(ctx.arena))
+        }
+        // Error
+        tag::ERROR => Ok(Term::error(ctx.arena)),
+        // Builtin
+        tag::BUILTIN => {
+            let builtin_tag = decoder.bits8(BUILTIN_TAG_WIDTH)?;
+
+            let function = builtin::try_from_tag(ctx.arena, builtin_tag)?;
+
+            let term = Term::builtin(ctx.arena, function);
+
+            Ok(term)
+        }
+        // Constr
+        tag::CONSTR => {
+            let tag = decoder.word()?;
+            let fields = decoder.list_with(ctx, decode_term)?;
+            let fields = ctx.arena.alloc(fields);
+
+            let term = Term::constr(ctx.arena, tag, fields);
+
+            Ok(term)
+        }
+        // Case
+        tag::CASE => {
+            let constr = decode_term(ctx, decoder)?;
+            let branches = decoder.list_with(ctx, decode_term)?;
+            let branches = ctx.arena.alloc(branches);
+
+            Ok(Term::case(ctx.arena, constr, branches))
+        }
+        _ => Err(FlatDecodeError::UnknownTermConstructor(tag)),
     }
 }
 
@@ -404,21 +383,11 @@ mod tests {
     use num::BigInt;
 
     #[test]
-    fn deeply_nested_terms_decode_without_call_stack_growth() {
-        let arena = Arena::new();
-        let mut bytes = vec![1, 1, 0];
-        bytes.extend(std::iter::repeat_n(0x11, 10_000));
-        bytes.push(0x61);
-        let program: &Program<DeBruijn> = decode(&arena, &bytes).unwrap();
-        assert_eq!(crate::flat::encode(program).unwrap(), bytes);
-    }
-
-    #[test]
     fn nested_application_and_case_lists_roundtrip() {
         let arena = Arena::new();
         let leaf = Term::<DeBruijn>::error(&arena);
         let mut term = leaf;
-        for _ in 0..5_000 {
+        for _ in 0..16 {
             let fields = arena.alloc([term, leaf]);
             let subject = Term::constr(&arena, 3, fields);
             let branches = arena.alloc([leaf, leaf]);

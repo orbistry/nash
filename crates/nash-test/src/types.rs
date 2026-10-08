@@ -38,6 +38,8 @@ pub struct Config {
     pub seed: u32,
     pub max_success: usize,
     pub jobs: usize,
+    /// Stack size of each worker thread; the workers decode programs.
+    pub worker_stack: usize,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -45,6 +47,8 @@ impl Default for Config {
             seed: 0,
             max_success: 100,
             jobs: 1,
+            // Rust's default thread stack.
+            worker_stack: 2 * 1024 * 1024,
         }
     }
 }

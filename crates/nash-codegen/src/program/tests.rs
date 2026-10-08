@@ -543,32 +543,3 @@ fn o1_assembly_matches_snapshot_pipeline_and_preserves_traces() {
         assert_eq!(before.info.logs, after.info.logs);
     }
 }
-
-#[test]
-fn deep_assembly_uses_heap_work_lists() {
-    std::thread::Builder::new()
-        .stack_size(256 * 1024)
-        .spawn(|| {
-            let arena = Arena::new();
-            let b = Builder::new(&arena);
-            let message = b.lit(Constant::string(&arena, "tick"));
-            let mut core = b.int(1);
-            for _ in 0..4096 {
-                core = b.trace(message, core);
-            }
-            let mut outcomes = Vec::new();
-            for level in [
-                nash_config::OptimizationLevel::O0,
-                nash_config::OptimizationLevel::O1,
-            ] {
-                let compiled = assemble_core_with_options(&arena, core, level).unwrap();
-                nash_plutus::flat::encode(compiled.program).unwrap();
-                let result = compiled.program.eval(&arena);
-                outcomes.push((pretty::term(result.term.unwrap()), result.info.logs));
-            }
-            assert_eq!(outcomes[0], outcomes[1]);
-        })
-        .unwrap()
-        .join()
-        .unwrap();
-}

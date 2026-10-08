@@ -101,6 +101,7 @@ fn run(test: TestProgram) -> Outcome {
             seed: 42,
             max_success: 5,
             jobs: 1,
+            ..Config::default()
         },
     )
     .remove(0)

@@ -14,6 +14,10 @@ The sections below are the record of 2026-09-29. The candidates and the
 follow-up order are not planned work. The work stacks under "Reproduced
 failures" stay until a later change converts them back to recursion.
 
+Converted back so far: Flat term encoding and decoding (`encode_term`,
+`decode_term`) recurse again, as in the imported code. `nash test` decodes
+programs on its worker pool, so the CLI gives those workers the compiler stack.
+
 Default O1 exposed a stack overflow in the driver `ledger_contexts` fixture.
 This audit distinguishes reproduced failures from recursive paths that still
 need depth regressions. Passing the fixture does not establish a universal

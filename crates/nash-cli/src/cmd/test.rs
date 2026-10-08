@@ -173,6 +173,7 @@ impl Args {
             seed,
             max_success: self.max_success,
             jobs: self.jobs,
+            worker_stack: nash_driver::stack::COMPILER_STACK,
         };
         let outcomes = spawn_blocking(move || nash_test::run_all(programs, &config))
             .await
