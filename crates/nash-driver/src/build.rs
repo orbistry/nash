@@ -69,11 +69,6 @@ pub fn build_validators_matching_with(
             },
             compiler: config.compiler_traces,
         };
-        let version = match config.plutus_version {
-            nash_config::PlutusVersion::V1 => nash_plutus::machine::PlutusVersion::V1,
-            nash_config::PlutusVersion::V2 => nash_plutus::machine::PlutusVersion::V2,
-            nash_config::PlutusVersion::V3 => nash_plutus::machine::PlutusVersion::V3,
-        };
         let name = module.module.name.name;
         let error = |message: String| BuildError {
             module: name.to_owned(),
@@ -104,13 +99,9 @@ pub fn build_validators_matching_with(
                 trace,
             )
             .map_err(|e| error(e.to_string()))?;
-        let compiled = nash_codegen::program::assemble_core_with_options(
-            &arena,
-            core.core,
-            version,
-            config.optimize,
-        )
-        .map_err(|e| error(e.to_string()))?;
+        let compiled =
+            nash_codegen::program::assemble_core_with_options(&arena, core.core, config.optimize)
+                .map_err(|e| error(e.to_string()))?;
         let uplc = pretty::program(Program::new(
             &arena,
             compiled.program.version,
@@ -122,7 +113,7 @@ pub fn build_validators_matching_with(
             module: name.to_owned(),
             uplc,
             flat: bytes,
-            hash: nash_plutus::script::script_hash(version, &cbor),
+            hash: nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V3, &cbor),
             cbor,
         });
     }
@@ -332,7 +323,6 @@ pub fn compile_tests_matching_with(
             module.module.name,
             module.source,
             &path,
-            config.plutus_version,
             trace,
             config.optimize,
             |test| include(module.module.name.name, test.name.value),

@@ -3,7 +3,7 @@ use crate::{
     prng::{Prng, Trace},
     shrink, *,
 };
-use nash_plutus::{arena::Arena, machine::PlutusVersion as MachineVersion};
+use nash_plutus::{arena::Arena, machine::PlutusVersion};
 use rayon::prelude::*;
 
 pub fn run_all(tests: Vec<TestProgram>, config: &Config) -> Vec<Outcome> {
@@ -19,13 +19,6 @@ pub fn run_all(tests: Vec<TestProgram>, config: &Config) -> Vec<Outcome> {
     {
         Ok(pool) => pool.install(run),
         Err(_) => run(),
-    }
-}
-fn version(v: PlutusVersion) -> MachineVersion {
-    match v {
-        PlutusVersion::V1 => MachineVersion::V1,
-        PlutusVersion::V2 => MachineVersion::V2,
-        PlutusVersion::V3 => MachineVersion::V3,
     }
 }
 fn exceeded(limit: Option<Budget>, used: ExBudget) -> Option<Failure> {
@@ -60,7 +53,7 @@ fn run_one(test: TestProgram, config: &Config) -> Outcome {
     run_one_with_budget(test, config, ExBudget::max())
 }
 fn run_one_with_budget(test: TestProgram, config: &Config, machine_budget: ExBudget) -> Outcome {
-    let v = version(test.plutus_version);
+    let v = PlutusVersion::V3;
     let mut out = Outcome {
         test,
         status: Status::Pass,
@@ -253,7 +246,6 @@ mod tests {
             programs,
             asserts: vec![],
             binder_texts: vec![],
-            plutus_version: PlutusVersion::V3,
             source: String::new(),
             source_path: "Budget.nash".into(),
         }
@@ -303,7 +295,7 @@ mod tests {
         let arena = &Arena::new();
         let run = bytes(arena, Term::error(arena));
         let exhausted =
-            eval::evaluate_with_budget(arena, MachineVersion::V3, &run, None, ExBudget::new(0, 0));
+            eval::evaluate_with_budget(arena, PlutusVersion::V3, &run, None, ExBudget::new(0, 0));
         assert!(exhausted.term.is_err());
         assert_eq!(exhausted.exhausted, Some(ExBudget::new(0, 0)));
         assert!(invalid_shrink_evaluation(&exhausted, None));
@@ -311,7 +303,7 @@ mod tests {
             &exhausted,
             Some(Budget::Cpu(i128::MAX))
         ));
-        let body_error = eval::evaluate(arena, MachineVersion::V3, &run, None);
+        let body_error = eval::evaluate(arena, PlutusVersion::V3, &run, None);
         assert!(body_error.term.is_err());
         assert_eq!(body_error.exhausted, None);
         assert!(!invalid_shrink_evaluation(&body_error, None));
@@ -325,7 +317,7 @@ mod tests {
         );
         let failure = eval::prepare(
             arena,
-            MachineVersion::V3,
+            PlutusVersion::V3,
             &program,
             &Prng::from_seed(42),
             ExBudget::new(0, 0),

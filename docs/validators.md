@@ -159,19 +159,16 @@ byte followed by the single-wrapped bytes) for each validator.
 
 ## Target compatibility
 
-Each validator uses its owning application's or package's `plutusVersion`
-(default `"v3"`), overridden by `--plutus-version`. Workspace members retain
-their own settings; dependency settings do not change the caller's script.
+Nash produces Plutus V3 validators only. The script context differs between
+ledger languages and Nash supports the V3 one, so there is no setting for
+another ledger language. The script hash always uses the V3 language tag.
 
-Compatibility targets **protocol version 11**. Ledger language versions and
-UPLC versions are distinct. V1, V2, and V3 all emit UPLC 1.1.0 and permit the
-builtins supported by this compiler at this protocol baseline; the selected
-ledger language still determines the script hash tag and evaluator semantics.
+Compatibility targets **protocol version 11**. Scripts are UPLC 1.1.0 and may
+use the builtins supported by this compiler at this protocol baseline.
 
 The entire generated program is validated, including nested terms and empty
-typed containers. Native `constr`/`case` terms are available for all three ledger
-languages. Protocol 11 also permits `case` on boolean, integer, list, pair,
-and unit constants. `Data` is not directly supported by native `case`: Nash
+typed containers. Native `constr`/`case` terms are available. Protocol 11 also
+permits `case` on boolean, integer, list, pair, and unit constants. `Data` is not directly supported by native `case`: Nash
 uses `chooseData` directly with delayed branches, forcing only the selected one.
 BLS runtime constants cannot be serialized as script literals; BLS builtins can
 construct values at runtime.
@@ -189,15 +186,14 @@ without a manifest must be relocated or removed explicitly before reuse.
 ## `nash build` flags
 
 ```
-nash build [PATH] [--plutus-version v1|v2|v3] [--trace-level LEVEL]
-           [--compiler-traces[=true|false]] [--out DIR]
+nash build [PATH] [--trace-level LEVEL] [--compiler-traces[=true|false]]
+           [--out DIR]
 ```
 
 | Flag | Values | Default | Effect |
 |---|---|---|---|
 | `--trace-level` | `silent`, `compact`, `verbose` | `traceLevel` in `nash.jsonc`, else `silent` | How user `trace` calls compile. `silent` removes them, `compact` keeps a short code per site, `verbose` keeps the full message. |
 | `--compiler-traces` | optional boolean | `compilerTraces` in config, else false | Keep compiler traces independently of user traces. The bare flag enables them; `--compiler-traces=false` disables them. |
-| `--plutus-version` | `v1`, `v2`, `v3` | `plutusVersion` in config, else `v3` | Select the target compatibility rules. |
 | `--out` | path | `build` | Output directory. |
 
 Flags override config values for one run. Builds remain unoptimized; optimizer

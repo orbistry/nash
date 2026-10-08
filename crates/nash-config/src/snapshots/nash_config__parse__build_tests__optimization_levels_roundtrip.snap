@@ -5,7 +5,6 @@ description: "{\"type\":\"application\",\"optimize\":0,\"traceLevel\":\"verbose\
 {
   "type": "application",
   "optimize": 0,
-  "plutusVersion": "v3",
   "traceLevel": "verbose",
   "compilerTraces": true,
   "sourceDirectories": [

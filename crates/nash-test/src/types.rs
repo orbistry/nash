@@ -1,4 +1,3 @@
-pub use nash_config::PlutusVersion;
 pub use nash_plutus::machine::ExBudget;
 use nash_region::Region;
 pub use nash_source::{Budget, Expect};
@@ -14,7 +13,6 @@ pub struct TestProgram {
     pub programs: Programs,
     pub asserts: Vec<AssertSite>,
     pub binder_texts: Vec<String>,
-    pub plutus_version: PlutusVersion,
     pub source: String,
     pub source_path: PathBuf,
 }

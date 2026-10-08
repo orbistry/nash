@@ -209,7 +209,7 @@ async fn refuses_symlink_artifacts_and_manifests_without_touching_their_targets(
 }
 
 #[tokio::test]
-async fn roots_use_their_own_target_settings_and_hashes() {
+async fn validator_hashes_use_the_v3_language_tag() {
     let files = [
         (
             "First",
@@ -220,29 +220,20 @@ async fn roots_use_their_own_target_settings_and_hashes() {
             "validator module Second exposing (main)\nmain : 'a -> unit\nmain _ = ()\n",
         ),
     ];
-    let artifacts = outputs_with(&files, |uri| nash_config::Build {
-        plutus_version: if uri.path().ends_with("First.nash") {
-            nash_config::PlutusVersion::V1
-        } else {
-            nash_config::PlutusVersion::V3
-        },
-        ..Default::default()
-    })
-    .await;
+    let artifacts = outputs_with(&files, |_| nash_config::Build::default()).await;
 
     insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
         insta::assert_snapshot!(artifacts.iter().map(|artifact| format!("{}\n{}\nhash: {}", artifact.module, artifact.uplc, hex::encode(artifact.hash))).collect::<Vec<_>>().join("\n"));
     });
-    for (artifact, version) in artifacts.iter().zip([
-        nash_plutus::machine::PlutusVersion::V1,
-        nash_plutus::machine::PlutusVersion::V3,
-    ]) {
+    for artifact in &artifacts {
         assert_eq!(
             artifact.hash,
-            nash_plutus::script::script_hash(version, &artifact.cbor)
+            nash_plutus::script::script_hash(
+                nash_plutus::machine::PlutusVersion::V3,
+                &artifact.cbor
+            )
         );
     }
-    assert_ne!(artifacts[0].hash, artifacts[1].hash);
 }
 
 #[tokio::test]

@@ -60,23 +60,13 @@ pub fn assemble<'a>(arena: &'a Arena, module: &Module<'a>) -> Result<Compiled<'a
 
 /// Assemble an already wrapped Core root through the O0 pipeline.
 pub fn assemble_core<'a>(arena: &'a Arena, core: &'a Core<'a>) -> Result<Compiled<'a>, Error<'a>> {
-    assemble_core_for_version(arena, core, PlutusVersion::V3)
-}
-
-/// Assemble and validate for the selected ledger language at the PV11 baseline.
-pub fn assemble_core_for_version<'a>(
-    arena: &'a Arena,
-    core: &'a Core<'a>,
-    version: PlutusVersion,
-) -> Result<Compiled<'a>, Error<'a>> {
-    assemble_core_with_options(arena, core, version, nash_config::OptimizationLevel::O0)
+    assemble_core_with_options(arena, core, nash_config::OptimizationLevel::O0)
 }
 
 /// Assemble at the selected level. O2 removes all logging before O1 optimization.
 pub fn assemble_core_with_options<'a>(
     arena: &'a Arena,
     core: &'a Core<'a>,
-    version: PlutusVersion,
     optimize: nash_config::OptimizationLevel,
 ) -> Result<Compiled<'a>, Error<'a>> {
     if let Some(name) = free_variables(core).first() {
@@ -99,7 +89,7 @@ pub fn assemble_core_with_options<'a>(
     let term = debruijn::to_debruijn(arena, named).map_err(Error::DeBruijn)?;
     let uplc_version = Version::plutus_v3(arena);
     let program = Program::new(arena, uplc_version, term);
-    script::validate_program(program, version)?;
+    script::validate_program(program, PlutusVersion::V3)?;
     Ok(Compiled { program, named })
 }
 

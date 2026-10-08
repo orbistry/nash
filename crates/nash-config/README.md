@@ -105,7 +105,6 @@ Applications and packages accept these optional top-level fields:
 
 | Field | Values | Default |
 | --- | --- | --- |
-| `plutusVersion` | `"v1"`, `"v2"`, `"v3"` | `"v3"` |
 | `traceLevel` | `"silent"`, `"compact"`, `"verbose"` | `"silent"` |
 | `compilerTraces` | `true`, `false` | `false` |
 

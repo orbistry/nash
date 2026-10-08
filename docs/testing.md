@@ -152,7 +152,7 @@ The first counterexample stops the loop and is shrunk. This is Aiken's
 The test fails when the consumed budget exceeds a given limit; a missing
 limit is unbounded. For a `prop` the
 limit applies to every iteration, and the report shows the maximum. Budgets
-are measured with the bundled cost model of the configured `plutusVersion`
+are measured with the bundled Plutus V3 cost model
 after the same Core passes `nash build` runs. The evaluator does not query live
 protocol parameters; these measurements do not establish current mainnet costs.
 `within` and
@@ -523,8 +523,7 @@ across tests, as in Aiken (`aiken-project/src/lib.rs:1173-1176`).
 - Test programs use the same selected O0/O1 pipeline as validator builds. Optimization does not change user/compiler trace settings or test protocol logs.
   Compiler traces are enabled; user traces default to verbose unless the owning
   project explicitly configures a level or the CLI overrides it. Plan 08 remains
-  deferred. Property result tuples/options use native constructors and cases,
-  supported for V1, V2, and V3 at the protocol 11 baseline.
+  deferred. Property result tuples/options use native constructors and cases.
 
 ## Interactions
 

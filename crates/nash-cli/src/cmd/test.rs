@@ -4,7 +4,7 @@ use miette::{IntoDiagnostic, Result};
 use nash_driver::{Database, FileSystemSource, Project, build_graph_with_tests, test_with};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
-use super::build::{PlutusVersionArg, TraceLevelArg};
+use super::build::TraceLevelArg;
 
 #[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Coverage {
@@ -29,8 +29,6 @@ pub struct Args {
     pub exact: bool,
     #[arg(long, value_enum)]
     pub trace_level: Option<TraceLevelArg>,
-    #[arg(long, value_enum)]
-    pub plutus_version: Option<PlutusVersionArg>,
     #[arg(long, default_value_t = default_jobs(), value_parser = positive)]
     pub jobs: usize,
     #[arg(long, value_enum, default_value = "labels")]
@@ -64,13 +62,6 @@ impl Args {
                 TraceLevelArg::Silent => nash_config::TraceLevel::Silent,
                 TraceLevelArg::Compact => nash_config::TraceLevel::Compact,
                 TraceLevelArg::Verbose => nash_config::TraceLevel::Verbose,
-            };
-        }
-        if let Some(version) = self.plutus_version {
-            config.plutus_version = match version {
-                PlutusVersionArg::V1 => nash_config::PlutusVersion::V1,
-                PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
-                PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
             };
         }
         config.validate()?;

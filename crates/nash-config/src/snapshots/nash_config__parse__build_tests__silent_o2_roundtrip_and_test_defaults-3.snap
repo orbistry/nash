@@ -5,7 +5,6 @@ description: "{\"type\":\"package\",\"name\":\"test/lib\",\"version\":\"1.0.0\",
 {
   "type": "package",
   "optimize": 2,
-  "plutusVersion": "v3",
   "compilerTraces": false,
   "name": "test/lib",
   "version": "1.0.0",

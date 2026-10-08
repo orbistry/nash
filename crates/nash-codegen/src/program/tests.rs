@@ -464,34 +464,36 @@ fn comptime_infinite_recursion_exhausts_default_budget() {
 }
 
 #[test]
-fn assemble_selected_ledger_language() {
+fn assemble_targets_plutus_v3() {
     let a = Arena::new();
     let b = Builder::new(&a);
-    for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
-        let compiled = assemble_core_for_version(&a, b.int(42), version).unwrap();
-        assert!(compiled.program.version.is_v1_1_0());
-        assert_eq!(
-            pretty::term(compiled.program.eval_version(&a, version).term.unwrap()),
-            "(con integer 42)"
-        );
-    }
-    for version in [PlutusVersion::V1, PlutusVersion::V2, PlutusVersion::V3] {
-        let constr = b.constr(
-            0,
-            &[b.int(1)],
-            Ty::Runtime(b.arena.alloc(nash_ir::ty::RuntimeTy::Constr {
-                tag: 0,
-                fields: b.arena.alloc_slice_copy(&[Ty::Const(&ConstTy::Int)]),
-            })),
-        );
-        assert!(assemble_core_for_version(&a, constr, version).is_ok());
-        let newer = b.builtin(
-            F::ExpModInteger,
-            &[b.int(2), b.int(3), b.int(5)],
-            Ty::Const(&ConstTy::Int),
-        );
-        assert!(assemble_core_for_version(&a, newer, version).is_ok());
-    }
+    let compiled = assemble_core(&a, b.int(42)).unwrap();
+    assert!(compiled.program.version.is_v1_1_0());
+    assert_eq!(
+        pretty::term(
+            compiled
+                .program
+                .eval_version(&a, PlutusVersion::V3)
+                .term
+                .unwrap()
+        ),
+        "(con integer 42)"
+    );
+    let constr = b.constr(
+        0,
+        &[b.int(1)],
+        Ty::Runtime(b.arena.alloc(nash_ir::ty::RuntimeTy::Constr {
+            tag: 0,
+            fields: b.arena.alloc_slice_copy(&[Ty::Const(&ConstTy::Int)]),
+        })),
+    );
+    assert!(assemble_core(&a, constr).is_ok());
+    let newer = b.builtin(
+        F::ExpModInteger,
+        &[b.int(2), b.int(3), b.int(5)],
+        Ty::Const(&ConstTy::Int),
+    );
+    assert!(assemble_core(&a, newer).is_ok());
 }
 
 #[test]
@@ -508,8 +510,7 @@ fn o1_assembly_matches_snapshot_pipeline_and_preserves_traces() {
             if fails { b.error(int) } else { value },
         );
         let prepared = crate::snapshot_optimizer::prepare(&arena, root);
-        let o1 = assemble_core_with_options(&arena, root, PlutusVersion::V3, OptimizationLevel::O1)
-            .unwrap();
+        let o1 = assemble_core_with_options(&arena, root, OptimizationLevel::O1).unwrap();
         let before = prepared.before.program.eval(&arena);
         let after = o1.program.eval(&arena);
         insta::assert_snapshot!(
@@ -560,8 +561,7 @@ fn deep_assembly_uses_heap_work_lists() {
                 nash_config::OptimizationLevel::O0,
                 nash_config::OptimizationLevel::O1,
             ] {
-                let compiled =
-                    assemble_core_with_options(&arena, core, PlutusVersion::V3, level).unwrap();
+                let compiled = assemble_core_with_options(&arena, core, level).unwrap();
                 nash_plutus::flat::encode(compiled.program).unwrap();
                 let result = compiled.program.eval(&arena);
                 outcomes.push((pretty::term(result.term.unwrap()), result.info.logs));

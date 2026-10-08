@@ -230,10 +230,7 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     .unwrap();
     let (report, outputs) = build_with(db, &graph, &origins, move |solved| {
         nash_driver::build::build_validators_matching_with(solved, |uri| {
-            (uri == &main).then_some(nash_config::Build {
-                plutus_version: nash_config::PlutusVersion::V1,
-                ..Default::default()
-            })
+            (uri == &main).then_some(nash_config::Build::default())
         })
     })
     .await;
@@ -246,6 +243,6 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     });
     assert_eq!(
         outputs[0].hash,
-        nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V1, &outputs[0].cbor)
+        nash_plutus::script::script_hash(nash_plutus::machine::PlutusVersion::V3, &outputs[0].cbor)
     );
 }

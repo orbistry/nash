@@ -12,7 +12,7 @@ use jsonc_parser::{CollectOptions, ParseOptions, parse_to_ast};
 
 use crate::config::{
     Application, Build, Config, Dependency, DependencySource, ExposedModules, GitDep, Package,
-    PathDep, PlutusVersion, TraceLevel, Workspace, WorkspaceDep,
+    PathDep, TraceLevel, Workspace, WorkspaceDep,
 };
 use crate::error::{ConfigError, Position};
 use crate::name::{PackageName, PackageNameError};
@@ -110,19 +110,6 @@ fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, Confi
         value,
         expected,
     };
-    let plutus_version =
-        match parse_optional_string(contents, path, obj, "plutusVersion")?.as_deref() {
-            None | Some("v3") => PlutusVersion::V3,
-            Some("v1") => PlutusVersion::V1,
-            Some("v2") => PlutusVersion::V2,
-            Some(other) => {
-                return Err(invalid_enum(
-                    "plutusVersion",
-                    other.into(),
-                    "'v1', 'v2', or 'v3'",
-                ));
-            }
-        };
     let trace_level = match parse_optional_string(contents, path, obj, "traceLevel")?.as_deref() {
         None | Some("silent") => TraceLevel::Silent,
         Some("compact") => TraceLevel::Compact,
@@ -159,7 +146,6 @@ fn parse_build(contents: &str, path: &Path, obj: &Object) -> Result<Build, Confi
     };
     let build = Build {
         optimize,
-        plutus_version,
         trace_level,
         trace_level_explicit: find_property(obj, "traceLevel").is_some(),
         compiler_traces,
@@ -226,7 +212,7 @@ fn parse_package(contents: &str, path: &Path, obj: &Object) -> Result<Package, C
 }
 
 fn parse_workspace(contents: &str, path: &Path, obj: &Object) -> Result<Workspace, ConfigError> {
-    for field in ["plutusVersion", "traceLevel", "compilerTraces", "optimize"] {
+    for field in ["traceLevel", "compilerTraces", "optimize"] {
         if let Some(prop) = find_property(obj, field) {
             return Err(ConfigError::WorkspaceBuildSetting {
                 path: path.into(),
@@ -863,7 +849,7 @@ mod tests {
 #[cfg(test)]
 mod build_tests {
     use super::*;
-    use crate::{Build, PlutusVersion, TraceLevel};
+    use crate::{Build, TraceLevel};
 
     #[test]
     fn optimization_levels_roundtrip() {
@@ -915,7 +901,6 @@ mod build_tests {
         ] {
             let config = parse(source, "nash.jsonc").unwrap();
             assert_eq!(config.build(), Build::default());
-            assert_eq!(config.build().plutus_version, PlutusVersion::V3);
             assert_eq!(config.build().trace_level, TraceLevel::Silent);
             assert!(!config.build().compiler_traces);
             assert_eq!(serde_json::from_str::<Config>(source).unwrap(), config);
@@ -924,46 +909,38 @@ mod build_tests {
 
     #[test]
     fn build_roundtrip() {
-        for (version, expected_version) in [
-            ("v1", PlutusVersion::V1),
-            ("v2", PlutusVersion::V2),
-            ("v3", PlutusVersion::V3),
+        for (trace, expected_trace) in [
+            ("silent", TraceLevel::Silent),
+            ("compact", TraceLevel::Compact),
+            ("verbose", TraceLevel::Verbose),
         ] {
-            for (trace, expected_trace) in [
-                ("silent", TraceLevel::Silent),
-                ("compact", TraceLevel::Compact),
-                ("verbose", TraceLevel::Verbose),
-            ] {
-                for compiler_traces in [false, true] {
-                    let source = format!(
-                        r#"{{"type":"application","plutusVersion":"{version}","traceLevel":"{trace}","compilerTraces":{compiler_traces}}}"#
-                    );
-                    let config = parse(&source, "nash.jsonc").unwrap();
-                    assert_eq!(
-                        config.build(),
-                        Build {
-                            optimize: crate::OptimizationLevel::O1,
-                            plutus_version: expected_version,
-                            trace_level: expected_trace,
-                            trace_level_explicit: true,
-                            compiler_traces
-                        }
-                    );
-                    assert_config_roundtrip_snapshot!(&source, config);
-                }
+            for compiler_traces in [false, true] {
+                let source = format!(
+                    r#"{{"type":"application","traceLevel":"{trace}","compilerTraces":{compiler_traces}}}"#
+                );
+                let config = parse(&source, "nash.jsonc").unwrap();
+                assert_eq!(
+                    config.build(),
+                    Build {
+                        optimize: crate::OptimizationLevel::O1,
+                        trace_level: expected_trace,
+                        trace_level_explicit: true,
+                        compiler_traces
+                    }
+                );
+                assert_config_roundtrip_snapshot!(&source, config);
             }
         }
     }
 
     #[test]
     fn package_build_settings() {
-        let source = r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[],"plutusVersion":"v1","traceLevel":"verbose","compilerTraces":true}"#;
+        let source = r#"{"type":"package","name":"test/lib","version":"1.0.0","summary":"","license":"MIT","exposedModules":[],"traceLevel":"verbose","compilerTraces":true}"#;
         let config = parse(source, "nash.jsonc").unwrap();
         assert_eq!(
             config.build(),
             Build {
                 optimize: crate::OptimizationLevel::O1,
-                plutus_version: PlutusVersion::V1,
                 trace_level: TraceLevel::Verbose,
                 trace_level_explicit: true,
                 compiler_traces: true
@@ -974,10 +951,6 @@ mod build_tests {
     }
 
     config_error_snapshot!(
-        workspace_plutus_version,
-        r#"{"type":"workspace","members":[],"plutusVersion":"v3"}"#
-    );
-    config_error_snapshot!(
         workspace_trace_level,
         r#"{"type":"workspace","members":[],"traceLevel":"compact"}"#
     );
@@ -986,21 +959,8 @@ mod build_tests {
         r#"{"type":"workspace","members":[],"compilerTraces":false}"#
     );
     config_error_snapshot!(
-        invalid_plutus_version,
-        r#"
-        {
-            "type": "application",
-            "plutusVersion": "v4"
-        }
-    "#
-    );
-    config_error_snapshot!(
         invalid_trace_level,
         r#"{"type":"application","traceLevel":"loud"}"#
-    );
-    config_error_snapshot!(
-        plutus_version_wrong_type,
-        r#"{"type":"application","plutusVersion":3}"#
     );
     config_error_snapshot!(
         trace_level_wrong_type,

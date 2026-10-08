@@ -833,10 +833,9 @@ local bindings also retain strict evaluation.
 
 ## Build targets
 
-Production assembly accepts a ledger target and validates generated UPLC against
+Production assembly targets Plutus V3 only and validates generated UPLC against
 the protocol 11 compatibility baseline described in [validators.md](validators.md#target-compatibility).
-`assemble_core` remains the default V3 entrypoint; `assemble_core_for_version`
-emits UPLC 1.1.0 for V1, V2, and V3 and checks the complete program.
+`assemble_core` is the O0 entrypoint; it emits UPLC 1.1.0 and checks the complete program.
 O1 is the build/test default; O0 remains available (required recursion rewriting then ordinary lowering).
 `assemble_core_with_options` also supports O1: shared `optimizer::optimize`
 performs freshening, static lifting and unused-parameter removal, then one ANF

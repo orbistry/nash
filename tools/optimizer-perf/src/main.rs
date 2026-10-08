@@ -354,13 +354,8 @@ fn silent_experiment(path: &Path) -> Result<()> {
             ]
         };
         for &level in levels {
-            let compiled = nash_codegen::program::assemble_core_with_options(
-                &arena,
-                core,
-                PlutusVersion::V3,
-                level,
-            )
-            .map_err(|e| e.to_string())?;
+            let compiled = nash_codegen::program::assemble_core_with_options(&arena, core, level)
+                .map_err(|e| e.to_string())?;
             let optimized = match level {
                 OptimizationLevel::O0 => core,
                 OptimizationLevel::O1 => nash_codegen::optimizer::optimize(&arena, core),
@@ -370,13 +365,9 @@ fn silent_experiment(path: &Path) -> Result<()> {
                 let once = flat::encode(compiled.program)?;
                 let mut repeated = optimized;
                 for _ in 0..2 {
-                    let compiled = nash_codegen::program::assemble_core_with_options(
-                        &arena,
-                        repeated,
-                        PlutusVersion::V3,
-                        level,
-                    )
-                    .map_err(|e| e.to_string())?;
+                    let compiled =
+                        nash_codegen::program::assemble_core_with_options(&arena, repeated, level)
+                            .map_err(|e| e.to_string())?;
                     assert_eq!(once, flat::encode(compiled.program)?, "O2 must converge");
                     repeated = nash_codegen::optimizer::optimize_silent(&arena, repeated)?;
                 }

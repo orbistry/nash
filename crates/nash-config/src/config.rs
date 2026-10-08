@@ -18,16 +18,6 @@ pub enum Config {
     Workspace(Workspace),
 }
 
-/// Plutus ledger language version used for validator compilation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum PlutusVersion {
-    V1,
-    V2,
-    #[default]
-    V3,
-}
-
 /// Amount of user trace information included in compiled validators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -89,7 +79,6 @@ impl OptimizationLevel {
 #[serde(try_from = "BuildFields", into = "BuildFields")]
 pub struct Build {
     pub optimize: OptimizationLevel,
-    pub plutus_version: PlutusVersion,
     pub trace_level: TraceLevel,
     /// Distinguishes an explicit silent setting from the command-specific default.
     pub trace_level_explicit: bool,
@@ -101,8 +90,6 @@ pub struct Build {
 struct BuildFields {
     #[serde(default, skip_serializing_if = "OptimizationLevel::is_default")]
     optimize: OptimizationLevel,
-    #[serde(default)]
-    plutus_version: PlutusVersion,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     trace_level: Option<TraceLevel>,
     #[serde(default)]
@@ -114,7 +101,6 @@ impl TryFrom<BuildFields> for Build {
     fn try_from(fields: BuildFields) -> Result<Self, Self::Error> {
         let build = Self {
             optimize: fields.optimize,
-            plutus_version: fields.plutus_version,
             trace_level: fields.trace_level.unwrap_or_default(),
             trace_level_explicit: fields.trace_level.is_some(),
             compiler_traces: fields.compiler_traces,
@@ -128,7 +114,6 @@ impl From<Build> for BuildFields {
     fn from(build: Build) -> Self {
         Self {
             optimize: build.optimize,
-            plutus_version: build.plutus_version,
             trace_level: (build.trace_level_explicit || build.trace_level != TraceLevel::Silent)
                 .then_some(build.trace_level),
             compiler_traces: build.compiler_traces,

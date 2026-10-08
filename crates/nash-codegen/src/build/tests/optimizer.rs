@@ -2,7 +2,7 @@
 use super::*;
 use nash_config::OptimizationLevel;
 use nash_ir::{anf, build::Builder, hygiene, pretty::pretty};
-use nash_plutus::{builtin::DefaultFunction as F, machine::PlutusVersion, term::Term};
+use nash_plutus::{builtin::DefaultFunction as F, term::Term};
 
 macro_rules! boolean_case_snapshot {
     ($name:ident, $source:literal) => {
@@ -236,13 +236,8 @@ fn application_failure_precedes_later_argument() {
 fn check_silent(arena: &Arena, name: &str, core: &Core<'_>, source: &str, fails: bool) {
     let after = crate::optimizer::optimize_silent(arena, core).unwrap();
     let before_program = crate::program::assemble_core(arena, core).unwrap();
-    let after_program = crate::program::assemble_core_with_options(
-        arena,
-        core,
-        PlutusVersion::V3,
-        OptimizationLevel::O2,
-    )
-    .unwrap();
+    let after_program =
+        crate::program::assemble_core_with_options(arena, core, OptimizationLevel::O2).unwrap();
     let baseline = crate::harness::eval_named(arena, before_program.named);
     let optimized = crate::harness::eval_named(arena, after_program.named);
     assert_eq!(optimized.result.starts_with("error:"), fails);
@@ -255,13 +250,8 @@ fn check_silent(arena: &Arena, name: &str, core: &Core<'_>, source: &str, fails:
     nash_ir::hygiene::validate(after, &[]).unwrap();
     nash_ir::anf::validate(after).unwrap();
     assert_silent(after_program.named);
-    let twice = crate::program::assemble_core_with_options(
-        arena,
-        after,
-        PlutusVersion::V3,
-        OptimizationLevel::O2,
-    )
-    .unwrap();
+    let twice =
+        crate::program::assemble_core_with_options(arena, after, OptimizationLevel::O2).unwrap();
     assert_eq!(
         nash_plutus::flat::encode(after_program.program).unwrap(),
         nash_plutus::flat::encode(twice.program).unwrap()
@@ -429,7 +419,6 @@ fn o2_discards_diverging_message() {
         let compiled = crate::program::assemble_core_with_options(
             arena,
             core,
-            nash_plutus::machine::PlutusVersion::V3,
             nash_config::OptimizationLevel::O2,
         )
         .unwrap();

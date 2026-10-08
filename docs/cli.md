@@ -37,7 +37,6 @@ Global flags, accepted before the subcommand:
 | Flag | Default | Effect |
 |---|---|---|
 | `-O0` / `-O1` / `-O2`, `--optimize 0\|1\|2` | config `optimize`, else `1` | Select baseline, trace-preserving O1, or silent O2. |
-| `--plutus-version v1\|v2\|v3` | config `plutusVersion`, else `v3` | Ledger language target at the protocol 11 baseline. |
 | `--trace-level silent\|compact\|verbose` | config `traceLevel`, else `silent` | User `trace` compilation mode. |
 | `--compiler-traces[=true\|false]` | config `compilerTraces`, else false | Independently control compiler traces; the bare flag enables them. |
 | `--out DIR` | `build` | Output directory. |
@@ -65,7 +64,6 @@ See [target compatibility](validators.md#target-compatibility).
 | `--exact` | off | `--match` compares whole strings. |
 | `--trace-level` | config `traceLevel`, else `verbose` (O0/O1) or `silent` (O2) | As for `build`; O2 rejects non-silent settings. |
 | `--jobs N` | number of cores | Positive worker count; fixed seeds give the same ordered results across worker counts. |
-| `--plutus-version v1\|v2\|v3` | member config, else `v3` | Target validation and bundled execution cost model. |
 | `--json` | off | Write one structured result document to stdout. |
 | `--coverage labels\|tests` | `labels` | Denominator of the label table: total labels, or total iterations. |
 
@@ -141,13 +139,12 @@ See [testing.md](testing.md#example-output).
 
 ## `nash.jsonc` additions
 
-Four optional build settings are accepted on `application` and `package` configs:
+Three optional build settings are accepted on `application` and `package` configs:
 
 ```jsonc
 {
     "type": "application",
     "sourceDirectories": ["src"],
-    "plutusVersion": "v3",       // "v1" | "v2" | "v3"; default "v3"
     "optimize": 1,              // 0, 1 (default), or 2; O2 requires silent settings
     "traceLevel": "compact",     // "silent" | "compact" | "verbose"; default "silent"
     "compilerTraces": false,     // boolean; default false
@@ -157,7 +154,6 @@ Four optional build settings are accepted on `application` and `package` configs
 
 | Field | Used by | Meaning |
 |---|---|---|
-| `plutusVersion` | `build` | Ledger language target and permitted generated features at the supported protocol baseline. |
 | `optimize` | `build`, `test` | Default for `-O` / `--optimize`; 0, 1, or 2; O2 requires silent settings. |
 | `traceLevel` | `build` | Default for `--trace-level`. |
 | `compilerTraces` | `build` | Default for `--compiler-traces`; independent of user traces. |
@@ -167,7 +163,7 @@ apply to every member for that invocation. A
 dependency's values are ignored: the building project's settings apply to the
 whole script.
 
-Rust side (`crates/nash-config/src/config.rs`): `PlutusVersion` and
+Rust side (`crates/nash-config/src/config.rs`): `OptimizationLevel` and
 `TraceLevel` enums and `Build` settings with validated JSONC defaults. Details in [plans/09](../plans/09-validators-build.md).
 
 ## Open questions

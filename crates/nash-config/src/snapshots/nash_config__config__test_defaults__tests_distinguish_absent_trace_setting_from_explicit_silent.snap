@@ -4,7 +4,6 @@ description: "{\"type\":\"application\"}"
 ---
 {
   "type": "application",
-  "plutusVersion": "v3",
   "compilerTraces": false,
   "sourceDirectories": [
     "src"

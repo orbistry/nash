@@ -49,22 +49,19 @@ pub fn compile_tests<'a>(
     module: ModuleName<'a>,
     source: &str,
     path: &Path,
-    version: nash_config::PlutusVersion,
     trace: TraceConfig,
 ) -> Result<Vec<TestProgram>, Error<'a>> {
-    compile_tests_matching(arena, build, module, source, path, version, trace, |_| true)
+    compile_tests_matching(arena, build, module, source, path, trace, |_| true)
 }
 
 /// Select declarations before code generation: an unselected property must not
 /// impose its native-constructor target requirements on selected unit tests.
-#[allow(clippy::too_many_arguments)]
 pub fn compile_tests_matching<'a>(
     arena: &'a Arena,
     build: &Build<'a, '_>,
     module: ModuleName<'a>,
     source: &str,
     path: &Path,
-    version: nash_config::PlutusVersion,
     trace: TraceConfig,
     include: impl FnMut(&nash_ast::Test<'a>) -> bool,
 ) -> Result<Vec<TestProgram>, Error<'a>> {
@@ -74,7 +71,6 @@ pub fn compile_tests_matching<'a>(
         module,
         source,
         path,
-        version,
         trace,
         nash_config::OptimizationLevel::O0,
         include,
@@ -88,7 +84,6 @@ pub fn compile_tests_matching_optimized<'a>(
     module: ModuleName<'a>,
     source: &str,
     path: &Path,
-    version: nash_config::PlutusVersion,
     trace: TraceConfig,
     optimize: nash_config::OptimizationLevel,
     mut include: impl FnMut(&nash_ast::Test<'a>) -> bool,
@@ -119,12 +114,12 @@ pub fn compile_tests_matching_optimized<'a>(
         let programs = if test.binders.is_empty() {
             let root = engine.expr(test.body, &ctx)?;
             Programs::Unit {
-                run: encode(&mut engine, root, version, optimize)?,
+                run: encode(&mut engine, root, optimize)?,
             }
         } else {
             let prepare = engine.property(test, &ctx)?;
             Programs::Prop {
-                prepare: encode(&mut engine, prepare, version, optimize)?,
+                prepare: encode(&mut engine, prepare, optimize)?,
             }
         };
         result.push(TestProgram {
@@ -140,7 +135,6 @@ pub fn compile_tests_matching_optimized<'a>(
                 .iter()
                 .map(|b| source_region(source, b.pattern.region))
                 .collect(),
-            plutus_version: version,
             source: source.to_owned(),
             source_path: path.to_owned(),
         });
@@ -151,17 +145,10 @@ pub fn compile_tests_matching_optimized<'a>(
 fn encode<'a>(
     engine: &mut Engine<'a, '_, '_>,
     root: &'a Core<'a>,
-    version: nash_config::PlutusVersion,
     optimize: nash_config::OptimizationLevel,
 ) -> Result<Vec<u8>, Error<'a>> {
     let core = engine.finish_root(root)?;
-    let version = match version {
-        nash_config::PlutusVersion::V1 => nash_plutus::machine::PlutusVersion::V1,
-        nash_config::PlutusVersion::V2 => nash_plutus::machine::PlutusVersion::V2,
-        nash_config::PlutusVersion::V3 => nash_plutus::machine::PlutusVersion::V3,
-    };
-    let program =
-        crate::program::assemble_core_with_options(engine.ir.arena, core, version, optimize)?;
+    let program = crate::program::assemble_core_with_options(engine.ir.arena, core, optimize)?;
     flat::encode(program.program).map_err(|e| Error::Encoding(e.to_string()))
 }
 

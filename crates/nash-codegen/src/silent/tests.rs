@@ -4,20 +4,13 @@ use nash_ir::{
     pretty::pretty,
     ty::{ConstTy, TermTy},
 };
-use nash_plutus::{
-    builtin::DefaultFunction as F, constant::Constant, machine::PlutusVersion, term::Term,
-};
+use nash_plutus::{builtin::DefaultFunction as F, constant::Constant, term::Term};
 
 fn check(arena: &Arena, name: &str, core: &Core<'_>, fails: bool) {
     let after = crate::optimizer::optimize_silent(arena, core).unwrap();
     let before_program = crate::program::assemble_core(arena, core).unwrap();
-    let after_program = crate::program::assemble_core_with_options(
-        arena,
-        core,
-        PlutusVersion::V3,
-        OptimizationLevel::O2,
-    )
-    .unwrap();
+    let after_program =
+        crate::program::assemble_core_with_options(arena, core, OptimizationLevel::O2).unwrap();
     let baseline = crate::harness::eval_named(arena, before_program.named);
     let optimized = crate::harness::eval_named(arena, after_program.named);
     assert_eq!(optimized.result.starts_with("error:"), fails);
@@ -30,13 +23,8 @@ fn check(arena: &Arena, name: &str, core: &Core<'_>, fails: bool) {
     nash_ir::hygiene::validate(after, &[]).unwrap();
     nash_ir::anf::validate(after).unwrap();
     assert_silent(after_program.named);
-    let twice = crate::program::assemble_core_with_options(
-        arena,
-        after,
-        PlutusVersion::V3,
-        OptimizationLevel::O2,
-    )
-    .unwrap();
+    let twice =
+        crate::program::assemble_core_with_options(arena, after, OptimizationLevel::O2).unwrap();
     assert_eq!(
         nash_plutus::flat::encode(after_program.program).unwrap(),
         nash_plutus::flat::encode(twice.program).unwrap()

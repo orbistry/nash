@@ -3,23 +3,20 @@ use std::collections::BTreeMap;
 use super::*;
 use crate::build::{Input, TraceLevel};
 use nash_ast::primitives;
-use nash_config::PlutusVersion;
 use nash_plutus::machine::PlutusVersion as MachineVersion;
 use nash_test::{eval, prng::Prng};
 
 fn compile(
     snapshot_name: &str,
     source: &str,
-    version: PlutusVersion,
     trace: TraceLevel,
 ) -> Result<Vec<TestProgram>, String> {
-    compile_selected(snapshot_name, source, version, trace, None)
+    compile_selected(snapshot_name, source, trace, None)
 }
 
 fn compile_selected(
     snapshot_name: &str,
     source: &str,
-    version: PlutusVersion,
     trace: TraceLevel,
     name: Option<&str>,
 ) -> Result<Vec<TestProgram>, String> {
@@ -143,7 +140,6 @@ fn compile_selected(
         modules.last().unwrap().0.module.name,
         source,
         Path::new("Main.nash"),
-        version,
         TraceConfig {
             user: trace,
             compiler: false,
@@ -193,7 +189,7 @@ fn compile_selected(
         output.push('\n');
     }
     insta::with_settings!({description => source, omit_expression => true}, {
-        insta::assert_snapshot!(format!("{snapshot_name}_{version:?}_{trace:?}"), output);
+        insta::assert_snapshot!(format!("{snapshot_name}_{trace:?}"), output);
     });
     Ok(programs)
 }
@@ -229,7 +225,6 @@ fn unit_roots_and_power_assert_payloads() {
     let programs = compile(
         "unit_roots_and_power_assert_payloads_1",
         source,
-        PlutusVersion::V3,
         TraceLevel::Silent,
     )
     .unwrap();
@@ -277,7 +272,6 @@ fn captures_preserve_partial_application_order_and_lazy_branches() {
     let programs = compile(
         "captures_preserve_partial_application_order_and_lazy_branches_1",
         source,
-        PlutusVersion::V3,
         TraceLevel::Verbose,
     )
     .unwrap();
@@ -325,7 +319,6 @@ fn custom_show_runs_only_on_failure_and_test_local_native_layouts_specialize() {
     let programs = compile(
         "custom_show_runs_only_on_failure_and_test_local_native_layouts_specialize_1",
         source,
-        PlutusVersion::V3,
         TraceLevel::Verbose,
     )
     .unwrap();
@@ -373,7 +366,6 @@ fn assertion_json_preserves_nested_call_delimiters_and_string_parentheses() {
     let programs = compile(
         "assertion_json_preserves_nested_call_delimiters_and_string_parentheses_1",
         source,
-        PlutusVersion::V3,
         TraceLevel::Silent,
     )
     .unwrap();
@@ -418,7 +410,6 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
     let programs = compile(
         "properties_thread_prng_bind_patterns_and_draw_without_running_body_1",
         source,
-        PlutusVersion::V3,
         TraceLevel::Verbose,
     )
     .unwrap();
@@ -455,7 +446,7 @@ fn properties_thread_prng_bind_patterns_and_draw_without_running_body() {
 }
 
 #[test]
-fn rejected_generator_skips_body_and_selected_target_is_enforced() {
+fn rejected_generator_skips_body_and_selection_precedes_codegen() {
     let source = indoc::indoc!(
         r#"
         module Main exposing (..)
@@ -472,9 +463,8 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
     "#
     );
     let programs = compile(
-        "rejected_generator_skips_body_and_selected_target_is_enforced_3",
+        "rejected_generator_skips_body_and_selection_precedes_codegen_all",
         source,
-        PlutusVersion::V3,
         TraceLevel::Silent,
     )
     .unwrap();
@@ -493,28 +483,15 @@ fn rejected_generator_skips_body_and_selected_target_is_enforced() {
         .unwrap()
         .is_none()
     );
-    for version in [PlutusVersion::V1, PlutusVersion::V2] {
-        let all = compile(
-            "rejected_generator_skips_body_and_selected_target_is_enforced_2",
-            source,
-            version,
-            TraceLevel::Silent,
-        )
-        .unwrap();
-        assert_eq!(all.len(), 2);
-        assert_eq!(all[0].plutus_version, version);
-        assert_eq!(all[1].plutus_version, version);
-        let selected = compile_selected(
-            "rejected_generator_skips_body_and_selected_target_is_enforced_1",
-            source,
-            version,
-            TraceLevel::Silent,
-            Some("plain"),
-        )
-        .unwrap();
-        assert_eq!(selected.len(), 1);
-        assert_eq!(unit(&selected[0]), (true, vec![]));
-    }
+    let selected = compile_selected(
+        "rejected_generator_skips_body_and_selection_precedes_codegen_plain",
+        source,
+        TraceLevel::Silent,
+        Some("plain"),
+    )
+    .unwrap();
+    assert_eq!(selected.len(), 1);
+    assert_eq!(unit(&selected[0]), (true, vec![]));
 }
 
 #[test]
@@ -537,7 +514,6 @@ fn rejected_generator_does_not_initialize_later_generators() {
     let programs = compile(
         "rejected_generator_does_not_initialize_later_generators",
         source,
-        PlutusVersion::V3,
         TraceLevel::Verbose,
     )
     .unwrap();
@@ -583,7 +559,6 @@ fn o2_test_compilation_rejects_trace_settings() {
             primitives::primitive_home(),
             "",
             Path::new("Main.nash"),
-            PlutusVersion::V3,
             trace,
             nash_config::OptimizationLevel::O2,
             |_| true,

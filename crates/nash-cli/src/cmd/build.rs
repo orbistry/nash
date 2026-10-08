@@ -17,9 +17,6 @@ pub struct Args {
     /// Include user traces in the script.
     #[arg(long, value_enum)]
     pub trace_level: Option<TraceLevelArg>,
-    /// Ledger language target (protocol 11 compatibility).
-    #[arg(long, value_enum)]
-    pub plutus_version: Option<PlutusVersionArg>,
     /// Include compiler traces for failed casts and pattern checks.
     #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "true")]
     pub compiler_traces: Option<bool>,
@@ -32,25 +29,11 @@ pub enum TraceLevelArg {
     Verbose,
 }
 
-#[derive(Clone, Copy, clap::ValueEnum)]
-pub enum PlutusVersionArg {
-    V1,
-    V2,
-    V3,
-}
-
 impl Args {
     pub(crate) fn resolve_config(
         &self,
         mut config: nash_config::Build,
     ) -> std::result::Result<nash_config::Build, nash_config::BuildConflict> {
-        if let Some(version) = self.plutus_version {
-            config.plutus_version = match version {
-                PlutusVersionArg::V1 => nash_config::PlutusVersion::V1,
-                PlutusVersionArg::V2 => nash_config::PlutusVersion::V2,
-                PlutusVersionArg::V3 => nash_config::PlutusVersion::V3,
-            };
-        }
         if let Some(level) = self.optimize {
             config.optimize = level;
         }

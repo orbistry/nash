@@ -16,11 +16,6 @@
         "type": {
           "const": "application"
         },
-        "plutusVersion": {
-          "type": "string",
-          "enum": ["v1", "v2", "v3"],
-          "default": "v3"
-        },
         "traceLevel": {
           "type": "string",
           "enum": ["silent", "compact", "verbose"],
@@ -52,11 +47,6 @@
       "properties": {
         "type": {
           "const": "package"
-        },
-        "plutusVersion": {
-          "type": "string",
-          "enum": ["v1", "v2", "v3"],
-          "default": "v3"
         },
         "traceLevel": {
           "type": "string",

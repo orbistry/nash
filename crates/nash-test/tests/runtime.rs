@@ -30,7 +30,6 @@ fn fixture(programs: Programs, expect: Expect) -> TestProgram {
         programs,
         asserts: vec![],
         binder_texts: vec!["x".into()],
-        plutus_version: PlutusVersion::V3,
         source: "x == 2".into(),
         source_path: "Example.nash".into(),
     }
