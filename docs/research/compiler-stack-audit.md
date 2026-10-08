@@ -17,6 +17,8 @@ failures" stay until a later change converts them back to recursion.
 Converted back so far: Flat term encoding and decoding (`encode_term`,
 `decode_term`) recurse again, as in the imported code. `nash test` decodes
 programs on its worker pool, so the CLI gives those workers the compiler stack.
+The UPLC term printer, De Bruijn conversion, and target validation
+(`pretty::term`, `to_debruijn`, `validate_*`) recurse again.
 
 Default O1 exposed a stack overflow in the driver `ledger_contexts` fixture.
 This audit distinguishes reproduced failures from recursive paths that still

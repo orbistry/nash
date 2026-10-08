@@ -56,84 +56,81 @@ fn validate_term<V>(
     version: PlutusVersion,
     uplc_110: bool,
 ) -> Result<(), TargetError> {
-    let mut pending = vec![term];
-    while let Some(term) = pending.pop() {
-        match term {
-            Term::Lambda { body, .. } | Term::Delay(body) | Term::Force(body) => {
-                pending.push(*body)
-            }
-            Term::Apply { function, argument } => {
-                pending.push(*argument);
-                pending.push(*function);
-            }
-            Term::Constr { fields, .. } => {
-                if !uplc_110 {
-                    return Err(error(version, "constr (requires UPLC 1.1.0)"));
-                }
-                pending.extend(fields.iter().rev().copied());
-            }
-            Term::Case { constr, branches } => {
-                if !uplc_110 {
-                    return Err(error(version, "case (requires UPLC 1.1.0)"));
-                }
-                pending.extend(branches.iter().rev().copied());
-                pending.push(*constr);
-            }
-            Term::Builtin(fun) => {
-                let tag = **fun as u8;
-                // Flat tags 0..=100 are exactly upstream batches 1–6. Keep this
-                // bound fixed: future runtime builtins must not become ledger-valid
-                // merely because they were added to DefaultFunction.
-                let allowed = tag <= 100;
-                if !allowed {
-                    return Err(error(version, format!("builtin {fun:?}")));
-                }
-            }
-            Term::Constant(constant) => validate_constant(constant, version)?,
-            Term::Var(_) | Term::Error => {}
+    match term {
+        Term::Lambda { body, .. } | Term::Delay(body) | Term::Force(body) => {
+            validate_term(body, version, uplc_110)?
         }
+        Term::Apply { function, argument } => {
+            validate_term(function, version, uplc_110)?;
+            validate_term(argument, version, uplc_110)?;
+        }
+        Term::Constr { fields, .. } => {
+            if !uplc_110 {
+                return Err(error(version, "constr (requires UPLC 1.1.0)"));
+            }
+            for term in *fields {
+                validate_term(term, version, uplc_110)?;
+            }
+        }
+        Term::Case { constr, branches } => {
+            if !uplc_110 {
+                return Err(error(version, "case (requires UPLC 1.1.0)"));
+            }
+            validate_term(constr, version, uplc_110)?;
+            for term in *branches {
+                validate_term(term, version, uplc_110)?;
+            }
+        }
+        Term::Builtin(fun) => {
+            let tag = **fun as u8;
+            // Flat tags 0..=100 are exactly upstream batches 1–6. Keep this
+            // bound fixed: future runtime builtins must not become ledger-valid
+            // merely because they were added to DefaultFunction.
+            let allowed = tag <= 100;
+            if !allowed {
+                return Err(error(version, format!("builtin {fun:?}")));
+            }
+        }
+        Term::Constant(constant) => validate_constant(constant, version)?,
+        Term::Var(_) | Term::Error => {}
     }
     Ok(())
 }
 fn validate_type(typ: &Type<'_>, version: PlutusVersion) -> Result<(), TargetError> {
-    let mut pending = vec![typ];
-    while let Some(typ) = pending.pop() {
-        match typ {
-            Type::List(t) | Type::Array(t) => pending.push(*t),
-            Type::Pair(a, b) => {
-                pending.push(*b);
-                pending.push(*a);
-            }
-            // Nash cannot encode BLS constant types (including empty containers).
-            Type::Bls12_381G1Element | Type::Bls12_381G2Element | Type::Bls12_381MlResult => {
-                return Err(error(version, format!("constant type {typ:?}")));
-            }
-            _ => {}
+    match typ {
+        Type::List(t) | Type::Array(t) => validate_type(t, version)?,
+        Type::Pair(a, b) => {
+            validate_type(a, version)?;
+            validate_type(b, version)?;
         }
+        // Nash cannot encode BLS constant types (including empty containers).
+        Type::Bls12_381G1Element | Type::Bls12_381G2Element | Type::Bls12_381MlResult => {
+            return Err(error(version, format!("constant type {typ:?}")));
+        }
+        _ => {}
     }
     Ok(())
 }
 fn validate_constant(constant: &Constant<'_>, version: PlutusVersion) -> Result<(), TargetError> {
-    let mut pending = vec![constant];
-    while let Some(constant) = pending.pop() {
-        match constant {
-            Constant::ProtoList(t, values) | Constant::ProtoArray(t, values) => {
-                validate_type(t, version)?;
-                pending.extend(values.iter().rev().copied());
+    match constant {
+        Constant::ProtoList(t, values) | Constant::ProtoArray(t, values) => {
+            validate_type(t, version)?;
+            for value in *values {
+                validate_constant(value, version)?;
             }
-            Constant::ProtoPair(a, b, x, y) => {
-                validate_type(a, version)?;
-                validate_type(b, version)?;
-                pending.push(*y);
-                pending.push(*x);
-            }
-            Constant::Bls12_381G1Element(_)
-            | Constant::Bls12_381G2Element(_)
-            | Constant::Bls12_381MlResult(_) => {
-                return Err(error(version, "runtime-only BLS constant"));
-            }
-            _ => {}
         }
+        Constant::ProtoPair(a, b, x, y) => {
+            validate_type(a, version)?;
+            validate_type(b, version)?;
+            validate_constant(x, version)?;
+            validate_constant(y, version)?;
+        }
+        Constant::Bls12_381G1Element(_)
+        | Constant::Bls12_381G2Element(_)
+        | Constant::Bls12_381MlResult(_) => {
+            return Err(error(version, "runtime-only BLS constant"));
+        }
+        _ => {}
     }
     Ok(())
 }
