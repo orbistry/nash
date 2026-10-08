@@ -99,14 +99,13 @@ impl<'a, 'b> minicbor::decode::Decode<'b, Ctx<'a>> for &'a PlutusData<'a> {
                             bytes.extend_from_slice(chunk);
                         }
 
-                        let integer = ctx.arena.alloc_integer(num::BigInt::from_bytes_be(
-                            if x == IanaTag::PosBignum {
-                                num_bigint::Sign::Plus
-                            } else {
-                                num_bigint::Sign::Minus
-                            },
-                            &bytes,
-                        ));
+                        let n = num::BigInt::from_bytes_be(num_bigint::Sign::Plus, &bytes);
+                        // RFC 8949 3.4.3: tag 3 holds -1 - n.
+                        let integer = ctx.arena.alloc_integer(if x == IanaTag::PosBignum {
+                            n
+                        } else {
+                            -n - 1
+                        });
 
                         Ok(PlutusData::integer(ctx.arena, integer))
                     }
@@ -264,14 +263,20 @@ impl<C> minicbor::encode::Encode<C> for PlutusData<'_> {
                         }
                     }
                     num_bigint::Sign::Minus => {
-                        if digits.len() == 1 {
-                            let integer =
-                                minicbor::data::Int::try_from(-(digits[0] as i128)).unwrap();
-                            e.int(integer)?;
-                        } else {
-                            e.tag(Tag::new(3))?;
-                            let (_sign, bytes) = n.to_bytes_be();
-                            encode_bytestring(e, &bytes)?;
+                        // RFC 8949 3.4.3: a negative integer is written as -1 - n.
+                        let argument: num::BigInt = -(**n).clone() - 1;
+                        match u64::try_from(&argument) {
+                            Ok(argument) => {
+                                let integer =
+                                    minicbor::data::Int::try_from(-1 - i128::from(argument))
+                                        .unwrap();
+                                e.int(integer)?;
+                            }
+                            Err(_) => {
+                                e.tag(Tag::new(3))?;
+                                let (_sign, bytes) = argument.to_bytes_be();
+                                encode_bytestring(e, &bytes)?;
+                            }
                         }
                     }
                     num_bigint::Sign::NoSign => {
@@ -369,5 +374,32 @@ mod tests {
         let mut v = vec![];
         minicbor::encode(d, &mut v).expect("invalid PlutusData");
         assert_eq!(hex::encode(v), "d8799f9f0001ffff");
+    }
+
+    #[test]
+    fn integers_at_the_64_bit_boundaries_match_the_haskell_encoding() {
+        let arena = crate::arena::Arena::new();
+        for (value, cbor) in [
+            ("-1", "20"),
+            ("-18446744073709551616", "3bffffffffffffffff"),
+            ("-18446744073709551617", "c349010000000000000000"),
+            ("18446744073709551615", "1bffffffffffffffff"),
+            ("18446744073709551616", "c249010000000000000000"),
+        ] {
+            let value: num::BigInt = value.parse().unwrap();
+            let mut encoded = vec![];
+            minicbor::encode(PlutusData::Integer(&value), &mut encoded)
+                .expect("invalid PlutusData");
+            assert_eq!(hex::encode(&encoded), cbor);
+            assert_eq!(
+                PlutusData::from_cbor(&arena, &encoded).unwrap(),
+                &PlutusData::Integer(&value)
+            );
+        }
+        // Tag 3 holds -1 - n, also for an empty payload.
+        assert_eq!(
+            PlutusData::from_cbor(&arena, &hex::decode("c340").unwrap()).unwrap(),
+            &PlutusData::Integer(&num::BigInt::from(-1))
+        );
     }
 }
