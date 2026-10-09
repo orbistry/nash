@@ -313,7 +313,7 @@ fn cycles_and_deep_types_stop_before_recursive_allocation() {
         Err(Error::Limit)
     ));
     let mut typ = named(&arena, "int", &[]);
-    for _ in 0..150 {
+    for _ in 0..=DEPTH_LIMIT {
         typ = named(&arena, "list", arena.alloc_slice_copy(&[typ]));
     }
     assert!(matches!(
