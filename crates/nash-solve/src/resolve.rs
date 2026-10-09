@@ -1,5 +1,6 @@
 //! Coherent selection from known heads and read-only probes for relational
 //! equalities. The solver commits only a unique candidate's equalities.
+use nash_ast::head::WORK_LIMIT;
 use nash_ast::{HeadCon, ImplKey, QualifiedName};
 use nash_can::environment::{ImplInfo, Tables};
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
@@ -279,7 +280,9 @@ pub(crate) fn select<'a>(
 ) -> Selection<'a> {
     use nash_ast::head::{Match, matches};
     if args.len() >= 2 {
-        match given_candidates(tables, uf, trait_, args, givens, allocated, &mut 16_384) {
+        match given_candidates(tables, uf, trait_, args, givens, allocated, &mut {
+            WORK_LIMIT
+        }) {
             None => return Selection::Limit,
             Some(candidates) if !candidates.is_empty() => return Selection::Deferred,
             Some(_) => {}
@@ -297,7 +300,7 @@ pub(crate) fn select<'a>(
             View::Flexible | View::Rigid(_) | View::Application | View::Error
         )
     });
-    let mut remaining = 16_384;
+    let mut remaining = WORK_LIMIT;
     let mut selected = None;
     let mut deferred = false;
     for (key, info) in tables.impls_for(trait_) {
@@ -543,7 +546,7 @@ pub(crate) fn improvement<'a>(
     if args.len() < 2 {
         return None;
     }
-    let mut remaining = 16_384;
+    let mut remaining = WORK_LIMIT;
     let mut candidates =
         given_candidates(tables, uf, trait_, args, givens, allocated, &mut remaining)?;
     if !candidates.is_empty() {

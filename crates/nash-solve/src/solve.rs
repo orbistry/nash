@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bumpalo::Bump;
 use nash_ast::Type as CanType;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_can::Annotations;
 use nash_constrain::error::{Category, Error, Expected, PExpected};
 use nash_constrain::type_::{
@@ -1492,7 +1493,7 @@ impl<'a> Solver<'a, '_> {
                     .entry(self.predicates.root(id))
                     .or_default();
                 *work += 1;
-                if *work > 16_384 || resolution_depth >= 128 {
+                if *work > WORK_LIMIT || resolution_depth >= DEPTH_LIMIT {
                     state.errors.push(Error::ImplResolutionLimit {
                         region: site.region,
                         name: site.name,
@@ -3186,7 +3187,7 @@ mod copy_tests {
             solver.wanted.push((OUTERMOST_RANK, id));
             ids.push(id);
         }
-        solver.resolution_work.insert(ids[0], 16_384);
+        solver.resolution_work.insert(ids[0], WORK_LIMIT);
         let result = solver.resolve_wanted(
             &mut uf,
             OUTERMOST_RANK,

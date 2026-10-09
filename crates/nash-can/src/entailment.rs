@@ -2,15 +2,12 @@
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_ast::{Pred, QualifiedName, Type};
 use nash_region::Located;
 
 use crate::Error;
 use crate::environment::{ImplInfo, Tables};
-
-// Flexible contexts need not decrease. Bound both resolution and structural work.
-const WORK_LIMIT: usize = 16_384;
-const DEPTH_LIMIT: usize = 128;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Failure {

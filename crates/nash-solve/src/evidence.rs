@@ -1,5 +1,6 @@
 //! Impl evidence for ground canonical predicates, outside the inference loop.
 use bumpalo::Bump;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_ast::{Evidence, ImplRef, Pred, QualifiedName, Type};
 use nash_can::environment::Tables;
 use nash_region::Located;
@@ -29,7 +30,7 @@ pub fn resolve<'a>(
     Resolver {
         bump,
         tables,
-        remaining: 16_384,
+        remaining: WORK_LIMIT,
     }
     .resolve(pred, 0)
 }
@@ -127,7 +128,7 @@ impl<'a> Resolver<'_, 'a> {
     }
 
     fn step(&mut self, depth: usize) -> Result<(), Failure> {
-        if depth >= 128 || self.remaining == 0 {
+        if depth >= DEPTH_LIMIT || self.remaining == 0 {
             return Err(Failure::Limit);
         }
         self.remaining -= 1;
