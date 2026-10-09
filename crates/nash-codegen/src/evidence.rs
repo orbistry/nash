@@ -5,15 +5,13 @@
 //! demands are a separate part of specialization identity.
 use std::collections::HashMap;
 
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_ast::{AliasType, Evidence, Head, ImplRef, NodeId, Pred, QualifiedName, Type, primitives};
 use nash_can::environment::Tables;
 use nash_plutus::arena::Arena;
 use nash_region::Located;
 
 use crate::ty_of::Substitution;
-
-const MAX_DEPTH: usize = 128;
-const MAX_WORK: usize = 16_384;
 
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum Error<'a> {
@@ -66,7 +64,7 @@ pub fn ground<'a>(
     Grounder {
         arena,
         tables,
-        remaining: MAX_WORK,
+        remaining: WORK_LIMIT,
     }
     .one(evidence, subst, givens, 0)
 }
@@ -81,7 +79,7 @@ pub fn ground_arguments<'a>(
     Grounder {
         arena,
         tables,
-        remaining: MAX_WORK,
+        remaining: WORK_LIMIT,
     }
     .arguments(evidence, subst, givens, 0)
 }
@@ -119,12 +117,12 @@ pub fn executable_identity<'a>(
             }
         })
     }
-    let mut remaining = MAX_WORK;
+    let mut remaining = WORK_LIMIT;
     visit(evidence, &mut remaining, 0)
 }
 
 fn step<'a>(remaining: &mut usize, depth: usize) -> Result<(), Error<'a>> {
-    if depth > MAX_DEPTH || *remaining == 0 {
+    if depth > DEPTH_LIMIT || *remaining == 0 {
         return Err(Error::Limit);
     }
     *remaining -= 1;

@@ -9,6 +9,10 @@ use nash_region::Located;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limit;
 
+// Impl contexts need not decrease, so every trait search has a budget.
+pub const WORK_LIMIT: usize = 16_384;
+pub const DEPTH_LIMIT: usize = 128;
+
 pub enum Match<T> {
     Yes(T),
     No,

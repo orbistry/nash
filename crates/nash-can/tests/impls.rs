@@ -3,6 +3,7 @@ use snapshot_support::SnapshotInputs;
 
 use bumpalo::Bump;
 use indoc::indoc;
+use nash_ast::head::WORK_LIMIT;
 
 #[test]
 fn inline_impl_bounds_are_retained_for_superclasses() {
@@ -48,18 +49,18 @@ fn recursive_overlap_ignores_representation_contexts() {
         nash_ast::head::overlaps(keys[a].heads, keys[b].heads, &|_| None, budget)
     };
     assert!(
-        overlap(0, 1, &mut 16_384).unwrap(),
+        overlap(0, 1, &mut { WORK_LIMIT }).unwrap(),
         "representation contexts do not make equal heads disjoint"
     );
-    assert!(overlap(0, 2, &mut 16_384).unwrap());
-    assert!(overlap(1, 2, &mut 16_384).unwrap());
+    assert!(overlap(0, 2, &mut { WORK_LIMIT }).unwrap());
+    assert!(overlap(1, 2, &mut { WORK_LIMIT }).unwrap());
     assert!(
-        overlap(0, 0, &mut 16_384).unwrap(),
+        overlap(0, 0, &mut { WORK_LIMIT }).unwrap(),
         "fresh binders preserve overlap"
     );
-    let mut budget = 16_384;
+    let mut budget = WORK_LIMIT;
     assert!(overlap(0, 0, &mut budget).unwrap());
-    let mut exact_budget = 16_384 - budget;
+    let mut exact_budget = WORK_LIMIT - budget;
     assert!(exact_budget > 0);
     assert!(overlap(0, 0, &mut exact_budget).unwrap());
     assert_eq!(exact_budget, 0);
