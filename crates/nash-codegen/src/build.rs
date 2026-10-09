@@ -24,7 +24,7 @@ use emission::hoist_strings;
 pub(crate) use emission::names;
 
 const MAX_SPECIALIZATIONS: usize = 1024;
-const MAX_TYPE_DEPTH: usize = 128;
+const MAX_TYPE_DEPTH: usize = 256;
 
 #[derive(Clone, Copy)]
 pub struct Input<'a, 's> {
