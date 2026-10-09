@@ -273,7 +273,7 @@ does not assume that different head variable names make impls disjoint.
 Superclass checking during canonicalization performs a bounded search.
 A predicate already active in the instance-resolution chain is a cycle,
 not a proof. Expanding flexible contexts are bounded too: each impl check
-allows 16,384 work steps and fewer than 128 nested resolution or type
+allows 16,384 work steps and fewer than 256 nested resolution or type
 conversion calls. Predicate comparisons count toward the work limit.
 Failure reports the instantiated superclass requirement and distinguishes
 a missing proof, a cycle, and the search limit. The given superclass
@@ -381,7 +381,7 @@ context is the given set.
 Impl selection waits for the surrounding definition's type equalities.
 Captured outer variables must also be fixed before rejecting an enclosing
 given in favor of an impl. Impl contexts may expand indefinitely; resolution
-is bounded to 128 levels and 16,384 attempts per definition boundary. Exceeding
+is bounded to 256 levels and 16,384 attempts per definition boundary. Exceeding
 either bound reports `ImplResolutionLimit` at the originating call. An
 exhausted search never counts as evidence that a constraint was satisfied.
 
@@ -553,7 +553,7 @@ arguments with an already-proven Big representation; it does not choose
 a representation.
 Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
 failed predicate. Resolution and type traversal share a 16,384-step work
-budget, with a depth limit of 128. Context substitution is charged before
+budget, with a depth limit of 256. Context substitution is charged before
 allocation. Callers supply well-kinded canonical types and complete tables.
 
 Codegen specializes executable trait evidence at compile time. It walks a
