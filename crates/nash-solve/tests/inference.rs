@@ -136,6 +136,88 @@ fn recovery_reports_an_independent_escaping_annotation_and_blocks_its_uses() {
 }
 
 #[test]
+fn recovery_annotated_body_failure_resolves_caller_constraints_from_the_annotation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+        impl Round () where
+            create x = x
+        helper : () -> ()
+        helper x = \y -> y
+        caller : ()
+        caller = helper (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_annotated_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        helper : () -> ()
+        helper x = \y -> y
+        caller : ()
+        caller = helper Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_local_annotated_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        caller : ()
+        caller =
+            let
+                inner : () -> ()
+                inner x = \y -> y
+            in
+            inner Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_annotated_group_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        isEven : () -> ()
+        isEven x = isOdd x
+        isOdd : () -> ()
+        isOdd x = if Primitive.True then \y -> y else isEven x
+        caller : ()
+        caller = isEven Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_constrained_annotated_body_failure_reports_caller_missing_impl() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Same 'a where
+            same : 'a -> 'a -> ()
+        impl Same () where
+            same x y = x
+        check : Same 'a => 'a -> ()
+        check x = \y -> y
+        caller : ()
+        caller = check Primitive.True
+    "#
+    );
+}
+
+#[test]
 fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
     for broken in [
         "broken = if True then (assert Primitive.True) else (\\x -> x)\n",

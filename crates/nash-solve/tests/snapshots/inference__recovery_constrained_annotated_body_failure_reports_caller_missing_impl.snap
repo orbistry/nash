@@ -1,0 +1,34 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\ntrait Same 'a where\n    same : 'a -> 'a -> ()\nimpl Same () where\n    same x y = x\ncheck : Same 'a => 'a -> ()\ncheck x = \\y -> y\ncaller : ()\ncaller = check Primitive.True\n"
+info: diagnostic
+---
+nash::type::missing_impl
+
+  × No impl for `Same bool`.
+    ╭─[Main.nash:10:10]
+  9 │ caller : ()
+ 10 │ caller = check Primitive.True
+    ·          ──┬──
+    ·            ╰── required by `check`
+    ╰────
+  help: Available impl heads:
+
+            unit
+
+        Import or define an impl for `Same bool`.
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:8:11]
+ 6 │     same x y = x
+ 7 │ check : Same 'a => 'a -> ()
+   ·                    ────┬───
+   ·                        ╰── declared type
+ 8 │ check x = \y -> y
+   ·           ───┬───
+   ·              ╰── body of `check`
+ 9 │ caller : ()
+   ╰────

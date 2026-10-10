@@ -1,0 +1,29 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nisEven : () -> ()\nisEven x = isOdd x\nisOdd : () -> ()\nisOdd x = if Primitive.True then \\y -> y else isEven x\ncaller : ()\ncaller = isEven Primitive.True\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[Main.nash:8:17]
+ 7 │ caller : ()
+ 8 │ caller = isEven Primitive.True
+   ·                 ───────┬──────
+   ·                        ╰── argument 1 of `isEven`
+   ╰────
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:6:34]
+ 4 │ isEven x = isOdd x
+ 5 │ isOdd : () -> ()
+   ·         ────┬───
+   ·             ╰── declared type
+ 6 │ isOdd x = if Primitive.True then \y -> y else isEven x
+   ·                                  ───┬───
+   ·                                     ╰── if branch 1
+ 7 │ caller : ()
+   ╰────
