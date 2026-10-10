@@ -482,6 +482,7 @@ impl<'a> Solver<'a, '_> {
     ) -> ScopeResult<'a> {
         let young = rank + 1;
         state = self.generalize_scope(uf, young, state);
+        let escapes_before = state.errors.len();
         for rigid in rigids {
             if uf.get(*rigid).rank != NO_RANK && !crate::recovery::is_poisoned(uf, [*rigid]) {
                 let owner = binder
@@ -494,6 +495,10 @@ impl<'a> Solver<'a, '_> {
                 });
             }
         }
+        // A body error leaves a valid annotation usable by callers, as in Elm.
+        // Only an annotation that lets its own variables escape blocks its uses.
+        let annotated = !definitions.is_empty() && definitions.iter().all(|d| d.context.is_some());
+        let annotation_failed = state.errors.len() > escapes_before;
         if let Some(binder) = binder {
             let depth = self.enter_givens(uf, rank, given, Some(binder));
             loop {
@@ -528,9 +533,12 @@ impl<'a> Solver<'a, '_> {
         } else {
             &[]
         };
-        if state.errors.len() > errors_before
-            && let Some(binder) = binder
-        {
+        let failed = if annotated {
+            annotation_failed
+        } else {
+            state.errors.len() > errors_before
+        };
+        if failed && let Some(binder) = binder {
             self.fail_definition(uf, binder.node());
         }
         self.record_definitions(uf, rank, definitions, declared, context, binder);
@@ -608,7 +616,7 @@ impl<'a> Solver<'a, '_> {
             binder,
             definition.context.is_some(),
         );
-        if state.errors.len() > errors_before {
+        if state.errors.len() > errors_before && definition.context.is_none() {
             self.fail_definition(uf, definition.site.node());
         }
         self.givens.truncate(depth);

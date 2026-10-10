@@ -1,0 +1,29 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\ncaller : ()\ncaller =\n    let\n        inner : () -> ()\n        inner x = \\y -> y\n    in\n    inner Primitive.True\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `bool`.
+   ╭─[Main.nash:9:11]
+ 8 │     in
+ 9 │     inner Primitive.True
+   ·           ───────┬──────
+   ·                  ╰── argument 1 of `inner`
+   ╰────
+
+
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:7:19]
+ 5 │     let
+ 6 │         inner : () -> ()
+   ·                 ────┬───
+   ·                     ╰── declared type
+ 7 │         inner x = \y -> y
+   ·                   ───┬───
+   ·                      ╰── body of `inner`
+ 8 │     in
+   ╰────
