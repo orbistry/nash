@@ -2,8 +2,6 @@ module VestingTests exposing ( context )
 
 
 import Builtin exposing (..)
-import Vesting
-import VestingParam
 
 
 constr : ( int, list Data ) -> Data
@@ -61,6 +59,10 @@ context action time signers =
 
 
 tests
+    import Vesting
+
+    import VestingParam
+
     test "claim after deadline succeeds" =
         do
             Vesting.main (context 0 11 [])
