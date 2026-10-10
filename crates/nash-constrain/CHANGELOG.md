@@ -1,5 +1,15 @@
 # nash-constrain
 
+## 0.9.0 — 2026-10-10
+
+### Minor changes
+
+- [82b2b773](https://github.com/orbistry/nash/commit/82b2b773cc962799b111bb64c31321c569f2e663) Remove unused dependency bookkeeping, report and type helpers, and the unused FailureKind alias. Compilation, diagnostics, and supported editor behavior are unchanged. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [a4e5edf4](https://github.com/orbistry/nash/commit/a4e5edf453b4356574fb99319c226fc10aa40e48) Traverse diagnostic alias chains with a loop, and remove duplicate internal superclass handling while retaining public input validation. — Thanks @MicroProofs!
+
 ## 0.8.3 — 2026-09-27
 
 ### Patch changes

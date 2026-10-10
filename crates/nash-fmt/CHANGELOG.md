@@ -1,5 +1,11 @@
 # nash-fmt
 
+## 0.2.1 — 2026-10-10
+
+### Patch changes
+
+- Updated dependencies: nash-parse@0.10.0, nash-report@0.7.0
+
 ## 0.2.0 — 2026-09-27
 
 ### Minor changes

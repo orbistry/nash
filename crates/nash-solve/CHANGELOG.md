@@ -1,5 +1,15 @@
 # nash-solve
 
+## 0.10.0 — 2026-10-10
+
+### Minor changes
+
+- [7f0e49b1](https://github.com/orbistry/nash/commit/7f0e49b183143167642597ce3a6557e94fc43397) Support read-only `.fst` and `.snd` field access and accessor functions for known builtin pair types, including aliases. Lower access directly to the pair builtins. Enable the restricted O1 pair-case rewrite only when constructor inverse cleanup removes the introduced projection, preserving strict producer evaluation. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-constrain@0.9.0
+
 ## 0.9.2 — 2026-09-27
 
 ### Patch changes

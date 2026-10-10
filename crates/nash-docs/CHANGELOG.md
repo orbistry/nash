@@ -1,5 +1,11 @@
 # nash-docs
 
+## 0.2.3 — 2026-10-10
+
+### Patch changes
+
+- Updated dependencies: nash-config@0.7.0, nash-driver@0.14.0, nash-parse@0.10.0, nash-report@0.7.0
+
 ## 0.2.2 — 2026-10-07
 
 ### Patch changes
