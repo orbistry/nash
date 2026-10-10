@@ -1,0 +1,18 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\ntrait Round 'a where\n    create : () -> 'a\n    discard : 'a -> ()\nbroken x =\n    let\n        bad : ()\n        bad = \\y -> y\n    in\n    x\ncaller : ()\ncaller =\n    (\\shared ->\n        let\n            ignored : ()\n            ignored = broken shared\n        in\n        discard shared\n    )\n        (create ())\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+    ╭─[Main.nash:9:15]
+  7 │     let
+  8 │         bad : ()
+    ·               ─┬
+    ·                ╰── declared type
+  9 │         bad = \y -> y
+    ·               ───┬───
+    ·                  ╰── body of `bad`
+ 10 │     in
+    ╰────

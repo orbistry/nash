@@ -218,6 +218,81 @@ fn recovery_constrained_annotated_body_failure_reports_caller_missing_impl() {
 }
 
 #[test]
+fn recovery_failed_call_does_not_make_its_argument_constraint_ambiguous() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller = broken (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_failed_call_keeps_an_independent_ambiguity() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller =
+            let
+                ignored : ()
+                ignored = broken ()
+            in
+            discard (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_failed_call_leaves_a_shared_argument_unknown() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller =
+            (\shared ->
+                let
+                    ignored : ()
+                    ignored = broken shared
+                in
+                discard shared
+            )
+                (create ())
+    "#
+    );
+}
+
+#[test]
 fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
     for broken in [
         "broken = if True then (assert Primitive.True) else (\\x -> x)\n",
