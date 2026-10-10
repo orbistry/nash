@@ -220,6 +220,10 @@ impl<'a> Solver<'a, '_> {
             self.has_poison = true;
             crate::recovery::poison_roots(uf, detached);
             self.propagate_poison(uf);
+        } else if matches!(uf.get(actual).content, Content::Error) {
+            // A successful merge into an existing Error drops the other side's
+            // structure, leaving its children without any type information.
+            self.dependencies.strand(uf, [actual, expected]);
         }
         answer
     }
@@ -725,6 +729,7 @@ impl<'a> Solver<'a, '_> {
                         | crate::preds::Solution::Apply { subs },
                     ) => pending.extend(subs),
                     Some(_) => {}
+                    None if self.predicate_stranded(uf, id) => {}
                     None => {
                         let args = self.bump.alloc_slice_fill_iter(
                             pred.body
@@ -752,6 +757,14 @@ impl<'a> Solver<'a, '_> {
             }
         }
         errors
+    }
+
+    /// A constraint whose open variables lost their type information to a
+    /// failed call is unknown because of that failure, not unresolved.
+    fn predicate_stranded(&self, uf: &mut UnionFind<'a>, id: type_::PredId) -> bool {
+        Self::type_variables(uf, self.predicates.get(id).body.roots().collect())
+            .into_iter()
+            .any(|variable| self.dependencies.is_stranded(uf, variable))
     }
 
     fn finish(
@@ -2203,7 +2216,10 @@ impl<'a> Solver<'a, '_> {
             let variables =
                 Self::type_variables(uf, self.predicates.get(*id).body.roots().collect());
             for var in variables {
-                if uf.get(var).rank == NO_RANK && !reachable.contains(&var) {
+                if uf.get(var).rank == NO_RANK
+                    && !reachable.contains(&var)
+                    && !self.dependencies.is_stranded(uf, var)
+                {
                     ambiguous.entry(var).or_default().push(*id);
                 }
             }

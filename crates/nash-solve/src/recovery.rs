@@ -12,6 +12,10 @@ pub(crate) struct Dependencies {
     edges: BTreeSet<(Variable, Variable)>,
     computations: BTreeSet<(Variable, Variable)>,
     field_receivers: BTreeSet<(Variable, Variable)>,
+    /// Variables whose only type information came from a structure that merged
+    /// into an existing `Error`, such as the argument of a call to a failed
+    /// definition. They are unknown because of that failure, not ambiguous.
+    stranded: BTreeSet<Variable>,
 }
 
 impl Dependencies {
@@ -69,6 +73,23 @@ impl Dependencies {
 
     pub(crate) fn field(&mut self, output: Variable, receiver: Variable) {
         self.field_receivers.insert((output, receiver));
+    }
+
+    /// Remember variables the roots contained before they merged into `Error`.
+    pub(crate) fn strand(
+        &mut self,
+        uf: &mut UnionFind<'_>,
+        roots: impl IntoIterator<Item = Variable>,
+    ) {
+        let lost = self.detached(uf, roots);
+        self.stranded.extend(lost);
+    }
+
+    pub(crate) fn is_stranded(&self, uf: &mut UnionFind<'_>, variable: Variable) -> bool {
+        let variable = uf.find(variable);
+        self.stranded
+            .iter()
+            .any(|stranded| uf.find(*stranded) == variable)
     }
 
     pub(crate) fn invalidate(
