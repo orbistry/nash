@@ -1,5 +1,14 @@
 # nash-plutus
 
+## 0.3.5 — 2026-10-10
+
+### Patch changes
+
+- [5ee70cc4](https://github.com/orbistry/nash/commit/5ee70cc4da311a8f237db47350f8b9418c7b3729) Restore the recursive Flat term encoder and decoder. `nash_test::Config` gains `worker_stack`, and `nash test` runs its workers on the compiler stack. — Thanks @MicroProofs!
+- [f4c2c37e](https://github.com/orbistry/nash/commit/f4c2c37e46430ad7c830a884bb8b0179a18c7bb1) Restore the recursive UPLC term printer, De Bruijn conversion, and target validation. — Thanks @MicroProofs!
+- [7687f06d](https://github.com/orbistry/nash/commit/7687f06d3a80dee9491899bf96a2346eb3833d3a) Encode and decode negative Data integers below `-(2^64 - 1)` as the Haskell node does: CBOR tag 3 holds `-1 - n`, and `-2^64` is a plain negative integer. — Thanks @MicroProofs!
+- [ee7fd341](https://github.com/orbistry/nash/commit/ee7fd341614d8f6dadda7616c47c421a84c9d128) Run constant folding, unused-parameter removal and cleanup until unchanged without optimizer resource or output-growth limits. Evaluate all pure representable builtin calls directly and return errors instead of panicking for out-of-range constant indices and constructor tags. Correct whole-byte left shifts and handle arbitrary-size shift, rotate and list-drop inputs. — Thanks @MicroProofs!
+
 ## 0.3.4 — 2026-10-07
 
 ### Patch changes

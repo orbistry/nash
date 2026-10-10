@@ -1,5 +1,18 @@
 # nash-driver
 
+## 0.14.0 — 2026-10-10
+
+### Minor changes
+
+- [82b2b773](https://github.com/orbistry/nash/commit/82b2b773cc962799b111bb64c31321c569f2e663) Remove unused dependency bookkeeping, report and type helpers, and the unused FailureKind alias. Compilation, diagnostics, and supported editor behavior are unchanged. — Thanks @MicroProofs!
+- [6c40e488](https://github.com/orbistry/nash/commit/6c40e48881220fbdd71f63040c19efa782bb6e21) Add explicit O2 compilation for build and test. O2 requires silent settings, removes user and compiler traces, and discards trace message computations even when they fail or diverge before applying the O1 optimizer. Reject compact, verbose and compiler tracing with O2. Keep O1 as the default. — Thanks @MicroProofs!
+- [0e64dce4](https://github.com/orbistry/nash/commit/0e64dce4aafb56a963ded210d0c6589854ee981b) Remove the Plutus V1 and V2 targets. Nash compiles validators against the V3 script context only, so a V1 or V2 language tag produced an invalid validator. The `plutusVersion` project setting, the `--plutus-version` option, `nash_config::PlutusVersion`, `assemble_core_for_version`, `TestProgram::plutus_version` and the version parameters of `assemble_core_with_options` and `compile_tests*` are gone. Script hashes always use the V3 language tag. — Thanks @MicroProofs!
+- [d125a8ef](https://github.com/orbistry/nash/commit/d125a8ef32ce2d98b9016166afcdb4c7f8c8979c) Run compiler work on threads with a 128 MiB stack (`nash_driver::stack`) and remove the parser nesting limit of 64 with its `Space::TooDeep` error. Input that is too deep now ends the process with a stack overflow. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-codegen@0.7.0, nash-config@0.7.0, nash-constrain@0.9.0, nash-parse@0.10.0, nash-plutus@0.3.5, nash-report@0.7.0, nash-solve@0.10.0, nash-test@0.5.0
+
 ## 0.13.0 — 2026-10-07
 
 ### Minor changes
