@@ -1,8 +1,6 @@
 module Order exposing (compare, invert, sort)
 
 import Prelude exposing (..)
-import Literal
-import Logic exposing (not)
 import Ord exposing (Ord)
 import Ordering exposing (type ordering(..))
 
@@ -29,6 +27,7 @@ insert x xs =
 tests
     import Prop exposing (int)
     import Test exposing (label)
+    import Logic exposing (not)
 
     test "lt is strict" = do
         assert (not (lt 1 1))
