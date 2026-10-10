@@ -1,0 +1,29 @@
+---
+source: crates/nash-codegen/src/build/tests.rs
+description: "module Main exposing (..)\nimport Primitive exposing (..)\nimport Builtin exposing (..)\ntype alias ints = list int\ntrait Pass 'f where\n    pass : 'f 'a -> 'f 'a\nimpl Pass list where\n    pass x = x\nvalues : ints\nvalues = [1, 2]\nmain = pass values\n"
+---
+--- unoptimized Core
+let pass#2 : list 'erased -> list 'erased = \x#4 : list 'erased -> x#4 in
+let fromInt#5 : int -> int = \value#6 : int -> value#6 in
+let values#3 : list int = mkCons (fromInt#5 1) (mkCons (fromInt#5 2) (con (list integer) [])) in
+let main#1 : list int = pass#2 values#3 in
+main#1
+--- unoptimized UPLC
+(program 1.1.0
+  [(lam pass_2
+    [(lam fromInt_5
+      [(lam values_3 [(lam main_1 main_1) [pass_2 values_3]])
+        [[(force (builtin mkCons)) [fromInt_5 (con integer 1)]]
+          [[(force (builtin mkCons)) [fromInt_5 (con integer 2)]] (con (list integer) [])]]])
+      (lam value_6 value_6)])
+    (lam x_4 x_4)])
+--- optimized Core
+(con (list integer) [1, 2])
+--- optimized UPLC
+(program 1.1.0 (con (list integer) [1, 2]))
+--- result
+(con (list integer) [1, 2])
+--- logs
+[]
+--- budget
+cpu: 656824, memory: 3364
