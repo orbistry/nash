@@ -1747,7 +1747,7 @@ dependencies = [
 
 [[package]]
 name = "nash-cli"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "clap",
  "color-print",
@@ -1780,7 +1780,7 @@ dependencies = [
 
 [[package]]
 name = "nash-codegen"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1804,7 +1804,7 @@ dependencies = [
 
 [[package]]
 name = "nash-config"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "indoc",
  "insta",
@@ -1818,7 +1818,7 @@ dependencies = [
 
 [[package]]
 name = "nash-constrain"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "bumpalo",
  "insta",
@@ -1829,7 +1829,7 @@ dependencies = [
 
 [[package]]
 name = "nash-docs"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1852,7 +1852,7 @@ dependencies = [
 
 [[package]]
 name = "nash-driver"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "async-trait",
  "bumpalo",
@@ -1881,7 +1881,7 @@ dependencies = [
 
 [[package]]
 name = "nash-fmt"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1894,7 +1894,7 @@ dependencies = [
 
 [[package]]
 name = "nash-ir"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "insta",
  "nash-ast",
@@ -1903,7 +1903,7 @@ dependencies = [
 
 [[package]]
 name = "nash-language-server"
-version = "0.4.8"
+version = "0.4.9"
 dependencies = [
  "insta",
  "nash-driver",
@@ -1929,7 +1929,7 @@ dependencies = [
 
 [[package]]
 name = "nash-parse"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1942,7 +1942,7 @@ dependencies = [
 
 [[package]]
 name = "nash-plutus"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "append-only-vec",
  "blst",
@@ -1968,7 +1968,7 @@ version = "0.3.0"
 
 [[package]]
 name = "nash-report"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -1990,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "nash-solve"
-version = "0.9.2"
+version = "0.10.0"
 dependencies = [
  "bumpalo",
  "indoc",
@@ -2014,7 +2014,7 @@ dependencies = [
 
 [[package]]
 name = "nash-test"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "cryptoxide",
  "insta",

@@ -1,5 +1,27 @@
 # nash-codegen
 
+## 0.7.0 — 2026-10-10
+
+### Minor changes
+
+- [6c40e488](https://github.com/orbistry/nash/commit/6c40e48881220fbdd71f63040c19efa782bb6e21) Add explicit O2 compilation for build and test. O2 requires silent settings, removes user and compiler traces, and discards trace message computations even when they fail or diverge before applying the O1 optimizer. Reject compact, verbose and compiler tracing with O2. Keep O1 as the default. — Thanks @MicroProofs!
+- [7f0e49b1](https://github.com/orbistry/nash/commit/7f0e49b183143167642597ce3a6557e94fc43397) Support read-only `.fst` and `.snd` field access and accessor functions for known builtin pair types, including aliases. Lower access directly to the pair builtins. Enable the restricted O1 pair-case rewrite only when constructor inverse cleanup removes the introduced projection, preserving strict producer evaluation. — Thanks @MicroProofs!
+- [0e64dce4](https://github.com/orbistry/nash/commit/0e64dce4aafb56a963ded210d0c6589854ee981b) Remove the Plutus V1 and V2 targets. Nash compiles validators against the V3 script context only, so a V1 or V2 language tag produced an invalid validator. The `plutusVersion` project setting, the `--plutus-version` option, `nash_config::PlutusVersion`, `assemble_core_for_version`, `TestProgram::plutus_version` and the version parameters of `assemble_core_with_options` and `compile_tests*` are gone. Script hashes always use the V3 language tag. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [0d418bf8](https://github.com/orbistry/nash/commit/0d418bf8d89ec4a64a6700c3024901a7be638215) Run constructor folding and representation cancellation only in the post-ANF cleanup loops, following generated bindings and opportunities exposed by inlining. Remove the early direct-expression passes. — Thanks @MicroProofs!
+- [df857f60](https://github.com/orbistry/nash/commit/df857f60d2789a73df17ea97f8d70d0cdd3eb0ef) Restore the recursive lowering, constant-sharing rewrite, and recursion rewrite. — Thanks @MicroProofs!
+- [fe14e41d](https://github.com/orbistry/nash/commit/fe14e41d33685937c9cd354a9983342f5861ca4b) Enable bounded constant builtin evaluation in O1. Fold saturated literal calls through ANF bindings and repeat cleanup, preserving traces and runtime failures. Keep O0 and explicit comptime policies unchanged. — Thanks @MicroProofs!
+- [a357f4e4](https://github.com/orbistry/nash/commit/a357f4e4d5605b78ec94de78bca33a32b15ed899) Fuse adjacent application stages in O1, clean up generated UPLC bindings, and
+  pack value application spines with native Case/Constr while preserving traces,
+  failure and termination. — Thanks @MicroProofs!
+- [f4ad45a0](https://github.com/orbistry/nash/commit/f4ad45a000e1b021942985347384f41beaa631e9) Revisit static recursive parameter lifting after cleanup and recursive pruning so O1 reaches the same closed program in one invocation. Preserve atomic operands when lifting all-static oversaturated recursive calls and check optimizer idempotence across executable fixtures. — Thanks @MicroProofs!
+- [2cc5754f](https://github.com/orbistry/nash/commit/2cc5754f5ccb9b71148d49b8c329b55769d0e3b2) Remove unused self-recursive and mutual parameters in O1 while preserving strict argument order, forwarding dependencies, type views, and delayed worker execution. — Thanks @MicroProofs!
+- [a4e5edf4](https://github.com/orbistry/nash/commit/a4e5edf453b4356574fb99319c226fc10aa40e48) Traverse diagnostic alias chains with a loop, and remove duplicate internal superclass handling while retaining public input validation. — Thanks @MicroProofs!
+- [ee7fd341](https://github.com/orbistry/nash/commit/ee7fd341614d8f6dadda7616c47c421a84c9d128) Run constant folding, unused-parameter removal and cleanup until unchanged without optimizer resource or output-growth limits. Evaluate all pure representable builtin calls directly and return errors instead of panicking for out-of-range constant indices and constructor tags. Correct whole-byte left shifts and handle arbitrary-size shift, rotate and list-drop inputs. — Thanks @MicroProofs!
+- Updated dependencies: nash-config@0.7.0, nash-ir@0.5.1, nash-plutus@0.3.5, nash-solve@0.10.0, nash-test@0.5.0
+
 ## 0.6.0 — 2026-10-07
 
 ### Minor changes

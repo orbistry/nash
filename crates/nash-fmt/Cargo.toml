@@ -1,6 +1,6 @@
 [package]
 name = "nash-fmt"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 description = "Source formatter for Nash"
 homepage.workspace = true
@@ -11,8 +11,8 @@ license.workspace = true
 bumpalo.workspace = true
 nash-source = { path = "../nash-source", version = "0.10.0" }
 nash-region = { path = "../nash-region", version = "0.3.0" }
-nash-parse = { path = "../nash-parse", version = "0.9.0" }
-nash-report = { path = "../nash-report", version = "0.6.0" }
+nash-parse = { path = "../nash-parse", version = "0.10.0" }
+nash-report = { path = "../nash-report", version = "0.7.0" }
 
 [dev-dependencies]
 indoc.workspace = true

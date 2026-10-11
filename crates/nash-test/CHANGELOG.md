@@ -1,5 +1,17 @@
 # nash-test
 
+## 0.5.0 — 2026-10-10
+
+### Minor changes
+
+- [5ee70cc4](https://github.com/orbistry/nash/commit/5ee70cc4da311a8f237db47350f8b9418c7b3729) Restore the recursive Flat term encoder and decoder. `nash_test::Config` gains `worker_stack`, and `nash test` runs its workers on the compiler stack. — Thanks @MicroProofs!
+- [82b2b773](https://github.com/orbistry/nash/commit/82b2b773cc962799b111bb64c31321c569f2e663) Remove unused dependency bookkeeping, report and type helpers, and the unused FailureKind alias. Compilation, diagnostics, and supported editor behavior are unchanged. — Thanks @MicroProofs!
+- [0e64dce4](https://github.com/orbistry/nash/commit/0e64dce4aafb56a963ded210d0c6589854ee981b) Remove the Plutus V1 and V2 targets. Nash compiles validators against the V3 script context only, so a V1 or V2 language tag produced an invalid validator. The `plutusVersion` project setting, the `--plutus-version` option, `nash_config::PlutusVersion`, `assemble_core_for_version`, `TestProgram::plutus_version` and the version parameters of `assemble_core_with_options` and `compile_tests*` are gone. Script hashes always use the V3 language tag. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-config@0.7.0, nash-plutus@0.3.5
+
 ## 0.4.3 — 2026-10-07
 
 ### Patch changes

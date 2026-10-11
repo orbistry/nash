@@ -1,5 +1,11 @@
 # nash-parse
 
+## 0.10.0 — 2026-10-10
+
+### Minor changes
+
+- [d125a8ef](https://github.com/orbistry/nash/commit/d125a8ef32ce2d98b9016166afcdb4c7f8c8979c) Run compiler work on threads with a 128 MiB stack (`nash_driver::stack`) and remove the parser nesting limit of 64 with its `Space::TooDeep` error. Input that is too deep now ends the process with a stack overflow. — Thanks @MicroProofs!
+
 ## 0.9.0 — 2026-09-27
 
 ### Minor changes

@@ -1,5 +1,19 @@
 # nash-cli
 
+## 0.9.0 — 2026-10-10
+
+### Minor changes
+
+- [6c40e488](https://github.com/orbistry/nash/commit/6c40e48881220fbdd71f63040c19efa782bb6e21) Add explicit O2 compilation for build and test. O2 requires silent settings, removes user and compiler traces, and discards trace message computations even when they fail or diverge before applying the O1 optimizer. Reject compact, verbose and compiler tracing with O2. Keep O1 as the default. — Thanks @MicroProofs!
+- [0e64dce4](https://github.com/orbistry/nash/commit/0e64dce4aafb56a963ded210d0c6589854ee981b) Remove the Plutus V1 and V2 targets. Nash compiles validators against the V3 script context only, so a V1 or V2 language tag produced an invalid validator. The `plutusVersion` project setting, the `--plutus-version` option, `nash_config::PlutusVersion`, `assemble_core_for_version`, `TestProgram::plutus_version` and the version parameters of `assemble_core_with_options` and `compile_tests*` are gone. Script hashes always use the V3 language tag. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [5ee70cc4](https://github.com/orbistry/nash/commit/5ee70cc4da311a8f237db47350f8b9418c7b3729) Restore the recursive Flat term encoder and decoder. `nash_test::Config` gains `worker_stack`, and `nash test` runs its workers on the compiler stack. — Thanks @MicroProofs!
+- [74c221a9](https://github.com/orbistry/nash/commit/74c221a9d7f5c3dd2c076a6c91b4be7c554c4acd) Disable unused Bzip2 ZIP support to avoid building bzip2-sys. Retain all other existing ZIP features and XZ compiler-release extraction. — Thanks @MicroProofs!
+- [d125a8ef](https://github.com/orbistry/nash/commit/d125a8ef32ce2d98b9016166afcdb4c7f8c8979c) Run compiler work on threads with a 128 MiB stack (`nash_driver::stack`) and remove the parser nesting limit of 64 with its `Space::TooDeep` error. Input that is too deep now ends the process with a stack overflow. — Thanks @MicroProofs!
+- Updated dependencies: nash-codegen@0.7.0, nash-config@0.7.0, nash-docs@0.2.3, nash-driver@0.14.0, nash-fmt@0.2.1, nash-language-server@0.4.9, nash-report@0.7.0, nash-test@0.5.0
+
 ## 0.8.0 — 2026-10-07
 
 ### Minor changes

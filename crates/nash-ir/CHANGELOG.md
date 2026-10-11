@@ -1,5 +1,19 @@
 # nash-ir
 
+## 0.5.1 — 2026-10-10
+
+### Patch changes
+
+- [fe14e41d](https://github.com/orbistry/nash/commit/fe14e41d33685937c9cd354a9983342f5861ca4b) Enable bounded constant builtin evaluation in O1. Fold saturated literal calls through ANF bindings and repeat cleanup, preserving traces and runtime failures. Keep O0 and explicit comptime policies unchanged. — Thanks @MicroProofs!
+- [a357f4e4](https://github.com/orbistry/nash/commit/a357f4e4d5605b78ec94de78bca33a32b15ed899) Fuse adjacent application stages in O1, clean up generated UPLC bindings, and
+  pack value application spines with native Case/Constr while preserving traces,
+  failure and termination. — Thanks @MicroProofs!
+- [7f0e49b1](https://github.com/orbistry/nash/commit/7f0e49b183143167642597ce3a6557e94fc43397) Support read-only `.fst` and `.snd` field access and accessor functions for known builtin pair types, including aliases. Lower access directly to the pair builtins. Enable the restricted O1 pair-case rewrite only when constructor inverse cleanup removes the introduced projection, preserving strict producer evaluation. — Thanks @MicroProofs!
+- [f4ad45a0](https://github.com/orbistry/nash/commit/f4ad45a000e1b021942985347384f41beaa631e9) Revisit static recursive parameter lifting after cleanup and recursive pruning so O1 reaches the same closed program in one invocation. Preserve atomic operands when lifting all-static oversaturated recursive calls and check optimizer idempotence across executable fixtures. — Thanks @MicroProofs!
+- [2cc5754f](https://github.com/orbistry/nash/commit/2cc5754f5ccb9b71148d49b8c329b55769d0e3b2) Remove unused self-recursive and mutual parameters in O1 while preserving strict argument order, forwarding dependencies, type views, and delayed worker execution. — Thanks @MicroProofs!
+- [056ee255](https://github.com/orbistry/nash/commit/056ee2551fc4e5518b1c2a0e8bda0944db7cc50b) Restore the recursive Core traversals: `walk`, `map`, occurrence and free-variable analysis, discard checks, hygiene, ANF, beta splicing, and Core printing. — Thanks @MicroProofs!
+- Updated dependencies: nash-plutus@0.3.5
+
 ## 0.5.0 — 2026-10-07
 
 ### Minor changes

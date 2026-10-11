@@ -1,5 +1,17 @@
 # nash-report
 
+## 0.7.0 — 2026-10-10
+
+### Minor changes
+
+- [82b2b773](https://github.com/orbistry/nash/commit/82b2b773cc962799b111bb64c31321c569f2e663) Remove unused dependency bookkeeping, report and type helpers, and the unused FailureKind alias. Compilation, diagnostics, and supported editor behavior are unchanged. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [7f0e49b1](https://github.com/orbistry/nash/commit/7f0e49b183143167642597ce3a6557e94fc43397) Support read-only `.fst` and `.snd` field access and accessor functions for known builtin pair types, including aliases. Lower access directly to the pair builtins. Enable the restricted O1 pair-case rewrite only when constructor inverse cleanup removes the introduced projection, preserving strict producer evaluation. — Thanks @MicroProofs!
+- [d125a8ef](https://github.com/orbistry/nash/commit/d125a8ef32ce2d98b9016166afcdb4c7f8c8979c) Run compiler work on threads with a 128 MiB stack (`nash_driver::stack`) and remove the parser nesting limit of 64 with its `Space::TooDeep` error. Input that is too deep now ends the process with a stack overflow. — Thanks @MicroProofs!
+- Updated dependencies: nash-constrain@0.9.0, nash-parse@0.10.0
+
 ## 0.6.0 — 2026-09-27
 
 ### Minor changes
