@@ -76,10 +76,10 @@ implementation, default imports, Prop and the full validator example.
 | Tests | `tests` block at end of module with its own imports. `test "name" =`, `prop "name" =` with `let x via gen in`. Bodies are sequencing blocks (`e : unit` ⇒ `let () = e in ..`; `x <- e` ⇒ `let x = e`; no test monad). Power-assert `assert`. `fail` / `fail once`, `within (cpu N, mem M)`, `label`. |
 | Property testing | Little `Choice`/`Group` trees with strict group replay; `Prop.generator` is a state-function alias with ordinary Functor/Applicative/Monad composition. Rust reduces traces using consumed primitive-choice shortlex. Each prop prepares its state, body function, and display function once. |
 | `do` notation | Layout `do` block, `x <- e` desugars to `Monad.bind`. |
-| Macros | Procedural. Input: typed AST; output: surface AST. `@derive(Eq)` on declarations, `name!(args)` in expressions. Hygienic. Run on the CEK machine. Expand-then-recheck loop per module. The `Ast` family has Term representation (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. |
+| Macros | Syntax macros, as in Racket. Input and output are source syntax with scopes and origins, no inferred types; the expanded module is checked once in the ordinary strict way. Written with `quote`/`~`. Shapes: `name!(args)`, `name! subject of`, `name! pattern = value`, and `@name(args)` on declarations. Hygienic. Run on the CEK machine. The `Ast` family has Term representation (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. See [Plan 11](../plans/11-macros-comptime.md). |
 | Comptime | `comptime expr` evaluates on the CEK machine at compile time; result must be a UPLC constant (`Const` or `Big`). |
-| Integer dispatch (planned) | Explicit `IntegerDispatch` AST node, exposed by an ordinary positional `dispatch!(n, [branches...])` library macro. Native int subject, lazy branches, direct UPLC case; no automatic selection, decoding, or guards. Plan 11 chunk 13. |
-| Deriving | Implemented as macros (`@derive(Eq, Ord, Show, Validate)`). |
+| Integer dispatch (planned) | Explicit `IntegerDispatch` AST node, exposed by an ordinary positional `dispatch!(n, [branches...])` library macro. Native int subject, lazy branches, direct UPLC case; no automatic selection, decoding, or guards. Plan 11 chunk 5. |
+| Deriving (planned) | `@derive(Eq, Ord, Show, Validate)`: a Nash declaration macro in Base. Plan 11 chunk 10. |
 | IR | Single tree IR (`Core`): monomorphized lambda calculus with explicit reprs. Core -> Core optimization passes. Core -> UPLC `Term`. |
 | Pattern matching | Maranget decision trees, hoisted leaves, memoized accessors. Exhaustiveness from Elm's `Nitpick/PatternMatches`. |
 | Pair access | Known builtin pairs expose read-only `.fst`/`.snd` fields and accessors, lowering to the corresponding builtins. Receiver types resolve these names; ordinary record fields retain their meaning. Pair patterns use native case, with O1 projecting only when constructor inverse cleanup can cancel the projection. |
@@ -206,17 +206,15 @@ tests
 ## Pipeline
 
 ```
-source ─parse─> Source AST ─canonicalize─> Can AST ─infer─> types + trait evidence
-   ▲                                                                           │
-   └──────────── macro expansion (typed AST in, source AST out) ◄──────────────┘
-                                                                               │
-                                          exhaustiveness (Nitpick) ◄───────────┘
-                                                                               │
-                                   Core IR (monomorphized, explicit reprs) ◄───┘
-                                                                               │
-                                          Core -> Core optimizations           │
-                                                                               │
-                                          UPLC Term ─> flat / CBOR / CEK (tests, comptime)
+source
+  ─parse─────────> Source AST
+  ─expand macros─> Source AST     (syntax in, syntax out; macros run on the CEK machine)
+  ─canonicalize──> Can AST
+  ─infer─────────> types + trait evidence
+  ─nitpick───────> exhaustiveness
+  ─lower─────────> Core IR (monomorphized, explicit reprs)
+  ─optimize──────> Core -> Core optimizations
+  ─emit──────────> UPLC Term ─> flat / CBOR / CEK (tests, comptime)
 ```
 
 ## Crate map (target)

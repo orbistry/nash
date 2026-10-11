@@ -50,9 +50,10 @@ any other syntax. The compiler does not choose for it.
 
 ## Design: source syntax in, source syntax out
 
-Settled: macros are syntax macros, as in Racket. The input has no types. A macro
-definition itself is an ordinary annotated Nash function that its own module
-checks.
+Settled: macros are syntax macros, as in Racket. Their input carries scopes and
+origins, but no inferred types, kinds, or evidence. Written type annotations and
+type declarations in the input stay syntax. A macro definition itself is an
+ordinary annotated Nash function over `Ast` values that its own module checks.
 
 ```text
 parse

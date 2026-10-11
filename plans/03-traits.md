@@ -1638,9 +1638,8 @@ pub fn run<'a>(
 extended in this plan's contract section); `Error` is
 `nash_constrain::error::Error`. The driver passes `&can_result.tables` directly;
 the solver borrows these tables for the run. Plan 04 adds its field-table
-parameter when labeled constructor fields exist, and Plan 11 adds its
-macro-round mode when that behavior exists. Do not add empty field-table or
-mode placeholders in this plan merely to freeze a future signature.
+parameter when labeled constructor fields exist. Do not add an empty field-table
+placeholder in this plan merely to freeze a future signature.
 
 Elm reference: `Type/Solve.hs` lines 157-201 (`CLet` generalizing branch),
 574-660 (`makeCopy`, `makeCopyHelp`, `restore`), 501-570 (`srcTypeToVariable`);
@@ -1738,7 +1737,7 @@ with source names/locations, ordered type arguments, exact package identities
 and final context owners instead of arena addresses. Existing inference
 snapshots cover reduction, default and impl method bodies, multi-parameter
 selection, missing impls and missing constraints. The temporary ground-retention
-test is absent. Lenient macro solving remains a Plan 11 integration.
+test is absent.
 
 Files: `crates/nash-solve/src/solve.rs`, new `crates/nash-solve/src/resolve.rs`,
 `crates/nash-solve/src/preds.rs`, `crates/nash-solve/src/lib.rs`.
@@ -1913,32 +1912,6 @@ Recursive resolution and structural traversal share 16,384 work steps and
 depth 128; substitution is charged before allocation. Callers provide
 well-kinded canonical types and complete metadata. This API has no givens and
 does not create inference variables.
-
-Deferred integration for plans/11 macro expansion rounds, not a Plan 03
-implementation requirement: Plan 11 introduces `nash_can::Mode`
-(`Strict` | `Lenient`) on `nash_can::Context` and then extends the solver
-entry point. Plan 03 uses strict behavior without a mode parameter.
-When implementing that later integration, route resolution errors through
-one helper:
-
-```rust
-    /// Strict: report. Lenient: forget the predicate; its use site gets no evidence.
-    fn unresolved(&mut self, uf, state: State<'a>, id: PredId, error: Error<'a>) -> State<'a> {
-        self.detach(uf, id);
-        match self.mode {
-            Mode::Strict => add_error(state, error),
-            Mode::Lenient => state,
-        }
-    }
-```
-
-That later integration must route ambiguity and polymorphic-recursion errors through the same helper,
-so in `Lenient` an ambiguous variable is left unresolved (not defaulted
-to an error content) and `Instance.evidence` slots for dropped predicates
-are absent; `run` fills such slices only when every slot resolved, and
-otherwise omits the `instances` entry. Plans/11 reads `exprs`/`patterns`
-only. What plans/11 calls `Error::NoInstance` is `Error::MissingImpl`
-here.
 
 Elm reference: none (Elm has no classes). The shape follows "Typing
 Haskell in Haskell" `entail`/`byInst`/`bySuper`, adapted to unification
