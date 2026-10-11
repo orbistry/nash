@@ -16,7 +16,7 @@ compiler features available when it lands):
 | 5 trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` | plans/03 (traits; chunk 12 there is this chunk's file list) |
 | 6 type modules, 7 `Data`/`Map` modules | plans/03; `Data` patterns from data.md |
 | 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `prng` protocol, runner) |
-| 10 `Ast`, `Derive` | plans/11 chunk 2 (`Ast` and tags) and chunk 10 (`Derive`) |
+| 10 `Ast`, `Derive` | plans/11 chunk 2 (`Ast`), chunk 3 (host tags), and chunk 11 (`Derive`) |
 | 11 `Cardano.*` | chunk 7 |
 | 12 integer math and Rational | chunks 5–6 |
 | 13 Crypto | chunks 3 and 6; existing Plutus crypto builtins |
@@ -386,9 +386,9 @@ ordinary Builtin.trace calls have special lazy argument evaluation.
 
 ## Chunk 10: `Ast` and `Derive` — not implemented
 
-- [ ] Ship `Ast` (Plan 11 chunk 2, with its host tag table) and `Derive` (Plan 11
-  chunk 10). Plan 11 owns their design, tests, and evidence. Tick this chunk when
-  both land.
+- [ ] Ship `Ast` (Plan 11 chunk 2; its host tag table is chunk 3) and `Derive`
+  (Plan 11 chunk 11). Plan 11 owns their design, tests, and evidence. Tick this
+  chunk when both land.
 
 **Files**
 

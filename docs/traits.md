@@ -556,8 +556,8 @@ preserves polymorphic destructuring without losing qualified constraints.
 ### Resolving outside the solver
 
 Power-assert ([testing.md](testing.md)) needs `Show` at whatever ground
-type a subexpression has, and `@derive` ([macros.md](macros.md)) needs to
-know whether a field type already has an impl. Both run after solving, on
+type a subexpression has. `@derive` ([macros.md](macros.md)) does not need
+the resolver: it reads only field syntax. Power-assert runs after solving, on
 fully ground canonical types, so the resolver is also exposed as a plain
 function:
 
@@ -951,14 +951,6 @@ impl, duplicate trait, duplicate method, method signature missing a trait
 parameter, disconnected context variable, cyclic
 superclasses, refutable pattern in `<-`, kind mismatch between head and
 trait parameter (reported by the kind checker).
-
-## Lenient mode
-
-Macro expansion ([macros.md](macros.md)) type-checks partially expanded
-modules. In `Mode::Lenient` the resolver drops any predicate it cannot
-discharge (missing impl, missing constraint, ambiguous variable,
-polymorphic recursion) instead of reporting it, and records no evidence
-for it. `Mode::Strict`, the default, is everything above.
 
 ## Open questions
 

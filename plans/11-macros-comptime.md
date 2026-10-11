@@ -17,7 +17,7 @@ In scope:
 - `quote` and `~` (unquote) for every syntax kind that a supported shape needs.
 - Four invocation shapes: call, case, binding, declaration.
 - The explicit integer dispatch operation and its client, the positional
-  `dispatch!(n, [branch0, branch1, ...])` macro in Base (chunk 5).
+  `dispatch!(n, [branch0, branch1, ...])` macro in Base (chunk 6).
 - Syntax transport, CEK execution, output decoding, hygiene, the expansion loop,
   limits, diagnostics, and tooling.
 - `@derive` in Base, written in Nash (the decided derive mechanism).
@@ -35,7 +35,7 @@ Add a macro feature only when a real use case needs it.
 
 Each shape lands together with a guide macro. A guide macro proves that the
 machinery is right. Its exact library behavior is not the goal of this plan,
-except `dispatch!` (chunk 5) and `@derive` (chunk 10).
+except `dispatch!` (chunk 6) and `@derive` (chunk 11).
 
 | Shape | Source form | Guide |
 |---|---|---|
@@ -76,7 +76,7 @@ needs a lenient canonicalize and solve pass, a representation for unresolved nam
 and deferred predicates, and a rebuild of canonical nodes and `SolvedTypes` after
 each round.
 
-`quote` needs the definition-site global bridge (chunk 3).
+`quote` needs the definition-site global bridge (chunk 4).
 
 ## Settled contracts
 
@@ -86,10 +86,10 @@ Macros use `quote` and `~` as needed. `quote (e)` builds syntax; `~x` and `~(e)`
 insert syntax values. Quote lowers to calls of the Base `Ast` builders. The
 builders are ordinary Nash functions, so a macro can use them inside a quote, for
 example `~(Ast.integerDispatch n branches)`. Quote and `~` land before any macro
-runs (chunk 3), and the first macro that runs (chunk 4) uses them.
+runs (chunk 4), and the first macro that runs (chunk 5) uses them.
 
-Quote covers expressions first (chunk 3), then patterns (chunk 6) and declarations
-and impls (chunk 8). Types are added when a shape needs them.
+Quote covers expressions first (chunk 4), then patterns (chunk 7) and declarations
+and impls (chunk 9). Types are added when a shape needs them.
 
 ### Binding identity
 
@@ -152,44 +152,63 @@ can use it.
 representation `Term`. A constructor is `constr i [fields]`, `i` the declaration
 index, fields in order. `string`, `int`, and `bytes` fields are UPLC constants.
 `option` is `Some` tag 0 and `None` tag 1. `cons` is `Nil` tag 0 and `Cons` tag 1.
-Nothing in the macro path is `Data`. The host tag table and `Ast.nash` change
-together.
+Nothing in the macro path is `Data`. Chunk 2 fixes the constructor order of
+`Ast.nash`; chunk 3 adds the host tag table and a test that compares the two.
+After that, every schema change updates both together.
 
-## Chunk 1: declarations, syntax, and resolution
+## Chunk 1: macro syntax
 
-- [ ] Parse and format `macro name : shape` declarations, `quote (e)`, `~x`, and
-  `~(e)`. Keep the existing `name!(..)` and `@name(..)` parsing.
-- [ ] Define the macro shape signatures and check them. Export macro identity and
-  shape through interfaces.
-- [ ] Resolve imported macro names, also qualified names and `tests` imports.
-  Reject same-module calls, wrong shapes, and calls of ordinary values.
+- [ ] Reserve `macro` and `quote`. Parse and format `macro name : shape`
+  declarations (a value declaration with a required annotation, kept in
+  `Module.macros`), `quote (e)`, `~x`, and `~(e)`. Keep the existing `name!(..)`
+  and `@name(..)` parsing.
+- [ ] The parser keeps `~` outside a quote and nested quotes; chunk 4 rejects them.
+- [ ] Canonicalization rejects macro declarations, `quote`, and `~` as
+  unsupported, as it already rejects `name!(..)`.
 
-Evidence: parser, formatter, and resolution snapshots. No macro runs.
+Evidence: parser, formatter, and canonicalizer rejection snapshots. No macro runs.
 
-## Chunk 2: `Ast` in Base and syntax transport
+## Chunk 2: `Ast` types, macro checking, and resolution
 
 - [ ] Inventory the source expressions, patterns, types, and declarations,
   including `assert`, `fail`, `todo`, `trace`, `do`, and nested macro calls.
-- [ ] Define the `Ast` little ADTs in Base and the matching host tag table, with
-  origins and binding identities.
+- [ ] Define the `Ast` little ADTs in Base, with origins and binding identities.
+- [ ] Check macro definitions as ordinary functions in their own namespace, and
+  check each annotation against the four shape signatures (see docs/macros.md).
+- [ ] Export macro identity and shape through interfaces.
+- [ ] Resolve imported macro names, also qualified names and `tests` imports.
+  Reject unknown macros, same-module calls, wrong shapes, and calls of ordinary
+  values. A resolved call is still unsupported until chunk 5.
+
+Evidence: checking, interface, and resolution snapshots. No macro runs.
+
+## Chunk 3: syntax transport
+
+- [ ] Add the host tag table that matches `Ast.nash`, with a test that compares the
+  two.
 - [ ] Encode source syntax to `Term::Constr` values, and decode values to source
   syntax. Decoding checks tags, arities, field types, binding references, and
   origins, and reports errors without panics.
+- [ ] Add `nash-macro` to the dev-profile `opt-level = 3` list in the root
+  `Cargo.toml`, as for the other compiler crates.
 
 Evidence: round-trip and malformed-value snapshots in Rust. No macro runs.
 
-## Chunk 3: quote lowering and macro compilation
+## Chunk 4: quote lowering and macro compilation
 
 - [ ] Lower expression `quote` and `~` to checked `Ast` builder calls. Reject `~`
   outside a quote and nested quotes that are not supported.
 - [ ] Quoted globals resolve in the defining module, private helpers included.
   Carry their identity to the output so that final checking resolves them there.
 - [ ] Compile exported macros through Build to programs, cached for the build.
+- [ ] A quoted reference to a declaration that is not a checked definition-site
+  global is a `nash::macro` diagnostic, never a panic. Help text: "quote cannot
+  reference x: it is not a checked definition-site global" (from audit step 01).
 
 Evidence: Core and UPLC snapshots of compiled macros written with quote; quote
 error snapshots. No macro runs.
 
-## Chunk 4: first execution, call shape, hygiene
+## Chunk 5: first execution, call shape, hygiene
 
 Guide: `unfold10!`, written with quote.
 
@@ -201,14 +220,21 @@ Guide: `unfold10!`, written with quote.
   separate scopes for equal names.
 - [ ] Report invocation, shape, output, budget, depth, and macro failure errors
   with the macro name and origins.
+- [ ] When a macro stops at an error term, the last trace before it becomes the
+  main error text (`fail "msg"` traces `msg`; a bare `fail` after `trace "x"`
+  gives `x`). Earlier traces stay under "Macro logs". With no trace, the text is
+  "I could not expand this macro." with the machine error as help (audit step 10,
+  decision N6).
 - [ ] Keep `comptime` behavior.
 
 Evidence: expansion, Core/UPLC, and run snapshots of `unfold10!`; fixtures for
-capture, shadowing, private helpers, nested and dropped calls, and limits.
+capture, shadowing, private helpers, nested and dropped calls, and limits; a macro
+that returns a quote with an unchecked declaration reference (the chunk 4 rule);
+`fail` with and without a message.
 
 This chunk can split into more diffs at review.
 
-## Chunk 5: integer dispatch
+## Chunk 6: integer dispatch
 
 Client: `dispatch!(n, [branch0, branch1, ...])`, exported by Base `Dispatch`.
 
@@ -234,7 +260,7 @@ no guards); fixtures for first and last branch, subject evaluated once,
 unselected branch effects, out-of-range and negative subjects, empty branches,
 function and Term results, branch type errors, and macro argument errors.
 
-## Chunk 6: case shape and pattern quote
+## Chunk 7: case shape and pattern quote
 
 Guide: `caseIf! value of ...`, a pattern match on opaque Data.
 
@@ -246,7 +272,7 @@ Guide: `caseIf! value of ...`, a pattern match on opaque Data.
 Evidence: `caseIf!` expansion and UPLC snapshots; fixtures for arm scopes,
 copied arms, and shape errors.
 
-## Chunk 7: binding shape
+## Chunk 8: binding shape
 
 Guide: `expect! pattern = value`; on a mismatch it traces and fails.
 
@@ -259,7 +285,7 @@ Guide: `expect! pattern = value`; on a mismatch it traces and fails.
 Evidence: `expect!` snapshots for a match and a mismatch (trace, then failure);
 fixtures for two dependent bindings, shadowing, and evaluation order.
 
-## Chunk 8: declaration shape and declaration quote
+## Chunk 9: declaration shape and declaration quote
 
 Guide: a fixture `@derive(Eq, Show)` on a union.
 
@@ -271,11 +297,14 @@ Guide: a fixture `@derive(Eq, Show)` on a union.
 - [ ] Add declarations and impls to quote.
 - [ ] Generated declarations take part in ordinary dependency order, recursion,
   and trait default checking.
+- [ ] When a missing-constraint error points at an annotation that a macro
+  generated, add the help "A macro generated this annotation. To add the
+  constraint, write the declaration by hand." (from audit step 11).
 
 Evidence: declaration expansion snapshots; generated impl used elsewhere in the
 module; errors in generated impls with origins.
 
-## Chunk 9: tooling
+## Chunk 10: tooling
 
 - [ ] LSP diagnostics after expansion, also after overlay edits.
 - [ ] `nash docs` documents exported macros.
@@ -283,12 +312,18 @@ module; errors in generated impls with origins.
 
 Evidence: LSP, docs, and formatter fixtures.
 
-## Chunk 10: `Derive` in Base
+## Chunk 11: `Derive` in Base
 
 - [ ] `Derive.nash` with Eq, Ord, Show, and Validate, written with quote.
 - [ ] Constraints come from the field syntax only. Other types' bodies are not
   read. Big types keep automatic structural Eq and blanket ToData/FromData.
 - [ ] Unknown or duplicate trait names give an invocation diagnostic.
+- [ ] Record aliases, with or without parameters, also `{}`: a little alias gets
+  Eq, Ord, and Show; a Big alias gets Ord, Show, and Validate. Other aliases and
+  value, trait, and impl declarations are rejected. `Show` of a record alias
+  prints the alias name: `entry { first = True, second = False }`. Validate of a
+  Big record alias takes a Data list with the exact field count; constructor Data
+  is rejected (audit step 11, decision N7).
 
 Evidence: derive fixtures with Core/UPLC and execution; the `tests/base/derive`
 project.
@@ -297,15 +332,16 @@ Dependency: derives with `list` or `map` fields type-check only with the coverag
 rule (audit step 08, which needs step 05). Land 05 and 08 before this chunk, or
 those fixtures wait for them.
 
-After this chunk: audit step 10 (a macro `fail` text becomes the main error text)
-and step 11 (derive for record aliases; it also needs step 08).
+Reference cases from the old audit patch 11: `list` and `map` fields, mutual
+recursion, a nested phantom that needs evidence, a local type named `list`, a
+duplicate parameter, a field impl that needs another trait, and record-alias
+Eq, Ord, Show, and Validate.
 
 ## Open decisions
 
 | Decision | Before |
 |---|---|
-| Exact shape signatures for the four shapes | chunk 1 |
-| Mechanism that stops macro output from making references to globals it did not name | chunk 3 |
+| Mechanism that stops macro output from making references to globals it did not name | chunk 4 |
 
 ## Reference implementation
 
