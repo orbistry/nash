@@ -2,7 +2,7 @@
 //!
 //! Keep every expression root: discarded intermediate types must also have
 //! kind Type. Predicate-only variables are checked through the predicate store.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bumpalo::Bump;
 use nash_can::kinds::{Infer, K, KindEnv, Mismatch};
@@ -21,6 +21,99 @@ pub(crate) struct Contract<'a> {
     pub region: Region,
 }
 
+/// Recorded contracts with an index by the class of their variable.
+#[derive(Default)]
+pub(crate) struct Contracts<'a> {
+    all: Vec<Contract<'a>>,
+    /// Positions in `all`, ascending, so a class keeps contract order.
+    by_class: HashMap<Variable, Vec<usize>>,
+    /// Number of union-find merges already applied to `by_class`.
+    merged: usize,
+}
+
+/// Contracts whose index agrees with the current union-find classes.
+#[derive(Clone, Copy)]
+struct Indexed<'c, 'a>(&'c Contracts<'a>);
+
+impl<'a> Contracts<'a> {
+    fn indexed(&mut self, uf: &UnionFind<'a>) -> Indexed<'_, 'a> {
+        for &(loser, winner) in &uf.merges()[self.merged..] {
+            if let Some(moved) = self.by_class.remove(&loser) {
+                let kept = self.by_class.entry(winner).or_default();
+                kept.extend(moved);
+                kept.sort_unstable();
+            }
+        }
+        self.merged = uf.merges().len();
+        Indexed(self)
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.all.len()
+    }
+
+    pub(crate) fn push(&mut self, uf: &mut UnionFind<'a>, contract: Contract<'a>) {
+        self.indexed(uf);
+        self.by_class
+            .entry(uf.find(contract.variable))
+            .or_default()
+            .push(self.all.len());
+        self.all.push(contract);
+    }
+
+    /// Contracts among the first `recorded` on the class of `variable`, oldest first.
+    pub(crate) fn on_class(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        variable: Variable,
+        recorded: usize,
+    ) -> Vec<Contract<'a>> {
+        let class = uf.find(variable);
+        self.indexed(uf)
+            .on(class)
+            .take_while(|(position, _)| *position < recorded)
+            .map(|(_, contract)| *contract)
+            .collect()
+    }
+}
+
+impl<'c, 'a> Indexed<'c, 'a> {
+    fn on(self, class: Variable) -> impl Iterator<Item = (usize, &'c Contract<'a>)> {
+        self.0
+            .by_class
+            .get(&class)
+            .into_iter()
+            .flatten()
+            .map(move |&position| (position, &self.0.all[position]))
+    }
+
+    /// ORACLE: the per-check scan of every contract that the index replaces.
+    #[cfg(any(test, debug_assertions))]
+    fn assert_scan_agrees(self, uf: &mut UnionFind<'a>) {
+        let mut scan = BTreeMap::<_, Vec<_>>::new();
+        for contract in &self.0.all {
+            if crate::recovery::is_poisoned(uf, [contract.owner]) {
+                continue;
+            }
+            scan.entry(uf.find(contract.variable))
+                .or_default()
+                .push(std::ptr::from_ref(contract.kind));
+        }
+        let mut index = BTreeMap::<_, Vec<_>>::new();
+        for &class in self.0.by_class.keys() {
+            let kinds: Vec<_> = self
+                .on(class)
+                .filter(|(_, contract)| !crate::recovery::is_poisoned(uf, [contract.owner]))
+                .map(|(_, contract)| std::ptr::from_ref(contract.kind))
+                .collect();
+            if !kinds.is_empty() {
+                index.insert(class, kinds);
+            }
+        }
+        assert_eq!(scan, index);
+    }
+}
+
 pub(crate) struct Failure<'a> {
     pub error: Error<'a>,
     pub variable: Variable,
@@ -30,32 +123,17 @@ struct Check<'a, 'env> {
     infer: Infer<'a>,
     env: &'env KindEnv<'a>,
     variables: BTreeMap<Variable, &'a K<'a>>,
-    contracts: BTreeMap<Variable, Vec<&'a nash_ast::Kind<'a>>>,
+    contracts: Indexed<'env, 'a>,
     failed: Option<Variable>,
 }
 
 impl<'a, 'env> Check<'a, 'env> {
-    fn new(
-        bump: &'a Bump,
-        uf: &mut UnionFind<'a>,
-        env: &'env KindEnv<'a>,
-        contracts: &[Contract<'a>],
-    ) -> Self {
-        let mut requirements = BTreeMap::<_, Vec<_>>::new();
-        for contract in contracts {
-            if crate::recovery::is_poisoned(uf, [contract.owner]) {
-                continue;
-            }
-            requirements
-                .entry(uf.find(contract.variable))
-                .or_default()
-                .push(contract.kind);
-        }
+    fn new(bump: &'a Bump, env: &'env KindEnv<'a>, contracts: Indexed<'env, 'a>) -> Self {
         Self {
             infer: Infer::new(bump),
             env,
             variables: BTreeMap::new(),
-            contracts: requirements,
+            contracts,
             failed: None,
         }
     }
@@ -83,9 +161,11 @@ impl<'a, 'env> Check<'a, 'env> {
         }
         let kind = self.infer.fresh();
         self.variables.insert(variable, kind);
-        if let Some(requirements) = self.contracts.get(&variable) {
-            for requirement in requirements {
-                self.infer.unify(self.infer.from_kind(requirement), kind)?;
+        // Poison does not change inside one check.
+        for (_, contract) in self.contracts.on(variable) {
+            if !crate::recovery::is_poisoned(uf, [contract.owner]) {
+                self.infer
+                    .unify(self.infer.from_kind(contract.kind), kind)?;
             }
         }
         let actual = match uf.get(variable).content.clone() {
@@ -227,17 +307,20 @@ pub(crate) fn check<'a>(
     env: &KindEnv<'a>,
     roots: &[(Variable, Region)],
     predicates: &Store<'a>,
-    contracts: &[Contract<'a>],
-    dependencies: &crate::recovery::Dependencies,
+    contracts: &mut Contracts<'a>,
+    dependencies: &mut crate::recovery::Dependencies,
 ) -> Vec<Error<'a>> {
     // Restart after each failure: kind assignments made by a failed check must
     // not affect another diagnostic. Poison the failing nested type, then let
     // directed containment skip its parents while retaining sibling roots.
     let mut errors = Vec::new();
+    let contracts = contracts.indexed(uf);
     loop {
-        let mut check = Check::new(bump, uf, env, contracts);
+        #[cfg(debug_assertions)]
+        contracts.assert_scan_agrees(uf);
+        let mut check = Check::new(bump, env, contracts);
         let result = (|| {
-            for contract in contracts {
+            for contract in &contracts.0.all {
                 if !crate::recovery::is_poisoned(uf, [contract.owner, contract.variable]) {
                     check
                         .variable(uf, contract.variable)
@@ -287,10 +370,13 @@ pub(crate) fn freeze<'a>(
     root: nash_region::Located<Variable>,
     predicates: &[Body<'a>],
     quantified: &[Variable],
-    contracts: &[Contract<'a>],
+    contracts: &mut Contracts<'a>,
 ) -> Result<Vec<Contract<'a>>, Box<Failure<'a>>> {
     let region = root.region;
-    let mut check = Check::new(bump, uf, env, contracts);
+    let contracts = contracts.indexed(uf);
+    #[cfg(debug_assertions)]
+    contracts.assert_scan_agrees(uf);
+    let mut check = Check::new(bump, env, contracts);
     let result = (|| {
         check.values(uf, [root.value])?;
         for body in predicates {
@@ -316,4 +402,71 @@ pub(crate) fn freeze<'a>(
             error: check.error(region, mismatch),
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::recovery::tests::Lcg;
+    use nash_constrain::type_::{make_descriptor, mk_flex_var};
+
+    #[test]
+    fn contract_index_agrees_with_the_contract_scan() {
+        let bump = Bump::new();
+        let mut compared = 0;
+        for seed in 0..300 {
+            let mut random = Lcg(seed);
+            let mut uf = UnionFind::new();
+            let mut contracts = Contracts::default();
+            let mut variables: Vec<_> = (0..4).map(|_| mk_flex_var(&mut uf)).collect();
+            for _ in 0..150 {
+                match random.below(7) {
+                    0 => variables.push(mk_flex_var(&mut uf)),
+                    1 => {
+                        let children = (random.pick(&variables), random.pick(&variables));
+                        variables.push(uf.fresh(make_descriptor(Content::Structure(
+                            FlatType::Fun1(children.0, children.1),
+                        ))));
+                    }
+                    2 | 3 => {
+                        let contract = Contract {
+                            variable: random.pick(&variables),
+                            owner: random.pick(&variables),
+                            // A fresh allocation gives every contract its own identity.
+                            kind: bump.alloc(nash_ast::Kind::Type),
+                            region: Region::zero(),
+                        };
+                        contracts.push(&mut uf, contract);
+                    }
+                    4 => {
+                        let (first, second) = (random.pick(&variables), random.pick(&variables));
+                        let content = uf.get(first).content.clone();
+                        uf.union(first, second, make_descriptor(content));
+                    }
+                    5 => {
+                        let variable = random.pick(&variables);
+                        uf.modify(variable, |desc| desc.content = Content::Error);
+                    }
+                    _ => {
+                        contracts.indexed(&uf).assert_scan_agrees(&mut uf);
+                        let variable = random.pick(&variables);
+                        let recorded = random.below(contracts.len() + 1);
+                        let scan: Vec<_> = contracts.all[..recorded]
+                            .iter()
+                            .filter(|contract| uf.equivalent(variable, contract.variable))
+                            .map(|contract| std::ptr::from_ref(contract.kind))
+                            .collect();
+                        let index: Vec<_> = contracts
+                            .on_class(&mut uf, variable, recorded)
+                            .iter()
+                            .map(|contract| std::ptr::from_ref(contract.kind))
+                            .collect();
+                        assert_eq!(index, scan);
+                        compared += 1;
+                    }
+                }
+            }
+        }
+        assert!(compared > 5_000);
+    }
 }
