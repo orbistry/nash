@@ -78,8 +78,8 @@ implementation, default imports, Prop and the full validator example.
 | `do` notation | Layout `do` block, `x <- e` desugars to `Monad.bind`. |
 | Macros | Syntax macros, as in Racket. Input and output are source syntax with scopes and origins, no inferred types; the expanded module is checked once in the ordinary strict way. Written with `quote`/`~`. Shapes: `name!(args)`, `name! subject of`, `name! pattern = value`, and `@name(args)` on declarations. Hygienic. Run on the CEK machine. The `Ast` family has Term representation (little ADTs with `string`/`int`/`bytes` fields; child lists as core `cons 'a = Nil \| Cons 'a (cons 'a)`); the host builds input as a `Term::Constr` tree and reads output from the CEK result value. See [Plan 11](../plans/11-macros-comptime.md). |
 | Comptime | `comptime expr` evaluates on the CEK machine at compile time; result must be a UPLC constant (`Const` or `Big`). |
-| Integer dispatch (planned) | Explicit `IntegerDispatch` AST node, exposed by an ordinary positional `dispatch!(n, [branches...])` library macro. Native int subject, lazy branches, direct UPLC case; no automatic selection, decoding, or guards. Plan 11 chunk 5. |
-| Deriving (planned) | `@derive(Eq, Ord, Show, Validate)`: a Nash declaration macro in Base. Plan 11 chunk 10. |
+| Integer dispatch (planned) | Explicit `IntegerDispatch` AST node, exposed by an ordinary positional `dispatch!(n, [branches...])` library macro. Native int subject, lazy branches, direct UPLC case; no automatic selection, decoding, or guards. Plan 11 chunk 6. |
+| Deriving (planned) | `@derive(Eq, Ord, Show, Validate)`: a Nash declaration macro in Base. Plan 11 chunk 11. |
 | IR | Single tree IR (`Core`): monomorphized lambda calculus with explicit reprs. Core -> Core optimization passes. Core -> UPLC `Term`. |
 | Pattern matching | Maranget decision trees, hoisted leaves, memoized accessors. Exhaustiveness from Elm's `Nitpick/PatternMatches`. |
 | Pair access | Known builtin pairs expose read-only `.fst`/`.snd` fields and accessors, lowering to the corresponding builtins. Receiver types resolve these names; ordinary record fields retain their meaning. Pair patterns use native case, with O1 projecting only when constructor inverse cleanup can cancel the projection. |
@@ -250,7 +250,7 @@ crates/nash-driver/base/  compiler-bundled Base (Nash source)
 - [data.md](data.md) — `Data` type, patterns, encoders/decoders
 - [validators.md](validators.md) — validator modules, `main`, build outputs
 - [testing.md](testing.md) — tests block, props, generators, shrinking, power-assert
-- [macros.md](macros.md) — procedural macros, `@derive`, `comptime`
+- [macros.md](macros.md) — syntax macros, quote/unquote, `@derive`, integer dispatch, `comptime`
 - [codegen.md](codegen.md) — Core IR, lowering, pattern compilation, recursion, optimizations
 - [diagnostics.md](diagnostics.md) — error reporting architecture
 - [stdlib.md](stdlib.md) — `nash/base` layout, prelude, `Builtin`

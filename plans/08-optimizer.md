@@ -1987,7 +1987,7 @@ Performance checks remain outside normal Cargo tests.
 
 ## Boundaries and deferred work
 
-- Integer dispatch is explicit in [Plan 11](11-macros-comptime.md) chunk 5, via an AST/Core
+- Integer dispatch is explicit in [Plan 11](11-macros-comptime.md) chunk 6, via an AST/Core
   operation. Ordinary integer literal case remains equality-based. Do not add
   density/max-index thresholds, automatic dispatch selection, guards or table
   filling. Optimizing a known explicit dispatch must preserve its failure and
