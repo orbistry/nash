@@ -16,7 +16,7 @@ compiler features available when it lands):
 | 5 trait modules, operators, `Lift`, `ToData`, `FromData`, `Validate` | plans/03 (traits; chunk 12 there is this chunk's file list) |
 | 6 type modules, 7 `Data`/`Map` modules | plans/03; `Data` patterns from data.md |
 | 8 `Prop`, 9 `Test` | plans/03, plans/10 (tests block, sequencing `do`, `prng` protocol, runner) |
-| 10 `Ast`, `Derive` | plans/11 chunk 4 (tags) and chunk 10 |
+| 10 `Ast`, `Derive` | plans/11 chunk 2 (`Ast` and tags) and chunk 10 (`Derive`) |
 | 11 `Cardano.*` | chunk 7 |
 | 12 integer math and Rational | chunks 5–6 |
 | 13 Crypto | chunks 3 and 6; existing Plutus crypto builtins |
@@ -386,7 +386,9 @@ ordinary Builtin.trace calls have special lazy argument evaluation.
 
 ## Chunk 10: `Ast` and `Derive` — not implemented
 
-- [ ] Ship Ast/Derive with Plan 11's tag contract and macro tests.
+- [ ] Ship `Ast` (Plan 11 chunk 2, with its host tag table) and `Derive` (Plan 11
+  chunk 10). Plan 11 owns their design, tests, and evidence. Tick this chunk when
+  both land.
 
 **Files**
 
@@ -394,68 +396,10 @@ ordinary Builtin.trace calls have special lazy argument evaluation.
 - `crates/nash-driver/base/src/Derive.nash`
 - `tests/base/derive/src/DeriveTests.nash`
 
-**Change**
-
-The `Ast` types and builders from docs/macros.md, matching
-`crates/nash-macro/src/tags.rs` (plans/11 chunk 4; constructor tags are
-declaration indices, so the two files change together); `Derive` from
-plans/11 chunk 10. Both are plain Nash. Every `Ast` type is a little ADT
-with native `string`/`int`/`bytes` fields, `option` slots, and `cons`
-child lists (chunk 6); `Ast` imports `Prelude`, `Cons`, `String`, and the
-trait modules. No `Data`, `Lift`, or Big type appears.
-
-**Code** (`crates/nash-driver/base/src/Ast.nash` builders excerpt)
-
-```elm
-expr : exprNode -> expr
-expr node = Expr { span = None, typ = None } node
-
-name : string -> name
-name s = Local s
-
-var : name -> expr
-var n = expr (Var n)
-
-int : int -> expr
-int n = expr (IntLit n)
-
-call : expr -> cons expr -> expr
-call f args = expr (Call f args)
-
-tuple : cons expr -> expr
-tuple es = expr (Tuple es)
-
-and : cons expr -> expr
-and es =
-    case es of
-        Nil -> expr (Var (Global primitiveModule "True"))
-        Cons e rest -> Cons.foldl (\b acc -> expr (BinOp (Global boolModule "and") acc b)) e rest
-
-primitiveModule : modname
-primitiveModule = { package = Some "nash/base", name = "Primitive" }
-
-boolModule : modname
-boolModule = { package = Some "nash/base", name = "Logic" }
-
-exprName : expr -> option string
-exprName (Expr _ node) =
-    case node of
-        Var (Raw s) -> Some s
-        Var (Global _ s) -> Some s
-        _ -> None
-```
-
-**Elm/Aiken reference**
-
-None; see plans/11.
-
-**Tests**
-
-`tests/base/derive/src/DeriveTests.nash` per plans/11 chunk 10; `Ast.nash` `tests`:
-`exprName (var (raw "Eq")) == Some "Eq"`, `and Nil` is the `True` node,
-`Cons.length (Cons (int 1) Nil) == 1`.
-
-**Done when** plans/11 chunk 12's `decl_macro_derive_eq` snapshot passes.
+Both are plain Nash. Every `Ast` type is a little ADT with native
+`string`/`int`/`bytes` fields, `option` slots, and `cons` child lists. `Ast` is
+source syntax: written annotations stay syntax, and no node carries an inferred
+type, kind, or evidence field. No `Data`, `Lift`, or Big type appears.
 
 ---
 
