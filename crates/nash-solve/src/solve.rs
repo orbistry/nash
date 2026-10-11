@@ -80,6 +80,41 @@ enum UseSource {
     },
 }
 
+/// Recorded schemes with a lookup by defining node.
+#[derive(Default)]
+struct Schemes<'a> {
+    records: Vec<SchemeRecord<'a>>,
+    /// First record of each site node.
+    by_site: std::collections::HashMap<nash_ast::NodeId, usize>,
+}
+
+impl<'a> Schemes<'a> {
+    fn push(&mut self, record: SchemeRecord<'a>) {
+        self.by_site
+            .entry(record.site.node())
+            .or_insert(self.records.len());
+        self.records.push(record);
+    }
+
+    fn at(&self, site: nash_ast::NodeId) -> Option<&SchemeRecord<'a>> {
+        let found = self.by_site.get(&site).map(|index| &self.records[*index]);
+        // ORACLE: the scan of every scheme that the lookup replaces.
+        #[cfg(debug_assertions)]
+        assert_eq!(
+            found.map(std::ptr::from_ref),
+            self.records
+                .iter()
+                .find(|scheme| scheme.site.node() == site)
+                .map(std::ptr::from_ref)
+        );
+        found
+    }
+
+    fn iter(&self) -> std::slice::Iter<'_, SchemeRecord<'a>> {
+        self.records.iter()
+    }
+}
+
 struct NodeTypeRecord {
     node: nash_ast::NodeId,
     variable: Variable,
@@ -125,7 +160,7 @@ struct Solver<'a, 'tables> {
     predicates: Store<'a>,
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
-    schemes: Vec<SchemeRecord<'a>>,
+    schemes: Schemes<'a>,
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     expr_types: Vec<NodeTypeRecord>,
@@ -138,7 +173,7 @@ struct Solver<'a, 'tables> {
     failed_predicates: BTreeSet<type_::PredId>,
     failed_definitions: std::collections::HashSet<nash_ast::NodeId>,
     value_roots: Vec<(Variable, nash_region::Region)>,
-    kind_contracts: Vec<crate::kind_check::Contract<'a>>,
+    kind_contracts: crate::kind_check::Contracts<'a>,
     kind_errors: Vec<Error<'a>>,
     fields: Vec<DeferredField<'a>>,
 }
@@ -165,7 +200,7 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -178,7 +213,7 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -266,7 +301,7 @@ impl<'a> Solver<'a, '_> {
         self.failed_definitions.insert(definition);
         loop {
             let before = self.failed_definitions.len();
-            for scheme in &self.schemes {
+            for scheme in self.schemes.iter() {
                 if self.failed_definitions.contains(&scheme.site.node())
                     || self.failed_definitions.contains(&scheme.binder)
                 {
@@ -564,8 +599,7 @@ impl<'a> Solver<'a, '_> {
         loop {
             let scheme = self
                 .schemes
-                .iter()
-                .find(|scheme| scheme.site.node() == owner)
+                .at(owner)
                 .expect("body owner has a recorded scheme");
             match scheme.parent {
                 Some(parent) => {
@@ -687,13 +721,15 @@ impl<'a> Solver<'a, '_> {
             &self.tables.kinds,
             &self.value_roots,
             &self.predicates,
-            &self.kind_contracts,
-            &self.dependencies,
+            &mut self.kind_contracts,
+            &mut self.dependencies,
         );
         if !errors.is_empty() {
             self.has_poison = true;
             self.propagate_poison(uf);
         }
+        // Unknown constraints below look up stranded variables.
+        self.dependencies.sync(uf);
         let growing = self.growing_evidence();
         for use_ in &self.uses {
             if crate::recovery::is_poisoned(uf, [use_.variable]) {
@@ -782,21 +818,70 @@ impl<'a> Solver<'a, '_> {
         let mut solved = SolvedTypes::default();
         let mut orders = HashMap::new();
         let mut rendered_uses = HashMap::new();
+        // Group every record by scope once, scopes in first-seen order.
         let mut scopes = Vec::new();
-        for scheme in &self.schemes {
+        let mut scope_index = HashMap::new();
+        let mut members: Vec<Vec<&SchemeRecord<'a>>> = Vec::new();
+        for scheme in self.schemes.iter() {
             let root = self.scope(scheme.site.node()).0;
-            if !scopes.contains(&root) {
+            let index = *scope_index.entry(root).or_insert(members.len());
+            if index == members.len() {
                 scopes.push(root);
+                members.push(Vec::new());
+            }
+            members[index].push(scheme);
+        }
+        let scope_of = |owner: nash_ast::NodeId| scope_index[&self.scope(owner).0];
+        let mut uses: Vec<Vec<&UseRecord<'a>>> = vec![Vec::new(); scopes.len()];
+        for use_ in &self.uses {
+            uses[scope_of(use_.owner.expect("use belongs to a definition"))].push(use_);
+        }
+        let mut exprs: Vec<Vec<&NodeTypeRecord>> = vec![Vec::new(); scopes.len()];
+        for record in &self.expr_types {
+            if let Some(owner) = record.owner {
+                exprs[scope_of(owner)].push(record);
+            }
+        }
+        let mut patterns: Vec<Vec<&NodeTypeRecord>> = vec![Vec::new(); scopes.len()];
+        for record in &self.pattern_types {
+            if let Some(owner) = record.owner {
+                patterns[scope_of(owner)].push(record);
             }
         }
         // Quantifier order must be frozen with its rendered scheme, before
         // another body can assign names to its own instantiations.
-        for scope in &scopes {
-            let mut members: Vec<_> = self
-                .schemes
-                .iter()
-                .filter(|scheme| self.scope(scheme.site.node()).0 == *scope)
-                .collect();
+        for (index, mut members) in members.into_iter().enumerate() {
+            let (uses, exprs, patterns) = (&uses[index], &exprs[index], &patterns[index]);
+            // ORACLE: the per-scope filters over every record that the grouping replaces.
+            #[cfg(debug_assertions)]
+            {
+                let scope = scopes[index];
+                let same = |owner: nash_ast::NodeId| self.scope(owner).0 == scope;
+                assert!(
+                    members.iter().copied().map(std::ptr::from_ref).eq(self
+                        .schemes
+                        .iter()
+                        .filter(|scheme| same(scheme.site.node()))
+                        .map(std::ptr::from_ref))
+                );
+                assert!(
+                    uses.iter().copied().map(std::ptr::from_ref).eq(self
+                        .uses
+                        .iter()
+                        .filter(|use_| same(use_.owner.expect("use belongs to a definition")))
+                        .map(std::ptr::from_ref))
+                );
+                for (grouped, records) in
+                    [(exprs, &self.expr_types), (patterns, &self.pattern_types)]
+                {
+                    assert!(
+                        grouped.iter().copied().map(std::ptr::from_ref).eq(records
+                            .iter()
+                            .filter(|record| record.owner.is_some_and(same))
+                            .map(std::ptr::from_ref))
+                    );
+                }
+            }
             members.sort_by_key(|scheme| self.scope(scheme.site.node()).1);
             let mut roots = Vec::new();
             for scheme in &members {
@@ -805,22 +890,11 @@ impl<'a> Solver<'a, '_> {
                     roots.extend(self.predicates.get(*id).body.roots());
                 }
             }
-            for use_ in &self.uses {
-                if self
-                    .scope(use_.owner.expect("use belongs to a definition"))
-                    .0
-                    != *scope
-                {
-                    continue;
-                }
+            for use_ in uses {
                 let quantified = match use_.source {
-                    UseSource::Local { definition, .. } => self
-                        .schemes
-                        .iter()
-                        .find(|scheme| scheme.site.node() == definition)
-                        .unwrap()
-                        .quantified
-                        .as_slice(),
+                    UseSource::Local { definition, .. } => {
+                        self.schemes.at(definition).unwrap().quantified.as_slice()
+                    }
                     UseSource::Foreign { .. } => &[],
                 };
                 roots.extend(self.use_variables(uf, use_, quantified));
@@ -846,13 +920,7 @@ impl<'a> Solver<'a, '_> {
             // Node types must use the same variable names as their owner's
             // schemes and instances. Add them last so existing quantifier
             // ordering remains stable when a body introduces private types.
-            let node_types = self.expr_types.iter().chain(&self.pattern_types);
-            roots.extend(node_types.filter_map(|record| {
-                record
-                    .owner
-                    .filter(|owner| self.scope(*owner).0 == *scope)
-                    .map(|_| record.variable)
-            }));
+            roots.extend(exprs.iter().chain(patterns).map(|record| record.variable));
             crate::annotation::prepare_scope(self.bump, uf, &roots);
             for scheme in members {
                 let id = scheme.site.node();
@@ -882,22 +950,11 @@ impl<'a> Solver<'a, '_> {
                     },
                 );
             }
-            for use_ in &self.uses {
-                if self
-                    .scope(use_.owner.expect("use belongs to a definition"))
-                    .0
-                    != *scope
-                {
-                    continue;
-                }
+            for use_ in uses {
                 let keys = match &use_.source {
-                    UseSource::Local { definition, .. } => self
-                        .schemes
-                        .iter()
-                        .find(|scheme| scheme.site.node() == *definition)
-                        .unwrap()
-                        .quantified
-                        .clone(),
+                    UseSource::Local { definition, .. } => {
+                        self.schemes.at(*definition).unwrap().quantified.clone()
+                    }
                     UseSource::Foreign { variables } => variables.clone(),
                 };
                 let variables = self.use_variables(uf, use_, &keys);
@@ -914,21 +971,14 @@ impl<'a> Solver<'a, '_> {
                     "one instance per original use node"
                 );
             }
-            for (records, output) in [
-                (&self.expr_types, &mut solved.exprs),
-                (&self.pattern_types, &mut solved.patterns),
-            ] {
+            for (records, output) in [(exprs, &mut solved.exprs), (patterns, &mut solved.patterns)]
+            {
                 for record in records {
-                    if record
-                        .owner
-                        .is_some_and(|owner| self.scope(owner).0 == *scope)
-                    {
-                        let typ = crate::annotation::to_solved_type(self.bump, uf, record.variable);
-                        assert!(
-                            output.insert(record.node, typ).is_none(),
-                            "one type per original node"
-                        );
-                    }
+                    let typ = crate::annotation::to_solved_type(self.bump, uf, record.variable);
+                    assert!(
+                        output.insert(record.node, typ).is_none(),
+                        "one type per original node"
+                    );
                 }
             }
         }
@@ -1892,9 +1942,13 @@ impl<'a> Solver<'a, '_> {
             Located::at(region, root),
             &bodies,
             quantified,
-            &self.kind_contracts,
+            &mut self.kind_contracts,
         ) {
-            Ok(contracts) => self.kind_contracts.extend(contracts),
+            Ok(contracts) => {
+                for contract in contracts {
+                    self.kind_contracts.push(uf, contract);
+                }
+            }
             Err(failure) => {
                 self.kind_errors.push(failure.error);
                 self.has_poison = true;
@@ -1963,11 +2017,7 @@ impl<'a> Solver<'a, '_> {
             let UseSource::Local { definition, .. } = use_.source else {
                 unreachable!("recursive local use")
             };
-            let Some(scheme) = self
-                .schemes
-                .iter()
-                .find(|scheme| scheme.site.node() == definition)
-            else {
+            let Some(scheme) = self.schemes.at(definition) else {
                 self.recursive_uses.push(use_index);
                 continue;
             };
@@ -2061,10 +2111,9 @@ impl<'a> Solver<'a, '_> {
             return self.register(uf, rank, Content::Error);
         }
         let mut roots = vec![binding.variable];
-        if let Some(scheme) = self
-            .schemes
-            .iter()
-            .find(|scheme| Some(scheme.site.node()) == binding.definition)
+        if let Some(scheme) = binding
+            .definition
+            .and_then(|definition| self.schemes.at(definition))
         {
             // A destructured name instantiates its whole aggregate scheme,
             // including quantifiers absent from this selected component.
@@ -2209,6 +2258,7 @@ impl<'a> Solver<'a, '_> {
                 }
             }
         }
+        self.dependencies.sync(uf);
         let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for (_, id) in &self.wanted[start..] {
             if self.predicate_blocked(uf, *id) {
@@ -2507,16 +2557,17 @@ impl<'a> Solver<'a, '_> {
             .map(|root| self.make_copy_help(uf, rank, *root, quantified))
             .collect();
         let copied = std::mem::take(&mut self.copied);
-        let contracts = self.kind_contracts.clone();
+        let recorded = self.kind_contracts.len();
         for (original, copy) in &copied {
-            for contract in &contracts {
-                if uf.equivalent(*original, contract.variable) {
-                    self.kind_contracts.push(crate::kind_check::Contract {
+            for contract in self.kind_contracts.on_class(uf, *original, recorded) {
+                self.kind_contracts.push(
+                    uf,
+                    crate::kind_check::Contract {
                         variable: *copy,
                         owner: roots[0],
-                        ..*contract
-                    });
-                }
+                        ..contract
+                    },
+                );
             }
             uf.modify(*original, |desc| {
                 desc.copy = None;
@@ -3131,7 +3182,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3144,7 +3195,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3224,7 +3275,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3237,7 +3288,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3296,7 +3347,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3309,7 +3360,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3370,7 +3421,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3383,7 +3434,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3457,7 +3508,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3470,7 +3521,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3594,7 +3645,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3607,7 +3658,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3765,7 +3816,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3778,7 +3829,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
@@ -3852,7 +3903,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3865,7 +3916,7 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
             test_scope: false,
