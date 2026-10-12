@@ -2462,6 +2462,78 @@ fn typed_alias_function() {
     );
 }
 
+/// An annotated definition publishes its declared type. A call with more
+/// arguments in the same module must not replace the alias in the published
+/// annotation: an importer resolves the impl of the alias by its name.
+#[test]
+fn annotated_alias_result_keeps_its_impl_for_importers_after_a_wider_call() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut interfaces = literal_interfaces(&bump);
+    let mut output = Vec::new();
+    for (module_name, source) in [
+        (
+            "Gen",
+            indoc!(
+                r#"
+            module Gen exposing (..)
+            type alias gen 'a = int -> ('a, int)
+            trait Name 'a where
+                name : 'a -> ()
+            impl Name (gen int) where
+                name _ = ()
+            start : int -> gen int
+            start n = \seed -> (n, seed)
+            run : int -> (int, int)
+            run seed = start 4 seed
+        "#
+            ),
+        ),
+        (
+            "Main",
+            indoc!(
+                r#"
+            module Main exposing (..)
+            import Gen exposing (..)
+            label = name (start 1)
+        "#
+            ),
+        ),
+    ] {
+        let source = bump.alloc_str(source);
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let (annotations, _) = nash_solve::run(
+            &bump,
+            &mut UnionFind::new(),
+            &canonical.module,
+            &canonical.tables,
+        )
+        .unwrap_or_else(|errors| panic!("{}", render_errors(source, &errors)));
+        output.push(format!(
+            "{module_name}:\n{}",
+            render_annotations(&annotations)
+        ));
+        interfaces.insert(
+            module_name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(output.join("\n"));
+    });
+}
+
 // RECURSION
 
 #[test]

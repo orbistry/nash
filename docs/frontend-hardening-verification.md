@@ -1,9 +1,11 @@
 # Frontend hardening verification
 
-The six frontend cleanup changes and direct AST inference are complete. The
-replacement preserves the union-find and predicate engines, removes the
-allocated Constraint tree and intermediate inference Type, and passes all
-adoption gates. Plan 07 and code generation are outside this change.
+The six frontend cleanup changes are complete. A seventh change, direct AST
+inference, replaced the constraint tree and passed all adoption gates. It was
+later reverted: `nash-constrain` again generates the Elm constraint tree and
+`nash-solve` walks it. The union-find and predicate engines are the same in
+both designs. The inference sections below describe the direct engine as it was
+measured at that time. Plan 07 and code generation are outside this change.
 
 ## Commit sequence
 
@@ -19,7 +21,7 @@ rebases; use `jj log -r <change-id>` for the current commit hash.
 | `otpvxozr` | Remove inactive interface-cache machinery |
 | `ovwmkvpo` | Borrow canonical local scopes |
 | `npksuwvn` | Bound trait candidate traversal |
-| `lssnqtpu` | Infer directly from the canonical AST |
+| `lssnqtpu` | Infer directly from the canonical AST (replaced later by the restored constraint tree) |
 
 An external rebase placed these changes on release commit `046cb63c`. Its
 changes from the saved baseline are release metadata and changelogs; no Rust
@@ -126,5 +128,6 @@ The retained local audit root is
 - `occurs-review/`: targeted fixtures and complete original/candidate outputs.
 
 The seven recovery snapshots are committed with the inference tests. External
-audit copies contain the original engine only for verification; the production
-tree has one direct inference path.
+audit copies contain the original engine only for verification. The production
+tree builds the constraint tree and walks it again (see the note at the top of
+this file); the direct inference path no longer exists.

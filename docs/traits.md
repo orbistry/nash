@@ -297,9 +297,11 @@ Context reduction: a retained context never contains both `Ord 'a` and
 ## Inference
 
 Nash keeps Elm's rank-based solver (`nash-solve`). Predicates ride along
-with unification variables. Inference walks the canonical AST directly;
-there is no allocated constraint tree or intermediate inference type.
-Canonical types instantiate directly into union-find variables.
+with unification variables. `nash-constrain` turns the canonical AST into an
+arena-owned constraint tree, and the solver walks it in Elm's order. Types
+in the tree are the inference `Type` language; the solver turns them into
+union-find variables. Canonical annotations instantiate directly into
+union-find variables.
 
 Each definition owns its young rank, wanted predicates, and evidence binder.
 Pattern scopes introduce a younger rank only when they own fresh variables.
