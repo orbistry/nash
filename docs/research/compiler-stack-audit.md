@@ -54,7 +54,7 @@ still covered by the nested-type/constant follow-ups below.
 
 | Area | Recursive path | Why the parser limit does not settle it |
 | --- | --- | --- |
-| Flat source chains | `nash-can/src/expression.rs` field access and `build_tree_rec`; `nash-solve/src/solve/expressions.rs` | Parser nesting limit 64 does not limit flat operator/access chains. Equal-precedence operator construction also repeatedly scans the remaining chain. |
+| Flat source chains | `nash-can/src/expression.rs` field access and `build_tree_rec`; `nash-constrain/src/expression.rs` | Parser nesting limit 64 does not limit flat operator/access chains. Equal-precedence operator construction also repeatedly scans the remaining chain. |
 | IR type metadata | Derived type equality and `Builder::plutus_type` | Deeply nested types are independent of term-tree depth. |
 | Nested constants | Flat `encode_type` / `type_from_tags`, constant equality and pretty printing | Iterative Flat term traversal does not cover nested constant types or data. |
 | Module graph | `nash-driver/src/graph.rs` cycle reporting | Import graph depth is independent of source expression nesting. |

@@ -24,8 +24,9 @@ carry complete substitutions separately. Preserve trait-free polymorphic
 recursion through opaque values. Bound specialization work and report resource
 limits when demanded layouts keep growing. Core permits `Ty::Erased` where no representation inspection is needed.
 
-Implementation follows the current source APIs; old constraint-tree solver
-signatures in the sketches are historical. Record each concrete correction here
+Implementation follows the current source APIs; the constraint-tree solver
+signatures in the sketches may differ from the restored `nash-constrain` and
+`nash-solve` code. Record each concrete correction here
 as its chunk lands. The Core type model includes `Erased` pass-through values
 and `Constructor` metadata for higher-kinded arguments. Type conversion records
 ADT layouts lazily, one level at a time. UPLC printing uses lexical scope for
