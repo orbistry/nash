@@ -191,7 +191,8 @@ pub enum Error<'a> {
     },
     ContradictoryRepresentation {
         region: Region,
-        variable: &'a str,
+        /// A type variable or a type application such as `'f 'a`.
+        subject: &'a Located<nash_ast::Type<'a>>,
     },
     ImplOfBuiltinTrait {
         region: Region,
