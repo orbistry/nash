@@ -9,7 +9,8 @@ fn same_types(a: &[&Located<Type<'_>>], b: &[&Located<Type<'_>>]) -> bool {
     a.len() == b.len() && a.iter().zip(b).all(|(a, b)| same_type(&a.value, &b.value))
 }
 
-fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
+/// Structural type equality that ignores source locations.
+pub fn same_type(a: &Type<'_>, b: &Type<'_>) -> bool {
     match (a, b) {
         (Type::Var(a), Type::Var(b)) => a == b,
 

@@ -144,6 +144,26 @@ fn explicit_representation_contradictions_are_rejected() {
 }
 
 #[test]
+fn contradictory_application_annotation_context_is_rejected() {
+    let bump = Bump::new();
+    check_snapshot!(
+        &bump,
+        "f : (Big ('f 'a), Little ('f 'a)) => 'f 'a -> 'f 'a\nf x = x"
+    )
+    .unwrap_err();
+}
+
+#[test]
+fn contradictory_application_impl_context_is_rejected() {
+    let bump = Bump::new();
+    check_snapshot!(
+        &bump,
+        "type box 'f = Box ('f int)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl (Big ('f int), Little ('f int)) => Keep (box 'f) where\n    keep x = x"
+    )
+    .unwrap_err();
+}
+
+#[test]
 fn trait_parameter_kinds_come_from_method_uses() {
     let bump = Bump::new();
     let result = check(

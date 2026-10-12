@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntype box 'f = Box ('f int)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl (Big ('f int), Little ('f int)) => Keep (box 'f) where\n    keep x = x\n"
+---
+nash::names::contradictory_representation
+
+  × The representation requirements on 'f Primitive.int are incompatible:
+    ╭─[src/Main.nash:9:29]
+  8 │     keep : 'a -> 'a
+  9 │ impl (Big ('f int), Little ('f int)) => Keep (box 'f) where
+    ·                             ──────
+ 10 │     keep x = x
+    ╰────
+  help: Change the incompatible constraints or uses of this type.

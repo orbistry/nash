@@ -616,11 +616,23 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 admitted(*required)
             ),
         ),
-        Error::ContradictoryRepresentation { region, variable } => simple(
+        Error::ContradictoryRepresentation { region, subject } => simple(
             "CONTRADICTORY REPRESENTATION",
             *region,
-            &format!("The representation requirements on '{variable} are incompatible:"),
-            "Change the incompatible constraints or uses of this variable.",
+            &format!(
+                "The representation requirements on {} are incompatible:",
+                crate::render_type::can_to_doc(
+                    &crate::localizer::Localizer::default(),
+                    crate::render_type::Ctx::None,
+                    &subject.value,
+                )
+                .render(80, false)
+            ),
+            if matches!(subject.value, nash_ast::Type::Var(_)) {
+                "Change the incompatible constraints or uses of this variable."
+            } else {
+                "Change the incompatible constraints or uses of this type."
+            },
         ),
         Error::IrregularRecursion {
             region,
@@ -1939,7 +1951,7 @@ mod coverage {
             r2,
             Error::ContradictoryRepresentation {
                 region: r(),
-                variable: "a",
+                subject: &nash_region::Located::at_zero(nash_ast::Type::Var("a")),
             },
         );
     }

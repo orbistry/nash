@@ -1715,24 +1715,37 @@ pub(crate) fn infer_declarations<'a>(
     }
 }
 
+/// Every subject of representation predicates, variable or application,
+/// must admit at least one representation.
 fn check_representation_consistency<'a>(
     predicates: &[Pred<'a>],
 ) -> Result<(), Vec<crate::Error<'a>>> {
-    let mut admitted = BTreeMap::new();
+    let mut admitted: Vec<(
+        &'a nash_region::Located<nash_ast::Type<'a>>,
+        primitives::ReprSet,
+    )> = Vec::new();
     for pred in predicates {
         let Some(trait_) = pred.trait_ref().and_then(ReprTrait::of) else {
             continue;
         };
-        let arg = pred.args()[0];
-        if let Type::Var(name) = arg.value {
-            let previous = admitted.entry(name).or_insert(primitives::ReprSet::ALL);
-            *previous = previous.intersect(trait_.admits());
-            if previous.is_empty() {
-                return Err(vec![crate::Error::ContradictoryRepresentation {
-                    region: arg.region,
-                    variable: name,
-                }]);
+        let subject = pred.args()[0];
+        let index = match admitted
+            .iter()
+            .position(|(other, _)| nash_ast::same_type(&other.value, &subject.value))
+        {
+            Some(index) => index,
+            None => {
+                admitted.push((subject, primitives::ReprSet::ALL));
+                admitted.len() - 1
             }
+        };
+        let set = &mut admitted[index].1;
+        *set = set.intersect(trait_.admits());
+        if set.is_empty() {
+            return Err(vec![crate::Error::ContradictoryRepresentation {
+                region: subject.region,
+                subject,
+            }]);
         }
     }
     Ok(())
