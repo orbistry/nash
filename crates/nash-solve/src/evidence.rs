@@ -301,30 +301,33 @@ impl<'a> Resolver<'_, 'a> {
                 typ: args[0],
             }));
         }
-        let mut selected = None;
-        for (key, info) in self.tables.impls_for(trait_) {
-            if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical(&|typ, class| match nash_can::kinds::repr_of(
-                    self.bump,
-                    &self.tables.kinds,
-                    typ,
-                ) {
-                    Some(actual) if class.contains(actual) => nash_ast::head::Match::Yes(()),
-                    Some(_) => nash_ast::head::Match::No,
-                    None => nash_ast::head::Match::Deferred,
-                }),
-                key.heads,
-                args,
-                info.variables.len(),
-                &mut self.remaining,
-            )
-            .map_err(|_| error(Failure::Limit))?
-            {
-                selected = Some((*key, *info, arguments));
-                break;
-            }
-        }
-        let (key, info, type_args) = selected.ok_or_else(|| error(Failure::MissingImpl))?;
+        let candidates = self
+            .tables
+            .impls_for(trait_)
+            .map(|(key, info)| (key.heads, info.variables.len(), (*key, *info)));
+        let selection = nash_ast::head::select_impl(
+            &mut nash_ast::head::Canonical(&|typ, class| match nash_can::kinds::repr_of(
+                self.bump,
+                &self.tables.kinds,
+                typ,
+            ) {
+                Some(actual) if class.contains(actual) => nash_ast::head::Match::Yes(()),
+                Some(_) => nash_ast::head::Match::No,
+                None => nash_ast::head::Match::Deferred,
+            }),
+            candidates,
+            args,
+            &mut self.remaining,
+            nash_ast::head::SelectPolicy::Exact,
+        )
+        .map_err(|_| error(Failure::Limit))?;
+        let nash_ast::head::ImplSelection::Selected {
+            info: (key, info),
+            arguments: type_args,
+        } = selection
+        else {
+            return Err(error(Failure::MissingImpl));
+        };
         let substitution = info
             .variables
             .iter()

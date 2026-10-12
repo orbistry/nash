@@ -1,0 +1,16 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Const, Storable, Little)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\nbig : Big 'a => 'a -> 'a\nbig x = x\nlittle : Little 'a => 'a -> 'a\nlittle x = x\nbad x = keep (big (little x))\n"
+info: diagnostic
+---
+nash::type::contradictory_representation
+
+  × `bad` requires incompatible representations for `'a`.
+    ╭─[Main.nash:13:1]
+ 12 │ little x = x
+ 13 │ bad x = keep (big (little x))
+    · ───
+    ╰────
+  help: Required: Big, Little.
+
+        Use a consistent representation or convert the value explicitly.

@@ -278,7 +278,7 @@ pub(crate) fn select<'a>(
     givens: &[crate::preds::Body<'a>],
     allocated: &mut Vec<Variable>,
 ) -> Selection<'a> {
-    use nash_ast::head::{Match, matches};
+    use nash_ast::head::{ImplSelection, SelectPolicy, select_impl};
     if args.len() >= 2 {
         match given_candidates(tables, uf, trait_, args, givens, allocated, &mut {
             WORK_LIMIT
@@ -300,33 +300,28 @@ pub(crate) fn select<'a>(
             View::Flexible | View::Rigid(_) | View::Application | View::Error
         )
     });
-    let mut remaining = WORK_LIMIT;
-    let mut selected = None;
-    let mut deferred = false;
-    for (key, info) in tables.impls_for(trait_) {
-        match matches(
-            &mut types,
-            key.heads,
-            args,
-            info.variables.len(),
-            &mut remaining,
-        ) {
-            Err(_) => return Selection::Limit,
-            Ok(Match::No) => {}
-            Ok(Match::Deferred) => deferred = true,
-            Ok(Match::Yes(arguments)) => {
-                selected = Some(Selection::Impl {
-                    info,
-                    key: *key,
-                    substitution: info.variables.iter().copied().zip(arguments).collect(),
-                });
-            }
-        }
-    }
-    if deferred || (selected.is_none() && unknown_outer) {
-        Selection::Deferred
-    } else {
-        selected.unwrap_or(Selection::Missing)
+    let candidates = tables
+        .impls_for(trait_)
+        .map(|(key, info)| (key.heads, info.variables.len(), (key, *info)));
+    match select_impl(
+        &mut types,
+        candidates,
+        args,
+        &mut { WORK_LIMIT },
+        SelectPolicy::Defer,
+    ) {
+        Err(_) => Selection::Limit,
+        Ok(ImplSelection::Deferred) => Selection::Deferred,
+        Ok(ImplSelection::Selected {
+            info: (key, info),
+            arguments,
+        }) => Selection::Impl {
+            info,
+            key: *key,
+            substitution: info.variables.iter().copied().zip(arguments).collect(),
+        },
+        Ok(ImplSelection::Missing) if unknown_outer => Selection::Deferred,
+        Ok(ImplSelection::Missing) => Selection::Missing,
     }
 }
 

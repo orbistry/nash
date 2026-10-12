@@ -5266,6 +5266,29 @@ fn representation_classes_select_disjoint_blankets() {
     );
 }
 
+/// A use that requires both disjoint blankets' classes must be reported as a
+/// representation contradiction, never reach the selector as two matches.
+#[test]
+fn contradictory_inferred_classes_do_not_select_both_disjoint_blankets() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Storable, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        impl Keep ('a : Little) where
+            keep x = x
+        big : Big 'a => 'a -> 'a
+        big x = x
+        little : Little 'a => 'a -> 'a
+        little x = x
+        bad x = keep (big (little x))
+    "#
+    );
+}
+
 #[test]
 fn representation_classes_intersect_givens_and_expand_aliases() {
     assert_inference_snapshot!(
