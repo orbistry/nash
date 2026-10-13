@@ -1,5 +1,7 @@
 //! Port of Elm's `Type.Occurs`: does a variable occur in its own structure?
 
+use std::collections::BTreeMap;
+
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
 
 pub fn occurs(uf: &mut UnionFind<'_>, var: Variable) -> bool {
@@ -63,4 +65,53 @@ fn occurs_help(
             result
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum Visit {
+    Active,
+    Done,
+}
+
+/// Does a cycle occur in a type reachable from `roots`? This follows the
+/// edges of `occurs`, but visits each variable once, so a type that repeats a
+/// shared part stays linear. `occurs` keeps Elm's path-only check for the
+/// occurs check of a binding.
+pub fn reaches_cycle(uf: &mut UnionFind<'_>, roots: &[Variable]) -> bool {
+    let mut visits = BTreeMap::new();
+    roots
+        .iter()
+        .any(|root| reaches_cycle_help(uf, &mut visits, *root))
+}
+
+fn reaches_cycle_help(
+    uf: &mut UnionFind<'_>,
+    visits: &mut BTreeMap<Variable, Visit>,
+    var: Variable,
+) -> bool {
+    let var = uf.find(var);
+    match visits.get(&var) {
+        Some(Visit::Active) => return true,
+        Some(Visit::Done) => return false,
+        None => {}
+    }
+    visits.insert(var, Visit::Active);
+    let children = match uf.get(var).content.clone() {
+        Content::FlexVar(_) | Content::RigidVar(_) | Content::Error => Vec::new(),
+        Content::Structure(FlatType::AppV1(head, args)) => [head].into_iter().chain(args).collect(),
+        Content::Structure(FlatType::App1(_, _, args)) => args,
+        Content::Structure(FlatType::Fun1(a, b)) => vec![a, b],
+        Content::Structure(FlatType::Record1(fields)) => fields.into_values().collect(),
+        Content::Structure(FlatType::Tuple1(a, b, rest)) => {
+            [a, b].into_iter().chain(rest).collect()
+        }
+        Content::Alias { args, .. } | Content::PartialAlias { args, .. } => {
+            args.into_iter().map(|(_, arg)| arg).collect()
+        }
+    };
+    let found = children
+        .into_iter()
+        .any(|child| reaches_cycle_help(uf, visits, child));
+    visits.insert(var, Visit::Done);
+    found
 }

@@ -209,8 +209,12 @@ pub enum ImplSelection<I, N> {
 }
 
 /// Select the impl whose heads match `arguments`. Every candidate is matched,
-/// so a second match always stops the compiler: canonicalization rejects
-/// overlapping impls, and two matches here mean that check has a bug.
+/// and a second match stops the compiler. Two impls can match one argument
+/// list only if they overlap on finite types, which canonicalization rejects;
+/// if the representation givens contradict each other, which canonicalization
+/// rejects in one context and the solver across nested contexts; or if an
+/// argument is an infinite type, which inference does not select for (the
+/// occurs check of its binding reports it). A second match is a compiler bug.
 pub fn select_impl<'h, 'a: 'h, T: Types<'a>, I>(
     types: &mut T,
     candidates: impl IntoIterator<Item = (&'h [Head<'a>], usize, I)>,

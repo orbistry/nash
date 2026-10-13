@@ -2622,6 +2622,73 @@ fn infinite_type() {
     );
 }
 
+/// Impls are disjoint only over finite types: the infinite type of `f`
+/// matches both heads. The occurs check of the binding must report it.
+#[test]
+fn infinite_argument_does_not_select_between_impls_disjoint_on_finite_types() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Same 'a where
+            same : 'a -> ()
+        impl Same ('a, 'a) where
+            same _ = ()
+        impl Same ('a, 'a -> 'b) where
+            same _ = ()
+        bad f =
+            let
+                g = ( f f, same ( f, f ) )
+            in
+            g
+    "#
+    );
+}
+
+/// Two arguments also reach the relational improvement probes.
+#[test]
+fn infinite_arguments_of_a_two_parameter_trait_wait_for_the_occurs_check() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Pair 'a 'b where
+            pair : 'a -> 'b -> ()
+        impl Pair 'a 'a where
+            pair _ _ = ()
+        impl Pair 'a (list 'a) where
+            pair _ _ = ()
+        same : 'a -> 'a -> 'a
+        same a _ = a
+        bad x =
+            let
+                g = ( same x [ x ], pair x x )
+            in
+            g
+    "#
+    );
+}
+
+/// One impl matches the infinite type at every depth, so selecting it would
+/// repeat its own context until the work limit.
+#[test]
+fn infinite_argument_with_one_matching_impl_reports_only_the_infinite_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Show2 'a where
+            show2 : 'a -> ()
+        impl Show2 'a => Show2 (list 'a) where
+            show2 _ = ()
+        same : 'a -> 'a -> 'a
+        same a _ = a
+        bad x =
+            let
+                g = ( same x [ x ], show2 x )
+            in
+            g
+    "#
+    );
+}
+
 #[test]
 fn string_literal_requires_an_impl_for_the_result_type() {
     assert_inference_error_snapshot!(

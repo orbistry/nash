@@ -2203,6 +2203,15 @@ impl<'a> Solver<'a, '_> {
                 self.predicates.solve(uf, id, solution);
                 continue;
             }
+            // Impls are disjoint only over finite types, and an impl that
+            // matches an infinite type matches it again at every depth. Elm
+            // reports an infinite type at the occurs check after its `CLet`
+            // (`Type/Solve.hs` `occurs`); the binding's check here does the
+            // same and poisons the type, which drops this wanted.
+            if occurs::reaches_cycle(uf, &args) {
+                self.wanted.push((wanted_rank, id));
+                continue;
+            }
             // A blanket impl can match a rigid argument without narrowing it;
             // its prerequisites are checked against the enclosing givens below.
             let givens: Vec<_> = self
