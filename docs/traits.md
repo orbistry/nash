@@ -188,9 +188,10 @@ retains the compared type for codegen.
 Builtin-list Eq has disjoint implementations by element representation:
 Big elements compare `listData` results through structural Big Eq; Little elements
 use elementwise Eq with short-circuiting. This is ordinary library code, not a
-compiler optimization. Generic callers with unknown element representation must
-request `Eq (list 'a)` directly; `Eq 'a` alone does not select one of the two
-representation-constrained impls. Known Big elements need no element Eq context;
+compiler optimization. A generic caller with unknown element representation can
+request `Eq 'a`: inference covers both representation-constrained impls (see
+`by_coverage` under Entailment) and code generation selects one for each use.
+Requesting `Eq (list 'a)` directly also works. Known Big elements need no element Eq context;
 known Little elements still require element Eq. Builtin pair elements are Little,
 so native map-shaped lists retain elementwise pair equality. Big `Map` equality
 is already covered by structural Big Eq.
@@ -201,7 +202,8 @@ no runtime wrapper. Its ordinary library Eq implementations are disjoint:
 Big/Big compares `mapData` results structurally; Little keys with any values and
 Big keys with Little values compare entries using the selected element Eq.
 The alias itself requires neither Big nor Eq. A generic caller whose key/value
-representations are unknown requests `Eq (map 'k 'v)` directly. Alias identity selects the map
+representations are unknown requests `Eq 'k` and `Eq 'v`, which coverage turns into the
+map impl of each use, or `Eq (map 'k 'v)` directly. Alias identity selects the map
 impl; raw pair lists still select list Eq. `unMapData` returns the alias, and Map
 operations retain it in native map results. `Map.toList` explicitly returns the
 underlying list. Entry order and duplicate entries remain significant.
@@ -259,6 +261,26 @@ when it needs one that is missing.
 - `by_instance`: every argument of `P` has a head constructor, an impl with
   `P`'s key exists, and `Given ⊢ Q` for every `Q` in the impl's context
   instantiated at `P`'s arguments.
+- `by_coverage` (inference only: wanted predicates of function and method
+  bodies): ordinary selection cannot decide `P = T t1 .. tn` because a rigid
+  variable sits at an impl-head position that tests a representation class
+  (a *subject* of `P`). The limit comes first: the given closure must hold a
+  predicate of `T` with each subject itself as an argument (for one parameter,
+  exactly `T 'x`), so a signature never hides the trait that selects. Then
+  every *cell*, one representation per subject (Big, Const or Term, as the
+  representation and formation givens admit), must select an impl, and the
+  context of each selected impl must hold in its cell. The evidence is
+  `Specialize P`; code generation selects the impl for each use. One work
+  budget (16,384 steps) pays for finding the subjects, the cells and every
+  selection; more is an impl-resolution-limit error. Rigid variables come only
+  from annotations: an unannotated definition keeps `T (list 'a)` in its
+  inferred context.
+
+Superclass proofs (declaration checking) use `by_given` and `by_instance`
+only, never `by_coverage`. An impl names a split requirement in its context,
+as Base does: `impl ( Ord 'a, Eq (list 'a) ) => Ord (list 'a)` is accepted,
+`impl Ord 'a => Ord (list 'a)` gets a missing-superclass error. This is what
+Haskell does when instance selection depends on a rigid variable.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
 rule only for package `nash/base`, module `Lift`, trait `Lift`. Both arguments
@@ -286,6 +308,7 @@ Evidence = Impl  { impl_: ImplRef, type_args: [Type], args: [Evidence] } -- by_i
          | ReflexiveLift { typ: Type }                -- compiler rule for equal Big types
          | Given { binder: NodeId, index: u16 }         -- i-th predicate of the scheme of definition `binder`
          | Super { of: Evidence, index: u16 }           -- i-th superclass of an evidence's trait
+         | Specialize { trait_: TraitName, args: [Type] } -- by_coverage; codegen selects for each use
 ```
 
 `NodeId` is the identity of an AST node (its arena address), the key

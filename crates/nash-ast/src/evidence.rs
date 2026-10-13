@@ -173,6 +173,16 @@ impl PartialEq for Evidence<'_> {
             (Self::Super { of: ao, index: ai }, Self::Super { of: bo, index: bi }) => {
                 ao == bo && ai == bi
             }
+            (
+                Self::Specialize {
+                    trait_: a,
+                    args: aa,
+                },
+                Self::Specialize {
+                    trait_: b,
+                    args: ba,
+                },
+            ) => a == b && same_types(aa, ba),
             _ => false,
         }
     }
@@ -207,6 +217,10 @@ impl Hash for Evidence<'_> {
             Self::Super { of, index } => {
                 of.hash(state);
                 index.hash(state);
+            }
+            Self::Specialize { trait_, args } => {
+                trait_.hash(state);
+                hash_types(args, state);
             }
         }
     }

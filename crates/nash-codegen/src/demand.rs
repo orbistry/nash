@@ -1,11 +1,20 @@
-//! Fixed-point analysis of the type variables inspected by generated code.
+//! Fixed-point analysis of the type variables whose concrete types belong in a
+//! specialization key.
 use nash_ast::{primitives, *};
 use nash_region::Located;
 use nash_solve::SolvedTypes;
 use std::collections::{BTreeSet, HashMap};
 
-pub type Demands<'a> = HashMap<NodeId, BTreeSet<&'a str>>;
+pub(crate) type Names<'a> = HashMap<NodeId, BTreeSet<&'a str>>;
 type Scope<'a> = HashMap<&'a str, Option<NodeId>>;
+
+/// Type variables of each definition, in its solved scheme's names.
+pub struct Demands<'a> {
+    /// Variables whose runtime layout generated code inspects.
+    pub layouts: Names<'a>,
+    /// Variables whose types select an impl by representation coverage.
+    pub coverage: Names<'a>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -52,7 +61,8 @@ struct MethodCall<'a> {
     args: &'a [&'a Located<Type<'a>>],
 }
 struct Analysis<'a> {
-    demands: Demands<'a>,
+    demands: Names<'a>,
+    coverage: Names<'a>,
     owners: HashMap<NodeId, Owner<'a>>,
     top: HashMap<QualifiedName<'a>, NodeId>,
     methods: HashMap<(QualifiedName<'a>, &'a str), Vec<NodeId>>,
@@ -65,6 +75,7 @@ struct Analysis<'a> {
 pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
     let mut a = Analysis {
         demands: HashMap::new(),
+        coverage: HashMap::new(),
         owners: HashMap::new(),
         top: HashMap::new(),
         methods: HashMap::new(),
@@ -144,6 +155,7 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
     }
     loop {
         let previous = a.demands.clone();
+        let previous_coverage = a.coverage.clone();
         for call in &a.calls {
             let Some(owner) = a.owners.get(&call.target) else {
                 continue;
@@ -155,18 +167,32 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
                     variables(typ, a.demands.entry(call.caller).or_default());
                 }
             }
+            // A coverage type anywhere in an argument selects the callee's impl.
+            for &name in &previous_coverage[&call.target] {
+                if let Some(index) = owner.free.iter().position(|v| *v == name)
+                    && let Some(typ) = call.args.get(index)
+                {
+                    all_variables(typ, a.coverage.entry(call.caller).or_default());
+                }
+            }
         }
         for call in &a.method_calls {
             // A Given can select any applicable implementation at specialization.
             // Demand arguments only when a real method body inspects a layout.
-            if a.methods
-                .get(&(call.trait_, call.method))
-                .into_iter()
-                .flatten()
-                .any(|id| !previous[id].is_empty())
-            {
+            let bodies = || {
+                a.methods
+                    .get(&(call.trait_, call.method))
+                    .into_iter()
+                    .flatten()
+            };
+            if bodies().any(|id| !previous[id].is_empty()) {
                 for typ in call.args {
                     variables(typ, a.demands.entry(call.caller).or_default());
+                }
+            }
+            if bodies().any(|id| !previous_coverage[id].is_empty()) {
+                for typ in call.args {
+                    all_variables(typ, a.coverage.entry(call.caller).or_default());
                 }
             }
         }
@@ -177,10 +203,18 @@ pub fn analyze<'a>(modules: &[(&Module<'a>, &SolvedTypes<'a>)]) -> Demands<'a> {
                         a.demands.entry(parent).or_default().insert(name);
                     }
                 }
+                for &name in &previous_coverage[id] {
+                    if !owner.free.contains(&name) {
+                        a.coverage.entry(parent).or_default().insert(name);
+                    }
+                }
             }
         }
-        if previous == a.demands {
-            return a.demands;
+        if previous == a.demands && previous_coverage == a.coverage {
+            return Demands {
+                layouts: a.demands,
+                coverage: a.coverage,
+            };
         }
     }
 }
@@ -251,6 +285,70 @@ fn variables<'a>(typ: &'a Located<Type<'a>>, out: &mut BTreeSet<&'a str>) {
         _ => {}
     }
 }
+/// Every type variable of a type, in any position.
+fn all_variables<'a>(typ: &'a Located<Type<'a>>, out: &mut BTreeSet<&'a str>) {
+    match &typ.value {
+        Type::Var(name) => {
+            out.insert(name);
+        }
+        Type::Named { args, .. } => {
+            for t in *args {
+                all_variables(t, out);
+            }
+        }
+        Type::App { head, args } => {
+            all_variables(head, out);
+            for t in *args {
+                all_variables(t, out);
+            }
+        }
+        Type::Lambda { from, to } => {
+            all_variables(from, out);
+            all_variables(to, out);
+        }
+        Type::Tuple {
+            first,
+            second,
+            rest,
+        } => {
+            all_variables(first, out);
+            all_variables(second, out);
+            for t in *rest {
+                all_variables(t, out);
+            }
+        }
+        Type::Record { fields } => {
+            for field in *fields {
+                all_variables(field.typ, out);
+            }
+        }
+        Type::Alias { arguments, .. } => {
+            for arg in *arguments {
+                all_variables(arg.typ, out);
+            }
+        }
+    }
+}
+/// The variables of every coverage selection in this evidence.
+fn specialized_variables<'a>(evidence: &Evidence<'a>, out: &mut BTreeSet<&'a str>) {
+    match evidence {
+        Evidence::Specialize { args, .. } => {
+            for arg in *args {
+                all_variables(arg, out);
+            }
+        }
+        Evidence::Impl { args, .. } => {
+            for arg in *args {
+                specialized_variables(arg, out);
+            }
+        }
+        Evidence::Super { of, .. } => specialized_variables(of, out),
+        Evidence::Repr { .. }
+        | Evidence::ReflexiveLift { .. }
+        | Evidence::StructuralEq { .. }
+        | Evidence::Given { .. } => {}
+    }
+}
 fn bind<'a>(p: &'a Located<Pattern<'a>>, target: Option<NodeId>, env: &mut Scope<'a>) {
     match &p.value {
         Pattern::Var(name) => {
@@ -310,6 +408,7 @@ impl<'a> Analysis<'a> {
             },
         );
         self.demands.entry(id).or_default();
+        self.coverage.entry(id).or_default();
     }
     fn def(
         &mut self,
@@ -359,11 +458,21 @@ impl<'a> Analysis<'a> {
         }
     }
     fn call(&mut self, target: NodeId, node: NodeId, caller: NodeId, solved: &SolvedTypes<'a>) {
+        self.specialized(node, caller, solved);
         self.calls.push(Call {
             caller,
             target,
             args: solved.instances.get(&node).map_or(&[], |i| i.type_args),
         });
+    }
+    /// The caller's key holds the types that coverage selects with.
+    fn specialized(&mut self, node: NodeId, caller: NodeId, solved: &SolvedTypes<'a>) {
+        if let Some(instance) = solved.instances.get(&node) {
+            let names = self.coverage.entry(caller).or_default();
+            for evidence in instance.evidence {
+                specialized_variables(evidence, names);
+            }
+        }
     }
     fn method(
         &mut self,
@@ -373,6 +482,7 @@ impl<'a> Analysis<'a> {
         caller: NodeId,
         solved: &SolvedTypes<'a>,
     ) {
+        self.specialized(node, caller, solved);
         self.method_calls.push(MethodCall {
             caller,
             trait_,
@@ -652,7 +762,7 @@ mod graph_tests {
         instance(&b, &mut s, call, option);
         let d = def(&b, &mut s, "plain", &["a"], call);
         let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
+        assert!(analyze(&[(&m, &s)]).layouts[&NodeId::def(definition(d).0)].is_empty());
     }
     #[test]
     fn nil_demand_propagates_across_helpers_with_scoped_names() {
@@ -681,7 +791,7 @@ mod graph_tests {
         );
         let outer = def(&b, &mut s, "outer", &["opaque"], opaque);
         let m = module(&b, &[helper, caller, outer]);
-        let demands = analyze(&[(&m, &s)]);
+        let demands = analyze(&[(&m, &s)]).layouts;
         assert_eq!(
             demands[&NodeId::def(definition(helper).0)],
             BTreeSet::from(["element"])
@@ -707,7 +817,7 @@ mod graph_tests {
         );
         let outer = def(&b, &mut s, "outer", &["captured"], body);
         let m = module(&b, &[outer]);
-        let demands = analyze(&[(&m, &s)]);
+        let demands = analyze(&[(&m, &s)]).layouts;
         assert_eq!(
             demands[&NodeId::def(definition(outer).0)],
             BTreeSet::from(["captured"])
@@ -737,7 +847,7 @@ mod graph_tests {
         );
         let d = def(&b, &mut s, "plain", &["a"], call);
         let m = module(&b, &[d]);
-        assert!(analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)].is_empty());
+        assert!(analyze(&[(&m, &s)]).layouts[&NodeId::def(definition(d).0)].is_empty());
     }
 
     #[test]
@@ -762,7 +872,7 @@ mod graph_tests {
         }));
         m.impls = b.alloc_slice_copy(&[&*impl_]);
         assert_eq!(
-            analyze(&[(&m, &s)])[&NodeId::def(definition(d).0)],
+            analyze(&[(&m, &s)]).layouts[&NodeId::def(definition(d).0)],
             BTreeSet::from(["a"])
         );
     }

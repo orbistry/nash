@@ -133,6 +133,14 @@ impl ReprTrait {
             Self::Little => 6,
         })
     }
+    /// The representation trait that admits exactly `repr`.
+    pub const fn exactly(repr: Repr) -> Self {
+        match repr {
+            Repr::Big => Self::Big,
+            Repr::Const => Self::Const,
+            Repr::Term => Self::Term,
+        }
+    }
     pub const fn supers(self) -> &'static [Self] {
         match self {
             Self::Big => &[Self::Storable],

@@ -1,0 +1,20 @@
+---
+source: crates/nash-ast/src/head.rs
+description: "Coverage of a wanted predicate whose arguments are rigid variables. Big covers Big; Little covers Const and Term. One budget pays for subject discovery, the cells, and every selection."
+---
+Big and Little impls, given at 'a
+  'a Big selects big; 'a Const selects little; 'a Term selects little
+only a Big impl, given at 'a
+  no impl for the cell 'a Const
+Big and Little impls, no given
+  needs the trait at 'a
+only a Big impl, no given (the limit comes first)
+  needs the trait at 'a
+Big and Little impls, the argument can still change
+  not applicable
+pair impls, given at 'a and 'b
+  'a Big, 'b Big selects first big; 'a Big, 'b Const selects first big; 'a Big, 'b Term selects first big; 'a Const, 'b Big selects first little, second big; 'a Const, 'b Const selects both little; 'a Const, 'b Term selects both little; 'a Term, 'b Big selects first little, second big; 'a Term, 'b Const selects both little; 'a Term, 'b Term selects both little
+pair impls, given at 'a only
+  needs the trait at 'b
+pair impls, one step less than the whole search
+  work limit

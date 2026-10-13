@@ -1,0 +1,17 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Kind 'a where\n    kind : 'a -> 'a\nimpl Kind (list ('a : Big)) where\n    kind x = x\nimpl Kind 'a => Kind (list ('a : Little)) where\n    kind x = x\ntrait Kind 'a => Child 'a where\n    child : 'a -> 'a\nimpl Kind (list 'a) => Child (list 'a) where\n    child x = x\n\n\nmodule Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Kind 'a where\n    kind : 'a -> 'a\nimpl Kind (list ('a : Big)) where\n    kind x = x\nimpl Kind 'a => Kind (list ('a : Little)) where\n    kind x = x\ntrait Kind 'a => Child 'a where\n    child : 'a -> 'a\nimpl Kind 'a => Child (list 'a) where\n    child x = x\n"
+---
+Case 1: accepted
+nash::names::missing_superclass
+
+  × The `Main.Child` impl for (Primitive.list ('a0 : Storable)) does not establish
+  │ superclass 1:
+    ╭─[src/Main.nash:11:1]
+ 10 │         child : 'a -> 'a
+ 11 │ ╭─▶ impl Kind 'a => Child (list 'a) where
+ 12 │ ╰─▶     child x = x
+    ╰────
+  help: It must also satisfy `Main.Kind (Primitive.list 'a)`. I cannot find an impl or
+        context constraint that provides it. Add the required impl or include the
+        necessary constraint in this impl's context.

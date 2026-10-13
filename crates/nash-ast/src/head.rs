@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 use crate::Type;
 use crate::primitives::{Repr, ReprSet};
-use crate::{Head, HeadCon};
+use crate::{Head, HeadCon, QualifiedName};
 use nash_region::Located;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -248,6 +248,139 @@ pub fn select_impl<'h, 'a: 'h, T: Types<'a>, I>(
         Some(selected) => selected,
         None => ImplSelection::Missing,
     })
+}
+
+/// What a representation-tested head position learns about its argument.
+pub enum CoverageSubject<S> {
+    /// The class test is decided; ordinary selection handles it.
+    Decided,
+    /// The argument can still change; coverage cannot apply yet.
+    Deferred,
+    /// A rigid argument whose class is open within `admitted`.
+    Rigid { subject: S, admitted: ReprSet },
+}
+
+/// Type and given view for the finite search over representation cells.
+pub trait CoverageTypes<'a>: Types<'a> {
+    type Subject: Copy + Ord;
+    fn coverage_subject(
+        &mut self,
+        node: Self::Node,
+        tested: ReprSet,
+    ) -> CoverageSubject<Self::Subject>;
+    /// True when a given holds `trait_` with this subject as a direct argument.
+    fn given_at(&mut self, trait_: QualifiedName<'a>, subject: Self::Subject) -> bool;
+    /// Class tests of later selections see these representations.
+    fn set_coverage_assumptions(&mut self, assumptions: &[(Self::Subject, Repr)]);
+}
+
+pub enum Coverage<S, I, N> {
+    /// No rigid subject decides the selection, or an argument can still change.
+    NotApplicable,
+    /// No given holds the wanted trait at this subject.
+    Unstated(S),
+    /// This cell selects no impl.
+    Missing(Vec<(S, Repr)>),
+    Complete(Vec<CoveredImpl<S, I, N>>),
+}
+
+pub struct CoveredImpl<S, I, N> {
+    pub assumptions: Vec<(S, Repr)>,
+    pub info: I,
+    pub arguments: Vec<N>,
+}
+
+/// Select an impl for every admitted representation cell of the rigid
+/// variables at representation-tested head positions. Only such positions
+/// create dimensions. The limit comes first: every subject needs a given of
+/// `trait_` at it, so a signature never hides the trait that selects. One
+/// budget pays for the discovery, the cells and every selection.
+pub fn cover_impls<'h, 'a: 'h, T: CoverageTypes<'a>, I: Copy>(
+    types: &mut T,
+    trait_: QualifiedName<'a>,
+    candidates: &[(&'h [Head<'a>], usize, I)],
+    arguments: &[T::Node],
+    remaining: &mut usize,
+) -> Result<Coverage<T::Subject, I, T::Node>, Limit> {
+    let mut subjects = BTreeMap::new();
+    let mut deferred = false;
+    for (heads, _, _) in candidates {
+        let mut pending: Vec<_> = heads.iter().zip(arguments.iter().copied()).collect();
+        while let Some((head, argument)) = pending.pop() {
+            step(remaining)?;
+            match head {
+                Head::Var { repr, .. } if repr.is_all() => {}
+                Head::Var { repr, .. } => match types.coverage_subject(argument, *repr) {
+                    CoverageSubject::Decided => {}
+                    CoverageSubject::Deferred => deferred = true,
+                    CoverageSubject::Rigid { subject, admitted } => {
+                        subjects
+                            .entry(subject)
+                            .and_modify(|old: &mut ReprSet| *old = old.intersect(admitted))
+                            .or_insert(admitted);
+                    }
+                },
+                _ => match types.constructor(argument, head.con().expect("constructor pattern")) {
+                    Match::Yes(nodes) => {
+                        let patterns = children(head);
+                        if patterns.len() == nodes.len() {
+                            pending.extend(patterns.into_iter().zip(nodes));
+                        }
+                    }
+                    Match::Deferred => deferred = true,
+                    Match::No => {}
+                },
+            }
+        }
+    }
+    if deferred || subjects.is_empty() {
+        return Ok(Coverage::NotApplicable);
+    }
+    if let Some(subject) = subjects
+        .keys()
+        .copied()
+        .find(|subject| !types.given_at(trait_, *subject))
+    {
+        return Ok(Coverage::Unstated(subject));
+    }
+    let mut cells = vec![Vec::new()];
+    for (subject, admitted) in subjects {
+        let mut next = Vec::new();
+        for cell in cells {
+            for repr in [Repr::Big, Repr::Const, Repr::Term] {
+                if admitted.contains(repr) {
+                    step(remaining)?;
+                    let mut cell: Vec<_> = cell.clone();
+                    cell.push((subject, repr));
+                    next.push(cell);
+                }
+            }
+        }
+        cells = next;
+    }
+    let mut covered = Vec::new();
+    for assumptions in cells {
+        types.set_coverage_assumptions(&assumptions);
+        let selected = select_impl(
+            types,
+            candidates.iter().copied(),
+            arguments,
+            remaining,
+            SelectPolicy::Defer,
+        );
+        types.set_coverage_assumptions(&[]);
+        match selected? {
+            ImplSelection::Selected { info, arguments } => covered.push(CoveredImpl {
+                assumptions,
+                info,
+                arguments,
+            }),
+            ImplSelection::Missing | ImplSelection::Deferred => {
+                return Ok(Coverage::Missing(assumptions));
+            }
+        }
+    }
+    Ok(Coverage::Complete(covered))
 }
 
 #[derive(Clone, Copy)]
@@ -526,5 +659,232 @@ mod select_tests {
     #[should_panic(expected = "impl coherence violated")]
     fn defer_stops_the_compiler_on_a_second_match() {
         let _ = select(&[Yes, Deferred, Yes], Defer, 100);
+    }
+}
+
+#[cfg(test)]
+mod coverage_tests {
+    use super::*;
+
+    /// Arguments are rigid subjects, or a pair of them for tuple heads. A
+    /// subject belongs to a class only through the current cell.
+    #[derive(Clone, Copy)]
+    enum Arg {
+        Subject(u8),
+        Pair(u8, u8),
+    }
+
+    struct Rigid {
+        given: Vec<u8>,
+        deferred: bool,
+        assumptions: Vec<(u8, Repr)>,
+    }
+
+    impl<'a> Types<'a> for Rigid {
+        type Node = Arg;
+        fn in_class(&mut self, node: Arg, class: ReprSet) -> Match<()> {
+            let Arg::Subject(subject) = node else {
+                return Match::No;
+            };
+            match self.assumptions.iter().find(|(other, _)| *other == subject) {
+                Some((_, repr)) if class.contains(*repr) => Match::Yes(()),
+                _ => Match::No,
+            }
+        }
+        fn constructor(&mut self, node: Arg, expected: HeadCon<'a>) -> Match<Vec<Arg>> {
+            match (node, expected) {
+                (Arg::Pair(a, b), HeadCon::Tuple(2)) => {
+                    Match::Yes(vec![Arg::Subject(a), Arg::Subject(b)])
+                }
+                _ => Match::No,
+            }
+        }
+        fn equal(&mut self, _: Arg, _: Arg, _: &mut usize) -> Result<Match<()>, Limit> {
+            unreachable!("no head repeats a variable")
+        }
+    }
+
+    impl<'a> CoverageTypes<'a> for Rigid {
+        type Subject = u8;
+        fn coverage_subject(&mut self, node: Arg, _: ReprSet) -> CoverageSubject<u8> {
+            match node {
+                _ if self.deferred => CoverageSubject::Deferred,
+                Arg::Subject(subject) => CoverageSubject::Rigid {
+                    subject,
+                    admitted: ReprSet::ALL,
+                },
+                Arg::Pair(..) => unreachable!("tuple heads are constructors"),
+            }
+        }
+        fn given_at(&mut self, _: QualifiedName<'a>, subject: u8) -> bool {
+            self.given.contains(&subject)
+        }
+        fn set_coverage_assumptions(&mut self, assumptions: &[(u8, Repr)]) {
+            self.assumptions = assumptions.to_vec();
+        }
+    }
+
+    const BIG: ReprSet = ReprSet::only(Repr::Big);
+    const LITTLE: ReprSet = crate::primitives::ReprTrait::Little.admits();
+    const fn var(index: u16, repr: ReprSet) -> Head<'static> {
+        Head::Var { index, repr }
+    }
+    const BIG_HEAD: [Head<'static>; 1] = [var(0, BIG)];
+    const LITTLE_HEAD: [Head<'static>; 1] = [var(0, LITTLE)];
+    const PAIR_BIG: [Head<'static>; 1] = [Head::Tuple(&[var(0, BIG), var(1, ReprSet::ALL)])];
+    const PAIR_LITTLE_BIG: [Head<'static>; 1] = [Head::Tuple(&[var(0, LITTLE), var(1, BIG)])];
+    const PAIR_LITTLE_LITTLE: [Head<'static>; 1] = [Head::Tuple(&[var(0, LITTLE), var(1, LITTLE)])];
+
+    fn search(
+        impls: &[(&'static str, &[Head<'static>])],
+        argument: Arg,
+        given: &[u8],
+        deferred: bool,
+        budget: usize,
+    ) -> (Result<Coverage<u8, &'static str, Arg>, Limit>, usize) {
+        let trait_ = QualifiedName {
+            home: crate::ModuleName {
+                package: None,
+                name: "Main",
+            },
+            name: "Probe",
+        };
+        let candidates: Vec<_> = impls
+            .iter()
+            .map(|(name, heads)| {
+                let variables = match heads {
+                    [Head::Tuple(_)] => 2,
+                    _ => 1,
+                };
+                (*heads, variables, *name)
+            })
+            .collect();
+        let mut types = Rigid {
+            given: given.to_vec(),
+            deferred,
+            assumptions: Vec::new(),
+        };
+        let mut remaining = budget;
+        let result = cover_impls(&mut types, trait_, &candidates, &[argument], &mut remaining);
+        (result, budget - remaining)
+    }
+
+    fn cell(assumptions: &[(u8, Repr)]) -> String {
+        assumptions
+            .iter()
+            .map(|(subject, repr)| format!("'{} {repr:?}", char::from(b'a' + subject)))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    fn render(result: Result<Coverage<u8, &'static str, Arg>, Limit>) -> String {
+        match result {
+            Ok(Coverage::NotApplicable) => "not applicable".to_owned(),
+            Ok(Coverage::Unstated(subject)) => {
+                format!("needs the trait at '{}", char::from(b'a' + subject))
+            }
+            Ok(Coverage::Missing(assumptions)) => {
+                format!("no impl for the cell {}", cell(&assumptions))
+            }
+            Ok(Coverage::Complete(covered)) => covered
+                .iter()
+                .map(|covered| format!("{} selects {}", cell(&covered.assumptions), covered.info))
+                .collect::<Vec<_>>()
+                .join("; "),
+            Err(Limit) => "work limit".to_owned(),
+        }
+    }
+
+    #[test]
+    fn cover_impls_outcomes() {
+        let split: &[(&str, &[Head])] = &[("big", &BIG_HEAD), ("little", &LITTLE_HEAD)];
+        let only_big: &[(&str, &[Head])] = &[("big", &BIG_HEAD)];
+        let pairs: &[(&str, &[Head])] = &[
+            ("first big", &PAIR_BIG),
+            ("first little, second big", &PAIR_LITTLE_BIG),
+            ("both little", &PAIR_LITTLE_LITTLE),
+        ];
+        let element = Arg::Subject(0);
+        let both = Arg::Pair(0, 1);
+        let (_, pairs_cost) = search(pairs, both, &[0, 1], false, WORK_LIMIT);
+        let scenarios = [
+            (
+                "Big and Little impls, given at 'a",
+                split,
+                element,
+                &[0][..],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "only a Big impl, given at 'a",
+                only_big,
+                element,
+                &[0],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "Big and Little impls, no given",
+                split,
+                element,
+                &[],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "only a Big impl, no given (the limit comes first)",
+                only_big,
+                element,
+                &[],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "Big and Little impls, the argument can still change",
+                split,
+                element,
+                &[0],
+                true,
+                WORK_LIMIT,
+            ),
+            (
+                "pair impls, given at 'a and 'b",
+                pairs,
+                both,
+                &[0, 1],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "pair impls, given at 'a only",
+                pairs,
+                both,
+                &[0],
+                false,
+                WORK_LIMIT,
+            ),
+            (
+                "pair impls, one step less than the whole search",
+                pairs,
+                both,
+                &[0, 1],
+                false,
+                pairs_cost - 1,
+            ),
+        ];
+        let mut output = String::new();
+        for (name, impls, argument, given, deferred, budget) in scenarios {
+            let (result, _) = search(impls, argument, given, deferred, budget);
+            output.push_str(&format!("{name}\n  {}\n", render(result)));
+        }
+        insta::with_settings!({
+            description => "Coverage of a wanted predicate whose arguments are rigid variables. \
+                Big covers Big; Little covers Const and Term. One budget pays for subject \
+                discovery, the cells, and every selection.",
+            omit_expression => true,
+        }, {
+            insta::assert_snapshot!(output);
+        });
     }
 }

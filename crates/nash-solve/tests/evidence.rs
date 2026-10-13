@@ -55,7 +55,7 @@ fn dictionaries<'a>(
                 }),
                 Evidence::StructuralEq { typ } => Some(Evidence::StructuralEq { typ }),
                 Evidence::ReflexiveLift { typ } => Some(Evidence::ReflexiveLift { typ }),
-                Evidence::Given { .. } | Evidence::Super { .. } => {
+                Evidence::Given { .. } | Evidence::Super { .. } | Evidence::Specialize { .. } => {
                     panic!("ground evidence must be closed")
                 }
             })

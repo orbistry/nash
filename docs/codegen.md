@@ -201,6 +201,16 @@ The worklist identifies a specialization by:
 3. The runtime layout descriptors demanded by that body and its callees.
    Complete source type arguments remain available as substitution metadata,
    but do not all participate in key equality or hashing.
+4. The types of the variables that representation coverage selects with
+   (`Evidence::Specialize`, see [traits.md](traits.md) Entailment). The impl
+   is selected for each use from these types, so two uses with the same
+   given evidence, for example one `impl Kind ('a : Storable)` for a Big and a
+   Const element, still get separate copies when `Kind (box 'a)` selects
+   different impls for them.
+
+Coverage demand propagates like layout demand: a caller that passes such a
+variable to a callee with a coverage demand holds every type variable of that
+argument in its own key.
 
 Layout demand propagates through calls to a fixed point. It includes native
 constant construction and representation-dependent builtins. In particular an

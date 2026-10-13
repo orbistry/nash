@@ -1142,3 +1142,22 @@ fn classed_superclass_selection_normalizes_alias_application_givens() {
         insta::assert_debug_snapshot!(result.module.impls);
     });
 }
+
+/// A superclass proof never uses representation coverage (owner decision N3):
+/// an impl names the split requirement in its context. Only the element
+/// requirement is not enough, although inference would cover it in a body.
+#[test]
+fn superclass_proof_needs_the_split_requirement_named() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for context in ["Kind (list 'a)", "Kind 'a"] {
+        let source = format!(
+            "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Kind 'a where\n    kind : 'a -> 'a\nimpl Kind (list ('a : Big)) where\n    kind x = x\nimpl Kind 'a => Kind (list ('a : Little)) where\n    kind x = x\ntrait Kind 'a => Child 'a where\n    child : 'a -> 'a\nimpl {context} => Child (list 'a) where\n    child x = x\n"
+        );
+        results.push(canonicalize(&bump, snapshot_inputs.record(&source)).map(|_| ()));
+    }
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
+    });
+}
