@@ -1,0 +1,71 @@
+module Main exposing (..)
+
+trait Kind 'a where
+    kind : 'a -> string
+
+impl Kind ('a : Storable) where
+    kind _ = "storable"
+
+type box 'a = Box 'a
+
+impl Kind (box ('a : Big)) where
+    kind _ = "big box"
+
+impl Kind 'a => Kind (box ('a : Little)) where
+    kind _ = "little box"
+
+trait Kind 'a => Child 'a where
+    child : 'a -> string
+
+impl Kind (box 'a) => Child (box 'a) where
+    child x = kind x
+
+viaBox : Kind 'a => 'a -> string
+viaBox x = kind (Box x)
+
+fromSuper : Child 't => 't -> string
+fromSuper x = kind x
+
+viaElement : Kind 'a => 'a -> string
+viaElement x = fromSuper (Box x)
+
+viaCaller : Kind 'a => 'a -> string
+viaCaller x = viaBox x
+
+same : Eq 'a => list 'a -> list 'a -> bool
+same xs ys = xs == ys
+
+bigValue : Int
+bigValue = 42
+littleValue : int
+littleValue = 42
+
+tests
+    test "a split impl is selected for each use, big element first" = do
+        assert (viaBox bigValue == "big box")
+        assert (viaBox littleValue == "little box")
+
+    test "a split impl is selected for each use, little element first" = do
+        assert (viaBox littleValue == "little box")
+        assert (viaBox bigValue == "big box")
+
+    test "a superclass of a delayed context, big element first" = do
+        assert (viaElement bigValue == "big box")
+        assert (viaElement littleValue == "little box")
+
+    test "a superclass of a delayed context, little element first" = do
+        assert (viaElement littleValue == "little box")
+        assert (viaElement bigValue == "big box")
+
+    test "a generic caller passes the selecting type on, big element first" = do
+        assert (viaCaller bigValue == "big box")
+        assert (viaCaller littleValue == "little box")
+
+    test "a generic caller passes the selecting type on, little element first" = do
+        assert (viaCaller littleValue == "little box")
+        assert (viaCaller bigValue == "big box")
+
+    test "list equality under an element constraint" = do
+        assert (same [bigValue] [bigValue])
+        assert (same [littleValue] [littleValue])
+        assert (not (same [littleValue] [littleValue, littleValue]))

@@ -1,0 +1,16 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Probe 'a where\n    probe : 'a -> ()\nimpl Probe (list ('a : Big)) where\n    probe _ = ()\nimpl Probe 'a => Probe (list ('a : Little)) where\n    probe _ = ()\ncheck : list 'a -> ()\ncheck xs = probe xs\n"
+info: diagnostic
+---
+nash::type::missing_constraint
+
+  × `probe` requires undeclared constraint `Probe 'a`.
+    ╭─[Main.nash:10:12]
+  9 │ check : list 'a -> ()
+ 10 │ check xs = probe xs
+    · ──┬──      ──┬──
+    ·   │          ╰── constraint required here
+    ·   ╰── annotation for `check`
+    ╰────
+  help: Add `Probe 'a` to the annotation for `check`.

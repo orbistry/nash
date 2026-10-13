@@ -5534,6 +5534,201 @@ fn representation_class_requires_a_given_for_rigid_types() {
     );
 }
 
+// REPRESENTATION COVERAGE
+
+/// `Probe (list 'a)` has one impl for each representation class of `'a`.
+/// With `Probe 'a` given, every class of the rigid `'a` selects an impl.
+#[test]
+fn coverage_selects_split_impls_for_a_rigid_element() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+/// The limit is checked first: a signature never hides the trait at an
+/// element that selects the impl.
+#[test]
+fn coverage_requires_the_trait_at_the_element() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+#[test]
+fn coverage_names_the_element_without_a_given() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (map ('k : Big) ('v : Big)) where
+            probe _ = ()
+        impl ( Probe 'k, Probe 'v ) => Probe (map ('k : Little) 'v) where
+            probe _ = ()
+        impl Probe 'v => Probe (map ('k : Big) ('v : Little)) where
+            probe _ = ()
+        check : Probe 'k => map 'k 'v -> ()
+        check m = probe m
+    "#
+    );
+}
+
+/// The Big impl needs `Wrap 'a`, which only the Big blanket provides: the
+/// branch context is proved under the representation of its cell.
+#[test]
+fn coverage_proves_a_branch_context_under_its_representation() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Wrap 'a where
+            wrap : 'a -> ()
+        impl Wrap ('a : Big) where
+            wrap _ = ()
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Wrap 'a => Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+#[test]
+fn coverage_reports_a_missing_branch_context() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Label 'a where
+            label : 'a -> ()
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl ( Probe 'a, Label 'a ) => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+/// No impl covers a Term element, so coverage cannot replace selection.
+#[test]
+fn coverage_reports_the_uncovered_representation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const)
+        type box 'a = Box 'a
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (box ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (box ('a : Const)) where
+            probe _ = ()
+        check : Probe 'a => box 'a -> ()
+        check x = probe x
+    "#
+    );
+}
+
+/// Six subjects give 729 cells, more than one work budget can select.
+#[test]
+fn coverage_search_stops_at_the_work_limit() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        type six 'a 'b 'c 'd 'e 'f = Six 'a 'b 'c 'd 'e 'f
+        trait Kind 'a where
+            kind : 'a -> ()
+        impl Kind (six ('a : Big) 'b 'c 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Big) 'c 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Big) 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Big) 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Big) 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Big)) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Little)) where
+            kind _ = ()
+        check : ( Kind 'a, Kind 'b, Kind 'c, Kind 'd, Kind 'e, Kind 'f ) => six 'a 'b 'c 'd 'e 'f -> ()
+        check x = kind x
+    "#
+    );
+}
+
+/// Coverage applies to rigid variables only: an unannotated definition keeps
+/// the constraint on the container in its inferred context.
+#[test]
+fn coverage_keeps_the_inferred_context_of_an_unannotated_definition() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check x = probe [ x ]
+    "#
+    );
+}
+
+/// A covered recursive call wraps the caller's own given in an impl at each
+/// level, so code generation would need one copy for every depth.
+#[test]
+fn coverage_counts_as_growing_evidence() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little, Storable)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        nest : ( Probe 'a, Storable 'a ) => 'a -> ()
+        nest x = nest [ x ]
+    "#
+    );
+}
+
 #[test]
 fn relational_constraints_infer_hidden_components() {
     assert_inference_snapshot!(

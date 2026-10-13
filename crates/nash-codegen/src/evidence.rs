@@ -112,7 +112,7 @@ pub fn executable_identity<'a>(
                 }
                 ExecutableEvidence::Impl(*impl_, children)
             }
-            Evidence::Given { .. } | Evidence::Super { .. } => {
+            Evidence::Given { .. } | Evidence::Super { .. } | Evidence::Specialize { .. } => {
                 return Err(Error::UnresolvedEvidence);
             }
         })
@@ -210,6 +210,29 @@ impl<'a> Grounder<'a, '_> {
                 }
                 let predicate = self.super_predicate(&of, *index, depth + 1)?;
                 self.validate_predicate(predicate)?;
+                let resolved =
+                    nash_solve::evidence::resolve(self.arena.as_bump(), self.tables, &predicate)
+                        .map_err(|error| {
+                            if error.reason == nash_solve::evidence::Failure::Limit {
+                                Error::Limit
+                            } else {
+                                Error::Resolution(error.reason)
+                            }
+                        })?
+                        .ok_or(Error::NoEvidence)?;
+                return self.one(&resolved, &Substitution::new(), &HashMap::new(), depth + 1);
+            }
+            Evidence::Specialize { trait_, args } => {
+                // Method B: the specialization key holds these types, so each
+                // use selects its impl here, with the types substituted.
+                let types = args
+                    .iter()
+                    .map(|typ| self.typ(typ, subst))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let predicate = Pred::Trait {
+                    trait_: *trait_,
+                    args: self.arena.alloc_slice_copy(&types),
+                };
                 let resolved =
                     nash_solve::evidence::resolve(self.arena.as_bump(), self.tables, &predicate)
                         .map_err(|error| {
@@ -388,7 +411,10 @@ impl<'a> Grounder<'a, '_> {
             }
             // `one` has resolved givens/projections and handled representation
             // superclasses directly before calling this private helper.
-            Evidence::Repr { .. } | Evidence::Given { .. } | Evidence::Super { .. } => {
+            Evidence::Repr { .. }
+            | Evidence::Given { .. }
+            | Evidence::Super { .. }
+            | Evidence::Specialize { .. } => {
                 unreachable!("superclass predicate requires resolved non-representation evidence")
             }
         };

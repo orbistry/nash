@@ -192,7 +192,52 @@ struct ClassedTypes<'u, 'a> {
     tables: &'u Tables<'a>,
     givens: &'u [crate::preds::Body<'a>],
     allocated: &'u mut Vec<Variable>,
+    /// The representation cell that coverage is selecting for.
+    assumptions: Vec<(Variable, nash_ast::primitives::Repr)>,
 }
+
+impl<'u, 'a> ClassedTypes<'u, 'a> {
+    fn new(
+        uf: &'u mut UnionFind<'a>,
+        tables: &'u Tables<'a>,
+        givens: &'u [crate::preds::Body<'a>],
+        allocated: &'u mut Vec<Variable>,
+    ) -> Self {
+        ClassedTypes {
+            types: InferenceTypes(uf),
+            tables,
+            givens,
+            allocated,
+            assumptions: Vec::new(),
+        }
+    }
+
+    /// The representations that the representation givens and the current
+    /// coverage cell admit for a normalized subject.
+    fn admitted(&mut self, subject: Variable) -> nash_ast::primitives::ReprSet {
+        use nash_ast::primitives::{ReprSet, ReprTrait};
+        let uf = &mut *self.types.0;
+        let mut proven = ReprSet::ALL;
+        for given in self.givens {
+            if let crate::preds::Body::Trait { trait_, args, .. } = given
+                && let Some(required) = ReprTrait::of(*trait_)
+            {
+                let arg =
+                    crate::representation::subject(uf, &self.tables.kinds, args[0], self.allocated);
+                if crate::preds::same_args(uf, &[arg], &[subject]) {
+                    proven = proven.intersect(required.admits());
+                }
+            }
+        }
+        for (other, repr) in &self.assumptions {
+            if crate::preds::same_args(uf, &[*other], &[subject]) {
+                proven = proven.intersect(ReprSet::only(*repr));
+            }
+        }
+        proven
+    }
+}
+
 impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
     type Node = Variable;
     fn constructor(
@@ -215,10 +260,7 @@ impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
         node: Variable,
         class: nash_ast::primitives::ReprSet,
     ) -> nash_ast::head::Match<()> {
-        use nash_ast::{
-            head::Match,
-            primitives::{ReprSet, ReprTrait},
-        };
+        use nash_ast::head::Match;
         let uf = &mut *self.types.0;
         let subject = crate::representation::subject(uf, &self.tables.kinds, node, self.allocated);
         if let Some(actual) =
@@ -230,22 +272,11 @@ impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
                 Match::No
             };
         }
-        let mut proven = ReprSet::ALL;
-        for given in self.givens {
-            if let crate::preds::Body::Trait { trait_, args, .. } = given
-                && let Some(required) = ReprTrait::of(*trait_)
-            {
-                let arg =
-                    crate::representation::subject(uf, &self.tables.kinds, args[0], self.allocated);
-                if crate::preds::same_args(uf, &[arg], &[subject]) {
-                    proven = proven.intersect(required.admits());
-                }
-            }
-        }
+        let proven = self.admitted(subject);
         // Canonicalization rejects a contradictory context, and the solver
         // rejects contradictory nested contexts on entry and poisons their
-        // subject. An empty set would prove every class and select every
-        // disjoint impl.
+        // subject. A coverage cell only takes an admitted representation. An
+        // empty set would prove every class and select every disjoint impl.
         assert!(
             !proven.is_empty(),
             "contradictory representation givens reached impl selection"
@@ -260,6 +291,48 @@ impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
     }
 }
 
+impl<'a> nash_ast::head::CoverageTypes<'a> for ClassedTypes<'_, 'a> {
+    type Subject = Variable;
+    fn coverage_subject(
+        &mut self,
+        node: Variable,
+        tested: nash_ast::primitives::ReprSet,
+    ) -> nash_ast::head::CoverageSubject<Variable> {
+        use nash_ast::head::CoverageSubject;
+        let uf = &mut *self.types.0;
+        let subject = crate::representation::subject(uf, &self.tables.kinds, node, self.allocated);
+        if crate::representation::known(uf, &self.tables.kinds, subject, self.allocated).is_some() {
+            return CoverageSubject::Decided;
+        }
+        match self.types.view(subject).0 {
+            View::Rigid(root) => {
+                let admitted = self.admitted(subject);
+                let both = admitted.intersect(tested);
+                if both == admitted || both.is_empty() {
+                    CoverageSubject::Decided
+                } else {
+                    CoverageSubject::Rigid {
+                        subject: root,
+                        admitted,
+                    }
+                }
+            }
+            View::Flexible | View::Application | View::Error => CoverageSubject::Deferred,
+            _ => CoverageSubject::Decided,
+        }
+    }
+    fn given_at(&mut self, trait_: QualifiedName<'a>, subject: Variable) -> bool {
+        let uf = &mut *self.types.0;
+        self.givens.iter().any(|given| {
+            matches!(given, crate::preds::Body::Trait { trait_: name, args, .. }
+                if *name == trait_ && args.iter().any(|arg| uf.find(*arg) == subject))
+        })
+    }
+    fn set_coverage_assumptions(&mut self, assumptions: &[(Variable, nash_ast::primitives::Repr)]) {
+        self.assumptions = assumptions.to_vec();
+    }
+}
+
 pub(crate) fn in_class<'a>(
     tables: &Tables<'a>,
     uf: &mut UnionFind<'a>,
@@ -269,13 +342,7 @@ pub(crate) fn in_class<'a>(
     allocated: &mut Vec<Variable>,
 ) -> nash_ast::head::Match<()> {
     use nash_ast::head::Types;
-    ClassedTypes {
-        types: InferenceTypes(uf),
-        tables,
-        givens,
-        allocated,
-    }
-    .in_class(node, class)
+    ClassedTypes::new(uf, tables, givens, allocated).in_class(node, class)
 }
 
 pub(crate) fn select<'a>(
@@ -296,12 +363,7 @@ pub(crate) fn select<'a>(
             Some(_) => {}
         }
     }
-    let mut types = ClassedTypes {
-        types: InferenceTypes(uf),
-        tables,
-        givens,
-        allocated,
-    };
+    let mut types = ClassedTypes::new(uf, tables, givens, allocated);
     let unknown_outer = args.iter().any(|arg| {
         matches!(
             types.types.view(*arg).0,
@@ -330,6 +392,65 @@ pub(crate) fn select<'a>(
         },
         Ok(ImplSelection::Missing) if unknown_outer => Selection::Deferred,
         Ok(ImplSelection::Missing) => Selection::Missing,
+    }
+}
+
+pub(crate) enum Coverage<'a> {
+    NotApplicable,
+    Limit,
+    /// No given holds the wanted trait at this rigid subject.
+    Unstated(Variable),
+    /// A representation cell selects no impl.
+    Uncovered,
+    Complete(Vec<CoveredImpl<'a>>),
+}
+
+pub(crate) struct CoveredImpl<'a> {
+    pub info: &'a ImplInfo<'a>,
+    pub substitution: Vec<(&'a str, Variable)>,
+    pub assumptions: Vec<(Variable, nash_ast::primitives::Repr)>,
+}
+
+/// Select an impl for every admitted representation of the rigid variables
+/// that keep `select` from deciding (inference only). The cells are not
+/// committed to inference: each covered impl's context is proved under its
+/// cell by the caller, and code generation selects again for each use.
+pub(crate) fn coverage<'a>(
+    tables: &Tables<'a>,
+    uf: &mut UnionFind<'a>,
+    trait_: QualifiedName<'a>,
+    args: &[Variable],
+    givens: &[crate::preds::Body<'a>],
+    allocated: &mut Vec<Variable>,
+    remaining: &mut usize,
+) -> Coverage<'a> {
+    use nash_ast::head::Coverage as Cells;
+    let candidates: Vec<_> = tables
+        .impls_for(trait_)
+        .map(|(key, info)| (key.heads, info.variables.len(), *info))
+        .collect();
+    let mut types = ClassedTypes::new(uf, tables, givens, allocated);
+    match nash_ast::head::cover_impls(&mut types, trait_, &candidates, args, remaining) {
+        Err(_) => Coverage::Limit,
+        Ok(Cells::NotApplicable) => Coverage::NotApplicable,
+        Ok(Cells::Unstated(subject)) => Coverage::Unstated(subject),
+        Ok(Cells::Missing(_)) => Coverage::Uncovered,
+        Ok(Cells::Complete(covered)) => Coverage::Complete(
+            covered
+                .into_iter()
+                .map(|covered| CoveredImpl {
+                    info: covered.info,
+                    substitution: covered
+                        .info
+                        .variables
+                        .iter()
+                        .copied()
+                        .zip(covered.arguments)
+                        .collect(),
+                    assumptions: covered.assumptions,
+                })
+                .collect(),
+        ),
     }
 }
 
@@ -505,12 +626,7 @@ fn given_candidates<'a>(
         seen.push(given);
         let mut probe = Probe {
             nominal: false,
-            types: ClassedTypes {
-                types: InferenceTypes(uf),
-                tables,
-                givens,
-                allocated,
-            },
+            types: ClassedTypes::new(uf, tables, givens, allocated),
             substitutions: Default::default(),
             equations: Vec::new(),
             classes: Vec::new(),
@@ -562,12 +678,7 @@ pub(crate) fn improvement<'a>(
     for (key, info) in tables.impls_for(trait_) {
         let mut probe = Probe {
             nominal: false,
-            types: ClassedTypes {
-                types: InferenceTypes(uf),
-                tables,
-                givens,
-                allocated,
-            },
+            types: ClassedTypes::new(uf, tables, givens, allocated),
             substitutions: Default::default(),
             equations: Vec::new(),
             classes: Vec::new(),
@@ -596,12 +707,7 @@ pub(crate) fn improvement<'a>(
     {
         let mut probe = Probe {
             nominal: true,
-            types: ClassedTypes {
-                types: InferenceTypes(uf),
-                tables,
-                givens,
-                allocated,
-            },
+            types: ClassedTypes::new(uf, tables, givens, allocated),
             substitutions: Default::default(),
             equations: Vec::new(),
             classes: Vec::new(),

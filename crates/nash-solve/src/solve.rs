@@ -152,6 +152,16 @@ fn representation_requirement<'a>(
     Some((args[0], required))
 }
 
+/// Why representation coverage could not prove a wanted predicate.
+enum CoverageProblem<'a> {
+    Limit,
+    /// Some cell cannot prove this predicate: a context of a covered impl,
+    /// or, at the limit, the wanted trait at a rigid subject.
+    MissingContext(Body<'a>),
+    /// Some representation cell selects no impl.
+    Uncovered,
+}
+
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
     test_scope: bool,
@@ -1383,11 +1393,15 @@ impl<'a> Solver<'a, '_> {
                         continue;
                     }
                     match &self.predicates.get(id).solution {
-                        Some(Solution::Impl { subs, .. }) => pending.extend(
-                            subs.iter()
-                                .filter(|id| self.predicates.get(**id).body.trait_ref().is_some())
-                                .map(|id| (*id, true)),
-                        ),
+                        Some(Solution::Impl { subs, .. } | Solution::Specialize { subs }) => {
+                            pending.extend(
+                                subs.iter()
+                                    .filter(|id| {
+                                        self.predicates.get(**id).body.trait_ref().is_some()
+                                    })
+                                    .map(|id| (*id, true)),
+                            )
+                        }
                         Some(
                             Solution::Given { binder, index }
                             | Solution::Super { binder, index, .. },
@@ -1476,7 +1490,8 @@ impl<'a> Solver<'a, '_> {
                 match &pred.solution {
                     Some(
                         crate::preds::Solution::Impl { subs, .. }
-                        | crate::preds::Solution::Apply { subs },
+                        | crate::preds::Solution::Apply { subs }
+                        | crate::preds::Solution::Specialize { subs },
                     ) => pending.extend(subs),
                     Some(_) => {}
                     None if self.predicate_stranded(uf, id) => {}
@@ -1626,6 +1641,10 @@ impl<'a> Solver<'a, '_> {
                             | crate::preds::Solution::Repr { typ, .. },
                         ) => roots.push(*typ),
                         Some(crate::preds::Solution::Apply { subs }) => pending.extend(subs),
+                        // Code generation selects again from these types.
+                        Some(crate::preds::Solution::Specialize { .. }) => {
+                            roots.extend(self.predicates.get(id).body.roots())
+                        }
                         _ => {}
                     }
                 }
@@ -1804,6 +1823,18 @@ impl<'a> Solver<'a, '_> {
                 ),
                 args: self.evidence_arguments(uf, subs),
             },
+            Solution::Specialize { .. } => {
+                let Body::Trait { trait_, args, .. } = &self.predicates.get(id).body else {
+                    unreachable!("coverage proves trait predicates")
+                };
+                Evidence::Specialize {
+                    trait_: *trait_,
+                    args: self.bump.alloc_slice_fill_iter(
+                        args.iter()
+                            .map(|var| crate::annotation::to_solved_type(self.bump, uf, *var)),
+                    ),
+                }
+            }
         }
     }
 
@@ -2053,27 +2084,7 @@ impl<'a> Solver<'a, '_> {
                 continue;
             }
             let body = self.predicates.get(id).body.clone();
-            let mut allocated = Vec::new();
-            let solution = self.givens.iter().rev().find_map(|frame| {
-                frame.predicates.iter().find_map(|given| {
-                    crate::representation::same_predicate(
-                        uf,
-                        &self.tables.kinds,
-                        &given.body,
-                        &body,
-                        &mut allocated,
-                    )
-                    .then_some((frame.binder, given.index, given.path.clone()))
-                })
-            });
-            self.introduce(uf, rank, &allocated);
-            if let Some((binder, index, path)) = solution {
-                if let Some(index) = index {
-                    self.predicates.solve_given(uf, id, binder, index, path);
-                } else {
-                    self.predicates
-                        .solve(uf, id, Solution::Apply { subs: Vec::new() });
-                }
+            if self.solve_from_givens(uf, rank, id, &body) {
                 continue;
             }
             let roots: Vec<_> = body.roots().collect();
@@ -2254,6 +2265,80 @@ impl<'a> Solver<'a, '_> {
                     continue;
                 }
             }
+            // Representation coverage: a rigid variable at a representation-
+            // tested head position keeps ordinary selection from deciding.
+            if matches!(
+                selection,
+                crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing
+            ) && let Some(binder) = binder
+            {
+                let mut remaining = WORK_LIMIT;
+                match self.cover(uf, rank, id, trait_, &args, &[], &mut remaining, 0) {
+                    Ok(None) => {}
+                    Ok(Some(subs)) => {
+                        self.predicates.solve(uf, id, Solution::Specialize { subs });
+                        continue;
+                    }
+                    Err(problem) => {
+                        let Some(site) = site else {
+                            self.wanted.push((wanted_rank, id));
+                            continue;
+                        };
+                        match problem {
+                            CoverageProblem::Limit => {
+                                state.errors.push(Error::ImplResolutionLimit {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_,
+                                });
+                                self.failed_lineages.insert(self.predicates.root(id));
+                            }
+                            _ if !report_missing => self.wanted.push((wanted_rank, id)),
+                            CoverageProblem::MissingContext(Body::Trait {
+                                trait_: missing,
+                                args: missing_args,
+                                ..
+                            }) => {
+                                let missing_args = self.bump.alloc_slice_fill_iter(
+                                    missing_args
+                                        .iter()
+                                        .map(|arg| to_error_type(self.bump, uf, *arg)),
+                                );
+                                self.failed_predicates.insert(id);
+                                state.errors.push(Error::MissingConstraint {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_: missing,
+                                    args: missing_args,
+                                    binder: binder.name(),
+                                });
+                            }
+                            CoverageProblem::MissingContext(Body::Apply { .. })
+                            | CoverageProblem::Uncovered => {
+                                let args: Vec<_> = args
+                                    .iter()
+                                    .map(|arg| to_error_type(self.bump, uf, *arg))
+                                    .collect();
+                                let available: Vec<_> = self
+                                    .tables
+                                    .impls_for(trait_)
+                                    .map(|(key, _)| key.heads)
+                                    .collect();
+                                self.failed_predicates.insert(id);
+                                state.errors.push(Error::MissingImpl {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_,
+                                    args: self.bump.alloc_slice_copy(&args),
+                                    available: self.bump.alloc_slice_copy(&available),
+                                    because: self.requirement_chain(uf, id),
+                                });
+                            }
+                        }
+                        continue;
+                    }
+                }
+            }
             if report_missing
                 && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
@@ -2362,6 +2447,313 @@ impl<'a> Solver<'a, '_> {
             }
         }
         state
+    }
+
+    /// Whether the givens, with any coverage cell, prove `class` for `node`.
+    fn proves_class(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        node: Variable,
+        class: nash_ast::primitives::ReprTrait,
+        givens: &[Body<'a>],
+    ) -> bool {
+        let mut allocated = Vec::new();
+        let result = crate::resolve::in_class(
+            self.tables,
+            uf,
+            node,
+            class.admits(),
+            givens,
+            &mut allocated,
+        );
+        self.introduce(uf, rank, &allocated);
+        matches!(result, nash_ast::head::Match::Yes(()))
+    }
+
+    /// Solve `id` from a given of an active frame, nearest frame first.
+    fn solve_from_givens(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        id: type_::PredId,
+        body: &Body<'a>,
+    ) -> bool {
+        let mut allocated = Vec::new();
+        let solution = self.givens.iter().rev().find_map(|frame| {
+            frame.predicates.iter().find_map(|given| {
+                crate::representation::same_predicate(
+                    uf,
+                    &self.tables.kinds,
+                    &given.body,
+                    body,
+                    &mut allocated,
+                )
+                .then_some((frame.binder, given.index, given.path.clone()))
+            })
+        });
+        self.introduce(uf, rank, &allocated);
+        let Some((binder, index, path)) = solution else {
+            return false;
+        };
+        if let Some(index) = index {
+            self.predicates.solve_given(uf, id, binder, index, path);
+        } else {
+            self.predicates
+                .solve(uf, id, crate::preds::Solution::Apply { subs: Vec::new() });
+        }
+        true
+    }
+
+    /// The givens of every active frame, then the coverage cell assumptions.
+    fn given_bodies(&self, assumptions: &[Body<'a>]) -> Vec<Body<'a>> {
+        self.givens
+            .iter()
+            .flat_map(|frame| frame.predicates.iter().map(|given| given.body.clone()))
+            .chain(assumptions.iter().cloned())
+            .collect()
+    }
+
+    /// Prove `trait_ args` by representation coverage (inference only).
+    /// `Ok(None)`: coverage does not apply. `Ok(Some(subs))`: every admitted
+    /// cell selects an impl, and `subs` prove each impl's context under its
+    /// cell. The cells are never committed to inference.
+    #[allow(clippy::too_many_arguments)]
+    fn cover(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        parent: type_::PredId,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &[Variable],
+        assumptions: &[Body<'a>],
+        remaining: &mut usize,
+        depth: usize,
+    ) -> Result<Option<Vec<type_::PredId>>, CoverageProblem<'a>> {
+        if depth >= DEPTH_LIMIT {
+            return Err(CoverageProblem::Limit);
+        }
+        let givens = self.given_bodies(assumptions);
+        let mut allocated = Vec::new();
+        let coverage = crate::resolve::coverage(
+            self.tables,
+            uf,
+            trait_,
+            args,
+            &givens,
+            &mut allocated,
+            remaining,
+        );
+        self.introduce(uf, rank, &allocated);
+        let covered = match coverage {
+            crate::resolve::Coverage::NotApplicable => return Ok(None),
+            crate::resolve::Coverage::Limit => return Err(CoverageProblem::Limit),
+            crate::resolve::Coverage::Unstated(subject) => {
+                return Err(CoverageProblem::MissingContext(Body::Trait {
+                    trait_,
+                    args: if args.len() == 1 {
+                        vec![subject]
+                    } else {
+                        args.to_vec()
+                    },
+                    hidden: false,
+                }));
+            }
+            crate::resolve::Coverage::Uncovered => return Err(CoverageProblem::Uncovered),
+            crate::resolve::Coverage::Complete(covered) => covered,
+        };
+        let mut subs = Vec::new();
+        for covered in covered {
+            let mut cell = assumptions.to_vec();
+            cell.extend(
+                covered
+                    .assumptions
+                    .iter()
+                    .map(|(subject, repr)| Body::Trait {
+                        trait_: nash_ast::primitives::ReprTrait::exactly(*repr).qualified(),
+                        args: vec![*subject],
+                        hidden: true,
+                    }),
+            );
+            let vars: BTreeMap<_, _> = covered.substitution.into_iter().collect();
+            for (index, context) in covered.info.context.iter().enumerate() {
+                let body = self.canonical_predicate(uf, rank, &vars, *context);
+                let sub = self.predicates.push(
+                    uf,
+                    Predicate {
+                        body: body.clone(),
+                        origin: Origin::Sub { parent, index },
+                        solution: None,
+                    },
+                );
+                if let Err(problem) = self.prove(uf, rank, sub, &cell, remaining, depth + 1) {
+                    self.predicates.detach(uf, sub);
+                    return Err(match problem {
+                        CoverageProblem::Limit => CoverageProblem::Limit,
+                        _ => CoverageProblem::MissingContext(body),
+                    });
+                }
+                subs.push(sub);
+            }
+        }
+        Ok(Some(subs))
+    }
+
+    /// Prove one predicate of a coverage cell now, without deferral: from a
+    /// given, a representation, a selected impl, or coverage again.
+    fn prove(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        id: type_::PredId,
+        assumptions: &[Body<'a>],
+        remaining: &mut usize,
+        depth: usize,
+    ) -> Result<(), CoverageProblem<'a>> {
+        use crate::preds::Solution;
+        use nash_ast::primitives::{Repr, ReprTrait};
+        nash_ast::head::step(remaining).map_err(|_| CoverageProblem::Limit)?;
+        if depth >= DEPTH_LIMIT {
+            return Err(CoverageProblem::Limit);
+        }
+        let body = self.predicates.get(id).body.clone();
+        if self.solve_from_givens(uf, rank, id, &body) {
+            return Ok(());
+        }
+        let givens = self.given_bodies(assumptions);
+        let (trait_, args) = match body {
+            Body::Apply { head, args } => {
+                let children = self
+                    .application_context(uf, rank, head, &args)
+                    .ok_or(CoverageProblem::Uncovered)?;
+                let mut subs = Vec::new();
+                for (index, child) in children.into_iter().enumerate() {
+                    let sub = self.predicates.push(
+                        uf,
+                        Predicate {
+                            body: child,
+                            origin: Origin::Sub { parent: id, index },
+                            solution: None,
+                        },
+                    );
+                    if let Err(problem) =
+                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
+                    {
+                        self.predicates.detach(uf, sub);
+                        return Err(problem);
+                    }
+                    subs.push(sub);
+                }
+                self.predicates.solve(uf, id, Solution::Apply { subs });
+                return Ok(());
+            }
+            Body::Trait { trait_, args, .. } => (trait_, args),
+        };
+        if let Some(required) = ReprTrait::of(trait_) {
+            let proven = match self.representation(uf, rank, args[0]) {
+                Some(actual) => required.admits().contains(actual),
+                None => self.proves_class(uf, rank, args[0], required, &givens),
+            };
+            if !proven {
+                return Err(CoverageProblem::Uncovered);
+            }
+            self.predicates.solve(
+                uf,
+                id,
+                Solution::Repr {
+                    trait_: required,
+                    typ: args[0],
+                },
+            );
+            return Ok(());
+        }
+        if trait_ == nash_ast::primitives::lift_trait()
+            && self.tables.has_reflexive_lift()
+            && args.len() == 2
+            && crate::preds::same_args(uf, &args[..1], &args[1..])
+        {
+            self.predicates
+                .solve(uf, id, Solution::ReflexiveLift { typ: args[0] });
+            return Ok(());
+        }
+        if trait_ == nash_ast::primitives::eq_trait()
+            && self.tables.has_structural_eq()
+            && args.len() == 1
+            && (self.representation(uf, rank, args[0]) == Some(Repr::Big)
+                || self.proves_class(uf, rank, args[0], ReprTrait::Big, &givens))
+        {
+            self.predicates
+                .solve(uf, id, Solution::StructuralEq { typ: args[0] });
+            return Ok(());
+        }
+        if occurs::reaches_cycle(uf, &args) {
+            return Err(CoverageProblem::Uncovered);
+        }
+        let mut allocated = Vec::new();
+        let selection =
+            crate::resolve::select(self.tables, uf, trait_, &args, &givens, &mut allocated);
+        self.introduce(uf, rank, &allocated);
+        match selection {
+            crate::resolve::Selection::Impl {
+                info,
+                key,
+                substitution,
+            } => {
+                let type_vars = substitution.iter().map(|(_, var)| *var).collect();
+                let vars: BTreeMap<_, _> = substitution.into_iter().collect();
+                let mut subs = Vec::new();
+                for (index, context) in info.context.iter().enumerate() {
+                    let body = self.canonical_predicate(uf, rank, &vars, *context);
+                    let sub = self.predicates.push(
+                        uf,
+                        Predicate {
+                            body,
+                            origin: Origin::Sub { parent: id, index },
+                            solution: None,
+                        },
+                    );
+                    if let Err(problem) =
+                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
+                    {
+                        self.predicates.detach(uf, sub);
+                        return Err(problem);
+                    }
+                    subs.push(sub);
+                }
+                self.predicates.solve(
+                    uf,
+                    id,
+                    Solution::Impl {
+                        impl_: nash_ast::ImplRef {
+                            home: info.home,
+                            key,
+                        },
+                        type_vars,
+                        subs,
+                    },
+                );
+                Ok(())
+            }
+            crate::resolve::Selection::Limit => Err(CoverageProblem::Limit),
+            crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing => {
+                match self.cover(
+                    uf,
+                    rank,
+                    id,
+                    trait_,
+                    &args,
+                    assumptions,
+                    remaining,
+                    depth + 1,
+                )? {
+                    Some(subs) => {
+                        self.predicates.solve(uf, id, Solution::Specialize { subs });
+                        Ok(())
+                    }
+                    None => Err(CoverageProblem::Uncovered),
+                }
+            }
+        }
     }
 
     fn formed_at(
@@ -3942,6 +4334,14 @@ mod copy_tests {
             }
             Evidence::StructuralEq { typ } => format!("StructuralEq {}", evidence_type(typ)),
             Evidence::ReflexiveLift { typ } => format!("ReflexiveLift {}", evidence_type(typ)),
+            Evidence::Specialize { trait_, args } => format!(
+                "Specialize {} [{}]",
+                evidence_name(*trait_),
+                args.iter()
+                    .map(|typ| evidence_type(typ))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Evidence::Impl {
                 impl_,
                 type_args,
