@@ -1,0 +1,17 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Const, Little)\nconstOnly : Const 'b => 'b -> 'b\nconstOnly x = x\nouter : Big 'a => 'a -> 'a\nouter x =\n    let\n        inner : Little 'a => 'a -> 'a\n        inner y = constOnly y\n    in\n    x\n"
+info: diagnostic
+---
+nash::type::contradictory_representation
+
+  × `inner` requires incompatible representations for `'a`.
+    ╭─[Main.nash:9:9]
+  8 │         inner : Little 'a => 'a -> 'a
+  9 │         inner y = constOnly y
+    ·         ─────
+ 10 │     in
+    ╰────
+  help: Required: Big, Little.
+
+        Use a consistent representation or convert the value explicitly.
