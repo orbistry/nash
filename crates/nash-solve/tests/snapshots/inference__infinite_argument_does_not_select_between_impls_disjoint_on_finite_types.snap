@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Same 'a where\n    same : 'a -> ()\nimpl Same ('a, 'a) where\n    same _ = ()\nimpl Same ('a, 'a -> 'b) where\n    same _ = ()\nbad f =\n    let\n        g = ( f f, same ( f, f ) )\n    in\n    g\n"
+info: diagnostic
+---
+nash::type::infinite_type
+
+  × `f` has a self-referential type: ∞ -> 'a
+   ╭─[Main.nash:8:5]
+ 7 │     same _ = ()
+ 8 │ bad f =
+   ·     ─
+ 9 │     let
+   ╰────
+  help: Break the type cycle; ∞ marks a repeated part of the type.

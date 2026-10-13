@@ -1,0 +1,15 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Pair 'a 'b where\n    pair : 'a -> 'b -> ()\nimpl Pair 'a 'a where\n    pair _ _ = ()\nimpl Pair 'a (list 'a) where\n    pair _ _ = ()\nsame : 'a -> 'a -> 'a\nsame a _ = a\nbad x =\n    let\n        g = ( same x [ x ], pair x x )\n    in\n    g\n"
+info: diagnostic
+---
+nash::type::infinite_type
+
+  × `g` has a self-referential type: ( list ∞, unit )
+    ╭─[Main.nash:12:9]
+ 11 │     let
+ 12 │         g = ( same x [ x ], pair x x )
+    ·         ─
+ 13 │     in
+    ╰────
+  help: Break the type cycle; ∞ marks a repeated part of the type.
