@@ -1,0 +1,13 @@
+---
+source: crates/nash-can/tests/kind_predicates.rs
+description: "module Main exposing (..)\n\nimport Primitive exposing (..)\nimport Builtin exposing (..)\n\ntrait Foo ('a : Big) where\n\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\ntrait Keep 'a => Sub 'a where\n\nimpl (Foo 'a, Little 'a) => Sub 'a where\n"
+---
+nash::names::contradictory_representation
+
+  × The representation requirements on 'a are incompatible:
+    ╭─[src/Main.nash:16:11]
+ 15 │ 
+ 16 │ impl (Foo 'a, Little 'a) => Sub 'a where
+    ·           ──
+    ╰────
+  help: Change the incompatible constraints or uses of this variable.

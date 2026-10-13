@@ -163,6 +163,28 @@ fn contradictory_application_impl_context_is_rejected() {
     .unwrap_err();
 }
 
+/// `Foo` promises `Big`, so this context admits no representation. The impl
+/// defines no method, so no method annotation repeats the context check.
+#[test]
+fn impl_using_only_default_methods_rejects_a_superclass_contradiction() {
+    let bump = Bump::new();
+    check_snapshot!(
+        &bump,
+        "trait Foo ('a : Big) where\n\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\ntrait Keep 'a => Sub 'a where\n    sub : 'a -> 'a\n    sub x = x\nimpl (Foo 'a, Little 'a) => Sub 'a where"
+    )
+    .unwrap_err();
+}
+
+#[test]
+fn marker_impl_rejects_a_superclass_contradiction() {
+    let bump = Bump::new();
+    check_snapshot!(
+        &bump,
+        "trait Foo ('a : Big) where\n\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\ntrait Keep 'a => Sub 'a where\n\nimpl (Foo 'a, Little 'a) => Sub 'a where"
+    )
+    .unwrap_err();
+}
+
 #[test]
 fn trait_parameter_kinds_come_from_method_uses() {
     let bump = Bump::new();
