@@ -5361,6 +5361,75 @@ fn contradictory_inferred_classes_do_not_select_both_disjoint_blankets() {
     );
 }
 
+/// A local annotation shares the enclosing annotation's type variables, as
+/// in Elm. Each context is consistent alone, but together they admit no
+/// representation for `'a`.
+#[test]
+fn local_annotation_contradicting_the_enclosing_representation_is_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Little)
+        constOnly : Const 'b => 'b -> 'b
+        constOnly x = x
+        outer : Big 'a => 'a -> 'a
+        outer x =
+            let
+                inner : Little 'a => 'a -> 'a
+                inner y = constOnly y
+            in
+            x
+    "#
+    );
+}
+
+/// The contradiction must be reported before impl selection: with no
+/// representation left, both disjoint blankets would match `'a`.
+#[test]
+fn local_annotation_contradiction_is_rejected_before_impl_selection() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        impl Keep ('a : Little) where
+            keep x = x
+        outer : Big 'a => 'a -> 'a
+        outer x =
+            let
+                inner : Little 'a => 'a -> 'a
+                inner y = keep y
+            in
+            x
+    "#
+    );
+}
+
+/// A trait parameter's representation reaches a default method's local
+/// annotation through the method's own trait constraint.
+#[test]
+fn default_method_local_annotation_contradicting_the_trait_parameter_is_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Little)
+        constOnly : Const 'b => 'b -> 'b
+        constOnly x = x
+        trait Foo ('a : Big) where
+            foo : 'a -> 'a
+            foo x =
+                let
+                    inner : Little 'a => 'a -> 'a
+                    inner y = constOnly y
+                in
+                x
+    "#
+    );
+}
+
 #[test]
 fn representation_classes_intersect_givens_and_expand_aliases() {
     assert_inference_snapshot!(

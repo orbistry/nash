@@ -242,8 +242,10 @@ impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
                 }
             }
         }
-        // Canonicalization rejects contradictory contexts; an empty set would
-        // otherwise prove every class and select every disjoint impl.
+        // Canonicalization rejects a contradictory context, and the solver
+        // rejects contradictory nested contexts on entry and poisons their
+        // subject. An empty set would prove every class and select every
+        // disjoint impl.
         assert!(
             !proven.is_empty(),
             "contradictory representation givens reached impl selection"

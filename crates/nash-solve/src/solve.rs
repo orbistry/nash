@@ -141,6 +141,17 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
     state
 }
 
+/// The subject and class of a representation predicate such as `Big 'a`.
+fn representation_requirement<'a>(
+    body: &Body<'a>,
+) -> Option<(Variable, nash_ast::primitives::ReprTrait)> {
+    let Body::Trait { trait_, args, .. } = body else {
+        return None;
+    };
+    let required = nash_ast::primitives::ReprTrait::of(*trait_)?;
+    Some((args[0], required))
+}
+
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
     test_scope: bool,
@@ -554,7 +565,13 @@ impl<'a> Solver<'a, '_> {
                     let annotation_failed = state1.errors.len() > escapes_before;
 
                     if let Some(binder) = *binder {
-                        let depth = self.enter_givens(uf, rank, given_bodies, Some(binder));
+                        let depth = self.enter_givens(
+                            uf,
+                            rank,
+                            given_bodies,
+                            Some(binder),
+                            &mut state1.errors,
+                        );
                         loop {
                             let (errors, defaulted) =
                                 self.check_ambiguity(uf, rank, wanted_start, &defs, binder.name());
@@ -644,7 +661,7 @@ impl<'a> Solver<'a, '_> {
         uf: &mut UnionFind<'a>,
         env: &Env<'a>,
         rank: usize,
-        state: State<'a>,
+        mut state: State<'a>,
         constraint: &Constraint<'a>,
         given: &[Body<'a>],
         binder: Option<type_::Binder<'a>>,
@@ -653,7 +670,7 @@ impl<'a> Solver<'a, '_> {
         // Attribute new failures to their owning binding. This count does not
         // gate any independent constraint or reset the collected diagnostics.
         let errors_before = state.errors.len();
-        let depth = self.enter_givens(uf, rank, given, binder);
+        let depth = self.enter_givens(uf, rank, given, binder, &mut state.errors);
         let start = self.wanted.len();
         let owner_depth = self.owners.len();
         if let Some(binder) = binder {
@@ -1868,6 +1885,7 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         given: &[Body<'a>],
         binder: Option<type_::Binder<'a>>,
+        errors: &mut Vec<Error<'a>>,
     ) -> usize {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
@@ -1883,6 +1901,23 @@ impl<'a> Solver<'a, '_> {
                 })
                 .collect();
             self.expand_givens(uf, rank, &mut predicates);
+            // Canonicalization checks each context alone. A local annotation
+            // shares the enclosing annotation's type variables, as Elm's `rtv`
+            // does, so its representation givens must also agree with every
+            // enclosing frame. A frame entered again finds its subject poisoned.
+            let requirements = self
+                .givens
+                .iter()
+                .flat_map(|frame| frame.predicates.iter())
+                .chain(&predicates)
+                .filter_map(|given| representation_requirement(&given.body))
+                .collect();
+            errors.extend(self.contradictory_representations(
+                uf,
+                rank,
+                requirements,
+                binder.name(),
+            ));
             self.givens.push(GivenFrame {
                 binder: binder.node(),
                 predicates,
@@ -2858,6 +2893,70 @@ impl<'a> Solver<'a, '_> {
         copies[0]
     }
 
+    /// Group representation requirements by subject, as `in_class` compares
+    /// them, and report each subject that no representation admits. The
+    /// subject is poisoned, so obligations on it are dropped instead of
+    /// reaching impl selection. A requirement that another one implies is left
+    /// out of the report.
+    fn contradictory_representations(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        requirements: Vec<(Variable, nash_ast::primitives::ReprTrait)>,
+        binder: &'a Located<&'a str>,
+    ) -> Vec<Error<'a>> {
+        use nash_ast::primitives::{ReprSet, ReprTrait};
+        let mut subjects: Vec<(Variable, Vec<ReprTrait>)> = Vec::new();
+        let mut allocated = Vec::new();
+        for (argument, required) in requirements {
+            let subject =
+                crate::representation::subject(uf, &self.tables.kinds, argument, &mut allocated);
+            if crate::recovery::is_poisoned(uf, [subject]) {
+                continue;
+            }
+            if let Some((_, found)) = subjects
+                .iter_mut()
+                .find(|(other, _)| crate::preds::same_args(uf, &[*other], &[subject]))
+            {
+                if !found.contains(&required) {
+                    found.push(required);
+                }
+            } else {
+                subjects.push((subject, vec![required]));
+            }
+        }
+        self.introduce(uf, rank, &allocated);
+        let mut errors = Vec::new();
+        for (subject, requirements) in subjects {
+            let admitted = requirements.iter().fold(ReprSet::ALL, |set, requirement| {
+                set.intersect(requirement.admits())
+            });
+            if !admitted.is_empty() {
+                continue;
+            }
+            let shown: Vec<_> = requirements
+                .iter()
+                .copied()
+                .filter(|requirement| {
+                    !requirements.iter().any(|other| {
+                        other.admits() != requirement.admits()
+                            && other.admits().intersect(requirement.admits()) == other.admits()
+                    })
+                })
+                .collect();
+            errors.push(Error::ContradictoryRepresentation {
+                region: binder.region,
+                name: binder.value,
+                typ: to_error_type(self.bump, uf, subject),
+                requirements: self.bump.alloc_slice_copy(&shown),
+            });
+            self.has_poison = true;
+            crate::recovery::poison(uf, [subject]);
+        }
+        self.propagate_poison(uf);
+        errors
+    }
+
     fn check_ambiguity(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -2866,55 +2965,17 @@ impl<'a> Solver<'a, '_> {
         definitions: &[Definition<'a>],
         binder: &'a Located<&'a str>,
     ) -> (Vec<Error<'a>>, bool) {
-        use nash_ast::primitives::ReprTrait;
         // Check the conjunction before defaulting or generalizing. An
         // impossible representation context cannot be exported as a scheme,
         // even when its variable is reachable from the inferred result.
-        let mut representations: Vec<(Variable, Vec<ReprTrait>)> = Vec::new();
-        let mut allocated = Vec::new();
+        let mut requirements = Vec::new();
         for (_, id) in &self.wanted[start..] {
             if self.predicate_blocked(uf, *id) {
                 continue;
             }
-            let Body::Trait { trait_, args, .. } = &self.predicates.get(*id).body else {
-                continue;
-            };
-            let Some(required) = ReprTrait::of(*trait_) else {
-                continue;
-            };
-            let subject =
-                crate::representation::subject(uf, &self.tables.kinds, args[0], &mut allocated);
-            if let Some((_, requirements)) = representations
-                .iter_mut()
-                .find(|(other, _)| crate::preds::same_args(uf, &[*other], &[subject]))
-            {
-                if !requirements.contains(&required) {
-                    requirements.push(required);
-                }
-            } else {
-                representations.push((subject, vec![required]));
-            }
+            requirements.extend(representation_requirement(&self.predicates.get(*id).body));
         }
-        self.introduce(uf, rank, &allocated);
-        let mut errors = Vec::new();
-        for (subject, requirements) in representations {
-            let admitted = requirements
-                .iter()
-                .fold(nash_ast::primitives::ReprSet::ALL, |set, requirement| {
-                    set.intersect(requirement.admits())
-                });
-            if admitted.is_empty() {
-                errors.push(Error::ContradictoryRepresentation {
-                    region: binder.region,
-                    name: binder.value,
-                    typ: to_error_type(self.bump, uf, subject),
-                    requirements: self.bump.alloc_slice_fill_iter(requirements),
-                });
-                self.has_poison = true;
-                crate::recovery::poison(uf, [subject]);
-            }
-        }
-        self.propagate_poison(uf);
+        let mut errors = self.contradictory_representations(uf, rank, requirements, binder);
         let roots: Vec<_> = definitions.iter().map(|def| def.typ).collect();
         let mut reachable = Self::type_variables(uf, roots);
         if definitions
