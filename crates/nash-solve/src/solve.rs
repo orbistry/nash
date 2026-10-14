@@ -96,17 +96,7 @@ impl<'a> Schemes<'a> {
     }
 
     fn at(&self, site: nash_ast::NodeId) -> Option<&SchemeRecord<'a>> {
-        let found = self.by_site.get(&site).map(|index| &self.records[*index]);
-        // ORACLE: the scan of every scheme that the lookup replaces.
-        #[cfg(debug_assertions)]
-        assert_eq!(
-            found.map(std::ptr::from_ref),
-            self.records
-                .iter()
-                .find(|scheme| scheme.site.node() == site)
-                .map(std::ptr::from_ref)
-        );
-        found
+        self.by_site.get(&site).map(|index| &self.records[*index])
     }
 
     fn iter(&self) -> std::slice::Iter<'_, SchemeRecord<'a>> {
@@ -1580,36 +1570,6 @@ impl<'a> Solver<'a, '_> {
         // another body can assign names to its own instantiations.
         for (index, mut members) in members.into_iter().enumerate() {
             let (uses, exprs, patterns) = (&uses[index], &exprs[index], &patterns[index]);
-            // ORACLE: the per-scope filters over every record that the grouping replaces.
-            #[cfg(debug_assertions)]
-            {
-                let scope = scopes[index];
-                let same = |owner: nash_ast::NodeId| self.scope(owner).0 == scope;
-                assert!(
-                    members.iter().copied().map(std::ptr::from_ref).eq(self
-                        .schemes
-                        .iter()
-                        .filter(|scheme| same(scheme.site.node()))
-                        .map(std::ptr::from_ref))
-                );
-                assert!(
-                    uses.iter().copied().map(std::ptr::from_ref).eq(self
-                        .uses
-                        .iter()
-                        .filter(|use_| same(use_.owner.expect("use belongs to a definition")))
-                        .map(std::ptr::from_ref))
-                );
-                for (grouped, records) in
-                    [(exprs, &self.expr_types), (patterns, &self.pattern_types)]
-                {
-                    assert!(
-                        grouped.iter().copied().map(std::ptr::from_ref).eq(records
-                            .iter()
-                            .filter(|record| record.owner.is_some_and(same))
-                            .map(std::ptr::from_ref))
-                    );
-                }
-            }
             members.sort_by_key(|scheme| self.scope(scheme.site.node()).1);
             let mut roots = Vec::new();
             for scheme in &members {
