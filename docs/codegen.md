@@ -251,8 +251,10 @@ instantiated at `type_args` (or the trait's default method body with the
 impl's evidence substituted). `args` supplies the evidence for the impl's
 own context (`impl Eq 'a => Eq (list ('a : Little))`), and a `Super` node (`lt` using
 `Eq` through `Ord`'s superclass) resolves to the superclass impl through
-the impl table. After this phase there are no dictionaries and no trait
-names in `Core`.
+the impl table. The superclass predicate can mention a type variable that no
+use fixes, such as a phantom parameter. Resolution keeps that variable open
+and fails only where it would select the impl. After this phase there are no
+dictionaries and no trait names in `Core`.
 
 ### 3. Pattern matching
 

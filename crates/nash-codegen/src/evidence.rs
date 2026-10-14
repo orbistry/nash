@@ -1,8 +1,9 @@
 //! Close compile-time evidence references without introducing runtime dictionaries.
 //!
 //! Type substitution is simultaneous. Payloads may remain open when code erases
-//! them; only instance superclass resolution requires a concrete predicate. Runtime layout
-//! demands are a separate part of specialization identity.
+//! them, as a phantom parameter does when no use fixes it. Superclass
+//! resolution accepts open types; it fails only where an open type would select
+//! the impl. Runtime layout demands are a separate part of specialization identity.
 use std::collections::HashMap;
 
 use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
@@ -34,8 +35,6 @@ pub enum Error<'a> {
     MalformedPredicate,
     #[error("superclass does not have an evidence slot")]
     NoEvidence,
-    #[error("superclass resolution requires a ground type, found {0}")]
-    NonGround(&'a str),
     #[error("evidence still contains a given or superclass projection")]
     UnresolvedEvidence,
     #[error("evidence normalization exceeded its work or depth limit")]
@@ -314,7 +313,7 @@ impl<'a> Grounder<'a, '_> {
     ) -> Result<&'a Located<Type<'a>>, Error<'a>> {
         // substitute_type is recursive, so bound its input and replacements
         // before calling it. Replacement types are not substituted again.
-        self.inspect_type(typ, Some(subst), false)?;
+        self.inspect_type(typ, subst)?;
         Ok(nash_can::types::substitute_type(
             self.arena.as_bump(),
             subst,
@@ -325,8 +324,7 @@ impl<'a> Grounder<'a, '_> {
     fn inspect_type(
         &mut self,
         typ: &'a Located<Type<'a>>,
-        subst: Option<&Substitution<'a>>,
-        require_ground: bool,
+        subst: &Substitution<'a>,
     ) -> Result<(), Error<'a>> {
         let mut pending = vec![(typ, 0, true)];
         while let Some((typ, depth, replace)) = pending.pop() {
@@ -334,11 +332,8 @@ impl<'a> Grounder<'a, '_> {
             let mut push = |child| pending.push((child, depth + 1, replace));
             match &typ.value {
                 Type::Var(name) => {
-                    if let Some(value) = subst.filter(|_| replace).and_then(|subst| subst.get(name))
-                    {
+                    if replace && let Some(value) = subst.get(name) {
                         pending.push((*value, depth + 1, false));
-                    } else if require_ground {
-                        return Err(Error::NonGround(name));
                     }
                 }
                 Type::App { head, args } => {
@@ -493,7 +488,7 @@ impl<'a> Grounder<'a, '_> {
         Ok(self.arena.alloc(Located::at_zero(typ)))
     }
 
-    fn validate_predicate(&mut self, predicate: Pred<'a>) -> Result<(), Error<'a>> {
+    fn validate_predicate(&self, predicate: Pred<'a>) -> Result<(), Error<'a>> {
         if let Some(trait_) = predicate.trait_ref() {
             let arity = if primitives::ReprTrait::of(trait_).is_some() {
                 1
@@ -508,9 +503,6 @@ impl<'a> Grounder<'a, '_> {
             if predicate.args().len() != arity {
                 return Err(Error::MalformedPredicate);
             }
-        }
-        for typ in predicate.types() {
-            self.inspect_type(typ, None, true)?;
         }
         Ok(())
     }

@@ -1,0 +1,16 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntype box 'a = Box 'a\ntrait Kind 'a where\n    kind : 'a -> string\nimpl Kind (box ('a : Big)) where\n    kind _ = \"big box\"\nimpl Kind 'a => Kind (box ('a : Little)) where\n    kind _ = \"little box\"\ntrait Kind 'a => Child 'a where\n    child : 'a -> string\nimpl Kind (box 'a) => Child (box 'a) where\n    child x = kind x\nfromSuper : Child 't => 't -> string\nfromSuper x = kind x\nwrapper : box 'p -> string\nwrapper b = fromSuper b\n"
+info: diagnostic
+---
+nash::type::missing_constraint
+
+  × `fromSuper` requires undeclared constraint `Kind 'p`.
+    ╭─[Main.nash:17:13]
+ 16 │ wrapper : box 'p -> string
+ 17 │ wrapper b = fromSuper b
+    · ───┬───     ────┬────
+    ·    │            ╰── constraint required here
+    ·    ╰── annotation for `wrapper`
+    ╰────
+  help: Add `Kind 'p` to the annotation for `wrapper`.

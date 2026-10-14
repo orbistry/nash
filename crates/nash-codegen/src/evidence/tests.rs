@@ -285,7 +285,7 @@ fn malformed_slots_and_open_types_return_errors() {
             &Substitution::new(),
             &HashMap::new()
         ),
-        Err(Error::NonGround("a"))
+        Err(Error::Resolution(nash_solve::evidence::Failure::NonGround))
     ));
     assert!(matches!(
         executable_identity(&given),

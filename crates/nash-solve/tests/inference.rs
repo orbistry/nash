@@ -5729,6 +5729,34 @@ fn coverage_counts_as_growing_evidence() {
     );
 }
 
+/// Code generation resolves a superclass at the types of each use, where a
+/// phantom parameter can stay open. When the parameter would select the
+/// superclass impl, type checking reports the missing constraint first.
+#[test]
+fn open_type_that_selects_a_superclass_impl_is_a_type_error() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        type box 'a = Box 'a
+        trait Kind 'a where
+            kind : 'a -> string
+        impl Kind (box ('a : Big)) where
+            kind _ = "big box"
+        impl Kind 'a => Kind (box ('a : Little)) where
+            kind _ = "little box"
+        trait Kind 'a => Child 'a where
+            child : 'a -> string
+        impl Kind (box 'a) => Child (box 'a) where
+            child x = kind x
+        fromSuper : Child 't => 't -> string
+        fromSuper x = kind x
+        wrapper : box 'p -> string
+        wrapper b = fromSuper b
+    "#
+    );
+}
+
 #[test]
 fn relational_constraints_infer_hidden_components() {
     assert_inference_snapshot!(

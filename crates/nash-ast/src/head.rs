@@ -31,7 +31,16 @@ pub trait Types<'a> {
     ) -> Result<Match<()>, Limit>;
 }
 
+/// Canonical types whose variables are rigid: a variable equals only itself
+/// and matches no constructor.
 pub struct Canonical<'r, 'a>(pub &'r dyn Fn(&'a Located<Type<'a>>, ReprSet) -> Match<()>);
+
+/// Canonical types whose variables stay open: nothing will bind them, as in
+/// code generation when no use fixes a phantom parameter. An open variable
+/// equals only itself. A constructor test or a comparison that only an open
+/// variable could decide is undecided, so under `SelectPolicy::Defer` a
+/// selection that needs an open variable is `Deferred`.
+pub struct Open<'r, 'a>(pub &'r dyn Fn(&'a Located<Type<'a>>, ReprSet) -> Match<()>);
 
 #[derive(PartialEq, Eq)]
 enum CanonicalCon<'a> {
@@ -93,12 +102,7 @@ impl<'a> Types<'a> for Canonical<'_, 'a> {
         (self.0)(node, class)
     }
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
-        let (con, args) = canonical_view(node);
-        if con == CanonicalCon::Known(expected) {
-            Match::Yes(args)
-        } else {
-            Match::No
-        }
+        constructor_view(node, expected, false)
     }
     fn equal(
         &mut self,
@@ -106,18 +110,68 @@ impl<'a> Types<'a> for Canonical<'_, 'a> {
         second: Self::Node,
         remaining: &mut usize,
     ) -> Result<Match<()>, Limit> {
-        let mut pending = vec![(first, second)];
-        while let Some((first, second)) = pending.pop() {
-            step(remaining)?;
-            let (a, aa) = canonical_view(first);
-            let (b, ba) = canonical_view(second);
-            if a != b || aa.len() != ba.len() {
-                return Ok(Match::No);
-            }
-            pending.extend(aa.into_iter().zip(ba));
-        }
-        Ok(Match::Yes(()))
+        equal_views(first, second, remaining, false)
     }
+}
+
+impl<'a> Types<'a> for Open<'_, 'a> {
+    type Node = &'a Located<Type<'a>>;
+    fn in_class(&mut self, node: Self::Node, class: ReprSet) -> Match<()> {
+        (self.0)(node, class)
+    }
+    fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
+        constructor_view(node, expected, true)
+    }
+    fn equal(
+        &mut self,
+        first: Self::Node,
+        second: Self::Node,
+        remaining: &mut usize,
+    ) -> Result<Match<()>, Limit> {
+        equal_views(first, second, remaining, true)
+    }
+}
+
+// With `open`, a type variable is undecided instead of matching nothing.
+fn constructor_view<'a>(
+    node: &'a Located<Type<'a>>,
+    expected: HeadCon<'a>,
+    open: bool,
+) -> Match<Vec<&'a Located<Type<'a>>>> {
+    match canonical_view(node) {
+        (CanonicalCon::Known(con), args) if con == expected => Match::Yes(args),
+        (CanonicalCon::Var(_), _) if open => Match::Deferred,
+        _ => Match::No,
+    }
+}
+
+// With `open`, a mismatch at a type variable is undecided instead of false.
+// A definite mismatch elsewhere still decides.
+fn equal_views<'a>(
+    first: &'a Located<Type<'a>>,
+    second: &'a Located<Type<'a>>,
+    remaining: &mut usize,
+    open: bool,
+) -> Result<Match<()>, Limit> {
+    let mut pending = vec![(first, second)];
+    let mut deferred = false;
+    while let Some((first, second)) = pending.pop() {
+        step(remaining)?;
+        let (a, aa) = canonical_view(first);
+        let (b, ba) = canonical_view(second);
+        if a == b && aa.len() == ba.len() {
+            pending.extend(aa.into_iter().zip(ba));
+        } else if open && (matches!(a, CanonicalCon::Var(_)) || matches!(b, CanonicalCon::Var(_))) {
+            deferred = true;
+        } else {
+            return Ok(Match::No);
+        }
+    }
+    Ok(if deferred {
+        Match::Deferred
+    } else {
+        Match::Yes(())
+    })
 }
 
 pub fn step(remaining: &mut usize) -> Result<(), Limit> {

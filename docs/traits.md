@@ -555,27 +555,34 @@ preserves polymorphic destructuring without losing qualified constraints.
 
 ### Resolving outside the solver
 
-Power-assert ([testing.md](testing.md)) needs `Show` at whatever ground
-type a subexpression has, and `@derive` ([macros.md](macros.md)) needs to
-know whether a field type already has an impl. Both run after solving, on
-fully ground canonical types, so the resolver is also exposed as a plain
-function:
+Power-assert ([testing.md](testing.md)) needs `Show` at whatever type a
+subexpression has, and `@derive` ([macros.md](macros.md)) needs to know
+whether a field type already has an impl. Both run after solving, so the
+resolver is also exposed as a plain function. Code generation also calls it
+for superclasses, method contexts, and `Specialize` evidence:
 
 ```rust
 pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
-    pred: &Pred<'a>,          // args are ground `Located<Type>`s: no `Type::Var`
+    pred: &Pred<'a>,          // a `Type::Var` in the args is open
 ) -> Result<Evidence<'a>, nash_solve::evidence::Error<'a>>
 ```
 
 It is the same `by_instance` walk without unification variables: match
 each argument's head constructor against the impl table, instantiate the
-impl's context at the argument's type arguments, recurse. A ground
-predicate never needs `Given`, so the result is a closed tree of `Impl` and
-exact-core `ReflexiveLift` evidence. Reflexive Lift requires nominally equal
-arguments with an already-proven Big representation; it does not choose
-a representation.
+impl's context at the argument's type arguments, recurse. A type variable
+that reaches the resolver is open: no use fixed it, as with a phantom
+parameter, and nothing will bind it. An open variable equals only itself and
+binds impl head variables like any other type. A decision that needs an open
+variable fails with `NonGround`: impl selection (`head::Open` under
+`SelectPolicy::Defer`), a representation test, or a requirement that
+formation of a type leaves. In a checked program, a rigid variable that
+selects an impl needs a stated constraint, so type checking reports that case
+first. The predicate never needs `Given`, so the result is a closed tree of
+`Impl` and exact-core `ReflexiveLift` evidence. Reflexive Lift requires
+nominally equal arguments with an already-proven Big representation; it does
+not choose a representation.
 Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
 failed predicate. Resolution and type traversal share a 16,384-step work
 budget, with a depth limit of 256. Context substitution is charged before
@@ -595,7 +602,9 @@ for the authoritative specialization identity and recursive-layout check.
 
 `Super { of, index }` after substitution is an `Impl`, and the superclass
 impl is found by key: the `index`-th superclass of the impl's trait, at the
-impl's heads. The impl check guarantees it exists.
+impl's heads. The impl check guarantees it exists. The heads can still hold
+open types after substitution; resolution fails only where an open type would
+select the superclass impl.
 
 ## `do` notation
 
