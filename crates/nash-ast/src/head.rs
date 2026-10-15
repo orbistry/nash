@@ -38,8 +38,9 @@ pub struct Canonical<'r, 'a>(pub &'r dyn Fn(&'a Located<Type<'a>>, ReprSet) -> M
 /// Canonical types whose variables stay open: nothing will bind them, as in
 /// code generation when no use fixes a phantom parameter. An open variable
 /// equals only itself. A constructor test or a comparison that only an open
-/// variable could decide is undecided, so under `SelectPolicy::Defer` a
-/// selection that needs an open variable is `Deferred`.
+/// variable could decide is undecided, so under `SelectPolicy::Exact` a
+/// selection that needs an open variable is `Deferred` unless another
+/// candidate is selected.
 pub struct Open<'r, 'a>(pub &'r dyn Fn(&'a Located<Type<'a>>, ReprSet) -> Match<()>);
 
 #[derive(PartialEq, Eq)]
@@ -251,7 +252,9 @@ pub fn matches<'a, T: Types<'a>>(
 pub enum SelectPolicy {
     /// Inference: any undecided candidate defers the whole selection.
     Defer,
-    /// Rigid or ground arguments: an undecided candidate is not proven.
+    /// Entailment and evidence: an undecided candidate is not proven, so a
+    /// selected candidate wins over it. With no selection, an undecided
+    /// candidate makes the result `Deferred`.
     Exact,
 }
 
@@ -300,6 +303,7 @@ pub fn select_impl<'h, 'a: 'h, T: Types<'a>, I>(
     Ok(match selected {
         _ if deferred && policy == SelectPolicy::Defer => ImplSelection::Deferred,
         Some(selected) => selected,
+        None if deferred => ImplSelection::Deferred,
         None => ImplSelection::Missing,
     })
 }
@@ -645,10 +649,12 @@ mod select_tests {
     use Outcome::{Deferred, No, Yes};
     use SelectPolicy::{Defer, Exact};
 
-    fn render(result: Result<ImplSelection<usize, ()>, Limit>) -> String {
+    fn render(policy: SelectPolicy, result: Result<ImplSelection<usize, ()>, Limit>) -> String {
         match result {
             Ok(ImplSelection::Selected { info, .. }) => format!("selects impl {}", info + 1),
-            Ok(ImplSelection::Deferred) => "waits".to_owned(),
+            // Inference waits for its variables; nothing binds an open type.
+            Ok(ImplSelection::Deferred) if policy == Defer => "waits".to_owned(),
+            Ok(ImplSelection::Deferred) => "undecided".to_owned(),
             Ok(ImplSelection::Missing) => "no impl".to_owned(),
             Err(Limit) => "work limit".to_owned(),
         }
@@ -688,10 +694,10 @@ mod select_tests {
                 ""
             };
             output.push_str(&format!(
-                "{}{budget_note}\n  inference: {}\n  closed types: {}\n",
+                "{}{budget_note}\n  inference: {}\n  entailment and evidence: {}\n",
                 describe(outcomes),
-                render(select(outcomes, Defer, *budget)),
-                render(select(outcomes, Exact, *budget)),
+                render(Defer, select(outcomes, Defer, *budget)),
+                render(Exact, select(outcomes, Exact, *budget)),
             ));
         }
         insta::with_settings!({

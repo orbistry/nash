@@ -133,6 +133,10 @@ base_snapshot!(
     phantom_type_through_a_superclass,
     "fixtures/base-traits/Phantom.nash"
 );
+base_snapshot!(
+    phantom_pair_through_a_superclass,
+    "fixtures/base-traits/PhantomPair.nash"
+);
 
 base_snapshot!(prop_helpers, "fixtures/base-traits/PropHelpers.nash");
 base_snapshot!(cardano_value, "fixtures/base-traits/CardanoValue.nash");

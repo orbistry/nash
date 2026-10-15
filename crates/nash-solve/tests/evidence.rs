@@ -643,3 +643,60 @@ fn open_types_resolve_when_no_decision_needs_them() {
         Failure::NonGround
     );
 }
+
+/// `twins 'a 'a` proves the open `twins p p` for every `p`. The disjoint
+/// `twins int bool` and reflexive Lift cannot decide it, and must not block
+/// that proof.
+#[test]
+fn selected_impl_proves_an_open_type_that_another_rule_cannot_decide() {
+    let bump = Bump::new();
+    let (tables, annotations) = fixture(
+        &bump,
+        indoc::indoc!(
+            "
+        module Lift exposing (..)
+        trait Lift 'small 'big where
+            lift : 'small -> 'big
+            lower : 'big -> 'small
+        trait Keep 'a where
+            keep : 'a -> 'a
+        type twins 'a 'b = Twins
+        impl Keep (twins 'a 'a) where
+            keep x = x
+        impl Keep (twins int bool) where
+            keep x = x
+        impl Lift (twins 'a 'a) (twins int bool) where
+            lift _ = Twins
+            lower _ = Twins
+        same : twins 'p 'p -> twins 'p 'p
+        same x = x
+        mixed : twins int bool -> twins int bool
+        mixed x = x
+    "
+        ),
+    );
+    let keep = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
+    assert!(matches!(
+        resolve(
+            &bump,
+            &tables,
+            &Pred::Trait {
+                trait_: keep,
+                args: bump.alloc_slice_copy(&[input(&annotations, "same")]),
+            }
+        ),
+        Ok(Some(Evidence::Impl { .. }))
+    ));
+    assert!(matches!(
+        resolve(
+            &bump,
+            &tables,
+            &Pred::Trait {
+                trait_: nash_ast::primitives::lift_trait(),
+                args: bump
+                    .alloc_slice_copy(&[input(&annotations, "same"), input(&annotations, "mixed")]),
+            }
+        ),
+        Ok(Some(Evidence::Impl { .. }))
+    ));
+}

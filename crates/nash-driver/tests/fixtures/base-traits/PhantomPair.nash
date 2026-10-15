@@ -1,0 +1,49 @@
+module Main exposing (..)
+
+import Lift exposing (Lift)
+
+type twins 'a 'b = Twins
+
+trait Label 'a where
+    label : 'a -> string
+
+impl Label (twins 'a 'a) where
+    label _ = "same"
+
+impl Label (twins int bool) where
+    label _ = "mixed"
+
+trait Label 'a => Named 'a where
+    name : 'a -> string
+
+impl Named (twins 'a 'a) where
+    name _ = "named"
+
+viaSuper : Named 't => 't -> string
+viaSuper x = label x
+
+pairLabel : twins 'p 'p -> string
+pairLabel t = viaSuper t
+
+impl Lift (twins 'a 'a) (twins int bool) where
+    lift _ = Twins
+    lower _ = Twins
+
+trait Lift 'small 'big => Convert 'small 'big where
+    convert : 'small -> 'big
+
+impl Convert (twins 'a 'a) (twins int bool) where
+    convert t = lift t
+
+viaLift : Convert 'small 'big => 'small -> 'big
+viaLift x = lift x
+
+pairToMixed : twins 'p 'p -> twins int bool
+pairToMixed t = viaLift t
+
+tests
+    test "an open pair selects the impl that matches every pair" = do
+        assert (pairLabel Twins == "same")
+
+    test "an open pair lifts through an impl that reflexivity cannot decide" = do
+        assert (label (pairToMixed Twins) == "mixed")

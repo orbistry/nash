@@ -301,6 +301,8 @@ impl<'a> Resolver<'_, 'a> {
                 typ: args[0],
             }));
         }
+        // An impl can still prove a pair that reflexivity cannot decide.
+        let mut undecided = false;
         if trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
             && let [first, second] = terms.as_slice()
@@ -311,7 +313,7 @@ impl<'a> Resolver<'_, 'a> {
                         typ: args[0],
                     }));
                 }
-                nash_ast::head::Match::Deferred => return Err(error(Failure::NonGround)),
+                nash_ast::head::Match::Deferred => undecided = true,
                 nash_ast::head::Match::No => {}
             }
         }
@@ -333,7 +335,7 @@ impl<'a> Resolver<'_, 'a> {
             candidates,
             args,
             &mut self.remaining,
-            nash_ast::head::SelectPolicy::Defer,
+            nash_ast::head::SelectPolicy::Exact,
         )
         .map_err(|_| error(Failure::Limit))?;
         let (key, info, type_args) = match selection {
@@ -342,6 +344,9 @@ impl<'a> Resolver<'_, 'a> {
                 arguments,
             } => (key, info, arguments),
             nash_ast::head::ImplSelection::Deferred => return Err(error(Failure::NonGround)),
+            nash_ast::head::ImplSelection::Missing if undecided => {
+                return Err(error(Failure::NonGround));
+            }
             nash_ast::head::ImplSelection::Missing => return Err(error(Failure::MissingImpl)),
         };
         let substitution = info

@@ -305,7 +305,7 @@ Evidence is the derivation:
 
 ```
 Evidence = Impl  { impl_: ImplRef, type_args: [Type], args: [Evidence] } -- by_instance; type_args = head vars
-         | ReflexiveLift { typ: Type }                -- compiler rule for equal Big types
+         | ReflexiveLift { typ: Type }                -- compiler rule for nominally equal types
          | Given { binder: NodeId, index: u16 }         -- i-th predicate of the scheme of definition `binder`
          | Super { of: Evidence, index: u16 }           -- i-th superclass of an evidence's trait
          | Specialize { trait_: TraitName, args: [Type] } -- by_coverage; codegen selects for each use
@@ -574,15 +574,16 @@ each argument's head constructor against the impl table, instantiate the
 impl's context at the argument's type arguments, recurse. A type variable
 that reaches the resolver is open: no use fixed it, as with a phantom
 parameter, and nothing will bind it. An open variable equals only itself and
-binds impl head variables like any other type. A decision that needs an open
-variable fails with `NonGround`: impl selection (`head::Open` under
-`SelectPolicy::Defer`), a representation test, or a requirement that
+binds impl head variables like any other type. An impl that matches whatever
+the variable is proves the predicate, even when another candidate or
+reflexive Lift depends on the variable. Otherwise a decision that needs an
+open variable fails with `NonGround`: impl selection (`head::Open` under
+`SelectPolicy::Exact`), a representation test, or a requirement that
 formation of a type leaves. In a checked program, a rigid variable that
 selects an impl needs a stated constraint, so type checking reports that case
 first. The predicate never needs `Given`, so the result is a closed tree of
 `Impl` and exact-core `ReflexiveLift` evidence. Reflexive Lift requires
-nominally equal arguments with an already-proven Big representation; it does
-not choose a representation.
+nominally equal arguments and does not choose a representation.
 Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
 failed predicate. Resolution and type traversal share a 16,384-step work
 budget, with a depth limit of 256. Context substitution is charged before
