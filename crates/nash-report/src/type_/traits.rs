@@ -13,6 +13,17 @@ fn predicate(l: &Localizer, trait_: QualifiedName<'_>, args: &[&ErrorType<'_>]) 
             .chain(args.iter().map(|ty| type_diff::to_doc(l, Ctx::App, ty))),
     )
 }
+// `lead `predicate`tail`. When the sentence does not fit, the predicate moves
+// to its own line, indented 4; a sentence that fits renders unchanged.
+fn with_predicate(lead: String, predicate: Doc, tail: String) -> Doc {
+    Doc::hang(
+        4,
+        Doc::sep([
+            Doc::text(lead),
+            Doc::cat([Doc::text("`"), predicate, Doc::text(format!("`{tail}"))]),
+        ]),
+    )
+}
 fn report(
     title: &str,
     region: Region,
@@ -226,16 +237,16 @@ pub(super) fn missing_constraint(
     let mut report = report(
         "MISSING CONSTRAINT",
         region,
-        Doc::cat([
-            Doc::text(format!("`{name}` requires undeclared constraint `")),
+        with_predicate(
+            format!("`{name}` requires undeclared constraint"),
             wanted.clone(),
-            Doc::text("`."),
-        ]),
-        [Doc::text(format!(
-            "Add `{}` to the annotation for `{}`.",
-            wanted.render(80, false),
-            binder.value
-        ))],
+            ".".into(),
+        ),
+        [with_predicate(
+            "Add".into(),
+            wanted,
+            format!(" to the annotation for `{}`.", binder.value),
+        )],
     );
     report.primary_label = Some("constraint required here".into());
     report.with_label(crate::Label {
@@ -346,23 +357,19 @@ pub(super) fn missing_impl(
             ReprTrait::Little => "Const or Term",
         };
         (
-            Doc::cat([
-                Doc::text("Unsatisfied representation constraint `"),
+            with_predicate(
+                "Unsatisfied representation constraint".into(),
                 wanted,
-                Doc::text("`."),
-            ]),
-            format!(
-                "Use a type with {admitted} representation; an impl cannot change representation."
+                ".".into(),
             ),
+            Doc::text(format!(
+                "Use a type with {admitted} representation; an impl cannot change representation."
+            )),
         )
     } else {
-        let hint = format!(
-            "Import or define an impl for `{}`.",
-            wanted.render(80, false)
-        );
         (
-            Doc::cat([Doc::text("No impl for `"), wanted, Doc::text("`.")]),
-            hint,
+            with_predicate("No impl for".into(), wanted.clone(), ".".into()),
+            with_predicate("Import or define an impl for".into(), wanted, ".".into()),
         )
     };
     let mut details = Vec::new();
@@ -388,7 +395,7 @@ pub(super) fn missing_impl(
             Doc::vcat(because.iter().map(|reason| requirement(l, reason))),
         ));
     }
-    details.push(Doc::text(hint));
+    details.push(hint);
     let mut report = report("MISSING IMPL", region, message, details);
     report.primary_label = Some(if name.is_empty() {
         "required here".into()

@@ -1278,6 +1278,22 @@ fn source_pipeline_missing_constraint() {
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));
 }
+/// The wanted predicate is wider than 80 columns, so the help line wraps.
+#[test]
+fn source_pipeline_missing_impl_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Probe 'a where\n    probe : 'a -> 'a\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) )\nf x = probe x\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
+/// The wanted predicate is wider than 80 columns, so the help line wraps.
+#[test]
+fn source_pipeline_missing_constraint_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Relate 'a 'b where\n    relate : 'a -> 'b -> Primitive.bool\nf : 'element -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.bool\nf x y = relate x y\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
 
 #[test]
 fn example_one_big_little_annotation() {

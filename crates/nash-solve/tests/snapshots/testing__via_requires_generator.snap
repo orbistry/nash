@@ -17,4 +17,5 @@ nash::type::missing_impl
 
             unit
 
-        Import or define an impl for `Literal.FromUnit (Prop.prng -> Option.option ( unit, Prop.prng ))`.
+        Import or define an impl for
+            `Literal.FromUnit (Prop.prng -> Option.option ( unit, Prop.prng ))`.

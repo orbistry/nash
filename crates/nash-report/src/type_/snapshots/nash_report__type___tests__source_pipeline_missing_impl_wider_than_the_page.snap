@@ -1,0 +1,22 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Probe 'a where\n    probe : 'a -> 'a\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) )\nf x = probe x\n"
+---
+nash::type::missing_impl
+
+  × No impl for
+  │     `Probe ( wrapper (pair int bytes)
+  │            , wrapper (pair string bool)
+  │            , wrapper (pair int int)
+  │            )`.
+   ╭─[Main.nash:7:7]
+ 6 │ f : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) )
+ 7 │ f x = probe x
+   ·       ──┬──
+   ·         ╰── required by `probe`
+   ╰────
+  help: Import or define an impl for
+            `Probe ( wrapper (pair int bytes)
+                   , wrapper (pair string bool)
+                   , wrapper (pair int int)
+                   )`.
