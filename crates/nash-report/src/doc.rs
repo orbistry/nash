@@ -67,6 +67,11 @@ impl Doc {
     pub fn hcat(docs: impl IntoIterator<Item = Doc>) -> Doc {
         Doc::cat(docs)
     }
+    /// Elm `D.cat` (wl-pprint `cat`): one line when the docs fit, otherwise
+    /// one per line. `Doc::cat` is `<>`.
+    pub fn pcat(docs: impl IntoIterator<Item = Doc>) -> Doc {
+        Doc::Group(Box::new(intersperse(docs, Doc::LineBreak)))
+    }
     /// `P.vcat`.
     pub fn vcat(docs: impl IntoIterator<Item = Doc>) -> Doc {
         intersperse(docs, Doc::HardLine)

@@ -1256,6 +1256,14 @@ fn source_pipeline_infinite_type() {
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));
 }
+/// A tuple wider than the page puts one entry on each line.
+#[test]
+fn source_pipeline_tuple_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.int\nf x = x\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
 #[test]
 fn source_pipeline_missing_impl() {
     let source = "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nf : A -> Primitive.bool\nf a = eq a a\n";

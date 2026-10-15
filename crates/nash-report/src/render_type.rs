@@ -37,7 +37,7 @@ pub fn tuple(a: Doc, b: Doc, rest: Vec<Doc>) -> Doc {
         .chain(rest)
         .enumerate()
         .map(|(i, d)| Doc::hsep([Doc::text(if i == 0 { "(" } else { "," }), d]));
-    Doc::align(Doc::sep([Doc::cat(entries), Doc::text(")")]))
+    Doc::align(Doc::sep([Doc::pcat(entries), Doc::text(")")]))
 }
 fn entry((name, typ): (Doc, Doc)) -> Doc {
     Doc::hang(4, Doc::sep([Doc::hsep([name, Doc::text(":")]), typ]))
@@ -64,12 +64,12 @@ fn record_docs(entries: Vec<(Doc, Doc)>, ext: Option<Doc>, vertical: bool) -> Do
     let body = if let Some(ext) = ext {
         Doc::hang(
             4,
-            Doc::sep([Doc::hsep([Doc::text("{"), ext]), Doc::cat(fields)]),
+            Doc::sep([Doc::hsep([Doc::text("{"), ext]), Doc::pcat(fields)]),
         )
     } else if vertical {
         Doc::vcat(fields)
     } else {
-        Doc::cat(fields)
+        Doc::pcat(fields)
     };
     if vertical {
         Doc::vcat([body, Doc::text("}")])
