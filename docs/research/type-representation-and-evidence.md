@@ -15,10 +15,11 @@ correctness machinery around generalization, predicates, and error recovery.
 
 ### What the two implementations actually do
 
-Nash already infers directly from the canonical AST. Its former intermediate
-constraint-tree architecture is gone. Switching representations would therefore
-not remove that layer a second time. See
-[`solve/infer.rs`](../../crates/nash-solve/src/solve/infer.rs) and
+Nash infers in two stages, as Elm does. `nash-constrain` turns the canonical
+AST into an arena-owned constraint tree, and `nash-solve` walks that tree with
+the union-find store. Switching representations would not remove the
+constraint layer. See
+[`nash-constrain/lib.rs`](../../crates/nash-constrain/src/lib.rs) and
 [`nash-solve/lib.rs`](../../crates/nash-solve/src/lib.rs).
 
 Nash stores a graph: a small `Variable` indexes a descriptor, whose children are
@@ -267,7 +268,7 @@ For example, `use : (forall a. a -> a) -> (unit, Color)` uses mathematical
 AST keeps quantification on `Annotation.free_vars`; nested `Type` nodes do not
 contain quantified schemes, and function parameters get monomorphic variables.
 See [`Annotation` and `Type`](../../crates/nash-ast/src/lib.rs) and
-[lambda inference](../../crates/nash-solve/src/solve/expressions.rs). The solver's
+[lambda constraints](../../crates/nash-constrain/src/expression.rs). The solver's
 internal variable ranks track generalization levels; they do not mean rank-N
 source types.
 

@@ -1,0 +1,9 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Gen exposing (..)\ntype alias gen 'a = int -> ('a, int)\ntrait Name 'a where\n    name : 'a -> ()\nimpl Name (gen int) where\n    name _ = ()\nstart : int -> gen int\nstart n = \\seed -> (n, seed)\nrun : int -> (int, int)\nrun seed = start 4 seed\n\n\nmodule Main exposing (..)\nimport Gen exposing (..)\nlabel = name (start 1)\n"
+---
+Gen:
+run : int -> ( int, int )
+start : int -> gen int
+Main:
+label : unit

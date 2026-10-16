@@ -26,11 +26,17 @@ enum PointInfo<'a> {
 #[derive(Debug, Default)]
 pub struct UnionFind<'a> {
     points: Vec<PointInfo<'a>>,
+    // DEVIATION from Elm: `(loser, winner)` of every union, so an index keyed
+    // by representative can follow merges without a scan.
+    merges: Vec<(Variable, Variable)>,
 }
 
 impl<'a> UnionFind<'a> {
     pub fn new() -> Self {
-        UnionFind { points: Vec::new() }
+        UnionFind {
+            points: Vec::new(),
+            merges: Vec::new(),
+        }
     }
 
     pub fn fresh(&mut self, desc: Descriptor<'a>) -> Variable {
@@ -109,6 +115,7 @@ impl<'a> UnionFind<'a> {
         };
 
         self.points[loser.index()] = PointInfo::Link(winner);
+        self.merges.push((loser, winner));
         match &mut self.points[winner.index()] {
             PointInfo::Info { weight, desc } => {
                 *weight = new_weight;
@@ -125,6 +132,11 @@ impl<'a> UnionFind<'a> {
     /// The representative of this point's equivalence class.
     pub fn find(&mut self, point: Variable) -> Variable {
         self.repr(point)
+    }
+
+    /// Every union so far as `(loser, winner)`, oldest first.
+    pub fn merges(&self) -> &[(Variable, Variable)] {
+        &self.merges
     }
 
     /// True when this point has been unioned into another representative.

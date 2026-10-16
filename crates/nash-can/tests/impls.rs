@@ -3,6 +3,7 @@ use snapshot_support::SnapshotInputs;
 
 use bumpalo::Bump;
 use indoc::indoc;
+use nash_ast::head::WORK_LIMIT;
 
 #[test]
 fn inline_impl_bounds_are_retained_for_superclasses() {
@@ -48,18 +49,18 @@ fn recursive_overlap_ignores_representation_contexts() {
         nash_ast::head::overlaps(keys[a].heads, keys[b].heads, &|_| None, budget)
     };
     assert!(
-        overlap(0, 1, &mut 16_384).unwrap(),
+        overlap(0, 1, &mut { WORK_LIMIT }).unwrap(),
         "representation contexts do not make equal heads disjoint"
     );
-    assert!(overlap(0, 2, &mut 16_384).unwrap());
-    assert!(overlap(1, 2, &mut 16_384).unwrap());
+    assert!(overlap(0, 2, &mut { WORK_LIMIT }).unwrap());
+    assert!(overlap(1, 2, &mut { WORK_LIMIT }).unwrap());
     assert!(
-        overlap(0, 0, &mut 16_384).unwrap(),
+        overlap(0, 0, &mut { WORK_LIMIT }).unwrap(),
         "fresh binders preserve overlap"
     );
-    let mut budget = 16_384;
+    let mut budget = WORK_LIMIT;
     assert!(overlap(0, 0, &mut budget).unwrap());
-    let mut exact_budget = 16_384 - budget;
+    let mut exact_budget = WORK_LIMIT - budget;
     assert!(exact_budget > 0);
     assert!(overlap(0, 0, &mut exact_budget).unwrap());
     assert_eq!(exact_budget, 0);
@@ -1139,5 +1140,24 @@ fn classed_superclass_selection_normalizes_alias_application_givens() {
     let result = canonicalize(&bump, source).unwrap();
     insta::with_settings!({description => source, omit_expression => true}, {
         insta::assert_debug_snapshot!(result.module.impls);
+    });
+}
+
+/// A superclass proof never uses representation coverage (owner decision N3):
+/// an impl names the split requirement in its context. Only the element
+/// requirement is not enough, although inference would cover it in a body.
+#[test]
+fn superclass_proof_needs_the_split_requirement_named() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut results = Vec::new();
+    for context in ["Kind (list 'a)", "Kind 'a"] {
+        let source = format!(
+            "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Kind 'a where\n    kind : 'a -> 'a\nimpl Kind (list ('a : Big)) where\n    kind x = x\nimpl Kind 'a => Kind (list ('a : Little)) where\n    kind x = x\ntrait Kind 'a => Child 'a where\n    child : 'a -> 'a\nimpl {context} => Child (list 'a) where\n    child x = x\n"
+        );
+        results.push(canonicalize(&bump, snapshot_inputs.record(&source)).map(|_| ()));
+    }
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.results(&results));
     });
 }

@@ -188,9 +188,10 @@ retains the compared type for codegen.
 Builtin-list Eq has disjoint implementations by element representation:
 Big elements compare `listData` results through structural Big Eq; Little elements
 use elementwise Eq with short-circuiting. This is ordinary library code, not a
-compiler optimization. Generic callers with unknown element representation must
-request `Eq (list 'a)` directly; `Eq 'a` alone does not select one of the two
-representation-constrained impls. Known Big elements need no element Eq context;
+compiler optimization. A generic caller with unknown element representation can
+request `Eq 'a`: inference covers both representation-constrained impls (see
+`by_coverage` under Entailment) and code generation selects one for each use.
+Requesting `Eq (list 'a)` directly also works. Known Big elements need no element Eq context;
 known Little elements still require element Eq. Builtin pair elements are Little,
 so native map-shaped lists retain elementwise pair equality. Big `Map` equality
 is already covered by structural Big Eq.
@@ -201,7 +202,8 @@ no runtime wrapper. Its ordinary library Eq implementations are disjoint:
 Big/Big compares `mapData` results structurally; Little keys with any values and
 Big keys with Little values compare entries using the selected element Eq.
 The alias itself requires neither Big nor Eq. A generic caller whose key/value
-representations are unknown requests `Eq (map 'k 'v)` directly. Alias identity selects the map
+representations are unknown requests `Eq 'k` and `Eq 'v`, which coverage turns into the
+map impl of each use, or `Eq (map 'k 'v)` directly. Alias identity selects the map
 impl; raw pair lists still select list Eq. `unMapData` returns the alias, and Map
 operations retain it in native map results. `Map.toList` explicitly returns the
 underlying list. Entry order and duplicate entries remain significant.
@@ -259,6 +261,26 @@ when it needs one that is missing.
 - `by_instance`: every argument of `P` has a head constructor, an impl with
   `P`'s key exists, and `Given ⊢ Q` for every `Q` in the impl's context
   instantiated at `P`'s arguments.
+- `by_coverage` (inference only: wanted predicates of function and method
+  bodies): ordinary selection cannot decide `P = T t1 .. tn` because a rigid
+  variable sits at an impl-head position that tests a representation class
+  (a *subject* of `P`). The limit comes first: the given closure must hold a
+  predicate of `T` with each subject itself as an argument (for one parameter,
+  exactly `T 'x`), so a signature never hides the trait that selects. Then
+  every *cell*, one representation per subject (Big, Const or Term, as the
+  representation and formation givens admit), must select an impl, and the
+  context of each selected impl must hold in its cell. The evidence is
+  `Specialize P`; code generation selects the impl for each use. One work
+  budget (16,384 steps) pays for finding the subjects, the cells and every
+  selection; more is an impl-resolution-limit error. Rigid variables come only
+  from annotations: an unannotated definition keeps `T (list 'a)` in its
+  inferred context.
+
+Superclass proofs (declaration checking) use `by_given` and `by_instance`
+only, never `by_coverage`. An impl names a split requirement in its context,
+as Base does: `impl ( Ord 'a, Eq (list 'a) ) => Ord (list 'a)` is accepted,
+`impl Ord 'a => Ord (list 'a)` gets a missing-superclass error. This is what
+Haskell does when instance selection depends on a rigid variable.
 
 After checking givens, resolution recognizes the compiler-owned reflexive
 rule only for package `nash/base`, module `Lift`, trait `Lift`. Both arguments
@@ -273,7 +295,7 @@ does not assume that different head variable names make impls disjoint.
 Superclass checking during canonicalization performs a bounded search.
 A predicate already active in the instance-resolution chain is a cycle,
 not a proof. Expanding flexible contexts are bounded too: each impl check
-allows 16,384 work steps and fewer than 128 nested resolution or type
+allows 16,384 work steps and fewer than 256 nested resolution or type
 conversion calls. Predicate comparisons count toward the work limit.
 Failure reports the instantiated superclass requirement and distinguishes
 a missing proof, a cycle, and the search limit. The given superclass
@@ -283,9 +305,10 @@ Evidence is the derivation:
 
 ```
 Evidence = Impl  { impl_: ImplRef, type_args: [Type], args: [Evidence] } -- by_instance; type_args = head vars
-         | ReflexiveLift { typ: Type }                -- compiler rule for equal Big types
+         | ReflexiveLift { typ: Type }                -- compiler rule for nominally equal types
          | Given { binder: NodeId, index: u16 }         -- i-th predicate of the scheme of definition `binder`
          | Super { of: Evidence, index: u16 }           -- i-th superclass of an evidence's trait
+         | Specialize { trait_: TraitName, args: [Type] } -- by_coverage; codegen selects for each use
 ```
 
 `NodeId` is the identity of an AST node (its arena address), the key
@@ -297,9 +320,11 @@ Context reduction: a retained context never contains both `Ord 'a` and
 ## Inference
 
 Nash keeps Elm's rank-based solver (`nash-solve`). Predicates ride along
-with unification variables. Inference walks the canonical AST directly;
-there is no allocated constraint tree or intermediate inference type.
-Canonical types instantiate directly into union-find variables.
+with unification variables. `nash-constrain` turns the canonical AST into an
+arena-owned constraint tree, and the solver walks it in Elm's order. Types
+in the tree are the inference `Type` language; the solver turns them into
+union-find variables. Canonical annotations instantiate directly into
+union-find variables.
 
 Each definition owns its young rank, wanted predicates, and evidence binder.
 Pattern scopes introduce a younger rank only when they own fresh variables.
@@ -381,7 +406,7 @@ context is the given set.
 Impl selection waits for the surrounding definition's type equalities.
 Captured outer variables must also be fixed before rejecting an enclosing
 given in favor of an impl. Impl contexts may expand indefinitely; resolution
-is bounded to 128 levels and 16,384 attempts per definition boundary. Exceeding
+is bounded to 256 levels and 16,384 attempts per definition boundary. Exceeding
 either bound reports `ImplResolutionLimit` at the originating call. An
 exhausted search never counts as evidence that a constraint was satisfied.
 
@@ -530,30 +555,38 @@ preserves polymorphic destructuring without losing qualified constraints.
 
 ### Resolving outside the solver
 
-Power-assert ([testing.md](testing.md)) needs `Show` at whatever ground
-type a subexpression has, and `@derive` ([macros.md](macros.md)) needs to
-know whether a field type already has an impl. Both run after solving, on
-fully ground canonical types, so the resolver is also exposed as a plain
-function:
+Power-assert ([testing.md](testing.md)) needs `Show` at whatever type a
+subexpression has, and `@derive` ([macros.md](macros.md)) needs to know
+whether a field type already has an impl. Both run after solving, so the
+resolver is also exposed as a plain function. Code generation also calls it
+for superclasses, method contexts, and `Specialize` evidence:
 
 ```rust
 pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
-    pred: &Pred<'a>,          // args are ground `Located<Type>`s: no `Type::Var`
+    pred: &Pred<'a>,          // a `Type::Var` in the args is open
 ) -> Result<Evidence<'a>, nash_solve::evidence::Error<'a>>
 ```
 
 It is the same `by_instance` walk without unification variables: match
 each argument's head constructor against the impl table, instantiate the
-impl's context at the argument's type arguments, recurse. A ground
-predicate never needs `Given`, so the result is a closed tree of `Impl` and
-exact-core `ReflexiveLift` evidence. Reflexive Lift requires nominally equal
-arguments with an already-proven Big representation; it does not choose
-a representation.
+impl's context at the argument's type arguments, recurse. A type variable
+that reaches the resolver is open: no use fixed it, as with a phantom
+parameter, and nothing will bind it. An open variable equals only itself and
+binds impl head variables like any other type. An impl that matches whatever
+the variable is proves the predicate, even when another candidate or
+reflexive Lift depends on the variable. Otherwise a decision that needs an
+open variable fails with `NonGround`: impl selection (`head::Open` under
+`SelectPolicy::Exact`), a representation test, or a requirement that
+formation of a type leaves. In a checked program, a rigid variable that
+selects an impl needs a stated constraint, so type checking reports that case
+first. The predicate never needs `Given`, so the result is a closed tree of
+`Impl` and exact-core `ReflexiveLift` evidence. Reflexive Lift requires
+nominally equal arguments and does not choose a representation.
 Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
 failed predicate. Resolution and type traversal share a 16,384-step work
-budget, with a depth limit of 128. Context substitution is charged before
+budget, with a depth limit of 256. Context substitution is charged before
 allocation. Callers supply well-kinded canonical types and complete tables.
 
 Codegen specializes executable trait evidence at compile time. It walks a
@@ -570,7 +603,9 @@ for the authoritative specialization identity and recursive-layout check.
 
 `Super { of, index }` after substitution is an `Impl`, and the superclass
 impl is found by key: the `index`-th superclass of the impl's trait, at the
-impl's heads. The impl check guarantees it exists.
+impl's heads. The impl check guarantees it exists. The heads can still hold
+open types after substitution; resolution fails only where an open type would
+select the superclass impl.
 
 ## `do` notation
 

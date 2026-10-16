@@ -1,0 +1,23 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Relate 'a 'b where\n    relate : 'a -> 'b -> Primitive.bool\nf : 'element -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.bool\nf x y = relate x y\n"
+---
+nash::type::missing_constraint
+
+  × `relate` requires undeclared constraint
+  │     `Relate 'element ( wrapper (pair int bytes)
+  │                      , wrapper (pair string bool)
+  │                      , wrapper (pair int int)
+  │                      )`.
+   ╭─[Main.nash:7:9]
+ 6 │ f : 'element -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.bool
+ 7 │ f x y = relate x y
+   · ┬       ───┬──
+   · │          ╰── constraint required here
+   · ╰── annotation for `f`
+   ╰────
+  help: Add
+            `Relate 'element ( wrapper (pair int bytes)
+                             , wrapper (pair string bool)
+                             , wrapper (pair int int)
+                             )` to the annotation for `f`.

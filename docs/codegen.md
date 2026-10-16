@@ -201,6 +201,16 @@ The worklist identifies a specialization by:
 3. The runtime layout descriptors demanded by that body and its callees.
    Complete source type arguments remain available as substitution metadata,
    but do not all participate in key equality or hashing.
+4. The types of the variables that representation coverage selects with
+   (`Evidence::Specialize`, see [traits.md](traits.md) Entailment). The impl
+   is selected for each use from these types, so two uses with the same
+   given evidence, for example one `impl Kind ('a : Storable)` for a Big and a
+   Const element, still get separate copies when `Kind (box 'a)` selects
+   different impls for them.
+
+Coverage demand propagates like layout demand: a caller that passes such a
+variable to a callee with a coverage demand holds every type variable of that
+argument in its own key.
 
 Layout demand propagates through calls to a fixed point. It includes native
 constant construction and representation-dependent builtins. In particular an
@@ -241,8 +251,10 @@ instantiated at `type_args` (or the trait's default method body with the
 impl's evidence substituted). `args` supplies the evidence for the impl's
 own context (`impl Eq 'a => Eq (list ('a : Little))`), and a `Super` node (`lt` using
 `Eq` through `Ord`'s superclass) resolves to the superclass impl through
-the impl table. After this phase there are no dictionaries and no trait
-names in `Core`.
+the impl table. The superclass predicate can mention a type variable that no
+use fixes, such as a phantom parameter. Resolution keeps that variable open
+and fails only where it would select the impl. After this phase there are no
+dictionaries and no trait names in `Core`.
 
 ### 3. Pattern matching
 

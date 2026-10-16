@@ -990,6 +990,29 @@ fn higher_kinded_default_method_accepts_a_nominal_record_alias() {
 }
 
 #[test]
+fn higher_kinded_application_unifies_through_a_transparent_alias_body() {
+    let result = core_eval(
+        "higher_kinded_application_unifies_through_a_transparent_alias_body",
+        indoc::indoc!(
+            r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        import Builtin exposing (..)
+        type alias ints = list int
+        trait Pass 'f where
+            pass : 'f 'a -> 'f 'a
+        impl Pass list where
+            pass x = x
+        values : ints
+        values = [1, 2]
+        main = pass values
+    "#
+        ),
+    );
+    assert!(!result.result.starts_with("error:"), "{}", result.result);
+}
+
+#[test]
 fn source_data_encoding_preserves_nominal_constructors() {
     let result = core_eval(
         "source_data_encoding_preserves_nominal_constructors",

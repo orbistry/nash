@@ -3,8 +3,9 @@ name = "nash-constrain"
 version = "0.9.0"
 edition.workspace = true
 description = """
-Shared union-find types, canonical type instantiation, and diagnostics \
-for direct type inference.
+Responsible for building the set of constraints that are used \
+during type inference of a program, and for gathering context \
+needed for pleasant error messages when a type error occurs.
 """
 homepage.workspace = true
 repository.workspace = true

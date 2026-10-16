@@ -1,0 +1,18 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\ntrait Round 'a where\n    create : () -> 'a\nimpl Round () where\n    create x = x\nhelper : () -> ()\nhelper x = \\y -> y\ncaller : ()\ncaller = helper (create ())\n"
+info: diagnostic
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `unit`, found `'a -> 'a`.
+   ╭─[Main.nash:7:12]
+ 5 │     create x = x
+ 6 │ helper : () -> ()
+   ·          ────┬───
+   ·              ╰── declared type
+ 7 │ helper x = \y -> y
+   ·            ───┬───
+   ·               ╰── body of `helper`
+ 8 │ caller : ()
+   ╰────

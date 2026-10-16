@@ -1,4 +1,5 @@
 mod evidence;
+pub use evidence::same_type;
 pub mod head;
 pub mod primitives;
 
@@ -648,6 +649,13 @@ pub enum Evidence<'a> {
     Given { binder: NodeId, index: u16 },
     /// The `index`-th superclass of `of`'s trait.
     Super { of: &'a Evidence<'a>, index: u16 },
+    /// Representation coverage: the impl depends on the representation of a
+    /// rigid variable in `args`. Code generation selects it for each use, when
+    /// the arguments are known.
+    Specialize {
+        trait_: QualifiedName<'a>,
+        args: &'a [&'a Located<Type<'a>>],
+    },
 }
 
 impl<'a> Head<'a> {

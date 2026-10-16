@@ -1,5 +1,7 @@
-//! Impl evidence for ground canonical predicates, outside the inference loop.
+//! Impl evidence for canonical predicates after inference. A type variable
+//! that reaches resolution is open: nothing will bind it.
 use bumpalo::Bump;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_ast::{Evidence, ImplRef, Pred, QualifiedName, Type};
 use nash_can::environment::Tables;
 use nash_region::Located;
@@ -7,6 +9,8 @@ use nash_region::Located;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {
     MissingImpl,
+    /// A decision needs an open type variable: impl selection, a
+    /// representation test, or the requirements of a type.
     NonGround,
     Limit,
 }
@@ -18,9 +22,10 @@ pub struct Error<'a> {
 }
 
 /// Resolve a well-kinded canonical predicate using the complete impl table.
-/// Nominal aliases retain their identity. Open types are rejected; resolution
-/// never chooses a type or kind to make an impl match. Recursive contexts and
-/// structural traversal share a bounded work budget.
+/// Nominal aliases retain their identity. An open type variable equals only
+/// itself; resolution never chooses a type or kind to make an impl match, so
+/// a decision that needs an open variable fails with `NonGround`. Recursive
+/// contexts and structural traversal share a bounded work budget.
 pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
@@ -29,7 +34,7 @@ pub fn resolve<'a>(
     Resolver {
         bump,
         tables,
-        remaining: 16_384,
+        remaining: WORK_LIMIT,
     }
     .resolve(pred, 0)
 }
@@ -40,10 +45,12 @@ enum Constructor<'a> {
     Tuple(usize),
     Function,
     Record(Vec<&'a str>),
+    Var(&'a str),
 }
 
 // A region-independent, nominal view for reflexive equality. Alias bodies and
-// unsupplied bound parameters are not part of a nominal application.
+// unsupplied bound parameters are not part of a nominal application. An open
+// variable equals only itself.
 #[derive(PartialEq, Eq)]
 struct Term<'a> {
     con: Constructor<'a>,
@@ -127,7 +134,7 @@ impl<'a> Resolver<'_, 'a> {
     }
 
     fn step(&mut self, depth: usize) -> Result<(), Failure> {
-        if depth >= 128 || self.remaining == 0 {
+        if depth >= DEPTH_LIMIT || self.remaining == 0 {
             return Err(Failure::Limit);
         }
         self.remaining -= 1;
@@ -137,10 +144,10 @@ impl<'a> Resolver<'_, 'a> {
     fn term(&mut self, typ: &Type<'a>, depth: usize) -> Result<Term<'a>, Failure> {
         self.step(depth)?;
         let (con, args) = match typ {
-            Type::Var(_) => return Err(Failure::NonGround),
+            Type::Var(name) => (Constructor::Var(name), Vec::new()),
             Type::App { head, args } => {
                 let mut head = self.term(&head.value, depth + 1)?;
-                if !matches!(head.con, Constructor::Named(_)) {
+                if !matches!(head.con, Constructor::Named(_) | Constructor::Var(_)) {
                     return Err(Failure::MissingImpl);
                 }
                 for arg in *args {
@@ -253,8 +260,9 @@ impl<'a> Resolver<'_, 'a> {
                 .typ(typ)
                 .map_err(|_| error(Failure::MissingImpl))?;
         }
-        // Every input is ground. Formation must fully discharge its internal
-        // requirements before a ground evidence marker can be issued.
+        // Formation leaves a requirement that it cannot decide, such as a
+        // representation class that a type declaration demands of an open
+        // variable. Evidence cannot discharge it.
         if !formation.predicates.is_empty() {
             return Err(error(Failure::NonGround));
         }
@@ -276,6 +284,7 @@ impl<'a> Resolver<'_, 'a> {
                         typ: args[0],
                     }))
                 }
+                None if mentions_open(&args[0].value) => Err(error(Failure::NonGround)),
                 _ => Err(error(Failure::MissingImpl)),
             };
         }
@@ -292,38 +301,54 @@ impl<'a> Resolver<'_, 'a> {
                 typ: args[0],
             }));
         }
+        // An impl can still prove a pair that reflexivity cannot decide.
+        let mut undecided = false;
         if trait_ == nash_ast::primitives::lift_trait()
             && self.tables.has_reflexive_lift()
-            && matches!(terms.as_slice(), [first, second] if first == second)
+            && let [first, second] = terms.as_slice()
         {
-            return Ok(Resolution::Complete(Evidence::ReflexiveLift {
-                typ: args[0],
-            }));
-        }
-        let mut selected = None;
-        for (key, info) in self.tables.impls_for(trait_) {
-            if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical(&|typ, class| match nash_can::kinds::repr_of(
-                    self.bump,
-                    &self.tables.kinds,
-                    typ,
-                ) {
-                    Some(actual) if class.contains(actual) => nash_ast::head::Match::Yes(()),
-                    Some(_) => nash_ast::head::Match::No,
-                    None => nash_ast::head::Match::Deferred,
-                }),
-                key.heads,
-                args,
-                info.variables.len(),
-                &mut self.remaining,
-            )
-            .map_err(|_| error(Failure::Limit))?
-            {
-                selected = Some((*key, *info, arguments));
-                break;
+            match agree(first, second) {
+                nash_ast::head::Match::Yes(()) => {
+                    return Ok(Resolution::Complete(Evidence::ReflexiveLift {
+                        typ: args[0],
+                    }));
+                }
+                nash_ast::head::Match::Deferred => undecided = true,
+                nash_ast::head::Match::No => {}
             }
         }
-        let (key, info, type_args) = selected.ok_or_else(|| error(Failure::MissingImpl))?;
+        let candidates = self
+            .tables
+            .impls_for(trait_)
+            .map(|(key, info)| (key.heads, info.variables.len(), (*key, *info)));
+        let selection = nash_ast::head::select_impl(
+            &mut nash_ast::head::Open(&|typ, class| match nash_can::kinds::repr_of(
+                self.bump,
+                &self.tables.kinds,
+                typ,
+            ) {
+                Some(actual) if class.contains(actual) => nash_ast::head::Match::Yes(()),
+                Some(_) => nash_ast::head::Match::No,
+                None if mentions_open(&typ.value) => nash_ast::head::Match::Deferred,
+                None => nash_ast::head::Match::No,
+            }),
+            candidates,
+            args,
+            &mut self.remaining,
+            nash_ast::head::SelectPolicy::Exact,
+        )
+        .map_err(|_| error(Failure::Limit))?;
+        let (key, info, type_args) = match selection {
+            nash_ast::head::ImplSelection::Selected {
+                info: (key, info),
+                arguments,
+            } => (key, info, arguments),
+            nash_ast::head::ImplSelection::Deferred => return Err(error(Failure::NonGround)),
+            nash_ast::head::ImplSelection::Missing if undecided => {
+                return Err(error(Failure::NonGround));
+            }
+            nash_ast::head::ImplSelection::Missing => return Err(error(Failure::MissingImpl)),
+        };
         let substitution = info
             .variables
             .iter()
@@ -350,6 +375,57 @@ impl<'a> Resolver<'_, 'a> {
             children,
         })
     }
+}
+
+// Reflexive Lift compares nominal terms. Terms that differ only where an open
+// variable stands could become equal, so the rule cannot decide them.
+fn agree(first: &Term<'_>, second: &Term<'_>) -> nash_ast::head::Match<()> {
+    let mut pending = vec![(first, second)];
+    let mut deferred = false;
+    while let Some((first, second)) = pending.pop() {
+        if first.con == second.con && first.args.len() == second.args.len() {
+            pending.extend(first.args.iter().zip(&second.args));
+        } else if matches!(first.con, Constructor::Var(_))
+            || matches!(second.con, Constructor::Var(_))
+        {
+            deferred = true;
+        } else {
+            return nash_ast::head::Match::No;
+        }
+    }
+    if deferred {
+        nash_ast::head::Match::Deferred
+    } else {
+        nash_ast::head::Match::Yes(())
+    }
+}
+
+fn mentions_open(typ: &Type<'_>) -> bool {
+    let mut pending = vec![typ];
+    while let Some(typ) = pending.pop() {
+        match typ {
+            Type::Var(_) => return true,
+            Type::App { head, args } => {
+                pending.push(&head.value);
+                pending.extend(args.iter().map(|arg| &arg.value));
+            }
+            Type::Named { args, .. } => pending.extend(args.iter().map(|arg| &arg.value)),
+            Type::Alias { arguments, .. } => {
+                pending.extend(arguments.iter().map(|arg| &arg.typ.value));
+            }
+            Type::Lambda { from, to } => pending.extend([&from.value, &to.value]),
+            Type::Tuple {
+                first,
+                second,
+                rest,
+            } => {
+                pending.extend([&first.value, &second.value]);
+                pending.extend(rest.iter().map(|arg| &arg.value));
+            }
+            Type::Record { fields } => pending.extend(fields.iter().map(|field| &field.typ.value)),
+        }
+    }
+    false
 }
 
 #[cfg(test)]

@@ -1,0 +1,5 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "Code:\n\nmodule Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Probe 'a where\n    probe : 'a -> ()\nimpl Probe (list ('a : Big)) where\n    probe _ = ()\nimpl Probe 'a => Probe (list ('a : Little)) where\n    probe _ = ()\ncheck : Probe 'a => list 'a -> ()\ncheck xs = probe xs\n"
+---
+check : forall a. (Probe a, Storable a) => list a -> unit

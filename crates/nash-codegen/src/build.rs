@@ -24,7 +24,7 @@ use emission::hoist_strings;
 pub(crate) use emission::names;
 
 const MAX_SPECIALIZATIONS: usize = 1024;
-const MAX_TYPE_DEPTH: usize = 128;
+const MAX_TYPE_DEPTH: usize = 256;
 
 #[derive(Clone, Copy)]
 pub struct Input<'a, 's> {
@@ -293,6 +293,8 @@ struct Key<'a> {
     template: usize,
     evidence: Vec<ExecutableEvidence<'a>>,
     layouts: Vec<Ty<'a>>,
+    /// Types that representation coverage selects an impl with.
+    coverage: Vec<Ty<'a>>,
 }
 struct InstanceBody<'a> {
     template: usize,
@@ -500,13 +502,13 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     }
     pub fn eager_template(&self, template: usize) -> Result<bool, Error<'a>> {
         let annotation = self.scheme(template)?.annotation;
+        let id = self.templates[template].id();
+        let demanded =
+            |names: &crate::demand::Names<'a>| names.get(&id).is_some_and(|d| !d.is_empty());
         Ok(annotation.free_vars.is_empty()
             || (annotation.context.iter().all(|p| p.trait_ref().is_none())
-                && self
-                    .build
-                    .demands
-                    .get(&self.templates[template].id())
-                    .is_none_or(|d| d.is_empty())))
+                && !demanded(&self.build.demands.layouts)
+                && !demanded(&self.build.demands.coverage)))
     }
     pub fn can_type(
         &self,
@@ -615,7 +617,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
     ) -> Result<Binder<'a>, Error<'a>> {
         let t = &self.templates[template];
         let mut layouts = Vec::new();
-        if let Some(demands) = self.build.demands.get(&t.id()) {
+        if let Some(demands) = self.build.demands.layouts.get(&t.id()) {
             for name in demands {
                 let Some(typ) = subst.get(name) else {
                     return Err(Error::RuntimeLayout(Ty::Erased));
@@ -623,6 +625,18 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
                 check_type(typ, &Substitution::new())?;
                 let ty = self.types.ty(typ, &Substitution::new())?;
                 layouts.push(native(self.ir.arena, ty)?);
+            }
+        }
+        let mut coverage = Vec::new();
+        if let Some(names) = self.build.demands.coverage.get(&t.id()) {
+            for name in names {
+                let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
+                check_type(typ, &Substitution::new())?;
+                let ty = self.types.ty(typ, &Substitution::new())?;
+                if ty == Ty::Erased {
+                    return Err(Error::RuntimeLayout(ty));
+                }
+                coverage.push(ty);
             }
         }
         let evidence_key = evidence
@@ -636,6 +650,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
             template,
             layouts,
             evidence: evidence_key,
+            coverage,
         };
         if let Some(old) = self.specs.iter().find(|old| old.key == key) {
             return Ok(old.binder);
@@ -648,7 +663,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         for name in scheme.annotation.free_vars {
             runtime_subst.remove(name);
         }
-        if let Some(demands) = self.build.demands.get(&t.id()) {
+        if let Some(demands) = self.build.demands.layouts.get(&t.id()) {
             for name in demands {
                 let typ = *subst.get(name).ok_or(Error::RuntimeLayout(Ty::Erased))?;
                 let layout = self.types.ty(typ, &Substitution::new())?;

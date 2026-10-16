@@ -1,4 +1,5 @@
-//! Union-find type descriptors, scheme identities, and literal annotations.
+//! Port of the data half of Elm's `Type.Type`: constraints, the inference
+//! `Type` language, and unification variable descriptors.
 //!
 //! `toAnnotation` and `toErrorType` live in `nash-solve` (they are only
 //! called by the solver and need `nash-can`'s canonical-type utilities).
@@ -8,9 +9,24 @@ use std::collections::BTreeMap;
 use nash_ast::{Annotation, ModuleName, NodeId, QualifiedName};
 use nash_region::{Located, Region};
 
+use crate::error::{Category, Expected, PCategory, PExpected};
 use crate::union_find::{UnionFind, Variable};
 
 // CONSTRAINTS
+
+/// An annotation predicate instantiated over the definition's rigid variables.
+#[derive(Clone, Copy, Debug)]
+pub enum Pred<'a> {
+    Trait {
+        trait_: QualifiedName<'a>,
+        args: &'a [&'a Type<'a>],
+        hidden: bool,
+    },
+    Apply {
+        head: &'a Type<'a>,
+        args: &'a [&'a Type<'a>],
+    },
+}
 
 /// Scheme identity is an original definition name or a destructuring pattern.
 #[derive(Clone, Copy, Debug)]
@@ -34,6 +50,111 @@ impl<'a> Binder<'a> {
         match self {
             Self::Named(name) | Self::Pattern { name, .. } => name,
         }
+    }
+}
+
+/// Preserve the original scheme identity and full type independently of lexical scope.
+#[derive(Clone, Copy, Debug)]
+pub struct Definition<'a> {
+    pub site: Binder<'a>,
+    pub typ: &'a Type<'a>,
+    /// `Some`, including an empty slice, distinguishes a declared scheme.
+    pub context: Option<&'a [Pred<'a>]>,
+}
+
+/// Elm's `Type.Constraint`. Allocated in a bump arena, so collections are
+/// slices, not owned containers.
+#[derive(Debug)]
+pub enum Constraint<'a> {
+    /// `tests`: the use is in a module test, where tests-block imports make
+    /// more labeled constructors visible.
+    Record {
+        region: Region,
+        context: FieldContext<'a>,
+        record: &'a Type<'a>,
+        tests: bool,
+    },
+    /// `tests`: as for `Record`.
+    Field {
+        region: Region,
+        context: FieldContext<'a>,
+        record: &'a Type<'a>,
+        field: &'a str,
+        field_type: &'a Type<'a>,
+        tests: bool,
+    },
+    True,
+    SaveTheEnvironment,
+    Equal(
+        Region,
+        Category<'a>,
+        &'a Type<'a>,
+        Expected<'a, &'a Type<'a>>,
+    ),
+    Local(Region, NodeId, &'a str, Expected<'a, &'a Type<'a>>),
+    Foreign(
+        Region,
+        NodeId,
+        &'a str,
+        &'a Annotation<'a>,
+        Expected<'a, &'a Type<'a>>,
+    ),
+    Pattern(
+        Region,
+        PCategory<'a>,
+        &'a Type<'a>,
+        PExpected<'a, &'a Type<'a>>,
+    ),
+    And(&'a [Constraint<'a>]),
+    Let {
+        /// Recursive binding identities published before checking group bodies.
+        /// Annotated declarations also supply their final contexts immediately.
+        declarations: &'a [Definition<'a>],
+        /// Assumed while checking the definition body, over its rigid variables.
+        given: &'a [Pred<'a>],
+        /// Evidence owner; the first untyped member for a recursive group.
+        binder: Option<Binder<'a>>,
+        /// All definitions generalized here, even when no lexical name is bound.
+        definitions: &'a [Definition<'a>],
+        rigid_vars: &'a [Variable],
+        flex_vars: &'a [Variable],
+        /// Name-sorted, mirroring Elm's `Map.Map Name (A.Located Type)`.
+        header: &'a [(&'a str, Located<&'a Type<'a>>)],
+        header_con: &'a Constraint<'a>,
+        body_con: &'a Constraint<'a>,
+    },
+    /// Nash only: record the solved type of an expression or pattern node for
+    /// `SolvedTypes`. Elm does not keep the type of each node.
+    SaveType {
+        node: NodeId,
+        kind: NodeKind,
+        typ: &'a Type<'a>,
+        constraint: &'a Constraint<'a>,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum NodeKind {
+    Expression,
+    Pattern,
+}
+
+/// Elm's `exists`: a `CLet` binding only flex variables.
+pub fn exists<'a>(
+    bump: &'a bumpalo::Bump,
+    flex_vars: &'a [Variable],
+    constraint: Constraint<'a>,
+) -> Constraint<'a> {
+    Constraint::Let {
+        declarations: &[],
+        given: &[],
+        binder: None,
+        definitions: &[],
+        rigid_vars: &[],
+        flex_vars,
+        header: &[],
+        header_con: bump.alloc(constraint),
+        body_con: bump.alloc(Constraint::True),
     }
 }
 
@@ -61,6 +182,40 @@ pub enum FlatType<'a> {
     Fun1(Variable, Variable),
     Record1(BTreeMap<&'a str, Variable>),
     Tuple1(Variable, Variable, Vec<Variable>),
+}
+
+/// Elm's `Type.Type`: the language the constraint generator writes types in.
+#[derive(Clone, Copy, Debug)]
+pub enum Type<'a> {
+    PartialAliasN {
+        home: ModuleName<'a>,
+        name: &'a str,
+        args: &'a [(&'a str, &'a Type<'a>)],
+        remaining: &'a [&'a str],
+        body: &'a Located<nash_ast::Type<'a>>,
+    },
+    /// Nash only: the application of a type variable.
+    AppVarN(&'a Type<'a>, &'a [&'a Type<'a>]),
+    AliasN {
+        home: ModuleName<'a>,
+        name: &'a str,
+        args: &'a [(&'a str, &'a Type<'a>)],
+        real: &'a Type<'a>,
+        body: &'a Located<nash_ast::Type<'a>>,
+    },
+    VarN(Variable),
+    AppN {
+        home: ModuleName<'a>,
+        name: &'a str,
+        args: &'a [&'a Type<'a>],
+    },
+    FunN(&'a Type<'a>, &'a Type<'a>),
+    /// Name-sorted, mirroring Elm's `Map.Map Name Type`. Records are closed, so
+    /// there is no extension variable.
+    RecordN {
+        fields: &'a [(&'a str, &'a Type<'a>)],
+    },
+    TupleN(&'a Type<'a>, &'a Type<'a>, &'a [&'a Type<'a>]),
 }
 
 /// Flatten application spines whose heads inference has already determined.
@@ -210,6 +365,30 @@ pub fn literal_default(trait_: nash_ast::QualifiedName<'_>) -> Option<FlatType<'
     ))
 }
 
+pub fn list<'a>(bump: &'a bumpalo::Bump, element: &'a Type<'a>) -> Type<'a> {
+    Type::AppN {
+        home: nash_ast::primitives::primitive_home(),
+        name: "list",
+        args: bump.alloc_slice_copy(&[element]),
+    }
+}
+
+pub const fn unit<'a>() -> Type<'a> {
+    Type::AppN {
+        home: nash_ast::primitives::primitive_home(),
+        name: "unit",
+        args: &[],
+    }
+}
+
+pub const fn bool<'a>() -> Type<'a> {
+    Type::AppN {
+        home: nash_ast::primitives::primitive_home(),
+        name: "bool",
+        args: &[],
+    }
+}
+
 // MAKE FLEX VARIABLES
 
 pub fn mk_flex_var<'a>(uf: &mut UnionFind<'a>) -> Variable {
@@ -218,4 +397,12 @@ pub fn mk_flex_var<'a>(uf: &mut UnionFind<'a>) -> Variable {
 
 pub const fn unnamed_flex_var<'a>() -> Content<'a> {
     Content::FlexVar(None)
+}
+
+pub fn name_to_flex<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
+    uf.fresh(make_descriptor(Content::FlexVar(Some(name))))
+}
+
+pub fn name_to_rigid<'a>(uf: &mut UnionFind<'a>, name: &'a str) -> Variable {
+    uf.fresh(make_descriptor(Content::RigidVar(name)))
 }

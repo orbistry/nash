@@ -1,22 +1,19 @@
-//! Direct canonical AST inference with Elm's rank-based generalization,
-//! producing annotations, definition schemes, and use-site evidence.
+//! Elm's constraint solver: walks the constraint tree that `nash-constrain`
+//! generates, with rank-based generalization. It produces annotations,
+//! definition schemes, and use-site evidence.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bumpalo::Bump;
 use nash_ast::Type as CanType;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_can::Annotations;
 use nash_constrain::error::{Category, Error, Expected, PExpected};
 use nash_constrain::type_::{
-    self, Content, Descriptor, FlatType, Mark, NO_MARK, NO_RANK, OUTERMOST_RANK,
+    self, Constraint, Content, Descriptor, FlatType, Mark, NO_MARK, NO_RANK, OUTERMOST_RANK, Type,
 };
 use nash_constrain::{UnionFind, Variable};
 use nash_region::{Located, Region};
-
-mod expressions;
-mod infer;
-mod patterns;
-use infer::Definition;
 
 use crate::annotation::to_error_type;
 use crate::occurs;
@@ -31,16 +28,19 @@ pub fn run<'a>(
     module: &nash_ast::Module<'a>,
     tables: &nash_can::environment::Tables<'a>,
 ) -> Result<(Annotations<'a>, crate::SolvedTypes<'a>), Vec<Error<'a>>> {
+    let constraint = nash_constrain::constrain(bump, uf, module);
     let mut solver = Solver::new(bump, tables);
 
-    let state = solver.infer_module(
+    let state = solver.solve(
         uf,
-        module,
+        &Env::new(),
+        OUTERMOST_RANK,
         State {
             env: Env::new(),
             mark: NO_MARK.next(),
             errors: Vec::new(),
         },
+        &constraint,
     );
 
     solver.finish_state(uf, state)
@@ -79,6 +79,31 @@ enum UseSource {
     },
 }
 
+/// Recorded schemes with a lookup by defining node.
+#[derive(Default)]
+struct Schemes<'a> {
+    records: Vec<SchemeRecord<'a>>,
+    /// First record of each site node.
+    by_site: std::collections::HashMap<nash_ast::NodeId, usize>,
+}
+
+impl<'a> Schemes<'a> {
+    fn push(&mut self, record: SchemeRecord<'a>) {
+        self.by_site
+            .entry(record.site.node())
+            .or_insert(self.records.len());
+        self.records.push(record);
+    }
+
+    fn at(&self, site: nash_ast::NodeId) -> Option<&SchemeRecord<'a>> {
+        self.by_site.get(&site).map(|index| &self.records[*index])
+    }
+
+    fn iter(&self) -> std::slice::Iter<'_, SchemeRecord<'a>> {
+        self.records.iter()
+    }
+}
+
 struct NodeTypeRecord {
     node: nash_ast::NodeId,
     variable: Variable,
@@ -106,9 +131,30 @@ fn add_error<'a>(mut state: State<'a>, error: Error<'a>) -> State<'a> {
     state
 }
 
+/// The subject and class of a representation predicate such as `Big 'a`.
+fn representation_requirement<'a>(
+    body: &Body<'a>,
+) -> Option<(Variable, nash_ast::primitives::ReprTrait)> {
+    let Body::Trait { trait_, args, .. } = body else {
+        return None;
+    };
+    let required = nash_ast::primitives::ReprTrait::of(*trait_)?;
+    Some((args[0], required))
+}
+
+/// Why representation coverage could not prove a wanted predicate.
+enum CoverageProblem<'a> {
+    Limit,
+    /// Some cell cannot prove this predicate: a context of a covered impl,
+    /// or, at the limit, the wanted trait at a rigid subject.
+    MissingContext(Body<'a>),
+    /// Some representation cell selects no impl.
+    Uncovered,
+}
+
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
-    test_scope: bool,
+    tests: bool,
     region: nash_region::Region,
     context: type_::FieldContext<'a>,
     record: Variable,
@@ -118,13 +164,12 @@ struct DeferredField<'a> {
 struct Solver<'a, 'tables> {
     bump: &'a Bump,
     tables: &'tables nash_can::environment::Tables<'a>,
-    test_scope: bool,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
     wanted: Vec<(usize, type_::PredId)>,
     givens: Vec<GivenFrame<'a>>,
-    schemes: Vec<SchemeRecord<'a>>,
+    schemes: Schemes<'a>,
     recursive_uses: Vec<usize>,
     uses: Vec<UseRecord<'a>>,
     expr_types: Vec<NodeTypeRecord>,
@@ -137,9 +182,18 @@ struct Solver<'a, 'tables> {
     failed_predicates: BTreeSet<type_::PredId>,
     failed_definitions: std::collections::HashSet<nash_ast::NodeId>,
     value_roots: Vec<(Variable, nash_region::Region)>,
-    kind_contracts: Vec<crate::kind_check::Contract<'a>>,
+    kind_contracts: crate::kind_check::Contracts<'a>,
     kind_errors: Vec<Error<'a>>,
     fields: Vec<DeferredField<'a>>,
+}
+
+/// A `Let` definition with its type and context converted to variables, for
+/// the Nash-only declared contexts, scheme records, and ambiguity check.
+#[derive(Clone, Copy)]
+struct Definition<'a> {
+    site: type_::Binder<'a>,
+    typ: Variable,
+    context: Option<&'a [Body<'a>]>,
 }
 
 struct GivenFrame<'a> {
@@ -164,7 +218,7 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -177,10 +231,9 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         }
     }
 
@@ -204,6 +257,694 @@ impl<'a, 'tables> Solver<'a, 'tables> {
     }
 }
 
+// SOLVE
+
+impl<'a> Solver<'a, '_> {
+    fn solve(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &Env<'a>,
+        rank: usize,
+        state: State<'a>,
+        constraint: &Constraint<'a>,
+    ) -> State<'a> {
+        match constraint {
+            Constraint::Record {
+                region,
+                context,
+                record,
+                tests,
+            } => {
+                let record = self.type_to_variable(uf, rank, record);
+                self.fields.push(DeferredField {
+                    tests: *tests,
+                    region: *region,
+                    context: *context,
+                    record,
+                    field: None,
+                });
+                let mut state = state;
+                self.retry_fields(uf, rank, &mut state.errors);
+                state
+            }
+
+            Constraint::Field {
+                region,
+                context,
+                record,
+                field,
+                field_type,
+                tests,
+            } => {
+                let record = self.type_to_variable(uf, rank, record);
+                let field_type = self.type_to_variable(uf, rank, field_type);
+                self.dependencies.field(field_type, record);
+                self.fields.push(DeferredField {
+                    tests: *tests,
+                    region: *region,
+                    context: *context,
+                    record,
+                    field: Some((field, field_type)),
+                });
+                let mut state = state;
+                self.retry_fields(uf, rank, &mut state.errors);
+                state
+            }
+
+            Constraint::True => state,
+
+            Constraint::SaveTheEnvironment => State {
+                env: env.clone(),
+                ..state
+            },
+
+            Constraint::Equal(region, category, tipe, expectation) => {
+                let actual = self.type_to_variable(uf, rank, tipe);
+                self.equal(uf, rank, state, *region, *category, actual, expectation)
+            }
+
+            Constraint::Local(region, node, name, expectation) => {
+                let binding = *env
+                    .get(name)
+                    .expect("constraint generator only references bound locals");
+                let actual = self.instantiate_binding(
+                    uf,
+                    rank,
+                    binding,
+                    UseSite {
+                        node: *node,
+                        region: *region,
+                        name,
+                    },
+                );
+                self.equal(
+                    uf,
+                    rank,
+                    state,
+                    *region,
+                    Category::Local(name),
+                    actual,
+                    expectation,
+                )
+            }
+
+            Constraint::Foreign(region, node, name, annotation, expectation) => {
+                let actual = self.src_type_to_variable(
+                    uf,
+                    rank,
+                    UseSite {
+                        node: *node,
+                        region: *region,
+                        name,
+                    },
+                    annotation,
+                );
+                self.equal(
+                    uf,
+                    rank,
+                    state,
+                    *region,
+                    Category::Foreign(name),
+                    actual,
+                    expectation,
+                )
+            }
+
+            Constraint::Pattern(region, category, tipe, expectation) => {
+                let actual = self.type_to_variable(uf, rank, tipe);
+                let expected = self.pattern_expectation_to_variable(uf, rank, expectation);
+                self.formed_at(uf, rank, &[actual, expected], *region);
+                match self.unify(uf, actual, expected) {
+                    unify::Answer::Ok(vars) => {
+                        self.introduce(uf, rank, &vars);
+                        state
+                    }
+                    unify::Answer::Err(vars, actual_type, expected_type) => {
+                        self.introduce(uf, rank, &vars);
+                        add_error(
+                            state,
+                            Error::BadPattern(
+                                *region,
+                                *category,
+                                actual_type,
+                                expectation.type_replace(expected_type),
+                            ),
+                        )
+                    }
+                }
+            }
+
+            Constraint::And(constraints) => constraints
+                .iter()
+                .fold(state, |state, sub| self.solve(uf, env, rank, state, sub)),
+
+            Constraint::SaveType {
+                node,
+                kind,
+                typ,
+                constraint,
+            } => match kind {
+                type_::NodeKind::Expression => {
+                    let variable = self.type_to_variable(uf, rank, typ);
+                    self.expr_types.push(NodeTypeRecord {
+                        node: *node,
+                        variable,
+                        owner: self.owners.last().copied(),
+                    });
+                    self.solve(uf, env, rank, state, constraint)
+                }
+                type_::NodeKind::Pattern => {
+                    let variable = self.type_to_variable(uf, rank, typ);
+                    self.pattern_types.push(NodeTypeRecord {
+                        node: *node,
+                        variable,
+                        owner: self.owners.last().copied(),
+                    });
+                    self.solve(uf, env, rank, state, constraint)
+                }
+            },
+
+            Constraint::Let {
+                declarations,
+                given,
+                binder,
+                definitions,
+                rigid_vars,
+                flex_vars,
+                header,
+                header_con,
+                body_con,
+            } => {
+                let errors_before = state.errors.len();
+                let wanted_start = self.wanted.len();
+                let annotated = definitions.iter().any(|def| def.context.is_some());
+                if definitions.is_empty()
+                    && rigid_vars.is_empty()
+                    && matches!(body_con, Constraint::True)
+                {
+                    self.introduce(uf, rank, flex_vars);
+                    let given = self.convert_givens(uf, rank, given);
+                    self.solve_header(uf, env, rank, state, header_con, given, *binder, annotated)
+                } else if definitions.is_empty() && rigid_vars.is_empty() && flex_vars.is_empty() {
+                    let decls = self.convert_definitions(uf, rank, declarations);
+                    let declared = self.declared_contexts(uf, rank, &[], &decls);
+                    let given = self.convert_givens(uf, rank, given);
+                    let state1 = self
+                        .solve_header(uf, env, rank, state, header_con, given, *binder, annotated);
+                    let locals: Vec<(&'a str, Located<Variable>)> = header
+                        .iter()
+                        .map(|(name, loc_type)| {
+                            let var = self.type_to_variable(uf, rank, loc_type.value);
+                            (*name, Located::at(loc_type.region, var))
+                        })
+                        .collect();
+                    let mut new_env = env.clone();
+                    for (name, loc) in &locals {
+                        new_env.entry(name).or_insert(Binding {
+                            declared_quantifiers: &[],
+                            variable: loc.value,
+                            context: declared.get(name).copied().unwrap_or(&[]),
+                            context_is_final: !declarations
+                                .iter()
+                                .any(|def| def.site.name().value == *name && def.context.is_none()),
+                            definition: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.site.name().value == *name)
+                                .map(|def| def.site.node())
+                                .or_else(|| {
+                                    binder
+                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
+                                        .map(type_::Binder::node)
+                                }),
+                        });
+                    }
+                    let state2 = self.solve(uf, &new_env, rank, state1, body_con);
+                    locals.into_iter().fold(state2, |state, (name, loc)| {
+                        self.check_occurs(uf, state, name, loc)
+                    })
+                } else {
+                    // work in the next pool to localize header
+                    let next_rank = rank + 1;
+                    if next_rank >= self.pools.len() {
+                        let pools_length = self.pools.len();
+                        self.pools.resize(pools_length * 2, Vec::new());
+                    }
+
+                    // introduce variables
+                    let vars: Vec<Variable> =
+                        rigid_vars.iter().chain(flex_vars.iter()).copied().collect();
+                    for var in &vars {
+                        uf.modify(*var, |desc| desc.rank = next_rank);
+                    }
+                    self.pools[next_rank] = vars;
+
+                    // run solver in next pool
+                    let locals: Vec<(&'a str, Located<Variable>)> = header
+                        .iter()
+                        .map(|(name, loc_type)| {
+                            let var = self.type_to_variable(uf, next_rank, loc_type.value);
+                            (*name, Located::at(loc_type.region, var))
+                        })
+                        .collect();
+                    let given_bodies = self.convert_givens(uf, next_rank, given);
+                    let defs = self.convert_definitions(uf, next_rank, definitions);
+                    let decls = self.convert_definitions(uf, next_rank, declarations);
+                    let declared = self.declared_contexts(uf, next_rank, &defs, &decls);
+                    let mut state1 = self.solve_header(
+                        uf,
+                        env,
+                        next_rank,
+                        state,
+                        header_con,
+                        given_bodies,
+                        *binder,
+                        annotated,
+                    );
+
+                    let young_mark = state1.mark;
+                    let visit_mark = young_mark.next();
+                    let final_mark = visit_mark.next();
+
+                    self.retry_fields(uf, next_rank, &mut state1.errors);
+                    self.finish_fields(uf, next_rank, &mut state1.errors);
+
+                    // pop pool
+                    self.generalize(uf, young_mark, visit_mark, next_rank);
+                    self.pools[next_rank] = Vec::new();
+
+                    // An unrelated error must not suppress an escaping annotation.
+                    let escapes_before = state1.errors.len();
+                    for rigid in rigid_vars.iter() {
+                        if uf.get(*rigid).rank != NO_RANK
+                            && !crate::recovery::is_poisoned(uf, [*rigid])
+                        {
+                            let owner = binder
+                                .map(|name| (name.name().region, name.name().value))
+                                .or_else(|| header.first().map(|(name, typ)| (typ.region, *name)));
+                            state1.errors.push(Error::AnnotationVariableEscapes {
+                                region: owner
+                                    .map_or_else(nash_region::Region::zero, |(region, _)| region),
+                                name: owner.map(|(_, name)| name),
+                                variable: to_error_type(self.bump, uf, *rigid),
+                            });
+                        }
+                    }
+                    // A body error leaves a valid annotation usable by callers, as in Elm.
+                    // Only an annotation that lets its own variables escape blocks its uses.
+                    let all_annotated = !definitions.is_empty()
+                        && definitions.iter().all(|def| def.context.is_some());
+                    let annotation_failed = state1.errors.len() > escapes_before;
+
+                    if let Some(binder) = *binder {
+                        let depth = self.enter_givens(
+                            uf,
+                            rank,
+                            given_bodies,
+                            Some(binder),
+                            &mut state1.errors,
+                        );
+                        loop {
+                            let (errors, defaulted) =
+                                self.check_ambiguity(uf, rank, wanted_start, &defs, binder.name());
+                            state1.errors.extend(errors);
+                            if !defaulted {
+                                break;
+                            }
+                            state1 = self.resolve_wanted(
+                                uf,
+                                next_rank,
+                                state1,
+                                wanted_start,
+                                Some(binder),
+                                annotated,
+                            );
+                        }
+                        self.givens.truncate(depth);
+                    }
+                    let context = if !definitions.is_empty()
+                        && definitions.iter().all(|def| def.context.is_none())
+                    {
+                        self.retain_wanted(
+                            uf,
+                            rank,
+                            wanted_start,
+                            binder.expect("inferred definition binder").node(),
+                        )
+                    } else {
+                        &[]
+                    };
+
+                    let mut new_env = env.clone();
+                    let failed = if all_annotated {
+                        annotation_failed
+                    } else {
+                        state1.errors.len() > errors_before
+                    };
+                    if failed && let Some(binder) = *binder {
+                        self.fail_definition(uf, binder.node());
+                    }
+                    self.record_definitions(uf, rank, &defs, &declared, context, *binder);
+                    for (name, loc) in &locals {
+                        new_env.entry(name).or_insert(Binding {
+                            declared_quantifiers: if declarations
+                                .iter()
+                                .any(|def| def.site.name().value == *name && def.context.is_some())
+                            {
+                                rigid_vars
+                            } else {
+                                &[]
+                            },
+                            variable: loc.value,
+                            context: declared.get(name).copied().unwrap_or(context),
+                            context_is_final: true,
+                            definition: definitions
+                                .iter()
+                                .chain(declarations.iter())
+                                .find(|def| def.site.name().value == *name)
+                                .map(|def| def.site.node())
+                                .or_else(|| {
+                                    binder
+                                        .filter(|b| matches!(b, type_::Binder::Pattern { .. }))
+                                        .map(type_::Binder::node)
+                                }),
+                        });
+                    }
+                    let temp_state = State {
+                        env: state1.env,
+                        mark: final_mark,
+                        errors: state1.errors,
+                    };
+                    let new_state = self.solve(uf, &new_env, rank, temp_state, body_con);
+
+                    locals.into_iter().fold(new_state, |state, (name, loc)| {
+                        self.check_occurs(uf, state, name, loc)
+                    })
+                }
+            }
+        }
+    }
+
+    /// Solve a header constraint in the scope of its givens and its evidence
+    /// owner, then retry fields and resolve the predicates wanted in this scope.
+    #[allow(clippy::too_many_arguments)]
+    fn solve_header(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        env: &Env<'a>,
+        rank: usize,
+        mut state: State<'a>,
+        constraint: &Constraint<'a>,
+        given: &[Body<'a>],
+        binder: Option<type_::Binder<'a>>,
+        annotated: bool,
+    ) -> State<'a> {
+        // Attribute new failures to their owning binding. This count does not
+        // gate any independent constraint or reset the collected diagnostics.
+        let errors_before = state.errors.len();
+        let depth = self.enter_givens(uf, rank, given, binder, &mut state.errors);
+        let start = self.wanted.len();
+        let owner_depth = self.owners.len();
+        if let Some(binder) = binder {
+            self.owners.push(binder.node());
+        }
+        let mut state = self.solve(uf, env, rank, state, constraint);
+        self.retry_fields(uf, rank, &mut state.errors);
+        state = self.resolve_wanted(uf, rank, state, start, binder, annotated);
+        // An annotated body keeps its annotation for callers; its failure is
+        // decided after generalization.
+        if state.errors.len() > errors_before
+            && !annotated
+            && let Some(binder) = binder
+        {
+            self.fail_definition(uf, binder.node());
+        }
+        self.givens.truncate(depth);
+        self.owners.truncate(owner_depth);
+        state
+    }
+
+    /// Unify an actual variable with an expectation, as Elm's `CEqual` does.
+    #[allow(clippy::too_many_arguments)]
+    fn equal(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        state: State<'a>,
+        region: Region,
+        category: Category<'a>,
+        actual: Variable,
+        expectation: &Expected<'a, &'a Type<'a>>,
+    ) -> State<'a> {
+        let expected = self.expected_to_variable(uf, rank, expectation);
+        if let Expected::FromContext(_, nash_constrain::error::Context::CallArity(_, arity), _) =
+            expectation
+        {
+            let mut result = expected;
+            let mut inputs = vec![actual];
+            for _ in 0..*arity {
+                let Content::Structure(FlatType::Fun1(argument, output)) = uf.get(result).content
+                else {
+                    break;
+                };
+                inputs.push(argument);
+                result = output;
+            }
+            self.dependencies.computation(result, inputs);
+        }
+        self.formed_at(uf, rank, &[actual, expected], region);
+        match self.unify(uf, actual, expected) {
+            unify::Answer::Ok(vars) => {
+                self.introduce(uf, rank, &vars);
+                state
+            }
+            unify::Answer::Err(vars, actual_type, expected_type) => {
+                self.introduce(uf, rank, &vars);
+                add_error(
+                    state,
+                    Error::BadExpr(
+                        region,
+                        category,
+                        actual_type,
+                        expectation.type_replace(expected_type),
+                    ),
+                )
+            }
+        }
+    }
+
+    // EXPECTATIONS TO VARIABLE
+
+    fn expected_to_variable(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        expectation: &Expected<'a, &'a Type<'a>>,
+    ) -> Variable {
+        let tipe = match expectation {
+            Expected::NoExpectation(tipe) => tipe,
+            Expected::FromContext(_, _, tipe) => tipe,
+            Expected::FromAnnotation(_, _, _, _, tipe) => tipe,
+        };
+        self.type_to_variable(uf, rank, tipe)
+    }
+
+    fn pattern_expectation_to_variable(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        expectation: &PExpected<'a, &'a Type<'a>>,
+    ) -> Variable {
+        let tipe = match expectation {
+            PExpected::NoExpectation(tipe) => tipe,
+            PExpected::FromContext(_, _, tipe) => tipe,
+        };
+        self.type_to_variable(uf, rank, tipe)
+    }
+
+    fn convert_givens(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        given: &[type_::Pred<'a>],
+    ) -> &'a [Body<'a>] {
+        let bump = self.bump;
+        bump.alloc_slice_fill_iter(
+            given
+                .iter()
+                .map(|pred| self.constraint_predicate(uf, rank, *pred)),
+        )
+    }
+
+    /// Convert each definition type on its own, as Elm converts each type in
+    /// each constraint. Its scheme is then the declared type: unification of
+    /// the header variable at a later use cannot remove an alias name, which
+    /// selects impls in Nash.
+    fn convert_definitions(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        definitions: &[type_::Definition<'a>],
+    ) -> Vec<Definition<'a>> {
+        definitions
+            .iter()
+            .map(|definition| Definition {
+                site: definition.site,
+                typ: self.type_to_variable(uf, rank, definition.typ),
+                context: definition
+                    .context
+                    .map(|context| self.convert_givens(uf, rank, context)),
+            })
+            .collect()
+    }
+
+    // TYPE TO VARIABLE
+
+    fn type_to_variable(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        tipe: &Type<'a>,
+    ) -> Variable {
+        match tipe {
+            Type::PartialAliasN {
+                home,
+                name,
+                args,
+                remaining,
+                body,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|(name, typ)| (*name, self.type_to_variable(uf, rank, typ)))
+                    .collect();
+                self.register(
+                    uf,
+                    rank,
+                    Content::PartialAlias {
+                        home: *home,
+                        name,
+                        args,
+                        remaining: remaining.to_vec(),
+                        body,
+                    },
+                )
+            }
+            Type::VarN(var) => *var,
+
+            Type::AppVarN(head, args) => {
+                let head = self.type_to_variable(uf, rank, head);
+                let args = args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect();
+                self.register(uf, rank, Content::Structure(FlatType::AppV1(head, args)))
+            }
+
+            Type::AppN { home, name, args } => {
+                let arg_vars: Vec<Variable> = args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect();
+                self.register(
+                    uf,
+                    rank,
+                    Content::Structure(FlatType::App1(*home, name, arg_vars)),
+                )
+            }
+
+            Type::FunN(a, b) => {
+                let a_var = self.type_to_variable(uf, rank, a);
+                let b_var = self.type_to_variable(uf, rank, b);
+                self.register(uf, rank, Content::Structure(FlatType::Fun1(a_var, b_var)))
+            }
+
+            Type::AliasN {
+                home,
+                name,
+                args,
+                real,
+                body,
+            } => {
+                let arg_vars: Vec<(&'a str, Variable)> = args
+                    .iter()
+                    .map(|(arg_name, arg_type)| {
+                        (*arg_name, self.type_to_variable(uf, rank, arg_type))
+                    })
+                    .collect();
+                let alias_var = self.type_to_variable(uf, rank, real);
+                self.register(
+                    uf,
+                    rank,
+                    Content::Alias {
+                        home: *home,
+                        name,
+                        args: arg_vars,
+                        real: alias_var,
+                        body,
+                    },
+                )
+            }
+
+            Type::RecordN { fields } => {
+                let field_vars: BTreeMap<&'a str, Variable> = fields
+                    .iter()
+                    .map(|(name, field_type)| (*name, self.type_to_variable(uf, rank, field_type)))
+                    .collect();
+                self.register(uf, rank, Content::Structure(FlatType::Record1(field_vars)))
+            }
+
+            Type::TupleN(a, b, rest) => {
+                let a_var = self.type_to_variable(uf, rank, a);
+                let b_var = self.type_to_variable(uf, rank, b);
+                let c_var = rest
+                    .iter()
+                    .map(|c| self.type_to_variable(uf, rank, c))
+                    .collect();
+                self.register(
+                    uf,
+                    rank,
+                    Content::Structure(FlatType::Tuple1(a_var, b_var, c_var)),
+                )
+            }
+        }
+    }
+
+    fn constraint_predicate(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        predicate: type_::Pred<'a>,
+    ) -> Body<'a> {
+        match predicate {
+            type_::Pred::Trait {
+                trait_,
+                args,
+                hidden,
+            } => Body::Trait {
+                trait_,
+                hidden,
+                args: args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect(),
+            },
+            type_::Pred::Apply { head, args } => Body::Apply {
+                head: self.type_to_variable(uf, rank, head),
+                args: args
+                    .iter()
+                    .map(|arg| self.type_to_variable(uf, rank, arg))
+                    .collect(),
+            },
+        }
+    }
+
+    fn structure(&mut self, uf: &mut UnionFind<'a>, rank: usize, typ: FlatType<'a>) -> Variable {
+        let typ = type_::normalize_application(uf, typ);
+        self.register(uf, rank, Content::Structure(typ))
+    }
+}
+
 impl<'a> Solver<'a, '_> {
     fn unify(
         &mut self,
@@ -220,6 +961,10 @@ impl<'a> Solver<'a, '_> {
             self.has_poison = true;
             crate::recovery::poison_roots(uf, detached);
             self.propagate_poison(uf);
+        } else if matches!(uf.get(actual).content, Content::Error) {
+            // A successful merge into an existing Error drops the other side's
+            // structure, leaving its children without any type information.
+            self.dependencies.strand(uf, [actual, expected]);
         }
         answer
     }
@@ -261,7 +1006,7 @@ impl<'a> Solver<'a, '_> {
         self.failed_definitions.insert(definition);
         loop {
             let before = self.failed_definitions.len();
-            for scheme in &self.schemes {
+            for scheme in self.schemes.iter() {
                 if self.failed_definitions.contains(&scheme.site.node())
                     || self.failed_definitions.contains(&scheme.binder)
                 {
@@ -455,7 +1200,7 @@ impl<'a> Solver<'a, '_> {
                         }
                         return true;
                     }
-                    let visible = if field.test_scope {
+                    let visible = if field.tests {
                         &self.tables.test_fields
                     } else {
                         &self.tables.fields
@@ -559,8 +1304,7 @@ impl<'a> Solver<'a, '_> {
         loop {
             let scheme = self
                 .schemes
-                .iter()
-                .find(|scheme| scheme.site.node() == owner)
+                .at(owner)
                 .expect("body owner has a recorded scheme");
             match scheme.parent {
                 Some(parent) => {
@@ -631,11 +1375,15 @@ impl<'a> Solver<'a, '_> {
                         continue;
                     }
                     match &self.predicates.get(id).solution {
-                        Some(Solution::Impl { subs, .. }) => pending.extend(
-                            subs.iter()
-                                .filter(|id| self.predicates.get(**id).body.trait_ref().is_some())
-                                .map(|id| (*id, true)),
-                        ),
+                        Some(Solution::Impl { subs, .. } | Solution::Specialize { subs }) => {
+                            pending.extend(
+                                subs.iter()
+                                    .filter(|id| {
+                                        self.predicates.get(**id).body.trait_ref().is_some()
+                                    })
+                                    .map(|id| (*id, true)),
+                            )
+                        }
                         Some(
                             Solution::Given { binder, index }
                             | Solution::Super { binder, index, .. },
@@ -682,13 +1430,15 @@ impl<'a> Solver<'a, '_> {
             &self.tables.kinds,
             &self.value_roots,
             &self.predicates,
-            &self.kind_contracts,
-            &self.dependencies,
+            &mut self.kind_contracts,
+            &mut self.dependencies,
         );
         if !errors.is_empty() {
             self.has_poison = true;
             self.propagate_poison(uf);
         }
+        // Unknown constraints below look up stranded variables.
+        self.dependencies.sync(uf);
         let growing = self.growing_evidence();
         for use_ in &self.uses {
             if crate::recovery::is_poisoned(uf, [use_.variable]) {
@@ -722,9 +1472,11 @@ impl<'a> Solver<'a, '_> {
                 match &pred.solution {
                     Some(
                         crate::preds::Solution::Impl { subs, .. }
-                        | crate::preds::Solution::Apply { subs },
+                        | crate::preds::Solution::Apply { subs }
+                        | crate::preds::Solution::Specialize { subs },
                     ) => pending.extend(subs),
                     Some(_) => {}
+                    None if self.predicate_stranded(uf, id) => {}
                     None => {
                         let args = self.bump.alloc_slice_fill_iter(
                             pred.body
@@ -754,6 +1506,14 @@ impl<'a> Solver<'a, '_> {
         errors
     }
 
+    /// A constraint whose open variables lost their type information to a
+    /// failed call is unknown because of that failure, not unresolved.
+    fn predicate_stranded(&self, uf: &mut UnionFind<'a>, id: type_::PredId) -> bool {
+        Self::type_variables(uf, self.predicates.get(id).body.roots().collect())
+            .into_iter()
+            .any(|variable| self.dependencies.is_stranded(uf, variable))
+    }
+
     fn finish(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -768,21 +1528,40 @@ impl<'a> Solver<'a, '_> {
         let mut solved = SolvedTypes::default();
         let mut orders = HashMap::new();
         let mut rendered_uses = HashMap::new();
+        // Group every record by scope once, scopes in first-seen order.
         let mut scopes = Vec::new();
-        for scheme in &self.schemes {
+        let mut scope_index = HashMap::new();
+        let mut members: Vec<Vec<&SchemeRecord<'a>>> = Vec::new();
+        for scheme in self.schemes.iter() {
             let root = self.scope(scheme.site.node()).0;
-            if !scopes.contains(&root) {
+            let index = *scope_index.entry(root).or_insert(members.len());
+            if index == members.len() {
                 scopes.push(root);
+                members.push(Vec::new());
+            }
+            members[index].push(scheme);
+        }
+        let scope_of = |owner: nash_ast::NodeId| scope_index[&self.scope(owner).0];
+        let mut uses: Vec<Vec<&UseRecord<'a>>> = vec![Vec::new(); scopes.len()];
+        for use_ in &self.uses {
+            uses[scope_of(use_.owner.expect("use belongs to a definition"))].push(use_);
+        }
+        let mut exprs: Vec<Vec<&NodeTypeRecord>> = vec![Vec::new(); scopes.len()];
+        for record in &self.expr_types {
+            if let Some(owner) = record.owner {
+                exprs[scope_of(owner)].push(record);
+            }
+        }
+        let mut patterns: Vec<Vec<&NodeTypeRecord>> = vec![Vec::new(); scopes.len()];
+        for record in &self.pattern_types {
+            if let Some(owner) = record.owner {
+                patterns[scope_of(owner)].push(record);
             }
         }
         // Quantifier order must be frozen with its rendered scheme, before
         // another body can assign names to its own instantiations.
-        for scope in &scopes {
-            let mut members: Vec<_> = self
-                .schemes
-                .iter()
-                .filter(|scheme| self.scope(scheme.site.node()).0 == *scope)
-                .collect();
+        for (index, mut members) in members.into_iter().enumerate() {
+            let (uses, exprs, patterns) = (&uses[index], &exprs[index], &patterns[index]);
             members.sort_by_key(|scheme| self.scope(scheme.site.node()).1);
             let mut roots = Vec::new();
             for scheme in &members {
@@ -791,22 +1570,11 @@ impl<'a> Solver<'a, '_> {
                     roots.extend(self.predicates.get(*id).body.roots());
                 }
             }
-            for use_ in &self.uses {
-                if self
-                    .scope(use_.owner.expect("use belongs to a definition"))
-                    .0
-                    != *scope
-                {
-                    continue;
-                }
+            for use_ in uses {
                 let quantified = match use_.source {
-                    UseSource::Local { definition, .. } => self
-                        .schemes
-                        .iter()
-                        .find(|scheme| scheme.site.node() == definition)
-                        .unwrap()
-                        .quantified
-                        .as_slice(),
+                    UseSource::Local { definition, .. } => {
+                        self.schemes.at(definition).unwrap().quantified.as_slice()
+                    }
                     UseSource::Foreign { .. } => &[],
                 };
                 roots.extend(self.use_variables(uf, use_, quantified));
@@ -825,6 +1593,10 @@ impl<'a> Solver<'a, '_> {
                             | crate::preds::Solution::Repr { typ, .. },
                         ) => roots.push(*typ),
                         Some(crate::preds::Solution::Apply { subs }) => pending.extend(subs),
+                        // Code generation selects again from these types.
+                        Some(crate::preds::Solution::Specialize { .. }) => {
+                            roots.extend(self.predicates.get(id).body.roots())
+                        }
                         _ => {}
                     }
                 }
@@ -832,13 +1604,7 @@ impl<'a> Solver<'a, '_> {
             // Node types must use the same variable names as their owner's
             // schemes and instances. Add them last so existing quantifier
             // ordering remains stable when a body introduces private types.
-            let node_types = self.expr_types.iter().chain(&self.pattern_types);
-            roots.extend(node_types.filter_map(|record| {
-                record
-                    .owner
-                    .filter(|owner| self.scope(*owner).0 == *scope)
-                    .map(|_| record.variable)
-            }));
+            roots.extend(exprs.iter().chain(patterns).map(|record| record.variable));
             crate::annotation::prepare_scope(self.bump, uf, &roots);
             for scheme in members {
                 let id = scheme.site.node();
@@ -868,22 +1634,11 @@ impl<'a> Solver<'a, '_> {
                     },
                 );
             }
-            for use_ in &self.uses {
-                if self
-                    .scope(use_.owner.expect("use belongs to a definition"))
-                    .0
-                    != *scope
-                {
-                    continue;
-                }
+            for use_ in uses {
                 let keys = match &use_.source {
-                    UseSource::Local { definition, .. } => self
-                        .schemes
-                        .iter()
-                        .find(|scheme| scheme.site.node() == *definition)
-                        .unwrap()
-                        .quantified
-                        .clone(),
+                    UseSource::Local { definition, .. } => {
+                        self.schemes.at(*definition).unwrap().quantified.clone()
+                    }
                     UseSource::Foreign { variables } => variables.clone(),
                 };
                 let variables = self.use_variables(uf, use_, &keys);
@@ -900,21 +1655,14 @@ impl<'a> Solver<'a, '_> {
                     "one instance per original use node"
                 );
             }
-            for (records, output) in [
-                (&self.expr_types, &mut solved.exprs),
-                (&self.pattern_types, &mut solved.patterns),
-            ] {
+            for (records, output) in [(exprs, &mut solved.exprs), (patterns, &mut solved.patterns)]
+            {
                 for record in records {
-                    if record
-                        .owner
-                        .is_some_and(|owner| self.scope(owner).0 == *scope)
-                    {
-                        let typ = crate::annotation::to_solved_type(self.bump, uf, record.variable);
-                        assert!(
-                            output.insert(record.node, typ).is_none(),
-                            "one type per original node"
-                        );
-                    }
+                    let typ = crate::annotation::to_solved_type(self.bump, uf, record.variable);
+                    assert!(
+                        output.insert(record.node, typ).is_none(),
+                        "one type per original node"
+                    );
                 }
             }
         }
@@ -1027,6 +1775,18 @@ impl<'a> Solver<'a, '_> {
                 ),
                 args: self.evidence_arguments(uf, subs),
             },
+            Solution::Specialize { .. } => {
+                let Body::Trait { trait_, args, .. } = &self.predicates.get(id).body else {
+                    unreachable!("coverage proves trait predicates")
+                };
+                Evidence::Specialize {
+                    trait_: *trait_,
+                    args: self.bump.alloc_slice_fill_iter(
+                        args.iter()
+                            .map(|var| crate::annotation::to_solved_type(self.bump, uf, *var)),
+                    ),
+                }
+            }
         }
     }
 
@@ -1108,6 +1868,7 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         given: &[Body<'a>],
         binder: Option<type_::Binder<'a>>,
+        errors: &mut Vec<Error<'a>>,
     ) -> usize {
         let depth = self.givens.len();
         if let Some(binder) = binder.filter(|_| !given.is_empty()) {
@@ -1123,6 +1884,23 @@ impl<'a> Solver<'a, '_> {
                 })
                 .collect();
             self.expand_givens(uf, rank, &mut predicates);
+            // Canonicalization checks each context alone. A local annotation
+            // shares the enclosing annotation's type variables, as Elm's `rtv`
+            // does, so its representation givens must also agree with every
+            // enclosing frame. A frame entered again finds its subject poisoned.
+            let requirements = self
+                .givens
+                .iter()
+                .flat_map(|frame| frame.predicates.iter())
+                .chain(&predicates)
+                .filter_map(|given| representation_requirement(&given.body))
+                .collect();
+            errors.extend(self.contradictory_representations(
+                uf,
+                rank,
+                requirements,
+                binder.name(),
+            ));
             self.givens.push(GivenFrame {
                 binder: binder.node(),
                 predicates,
@@ -1258,27 +2036,7 @@ impl<'a> Solver<'a, '_> {
                 continue;
             }
             let body = self.predicates.get(id).body.clone();
-            let mut allocated = Vec::new();
-            let solution = self.givens.iter().rev().find_map(|frame| {
-                frame.predicates.iter().find_map(|given| {
-                    crate::representation::same_predicate(
-                        uf,
-                        &self.tables.kinds,
-                        &given.body,
-                        &body,
-                        &mut allocated,
-                    )
-                    .then_some((frame.binder, given.index, given.path.clone()))
-                })
-            });
-            self.introduce(uf, rank, &allocated);
-            if let Some((binder, index, path)) = solution {
-                if let Some(index) = index {
-                    self.predicates.solve_given(uf, id, binder, index, path);
-                } else {
-                    self.predicates
-                        .solve(uf, id, Solution::Apply { subs: Vec::new() });
-                }
+            if self.solve_from_givens(uf, rank, id, &body) {
                 continue;
             }
             let roots: Vec<_> = body.roots().collect();
@@ -1408,6 +2166,15 @@ impl<'a> Solver<'a, '_> {
                 self.predicates.solve(uf, id, solution);
                 continue;
             }
+            // Impls are disjoint only over finite types, and an impl that
+            // matches an infinite type matches it again at every depth. Elm
+            // reports an infinite type at the occurs check after its `CLet`
+            // (`Type/Solve.hs` `occurs`); the binding's check here does the
+            // same and poisons the type, which drops this wanted.
+            if occurs::reaches_cycle(uf, &args) {
+                self.wanted.push((wanted_rank, id));
+                continue;
+            }
             // A blanket impl can match a rigid argument without narrowing it;
             // its prerequisites are checked against the enclosing givens below.
             let givens: Vec<_> = self
@@ -1450,6 +2217,80 @@ impl<'a> Solver<'a, '_> {
                     continue;
                 }
             }
+            // Representation coverage: a rigid variable at a representation-
+            // tested head position keeps ordinary selection from deciding.
+            if matches!(
+                selection,
+                crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing
+            ) && let Some(binder) = binder
+            {
+                let mut remaining = WORK_LIMIT;
+                match self.cover(uf, rank, id, trait_, &args, &[], &mut remaining, 0) {
+                    Ok(None) => {}
+                    Ok(Some(subs)) => {
+                        self.predicates.solve(uf, id, Solution::Specialize { subs });
+                        continue;
+                    }
+                    Err(problem) => {
+                        let Some(site) = site else {
+                            self.wanted.push((wanted_rank, id));
+                            continue;
+                        };
+                        match problem {
+                            CoverageProblem::Limit => {
+                                state.errors.push(Error::ImplResolutionLimit {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_,
+                                });
+                                self.failed_lineages.insert(self.predicates.root(id));
+                            }
+                            _ if !report_missing => self.wanted.push((wanted_rank, id)),
+                            CoverageProblem::MissingContext(Body::Trait {
+                                trait_: missing,
+                                args: missing_args,
+                                ..
+                            }) => {
+                                let missing_args = self.bump.alloc_slice_fill_iter(
+                                    missing_args
+                                        .iter()
+                                        .map(|arg| to_error_type(self.bump, uf, *arg)),
+                                );
+                                self.failed_predicates.insert(id);
+                                state.errors.push(Error::MissingConstraint {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_: missing,
+                                    args: missing_args,
+                                    binder: binder.name(),
+                                });
+                            }
+                            CoverageProblem::MissingContext(Body::Apply { .. })
+                            | CoverageProblem::Uncovered => {
+                                let args: Vec<_> = args
+                                    .iter()
+                                    .map(|arg| to_error_type(self.bump, uf, *arg))
+                                    .collect();
+                                let available: Vec<_> = self
+                                    .tables
+                                    .impls_for(trait_)
+                                    .map(|(key, _)| key.heads)
+                                    .collect();
+                                self.failed_predicates.insert(id);
+                                state.errors.push(Error::MissingImpl {
+                                    region: site.region,
+                                    name: site.name,
+                                    trait_,
+                                    args: self.bump.alloc_slice_copy(&args),
+                                    available: self.bump.alloc_slice_copy(&available),
+                                    because: self.requirement_chain(uf, id),
+                                });
+                            }
+                        }
+                        continue;
+                    }
+                }
+            }
             if report_missing
                 && !matches!(selection, crate::resolve::Selection::Impl { .. })
                 && let Some(binder) = binder
@@ -1479,7 +2320,7 @@ impl<'a> Solver<'a, '_> {
                     .entry(self.predicates.root(id))
                     .or_default();
                 *work += 1;
-                if *work > 16_384 || resolution_depth >= 128 {
+                if *work > WORK_LIMIT || resolution_depth >= DEPTH_LIMIT {
                     state.errors.push(Error::ImplResolutionLimit {
                         region: site.region,
                         name: site.name,
@@ -1558,6 +2399,313 @@ impl<'a> Solver<'a, '_> {
             }
         }
         state
+    }
+
+    /// Whether the givens, with any coverage cell, prove `class` for `node`.
+    fn proves_class(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        node: Variable,
+        class: nash_ast::primitives::ReprTrait,
+        givens: &[Body<'a>],
+    ) -> bool {
+        let mut allocated = Vec::new();
+        let result = crate::resolve::in_class(
+            self.tables,
+            uf,
+            node,
+            class.admits(),
+            givens,
+            &mut allocated,
+        );
+        self.introduce(uf, rank, &allocated);
+        matches!(result, nash_ast::head::Match::Yes(()))
+    }
+
+    /// Solve `id` from a given of an active frame, nearest frame first.
+    fn solve_from_givens(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        id: type_::PredId,
+        body: &Body<'a>,
+    ) -> bool {
+        let mut allocated = Vec::new();
+        let solution = self.givens.iter().rev().find_map(|frame| {
+            frame.predicates.iter().find_map(|given| {
+                crate::representation::same_predicate(
+                    uf,
+                    &self.tables.kinds,
+                    &given.body,
+                    body,
+                    &mut allocated,
+                )
+                .then_some((frame.binder, given.index, given.path.clone()))
+            })
+        });
+        self.introduce(uf, rank, &allocated);
+        let Some((binder, index, path)) = solution else {
+            return false;
+        };
+        if let Some(index) = index {
+            self.predicates.solve_given(uf, id, binder, index, path);
+        } else {
+            self.predicates
+                .solve(uf, id, crate::preds::Solution::Apply { subs: Vec::new() });
+        }
+        true
+    }
+
+    /// The givens of every active frame, then the coverage cell assumptions.
+    fn given_bodies(&self, assumptions: &[Body<'a>]) -> Vec<Body<'a>> {
+        self.givens
+            .iter()
+            .flat_map(|frame| frame.predicates.iter().map(|given| given.body.clone()))
+            .chain(assumptions.iter().cloned())
+            .collect()
+    }
+
+    /// Prove `trait_ args` by representation coverage (inference only).
+    /// `Ok(None)`: coverage does not apply. `Ok(Some(subs))`: every admitted
+    /// cell selects an impl, and `subs` prove each impl's context under its
+    /// cell. The cells are never committed to inference.
+    #[allow(clippy::too_many_arguments)]
+    fn cover(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        parent: type_::PredId,
+        trait_: nash_ast::QualifiedName<'a>,
+        args: &[Variable],
+        assumptions: &[Body<'a>],
+        remaining: &mut usize,
+        depth: usize,
+    ) -> Result<Option<Vec<type_::PredId>>, CoverageProblem<'a>> {
+        if depth >= DEPTH_LIMIT {
+            return Err(CoverageProblem::Limit);
+        }
+        let givens = self.given_bodies(assumptions);
+        let mut allocated = Vec::new();
+        let coverage = crate::resolve::coverage(
+            self.tables,
+            uf,
+            trait_,
+            args,
+            &givens,
+            &mut allocated,
+            remaining,
+        );
+        self.introduce(uf, rank, &allocated);
+        let covered = match coverage {
+            crate::resolve::Coverage::NotApplicable => return Ok(None),
+            crate::resolve::Coverage::Limit => return Err(CoverageProblem::Limit),
+            crate::resolve::Coverage::Unstated(subject) => {
+                return Err(CoverageProblem::MissingContext(Body::Trait {
+                    trait_,
+                    args: if args.len() == 1 {
+                        vec![subject]
+                    } else {
+                        args.to_vec()
+                    },
+                    hidden: false,
+                }));
+            }
+            crate::resolve::Coverage::Uncovered => return Err(CoverageProblem::Uncovered),
+            crate::resolve::Coverage::Complete(covered) => covered,
+        };
+        let mut subs = Vec::new();
+        for covered in covered {
+            let mut cell = assumptions.to_vec();
+            cell.extend(
+                covered
+                    .assumptions
+                    .iter()
+                    .map(|(subject, repr)| Body::Trait {
+                        trait_: nash_ast::primitives::ReprTrait::exactly(*repr).qualified(),
+                        args: vec![*subject],
+                        hidden: true,
+                    }),
+            );
+            let vars: BTreeMap<_, _> = covered.substitution.into_iter().collect();
+            for (index, context) in covered.info.context.iter().enumerate() {
+                let body = self.canonical_predicate(uf, rank, &vars, *context);
+                let sub = self.predicates.push(
+                    uf,
+                    Predicate {
+                        body: body.clone(),
+                        origin: Origin::Sub { parent, index },
+                        solution: None,
+                    },
+                );
+                if let Err(problem) = self.prove(uf, rank, sub, &cell, remaining, depth + 1) {
+                    self.predicates.detach(uf, sub);
+                    return Err(match problem {
+                        CoverageProblem::Limit => CoverageProblem::Limit,
+                        _ => CoverageProblem::MissingContext(body),
+                    });
+                }
+                subs.push(sub);
+            }
+        }
+        Ok(Some(subs))
+    }
+
+    /// Prove one predicate of a coverage cell now, without deferral: from a
+    /// given, a representation, a selected impl, or coverage again.
+    fn prove(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        id: type_::PredId,
+        assumptions: &[Body<'a>],
+        remaining: &mut usize,
+        depth: usize,
+    ) -> Result<(), CoverageProblem<'a>> {
+        use crate::preds::Solution;
+        use nash_ast::primitives::{Repr, ReprTrait};
+        nash_ast::head::step(remaining).map_err(|_| CoverageProblem::Limit)?;
+        if depth >= DEPTH_LIMIT {
+            return Err(CoverageProblem::Limit);
+        }
+        let body = self.predicates.get(id).body.clone();
+        if self.solve_from_givens(uf, rank, id, &body) {
+            return Ok(());
+        }
+        let givens = self.given_bodies(assumptions);
+        let (trait_, args) = match body {
+            Body::Apply { head, args } => {
+                let children = self
+                    .application_context(uf, rank, head, &args)
+                    .ok_or(CoverageProblem::Uncovered)?;
+                let mut subs = Vec::new();
+                for (index, child) in children.into_iter().enumerate() {
+                    let sub = self.predicates.push(
+                        uf,
+                        Predicate {
+                            body: child,
+                            origin: Origin::Sub { parent: id, index },
+                            solution: None,
+                        },
+                    );
+                    if let Err(problem) =
+                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
+                    {
+                        self.predicates.detach(uf, sub);
+                        return Err(problem);
+                    }
+                    subs.push(sub);
+                }
+                self.predicates.solve(uf, id, Solution::Apply { subs });
+                return Ok(());
+            }
+            Body::Trait { trait_, args, .. } => (trait_, args),
+        };
+        if let Some(required) = ReprTrait::of(trait_) {
+            let proven = match self.representation(uf, rank, args[0]) {
+                Some(actual) => required.admits().contains(actual),
+                None => self.proves_class(uf, rank, args[0], required, &givens),
+            };
+            if !proven {
+                return Err(CoverageProblem::Uncovered);
+            }
+            self.predicates.solve(
+                uf,
+                id,
+                Solution::Repr {
+                    trait_: required,
+                    typ: args[0],
+                },
+            );
+            return Ok(());
+        }
+        if trait_ == nash_ast::primitives::lift_trait()
+            && self.tables.has_reflexive_lift()
+            && args.len() == 2
+            && crate::preds::same_args(uf, &args[..1], &args[1..])
+        {
+            self.predicates
+                .solve(uf, id, Solution::ReflexiveLift { typ: args[0] });
+            return Ok(());
+        }
+        if trait_ == nash_ast::primitives::eq_trait()
+            && self.tables.has_structural_eq()
+            && args.len() == 1
+            && (self.representation(uf, rank, args[0]) == Some(Repr::Big)
+                || self.proves_class(uf, rank, args[0], ReprTrait::Big, &givens))
+        {
+            self.predicates
+                .solve(uf, id, Solution::StructuralEq { typ: args[0] });
+            return Ok(());
+        }
+        if occurs::reaches_cycle(uf, &args) {
+            return Err(CoverageProblem::Uncovered);
+        }
+        let mut allocated = Vec::new();
+        let selection =
+            crate::resolve::select(self.tables, uf, trait_, &args, &givens, &mut allocated);
+        self.introduce(uf, rank, &allocated);
+        match selection {
+            crate::resolve::Selection::Impl {
+                info,
+                key,
+                substitution,
+            } => {
+                let type_vars = substitution.iter().map(|(_, var)| *var).collect();
+                let vars: BTreeMap<_, _> = substitution.into_iter().collect();
+                let mut subs = Vec::new();
+                for (index, context) in info.context.iter().enumerate() {
+                    let body = self.canonical_predicate(uf, rank, &vars, *context);
+                    let sub = self.predicates.push(
+                        uf,
+                        Predicate {
+                            body,
+                            origin: Origin::Sub { parent: id, index },
+                            solution: None,
+                        },
+                    );
+                    if let Err(problem) =
+                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
+                    {
+                        self.predicates.detach(uf, sub);
+                        return Err(problem);
+                    }
+                    subs.push(sub);
+                }
+                self.predicates.solve(
+                    uf,
+                    id,
+                    Solution::Impl {
+                        impl_: nash_ast::ImplRef {
+                            home: info.home,
+                            key,
+                        },
+                        type_vars,
+                        subs,
+                    },
+                );
+                Ok(())
+            }
+            crate::resolve::Selection::Limit => Err(CoverageProblem::Limit),
+            crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing => {
+                match self.cover(
+                    uf,
+                    rank,
+                    id,
+                    trait_,
+                    &args,
+                    assumptions,
+                    remaining,
+                    depth + 1,
+                )? {
+                    Some(subs) => {
+                        self.predicates.solve(uf, id, Solution::Specialize { subs });
+                        Ok(())
+                    }
+                    None => Err(CoverageProblem::Uncovered),
+                }
+            }
+        }
     }
 
     fn formed_at(
@@ -1878,9 +3026,13 @@ impl<'a> Solver<'a, '_> {
             Located::at(region, root),
             &bodies,
             quantified,
-            &self.kind_contracts,
+            &mut self.kind_contracts,
         ) {
-            Ok(contracts) => self.kind_contracts.extend(contracts),
+            Ok(contracts) => {
+                for contract in contracts {
+                    self.kind_contracts.push(uf, contract);
+                }
+            }
             Err(failure) => {
                 self.kind_errors.push(failure.error);
                 self.has_poison = true;
@@ -1949,11 +3101,7 @@ impl<'a> Solver<'a, '_> {
             let UseSource::Local { definition, .. } = use_.source else {
                 unreachable!("recursive local use")
             };
-            let Some(scheme) = self
-                .schemes
-                .iter()
-                .find(|scheme| scheme.site.node() == definition)
-            else {
+            let Some(scheme) = self.schemes.at(definition) else {
                 self.recursive_uses.push(use_index);
                 continue;
             };
@@ -2047,10 +3195,9 @@ impl<'a> Solver<'a, '_> {
             return self.register(uf, rank, Content::Error);
         }
         let mut roots = vec![binding.variable];
-        if let Some(scheme) = self
-            .schemes
-            .iter()
-            .find(|scheme| Some(scheme.site.node()) == binding.definition)
+        if let Some(scheme) = binding
+            .definition
+            .and_then(|definition| self.schemes.at(definition))
         {
             // A destructured name instantiates its whole aggregate scheme,
             // including quantifiers absent from this selected component.
@@ -2099,6 +3246,70 @@ impl<'a> Solver<'a, '_> {
         copies[0]
     }
 
+    /// Group representation requirements by subject, as `in_class` compares
+    /// them, and report each subject that no representation admits. The
+    /// subject is poisoned, so obligations on it are dropped instead of
+    /// reaching impl selection. A requirement that another one implies is left
+    /// out of the report.
+    fn contradictory_representations(
+        &mut self,
+        uf: &mut UnionFind<'a>,
+        rank: usize,
+        requirements: Vec<(Variable, nash_ast::primitives::ReprTrait)>,
+        binder: &'a Located<&'a str>,
+    ) -> Vec<Error<'a>> {
+        use nash_ast::primitives::{ReprSet, ReprTrait};
+        let mut subjects: Vec<(Variable, Vec<ReprTrait>)> = Vec::new();
+        let mut allocated = Vec::new();
+        for (argument, required) in requirements {
+            let subject =
+                crate::representation::subject(uf, &self.tables.kinds, argument, &mut allocated);
+            if crate::recovery::is_poisoned(uf, [subject]) {
+                continue;
+            }
+            if let Some((_, found)) = subjects
+                .iter_mut()
+                .find(|(other, _)| crate::preds::same_args(uf, &[*other], &[subject]))
+            {
+                if !found.contains(&required) {
+                    found.push(required);
+                }
+            } else {
+                subjects.push((subject, vec![required]));
+            }
+        }
+        self.introduce(uf, rank, &allocated);
+        let mut errors = Vec::new();
+        for (subject, requirements) in subjects {
+            let admitted = requirements.iter().fold(ReprSet::ALL, |set, requirement| {
+                set.intersect(requirement.admits())
+            });
+            if !admitted.is_empty() {
+                continue;
+            }
+            let shown: Vec<_> = requirements
+                .iter()
+                .copied()
+                .filter(|requirement| {
+                    !requirements.iter().any(|other| {
+                        other.admits() != requirement.admits()
+                            && other.admits().intersect(requirement.admits()) == other.admits()
+                    })
+                })
+                .collect();
+            errors.push(Error::ContradictoryRepresentation {
+                region: binder.region,
+                name: binder.value,
+                typ: to_error_type(self.bump, uf, subject),
+                requirements: self.bump.alloc_slice_copy(&shown),
+            });
+            self.has_poison = true;
+            crate::recovery::poison(uf, [subject]);
+        }
+        self.propagate_poison(uf);
+        errors
+    }
+
     fn check_ambiguity(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -2107,55 +3318,17 @@ impl<'a> Solver<'a, '_> {
         definitions: &[Definition<'a>],
         binder: &'a Located<&'a str>,
     ) -> (Vec<Error<'a>>, bool) {
-        use nash_ast::primitives::ReprTrait;
         // Check the conjunction before defaulting or generalizing. An
         // impossible representation context cannot be exported as a scheme,
         // even when its variable is reachable from the inferred result.
-        let mut representations: Vec<(Variable, Vec<ReprTrait>)> = Vec::new();
-        let mut allocated = Vec::new();
+        let mut requirements = Vec::new();
         for (_, id) in &self.wanted[start..] {
             if self.predicate_blocked(uf, *id) {
                 continue;
             }
-            let Body::Trait { trait_, args, .. } = &self.predicates.get(*id).body else {
-                continue;
-            };
-            let Some(required) = ReprTrait::of(*trait_) else {
-                continue;
-            };
-            let subject =
-                crate::representation::subject(uf, &self.tables.kinds, args[0], &mut allocated);
-            if let Some((_, requirements)) = representations
-                .iter_mut()
-                .find(|(other, _)| crate::preds::same_args(uf, &[*other], &[subject]))
-            {
-                if !requirements.contains(&required) {
-                    requirements.push(required);
-                }
-            } else {
-                representations.push((subject, vec![required]));
-            }
+            requirements.extend(representation_requirement(&self.predicates.get(*id).body));
         }
-        self.introduce(uf, rank, &allocated);
-        let mut errors = Vec::new();
-        for (subject, requirements) in representations {
-            let admitted = requirements
-                .iter()
-                .fold(nash_ast::primitives::ReprSet::ALL, |set, requirement| {
-                    set.intersect(requirement.admits())
-                });
-            if admitted.is_empty() {
-                errors.push(Error::ContradictoryRepresentation {
-                    region: binder.region,
-                    name: binder.value,
-                    typ: to_error_type(self.bump, uf, subject),
-                    requirements: self.bump.alloc_slice_fill_iter(requirements),
-                });
-                self.has_poison = true;
-                crate::recovery::poison(uf, [subject]);
-            }
-        }
-        self.propagate_poison(uf);
+        let mut errors = self.contradictory_representations(uf, rank, requirements, binder);
         let roots: Vec<_> = definitions.iter().map(|def| def.typ).collect();
         let mut reachable = Self::type_variables(uf, roots);
         if definitions
@@ -2195,6 +3368,7 @@ impl<'a> Solver<'a, '_> {
                 }
             }
         }
+        self.dependencies.sync(uf);
         let mut ambiguous: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for (_, id) in &self.wanted[start..] {
             if self.predicate_blocked(uf, *id) {
@@ -2203,7 +3377,10 @@ impl<'a> Solver<'a, '_> {
             let variables =
                 Self::type_variables(uf, self.predicates.get(*id).body.roots().collect());
             for var in variables {
-                if uf.get(var).rank == NO_RANK && !reachable.contains(&var) {
+                if uf.get(var).rank == NO_RANK
+                    && !reachable.contains(&var)
+                    && !self.dependencies.is_stranded(uf, var)
+                {
                     ambiguous.entry(var).or_default().push(*id);
                 }
             }
@@ -2490,16 +3667,17 @@ impl<'a> Solver<'a, '_> {
             .map(|root| self.make_copy_help(uf, rank, *root, quantified))
             .collect();
         let copied = std::mem::take(&mut self.copied);
-        let contracts = self.kind_contracts.clone();
+        let recorded = self.kind_contracts.len();
         for (original, copy) in &copied {
-            for contract in &contracts {
-                if uf.equivalent(*original, contract.variable) {
-                    self.kind_contracts.push(crate::kind_check::Contract {
+            for contract in self.kind_contracts.on_class(uf, *original, recorded) {
+                self.kind_contracts.push(
+                    uf,
+                    crate::kind_check::Contract {
                         variable: *copy,
                         owner: roots[0],
-                        ..*contract
-                    });
-                }
+                        ..contract
+                    },
+                );
             }
             uf.modify(*original, |desc| {
                 desc.copy = None;
@@ -2789,13 +3967,37 @@ fn adjust_rank_content<'a>(
 #[cfg(test)]
 mod copy_tests {
     use super::*;
-    // Insert in solve.rs tests module; use Solver::new and finish_state.
+
     fn primitive_state<'a>() -> State<'a> {
         State {
             env: Env::new(),
             mark: NO_MARK.next(),
             errors: Vec::new(),
         }
+    }
+
+    fn fresh<'a>(solver: &mut Solver<'a, '_>, uf: &mut UnionFind<'a>, rank: usize) -> Variable {
+        solver.register(uf, rank, Content::FlexVar(None))
+    }
+
+    /// Solve one `Equal` constraint between two existing variables.
+    fn equal<'a>(
+        solver: &mut Solver<'a, '_>,
+        uf: &mut UnionFind<'a>,
+        state: State<'a>,
+        region: Region,
+        category: Category<'a>,
+        actual: Variable,
+        expected: Variable,
+    ) -> State<'a> {
+        let bump = solver.bump;
+        let constraint = Constraint::Equal(
+            region,
+            category,
+            bump.alloc(Type::VarN(actual)),
+            Expected::NoExpectation(bump.alloc(Type::VarN(expected))),
+        );
+        solver.solve(uf, &Env::new(), OUTERMOST_RANK, state, &constraint)
     }
 
     fn primitive_nullary<'a>(
@@ -2829,14 +4031,14 @@ mod copy_tests {
         let mut uf = UnionFind::new();
         let actual = primitive_nullary(&mut solver, &mut uf, "list");
         let expected = primitive_nullary(&mut solver, &mut uf, "list");
-        let state = solver.equal(
+        let state = equal(
+            &mut solver,
             &mut uf,
-            OUTERMOST_RANK,
             primitive_state(),
             nash_region::Region::zero(),
             Category::List,
             actual,
-            Expected::NoExpectation(expected),
+            expected,
         );
         let errors = solver.finish_state(&mut uf, state).unwrap_err();
         assert!(
@@ -2859,28 +4061,28 @@ mod copy_tests {
         };
         let function = primitive_unit_function(&mut solver, &mut uf);
         let unit = primitive_nullary(&mut solver, &mut uf, "unit");
-        let mut state = solver.equal(
+        let mut state = equal(
+            &mut solver,
             &mut uf,
-            OUTERMOST_RANK,
             primitive_state(),
             at(1),
             Category::Lambda,
             function,
-            Expected::NoExpectation(unit),
+            unit,
         );
         for line in [2, 3] {
             // Four separate list nodes across these two equalities: sharing the
             // source description never meant sharing its materialized UF graph.
             let actual = primitive_nullary(&mut solver, &mut uf, "list");
             let expected = primitive_nullary(&mut solver, &mut uf, "list");
-            state = solver.equal(
+            state = equal(
+                &mut solver,
                 &mut uf,
-                OUTERMOST_RANK,
                 state,
                 at(line),
                 Category::List,
                 actual,
-                Expected::NoExpectation(expected),
+                expected,
             );
         }
         let errors = solver.finish_state(&mut uf, state).unwrap_err();
@@ -2909,20 +4111,20 @@ mod copy_tests {
         let mut solver = Solver::new(&bump, &tables);
         let mut uf = UnionFind::new();
         let rank = OUTERMOST_RANK;
-        let head = solver.fresh(&mut uf, rank);
-        let result = solver.fresh(&mut uf, rank);
+        let head = fresh(&mut solver, &mut uf, rank);
+        let result = fresh(&mut solver, &mut uf, rank);
         let region = nash_region::Region::zero();
 
         let argument = primitive_nullary(&mut solver, &mut uf, "unit");
         let applied = solver.structure(&mut uf, rank, FlatType::AppV1(head, vec![argument]));
-        let mut state = solver.equal(
+        let mut state = equal(
+            &mut solver,
             &mut uf,
-            rank,
             primitive_state(),
             region,
             Category::List,
             result,
-            Expected::NoExpectation(applied),
+            applied,
         );
 
         let argument = primitive_nullary(&mut solver, &mut uf, "unit");
@@ -2935,38 +4137,38 @@ mod copy_tests {
                 vec![argument],
             ),
         );
-        state = solver.equal(
+        state = equal(
+            &mut solver,
             &mut uf,
-            rank,
             state,
             region,
             Category::List,
             result,
-            Expected::NoExpectation(list),
+            list,
         );
 
         let function = primitive_unit_function(&mut solver, &mut uf);
-        state = solver.equal(
+        state = equal(
+            &mut solver,
             &mut uf,
-            rank,
             state,
             region,
             Category::List,
             result,
-            Expected::NoExpectation(function),
+            function,
         );
 
         // Rebuild this entire function graph after the previous failing equality.
         // Only the explicit head/result variables are shared between operations.
         let function = primitive_unit_function(&mut solver, &mut uf);
-        state = solver.equal(
+        state = equal(
+            &mut solver,
             &mut uf,
-            rank,
             state,
             region,
             Category::List,
             head,
-            Expected::NoExpectation(function),
+            function,
         );
         let errors = solver.finish_state(&mut uf, state).unwrap_err();
         assert_eq!(
@@ -2975,6 +4177,64 @@ mod copy_tests {
             "normalization must not sever the dependency from the applied type to its shared head: {errors:#?}"
         );
         assert!(matches!(errors[0], Error::BadExpr(..)), "{errors:#?}");
+    }
+
+    #[test]
+    fn apply_head_and_arguments_share_the_signature_substitution() {
+        use nash_ast::Pred;
+
+        let bump = Bump::new();
+        let tables = nash_can::environment::Tables::default();
+        let mut solver = Solver::new(&bump, &tables);
+        let mut uf = UnionFind::new();
+        let f = fresh(&mut solver, &mut uf, 2);
+        let a = fresh(&mut solver, &mut uf, 2);
+        let scope = BTreeMap::from([("f", f), ("a", a)]);
+        let head = &*bump.alloc(Located::at_zero(CanType::Var("f")));
+        let arg = &*bump.alloc(Located::at_zero(CanType::Var("a")));
+        let args = bump.alloc_slice_copy(&[arg]);
+        let application =
+            solver.canonical_predicate(&mut uf, 2, &scope, Pred::Apply { head, args });
+        let Body::Apply {
+            head: actual_head,
+            args: actual_args,
+        } = application
+        else {
+            panic!("Apply preserved")
+        };
+        assert_eq!(actual_head, f);
+        assert_eq!(actual_args, [a]);
+        let representation = solver.canonical_predicate(
+            &mut uf,
+            2,
+            &scope,
+            Pred::Implied {
+                trait_: nash_ast::primitives::ReprTrait::Big.qualified(),
+                args,
+            },
+        );
+        let Body::Trait {
+            hidden,
+            args,
+            trait_,
+        } = representation
+        else {
+            panic!("representation predicate preserved")
+        };
+        assert!(hidden);
+        assert_eq!(trait_, nash_ast::primitives::ReprTrait::Big.qualified());
+        assert_eq!(args, [a]);
+        let signature = Located::at_zero(CanType::App {
+            head,
+            args: bump.alloc_slice_copy(&[arg]),
+        });
+        let signature = solver.src_type_to_var(&mut uf, 2, &scope, &signature);
+        let Content::Structure(FlatType::AppV1(type_head, type_args)) = &uf.get(signature).content
+        else {
+            panic!("type application preserved")
+        };
+        assert_eq!(*type_head, actual_head);
+        assert_eq!(type_args, &actual_args);
     }
 
     use nash_constrain::type_::{PredId, make_descriptor};
@@ -3026,6 +4286,14 @@ mod copy_tests {
             }
             Evidence::StructuralEq { typ } => format!("StructuralEq {}", evidence_type(typ)),
             Evidence::ReflexiveLift { typ } => format!("ReflexiveLift {}", evidence_type(typ)),
+            Evidence::Specialize { trait_, args } => format!(
+                "Specialize {} [{}]",
+                evidence_name(*trait_),
+                args.iter()
+                    .map(|typ| evidence_type(typ))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Evidence::Impl {
                 impl_,
                 type_args,
@@ -3114,7 +4382,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3127,10 +4395,9 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let name = bump.alloc(Located::at_zero("value"));
@@ -3170,7 +4437,7 @@ mod copy_tests {
             solver.wanted.push((OUTERMOST_RANK, id));
             ids.push(id);
         }
-        solver.resolution_work.insert(ids[0], 16_384);
+        solver.resolution_work.insert(ids[0], WORK_LIMIT);
         let result = solver.resolve_wanted(
             &mut uf,
             OUTERMOST_RANK,
@@ -3199,6 +4466,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3207,7 +4475,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3220,19 +4488,20 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
-        let result = solver.infer_module(
+        let result = solver.solve(
             &mut uf,
-            &canonical.module,
+            &Env::new(),
+            OUTERMOST_RANK,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
+            &constraint,
         );
         assert!(result.errors.is_empty());
         assert!(
@@ -3271,6 +4540,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3279,7 +4549,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3292,19 +4562,20 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
-        let result = solver.infer_module(
+        let result = solver.solve(
             &mut uf,
-            &canonical.module,
+            &Env::new(),
+            OUTERMOST_RANK,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
+            &constraint,
         );
         let localizer = nash_report::localizer::Localizer::from_module(&parsed, &[]);
         insta::with_settings!({description => source, omit_expression => true, info => &"diagnostic"}, {
@@ -3345,6 +4616,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3353,7 +4625,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3366,19 +4638,20 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
-        let result = solver.infer_module(
+        let result = solver.solve(
             &mut uf,
-            &canonical.module,
+            &Env::new(),
+            OUTERMOST_RANK,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
+            &constraint,
         );
         assert!(result.errors.is_empty());
         let local = solver
@@ -3432,6 +4705,7 @@ mod copy_tests {
         let canonical =
             nash_can::canonicalize(&bump, nash_can::Context::default(), &parsed).unwrap();
         let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3440,7 +4714,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3453,19 +4727,20 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
-        let result = solver.infer_module(
+        let result = solver.solve(
             &mut uf,
-            &canonical.module,
+            &Env::new(),
+            OUTERMOST_RANK,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
+            &constraint,
         );
         assert!(result.errors.is_empty(), "{:?}", result.errors);
         assert!(result.env["value"].context.is_empty());
@@ -3569,6 +4844,7 @@ mod copy_tests {
         let group_binder = group_binder.unwrap();
         let h_binder = h_binder.unwrap();
         let mut uf = UnionFind::new();
+        let constraint = nash_constrain::constrain(&bump, &mut uf, &canonical.module);
         let mut solver = Solver {
             bump: &bump,
             tables: &canonical.tables,
@@ -3577,7 +4853,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3590,19 +4866,20 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
-        let result = solver.infer_module(
+        let result = solver.solve(
             &mut uf,
-            &canonical.module,
+            &Env::new(),
+            OUTERMOST_RANK,
             State {
                 env: Env::new(),
                 mark: NO_MARK.next(),
                 errors: Vec::new(),
             },
+            &constraint,
         );
         assert!(result.errors.is_empty(), "{:?}", result.errors);
         assert!(solver.wanted.is_empty());
@@ -3748,7 +5025,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3761,10 +5038,9 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -3835,7 +5111,7 @@ mod copy_tests {
             predicates: Store::default(),
             wanted: Vec::new(),
             givens: Vec::new(),
-            schemes: Vec::new(),
+            schemes: Schemes::default(),
             recursive_uses: Vec::new(),
             uses: Vec::new(),
             expr_types: Vec::new(),
@@ -3848,10 +5124,9 @@ mod copy_tests {
             failed_predicates: BTreeSet::new(),
             failed_definitions: std::collections::HashSet::new(),
             value_roots: Vec::new(),
-            kind_contracts: Vec::new(),
+            kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

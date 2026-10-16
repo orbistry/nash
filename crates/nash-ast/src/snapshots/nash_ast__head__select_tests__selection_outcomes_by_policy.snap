@@ -1,0 +1,25 @@
+---
+source: crates/nash-ast/src/head.rs
+description: "Impls in declaration order and how each one matches the arguments. Inference uses SelectPolicy::Defer; entailment and evidence use SelectPolicy::Exact."
+---
+no impls
+  inference: no impl
+  entailment and evidence: no impl
+does not match, does not match
+  inference: no impl
+  entailment and evidence: no impl
+does not match, matches, does not match
+  inference: selects impl 2
+  entailment and evidence: selects impl 2
+matches, undecided
+  inference: waits
+  entailment and evidence: selects impl 1
+undecided, matches
+  inference: waits
+  entailment and evidence: selects impl 2
+undecided, does not match
+  inference: waits
+  entailment and evidence: undecided
+does not match, matches (budget for one step)
+  inference: work limit
+  entailment and evidence: work limit

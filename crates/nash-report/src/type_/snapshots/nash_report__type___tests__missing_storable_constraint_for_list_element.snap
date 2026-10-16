@@ -4,8 +4,8 @@ description: "module Main exposing (..)\nvalues = [\\x -> x + 1]\n"
 ---
 nash::type::missing_impl
 
-  × Unsatisfied representation constraint `Primitive.Storable (Primitive.int
-  │                                                            -> Primitive.int)`.
+  × Unsatisfied representation constraint
+  │     `Primitive.Storable (Primitive.int -> Primitive.int)`.
    ╭─[Main.nash:2:10]
  1 │ module Main exposing (..)
  2 │ values = [\x -> x + 1]

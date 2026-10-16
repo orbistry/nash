@@ -55,7 +55,7 @@ fn dictionaries<'a>(
                 }),
                 Evidence::StructuralEq { typ } => Some(Evidence::StructuralEq { typ }),
                 Evidence::ReflexiveLift { typ } => Some(Evidence::ReflexiveLift { typ }),
-                Evidence::Given { .. } | Evidence::Super { .. } => {
+                Evidence::Given { .. } | Evidence::Super { .. } | Evidence::Specialize { .. } => {
                     panic!("ground evidence must be closed")
                 }
             })
@@ -532,20 +532,29 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
         cycle x = x
         function : (int -> int) -> (int -> int)
         function x = x
+        openFunction : ('a -> int) -> ('a -> int)
+        openFunction x = x
     "
         ),
     );
     let trait_ = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
-    let results: Vec<_> = ["missing", "open", "growing", "cycle", "function"]
-        .into_iter()
-        .map(|name| {
-            let pred = Pred::Trait {
-                trait_,
-                args: bump.alloc_slice_copy(&[input(&annotations, name)]),
-            };
-            (name, resolve(&bump, &tables, &pred).unwrap_err().reason)
-        })
-        .collect();
+    let results: Vec<_> = [
+        "missing",
+        "open",
+        "growing",
+        "cycle",
+        "function",
+        "openFunction",
+    ]
+    .into_iter()
+    .map(|name| {
+        let pred = Pred::Trait {
+            trait_,
+            args: bump.alloc_slice_copy(&[input(&annotations, name)]),
+        };
+        (name, resolve(&bump, &tables, &pred).unwrap_err().reason)
+    })
+    .collect();
     assert_eq!(
         results,
         vec![
@@ -554,6 +563,7 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
             ("growing", Failure::Limit),
             ("cycle", Failure::Limit),
             ("function", Failure::MissingImpl),
+            ("openFunction", Failure::MissingImpl),
         ]
     );
     let mut deep = input(&annotations, "missing");
@@ -579,4 +589,114 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
         .reason,
         Failure::Limit
     );
+}
+
+#[test]
+fn open_types_resolve_when_no_decision_needs_them() {
+    let bump = Bump::new();
+    let (tables, annotations) = fixture(
+        &bump,
+        indoc::indoc!(
+            "
+        module Lift exposing (..)
+        trait Lift 'small 'big where
+            lift : 'small -> 'big
+            lower : 'big -> 'small
+        trait Keep 'a where
+            keep : 'a -> 'a
+        type tag 'p = Tag
+        impl Keep (tag 'p) where
+            keep x = x
+        phantom : tag 'p -> tag 'p
+        phantom x = x
+        first : 'a -> 'a
+        first x = x
+        second : 'b -> 'b
+        second x = x
+    "
+        ),
+    );
+    let keep = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
+    assert!(matches!(
+        resolve(
+            &bump,
+            &tables,
+            &Pred::Trait {
+                trait_: keep,
+                args: bump.alloc_slice_copy(&[input(&annotations, "phantom")]),
+            }
+        ),
+        Ok(Some(Evidence::Impl { .. }))
+    ));
+    let lift = |first, second| Pred::Trait {
+        trait_: nash_ast::primitives::lift_trait(),
+        args: bump.alloc_slice_copy(&[input(&annotations, first), input(&annotations, second)]),
+    };
+    assert!(matches!(
+        resolve(&bump, &tables, &lift("first", "first")),
+        Ok(Some(Evidence::ReflexiveLift { .. }))
+    ));
+    assert_eq!(
+        resolve(&bump, &tables, &lift("first", "second"))
+            .unwrap_err()
+            .reason,
+        Failure::NonGround
+    );
+}
+
+/// `twins 'a 'a` proves the open `twins p p` for every `p`. The disjoint
+/// `twins int bool` and reflexive Lift cannot decide it, and must not block
+/// that proof.
+#[test]
+fn selected_impl_proves_an_open_type_that_another_rule_cannot_decide() {
+    let bump = Bump::new();
+    let (tables, annotations) = fixture(
+        &bump,
+        indoc::indoc!(
+            "
+        module Lift exposing (..)
+        trait Lift 'small 'big where
+            lift : 'small -> 'big
+            lower : 'big -> 'small
+        trait Keep 'a where
+            keep : 'a -> 'a
+        type twins 'a 'b = Twins
+        impl Keep (twins 'a 'a) where
+            keep x = x
+        impl Keep (twins int bool) where
+            keep x = x
+        impl Lift (twins 'a 'a) (twins int bool) where
+            lift _ = Twins
+            lower _ = Twins
+        same : twins 'p 'p -> twins 'p 'p
+        same x = x
+        mixed : twins int bool -> twins int bool
+        mixed x = x
+    "
+        ),
+    );
+    let keep = *tables.traits.keys().find(|key| key.name == "Keep").unwrap();
+    assert!(matches!(
+        resolve(
+            &bump,
+            &tables,
+            &Pred::Trait {
+                trait_: keep,
+                args: bump.alloc_slice_copy(&[input(&annotations, "same")]),
+            }
+        ),
+        Ok(Some(Evidence::Impl { .. }))
+    ));
+    assert!(matches!(
+        resolve(
+            &bump,
+            &tables,
+            &Pred::Trait {
+                trait_: nash_ast::primitives::lift_trait(),
+                args: bump
+                    .alloc_slice_copy(&[input(&annotations, "same"), input(&annotations, "mixed")]),
+            }
+        ),
+        Ok(Some(Evidence::Impl { .. }))
+    ));
 }

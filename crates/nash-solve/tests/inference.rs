@@ -136,6 +136,163 @@ fn recovery_reports_an_independent_escaping_annotation_and_blocks_its_uses() {
 }
 
 #[test]
+fn recovery_annotated_body_failure_resolves_caller_constraints_from_the_annotation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+        impl Round () where
+            create x = x
+        helper : () -> ()
+        helper x = \y -> y
+        caller : ()
+        caller = helper (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_annotated_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        helper : () -> ()
+        helper x = \y -> y
+        caller : ()
+        caller = helper Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_local_annotated_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        caller : ()
+        caller =
+            let
+                inner : () -> ()
+                inner x = \y -> y
+            in
+            inner Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_annotated_group_body_failure_reports_caller_argument_mismatch() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        isEven : () -> ()
+        isEven x = isOdd x
+        isOdd : () -> ()
+        isOdd x = if Primitive.True then \y -> y else isEven x
+        caller : ()
+        caller = isEven Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_constrained_annotated_body_failure_reports_caller_missing_impl() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Same 'a where
+            same : 'a -> 'a -> ()
+        impl Same () where
+            same x y = x
+        check : Same 'a => 'a -> ()
+        check x = \y -> y
+        caller : ()
+        caller = check Primitive.True
+    "#
+    );
+}
+
+#[test]
+fn recovery_failed_call_does_not_make_its_argument_constraint_ambiguous() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller = broken (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_failed_call_keeps_an_independent_ambiguity() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller =
+            let
+                ignored : ()
+                ignored = broken ()
+            in
+            discard (create ())
+    "#
+    );
+}
+
+#[test]
+fn recovery_failed_call_leaves_a_shared_argument_unknown() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (..)
+        trait Round 'a where
+            create : () -> 'a
+            discard : 'a -> ()
+        broken x =
+            let
+                bad : ()
+                bad = \y -> y
+            in
+            x
+        caller : ()
+        caller =
+            (\shared ->
+                let
+                    ignored : ()
+                    ignored = broken shared
+                in
+                discard shared
+            )
+                (create ())
+    "#
+    );
+}
+
+#[test]
 fn recovery_blocks_repeated_and_recursive_uses_but_keeps_sibling_errors() {
     for broken in [
         "broken = if True then (assert Primitive.True) else (\\x -> x)\n",
@@ -2305,6 +2462,78 @@ fn typed_alias_function() {
     );
 }
 
+/// An annotated definition publishes its declared type. A call with more
+/// arguments in the same module must not replace the alias in the published
+/// annotation: an importer resolves the impl of the alias by its name.
+#[test]
+fn annotated_alias_result_keeps_its_impl_for_importers_after_a_wider_call() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let mut interfaces = literal_interfaces(&bump);
+    let mut output = Vec::new();
+    for (module_name, source) in [
+        (
+            "Gen",
+            indoc!(
+                r#"
+            module Gen exposing (..)
+            type alias gen 'a = int -> ('a, int)
+            trait Name 'a where
+                name : 'a -> ()
+            impl Name (gen int) where
+                name _ = ()
+            start : int -> gen int
+            start n = \seed -> (n, seed)
+            run : int -> (int, int)
+            run seed = start 4 seed
+        "#
+            ),
+        ),
+        (
+            "Main",
+            indoc!(
+                r#"
+            module Main exposing (..)
+            import Gen exposing (..)
+            label = name (start 1)
+        "#
+            ),
+        ),
+    ] {
+        let source = bump.alloc_str(source);
+        let parsed = nash_parse::Parser::new(&bump, snapshot_inputs.record(source))
+            .module()
+            .unwrap();
+        let canonical = nash_can::canonicalize(
+            &bump,
+            Context {
+                package: None,
+                interfaces: Some(&interfaces),
+            },
+            &parsed,
+        )
+        .unwrap();
+        let (annotations, _) = nash_solve::run(
+            &bump,
+            &mut UnionFind::new(),
+            &canonical.module,
+            &canonical.tables,
+        )
+        .unwrap_or_else(|errors| panic!("{}", render_errors(source, &errors)));
+        output.push(format!(
+            "{module_name}:\n{}",
+            render_annotations(&annotations)
+        ));
+        interfaces.insert(
+            module_name,
+            nash_can::from_module(&bump, &canonical.module, &annotations),
+        );
+    }
+    insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(output.join("\n"));
+    });
+}
+
 // RECURSION
 
 #[test]
@@ -2389,6 +2618,73 @@ fn infinite_type() {
         module Main exposing (selfApply)
 
         selfApply f = f f
+    "#
+    );
+}
+
+/// Impls are disjoint only over finite types: the infinite type of `f`
+/// matches both heads. The occurs check of the binding must report it.
+#[test]
+fn infinite_argument_does_not_select_between_impls_disjoint_on_finite_types() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Same 'a where
+            same : 'a -> ()
+        impl Same ('a, 'a) where
+            same _ = ()
+        impl Same ('a, 'a -> 'b) where
+            same _ = ()
+        bad f =
+            let
+                g = ( f f, same ( f, f ) )
+            in
+            g
+    "#
+    );
+}
+
+/// Two arguments also reach the relational improvement probes.
+#[test]
+fn infinite_arguments_of_a_two_parameter_trait_wait_for_the_occurs_check() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Pair 'a 'b where
+            pair : 'a -> 'b -> ()
+        impl Pair 'a 'a where
+            pair _ _ = ()
+        impl Pair 'a (list 'a) where
+            pair _ _ = ()
+        same : 'a -> 'a -> 'a
+        same a _ = a
+        bad x =
+            let
+                g = ( same x [ x ], pair x x )
+            in
+            g
+    "#
+    );
+}
+
+/// One impl matches the infinite type at every depth, so selecting it would
+/// repeat its own context until the work limit.
+#[test]
+fn infinite_argument_with_one_matching_impl_reports_only_the_infinite_type() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        trait Show2 'a where
+            show2 : 'a -> ()
+        impl Show2 'a => Show2 (list 'a) where
+            show2 _ = ()
+        same : 'a -> 'a -> 'a
+        same a _ = a
+        bad x =
+            let
+                g = ( same x [ x ], show2 x )
+            in
+            g
     "#
     );
 }
@@ -5109,6 +5405,98 @@ fn representation_classes_select_disjoint_blankets() {
     );
 }
 
+/// A use that requires both disjoint blankets' classes must be reported as a
+/// representation contradiction, never reach the selector as two matches.
+#[test]
+fn contradictory_inferred_classes_do_not_select_both_disjoint_blankets() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Storable, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        impl Keep ('a : Little) where
+            keep x = x
+        big : Big 'a => 'a -> 'a
+        big x = x
+        little : Little 'a => 'a -> 'a
+        little x = x
+        bad x = keep (big (little x))
+    "#
+    );
+}
+
+/// A local annotation shares the enclosing annotation's type variables, as
+/// in Elm. Each context is consistent alone, but together they admit no
+/// representation for `'a`.
+#[test]
+fn local_annotation_contradicting_the_enclosing_representation_is_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Little)
+        constOnly : Const 'b => 'b -> 'b
+        constOnly x = x
+        outer : Big 'a => 'a -> 'a
+        outer x =
+            let
+                inner : Little 'a => 'a -> 'a
+                inner y = constOnly y
+            in
+            x
+    "#
+    );
+}
+
+/// The contradiction must be reported before impl selection: with no
+/// representation left, both disjoint blankets would match `'a`.
+#[test]
+fn local_annotation_contradiction_is_rejected_before_impl_selection() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep ('a : Big) where
+            keep x = x
+        impl Keep ('a : Little) where
+            keep x = x
+        outer : Big 'a => 'a -> 'a
+        outer x =
+            let
+                inner : Little 'a => 'a -> 'a
+                inner y = keep y
+            in
+            x
+    "#
+    );
+}
+
+/// A trait parameter's representation reaches a default method's local
+/// annotation through the method's own trait constraint.
+#[test]
+fn default_method_local_annotation_contradicting_the_trait_parameter_is_rejected() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const, Little)
+        constOnly : Const 'b => 'b -> 'b
+        constOnly x = x
+        trait Foo ('a : Big) where
+            foo : 'a -> 'a
+            foo x =
+                let
+                    inner : Little 'a => 'a -> 'a
+                    inner y = constOnly y
+                in
+                x
+    "#
+    );
+}
+
 #[test]
 fn representation_classes_intersect_givens_and_expand_aliases() {
     assert_inference_snapshot!(
@@ -5142,6 +5530,229 @@ fn representation_class_requires_a_given_for_rigid_types() {
             keep x = x
         generic : 'a -> 'a
         generic x = keep x
+    "#
+    );
+}
+
+// REPRESENTATION COVERAGE
+
+/// `Probe (list 'a)` has one impl for each representation class of `'a`.
+/// With `Probe 'a` given, every class of the rigid `'a` selects an impl.
+#[test]
+fn coverage_selects_split_impls_for_a_rigid_element() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+/// The limit is checked first: a signature never hides the trait at an
+/// element that selects the impl.
+#[test]
+fn coverage_requires_the_trait_at_the_element() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+#[test]
+fn coverage_names_the_element_without_a_given() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (map ('k : Big) ('v : Big)) where
+            probe _ = ()
+        impl ( Probe 'k, Probe 'v ) => Probe (map ('k : Little) 'v) where
+            probe _ = ()
+        impl Probe 'v => Probe (map ('k : Big) ('v : Little)) where
+            probe _ = ()
+        check : Probe 'k => map 'k 'v -> ()
+        check m = probe m
+    "#
+    );
+}
+
+/// The Big impl needs `Wrap 'a`, which only the Big blanket provides: the
+/// branch context is proved under the representation of its cell.
+#[test]
+fn coverage_proves_a_branch_context_under_its_representation() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Wrap 'a where
+            wrap : 'a -> ()
+        impl Wrap ('a : Big) where
+            wrap _ = ()
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Wrap 'a => Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+#[test]
+fn coverage_reports_a_missing_branch_context() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Label 'a where
+            label : 'a -> ()
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl ( Probe 'a, Label 'a ) => Probe (list ('a : Little)) where
+            probe _ = ()
+        check : Probe 'a => list 'a -> ()
+        check xs = probe xs
+    "#
+    );
+}
+
+/// No impl covers a Term element, so coverage cannot replace selection.
+#[test]
+fn coverage_reports_the_uncovered_representation() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Const)
+        type box 'a = Box 'a
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (box ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (box ('a : Const)) where
+            probe _ = ()
+        check : Probe 'a => box 'a -> ()
+        check x = probe x
+    "#
+    );
+}
+
+/// Six subjects give 729 cells, more than one work budget can select.
+#[test]
+fn coverage_search_stops_at_the_work_limit() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        type six 'a 'b 'c 'd 'e 'f = Six 'a 'b 'c 'd 'e 'f
+        trait Kind 'a where
+            kind : 'a -> ()
+        impl Kind (six ('a : Big) 'b 'c 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Big) 'c 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Big) 'd 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Big) 'e 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Big) 'f) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Big)) where
+            kind _ = ()
+        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Little)) where
+            kind _ = ()
+        check : ( Kind 'a, Kind 'b, Kind 'c, Kind 'd, Kind 'e, Kind 'f ) => six 'a 'b 'c 'd 'e 'f -> ()
+        check x = kind x
+    "#
+    );
+}
+
+/// Coverage applies to rigid variables only: an unannotated definition keeps
+/// the constraint on the container in its inferred context.
+#[test]
+fn coverage_keeps_the_inferred_context_of_an_unannotated_definition() {
+    assert_inference_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        check x = probe [ x ]
+    "#
+    );
+}
+
+/// A covered recursive call wraps the caller's own given in an impl at each
+/// level, so code generation would need one copy for every depth.
+#[test]
+fn coverage_counts_as_growing_evidence() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little, Storable)
+        trait Probe 'a where
+            probe : 'a -> ()
+        impl Probe (list ('a : Big)) where
+            probe _ = ()
+        impl Probe 'a => Probe (list ('a : Little)) where
+            probe _ = ()
+        nest : ( Probe 'a, Storable 'a ) => 'a -> ()
+        nest x = nest [ x ]
+    "#
+    );
+}
+
+/// Code generation resolves a superclass at the types of each use, where a
+/// phantom parameter can stay open. When the parameter would select the
+/// superclass impl, type checking reports the missing constraint first.
+#[test]
+fn open_type_that_selects_a_superclass_impl_is_a_type_error() {
+    assert_inference_error_snapshot!(
+        r#"
+        module Main exposing (..)
+        import Primitive exposing (Big, Little)
+        type box 'a = Box 'a
+        trait Kind 'a where
+            kind : 'a -> string
+        impl Kind (box ('a : Big)) where
+            kind _ = "big box"
+        impl Kind 'a => Kind (box ('a : Little)) where
+            kind _ = "little box"
+        trait Kind 'a => Child 'a where
+            child : 'a -> string
+        impl Kind (box 'a) => Child (box 'a) where
+            child x = kind x
+        fromSuper : Child 't => 't -> string
+        fromSuper x = kind x
+        wrapper : box 'p -> string
+        wrapper b = fromSuper b
     "#
     );
 }

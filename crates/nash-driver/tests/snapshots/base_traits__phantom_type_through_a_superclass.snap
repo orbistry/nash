@@ -1,0 +1,5 @@
+---
+source: crates/nash-driver/tests/base_traits.rs
+description: "module Main exposing (..)\n\ntype tag 'p = Tag\n\nimpl Eq (tag 'p) where\n    eq _ _ = True\n\nimpl Ord (tag 'p) where\n    compare _ _ = EQ\n\nsame : Ord 'a => 'a -> 'a -> bool\nsame a b = a == b\n\nwrapper : tag 'p -> bool\nwrapper t = same t t\n\ntests\n    test \"an open phantom type reaches Eq through Ord\" = do\n        assert (wrapper Tag)\n"
+---
+an open phantom type reaches Eq through Ord: Pass; traces: []

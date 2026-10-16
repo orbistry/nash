@@ -16,7 +16,7 @@ nash::type::missing_field
   help: Did you mean `a`?
 
         Available fields: { a : unit
-        }
+                          }
 
 
 nash::type::missing_impl

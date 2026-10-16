@@ -14,4 +14,4 @@ nash::type::missing_field
   help: Did you mean `age`?
 
         Available fields: { age : Primitive.int
-        }
+                          }

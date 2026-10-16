@@ -1,0 +1,17 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Little)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep ('a : Big) where\n    keep x = x\nimpl Keep ('a : Little) where\n    keep x = x\nouter : Big 'a => 'a -> 'a\nouter x =\n    let\n        inner : Little 'a => 'a -> 'a\n        inner y = keep y\n    in\n    x\n"
+info: diagnostic
+---
+nash::type::contradictory_representation
+
+  × `inner` requires incompatible representations for `'a`.
+    ╭─[Main.nash:13:9]
+ 12 │         inner : Little 'a => 'a -> 'a
+ 13 │         inner y = keep y
+    ·         ─────
+ 14 │     in
+    ╰────
+  help: Required: Big, Little.
+
+        Use a consistent representation or convert the value explicitly.

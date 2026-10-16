@@ -186,6 +186,12 @@ pub enum Solution<'a> {
         index: usize,
         path: Vec<usize>,
     },
+    /// Representation coverage: every admitted representation of the rigid
+    /// subjects selects an impl. `subs` are the impl contexts proved for each
+    /// cell; code generation selects the impl again for each use.
+    Specialize {
+        subs: Vec<PredId>,
+    },
 }
 
 #[derive(Default)]

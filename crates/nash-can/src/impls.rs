@@ -2,6 +2,7 @@ use crate::environment::{Env, TraitInfo, dups};
 use crate::error::BadHead;
 use crate::{Error, kinds, module, types, warning::Warning};
 use bumpalo::Bump;
+use nash_ast::head::WORK_LIMIT;
 use nash_ast::{Annotation, Head, Impl, ImplKey, Pred, QualifiedName, Type};
 use nash_region::Located;
 use nash_source::Type as SourceType;
@@ -111,7 +112,7 @@ fn insert_impl<'a>(
         trait_: impl_.trait_,
         heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value)),
     };
-    let mut remaining = 16_384;
+    let mut remaining = WORK_LIMIT;
     for (candidate, first) in table
         .iter()
         .filter(|(candidate, _)| candidate.trait_ == key.trait_)
@@ -287,7 +288,7 @@ pub(crate) fn canonicalize<'a>(
                 &[left.value],
                 &[right.value],
                 &|head| head_repr(kind_env, head),
-                &mut 16_384,
+                &mut { WORK_LIMIT },
             )
             .map_err(|_| {
                 vec![Error::ImplPatternLimit {

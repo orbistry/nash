@@ -355,10 +355,19 @@ fn unify_partial_alias<'a>(
             unify_alias_args(uf, vars, args, other_args)?;
             merge(uf, context, other)
         }
-        Content::Structure(flat) => unify_application_alias(uf, vars, context, flat, alias),
+        Content::Structure(flat) => {
+            unify_application_alias(uf, vars, context, flat, alias, Side::First)
+        }
         Content::Error => merge(uf, context, Content::Error),
         _ => Err(()),
     }
+}
+
+/// Which side of the unification context holds the alias.
+#[derive(Clone, Copy)]
+enum Side {
+    First,
+    Second,
 }
 
 /// Decompose the supplied suffix while keeping the original closed alias body.
@@ -368,6 +377,7 @@ fn unify_application_alias<'a>(
     context: &Context<'a>,
     flat: FlatType<'a>,
     alias: Content<'a>,
+    side: Side,
 ) -> UResult {
     let FlatType::AppV1(head, applied) = type_::normalize_application(uf, flat) else {
         return Err(());
@@ -390,7 +400,19 @@ fn unify_application_alias<'a>(
         _ => unreachable!(),
     };
     if applied.is_empty() || applied.len() > args.len() {
-        return Err(());
+        // The application cannot split the alias's own parameters. A transparent
+        // alias still unifies through its body; record aliases stay nominal.
+        return match &alias {
+            Content::Alias { real, body, .. }
+                if !matches!(body.value, nash_ast::Type::Record { .. }) =>
+            {
+                match side {
+                    Side::First => sub_unify(uf, vars, *real, context.second),
+                    Side::Second => sub_unify(uf, vars, context.first, *real),
+                }
+            }
+            _ => Err(()),
+        };
     }
     let split = args.len() - applied.len();
     let partial = fresh(
@@ -486,6 +508,7 @@ fn unify_alias<'a>(
                 body,
                 real: real_var,
             },
+            Side::First,
         ),
         Content::Structure(_) if nominal => Err(()),
         Content::Structure(_) => sub_unify(uf, vars, real_var, context.second),
@@ -528,11 +551,11 @@ fn unify_structure<'a>(
         Content::RigidVar(_) => Err(()),
 
         alias @ Content::PartialAlias { .. } => {
-            unify_application_alias(uf, vars, context, flat_type, alias)
+            unify_application_alias(uf, vars, context, flat_type, alias, Side::Second)
         }
         alias @ Content::Alias { .. } => {
             if matches!(flat_type, FlatType::AppV1(..)) {
-                unify_application_alias(uf, vars, context, flat_type, alias)
+                unify_application_alias(uf, vars, context, flat_type, alias, Side::Second)
             } else {
                 let Content::Alias { real, body, .. } = alias else {
                     unreachable!()

@@ -1,0 +1,16 @@
+---
+source: crates/nash-solve/tests/inference.rs
+description: "module Main exposing (..)\nimport Primitive exposing (Big, Little, Storable)\ntrait Probe 'a where\n    probe : 'a -> ()\nimpl Probe (list ('a : Big)) where\n    probe _ = ()\nimpl Probe 'a => Probe (list ('a : Little)) where\n    probe _ = ()\nnest : ( Probe 'a, Storable 'a ) => 'a -> ()\nnest x = nest [ x ]\n"
+info: diagnostic
+---
+nash::type::polymorphic_recursion
+
+  × Recursive call to `nest` grows its trait requirement.
+    ╭─[Main.nash:10:10]
+  9 │ nest : ( Probe 'a, Storable 'a ) => 'a -> ()
+ 10 │ nest x = nest [ x ]
+    ·          ────
+    ╰────
+  help: Probe (list 'a)
+
+        Keep trait arguments stable across recursive calls, or split the recursion.

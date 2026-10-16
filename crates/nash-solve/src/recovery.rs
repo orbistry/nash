@@ -3,15 +3,25 @@
 //! Failed comparisons invalidate changed shared variables. Containment carries
 //! that failure to parents without invalidating independent siblings.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
 
 #[derive(Default)]
 pub(crate) struct Dependencies {
-    edges: BTreeSet<(Variable, Variable)>,
+    /// Recorded containment: parent handle to child handles.
+    edges: BTreeMap<Variable, BTreeSet<Variable>>,
+    /// Recorded parent handles by their current representative.
+    parents: HashMap<Variable, Vec<Variable>>,
     computations: BTreeSet<(Variable, Variable)>,
     field_receivers: BTreeSet<(Variable, Variable)>,
+    /// Representatives of variables whose only type information came from a
+    /// structure that merged into an existing `Error`, such as the argument of
+    /// a call to a failed definition. They are unknown because of that
+    /// failure, not ambiguous.
+    stranded: HashSet<Variable>,
+    /// Number of union-find merges already applied to `parents` and `stranded`.
+    merged: usize,
 }
 
 impl Dependencies {
@@ -22,6 +32,7 @@ impl Dependencies {
         uf: &mut UnionFind<'_>,
         roots: impl IntoIterator<Item = Variable>,
     ) {
+        self.sync(uf);
         let mut pending: Vec<_> = roots.into_iter().collect();
         let mut seen = BTreeSet::new();
         while let Some(variable) = pending.pop() {
@@ -31,15 +42,37 @@ impl Dependencies {
             }
             for child in children(&uf.get(variable).content) {
                 let child = uf.find(child);
-                self.edges.insert((variable, child));
+                let recorded = self.edges.entry(variable).or_default();
+                if recorded.is_empty() {
+                    self.parents.entry(variable).or_default().push(variable);
+                }
+                recorded.insert(child);
                 pending.push(child);
             }
         }
     }
 
+    /// Move the indexes keyed by representative along the merges made since
+    /// the last call.
+    pub(crate) fn sync(&mut self, uf: &UnionFind<'_>) {
+        for &(loser, winner) in &uf.merges()[self.merged..] {
+            if let Some(moved) = self.parents.remove(&loser) {
+                self.parents.entry(winner).or_default().extend(moved);
+            }
+            if self.stranded.remove(&loser) {
+                self.stranded.insert(winner);
+            }
+        }
+        self.merged = uf.merges().len();
+    }
+
     pub(crate) fn propagate(&self, uf: &mut UnionFind<'_>) -> bool {
         let mut changed = false;
-        for &(parent, child) in self.edges.iter().chain(&self.computations) {
+        let edges = self
+            .edges
+            .iter()
+            .flat_map(|(parent, children)| children.iter().map(move |child| (*parent, *child)));
+        for (parent, child) in edges.chain(self.computations.iter().copied()) {
             // Retain an aggregate whose current shape already contains the
             // error: unification can still check its unaffected children.
             // A lost historical edge or a separate computation result needs
@@ -71,8 +104,28 @@ impl Dependencies {
         self.field_receivers.insert((output, receiver));
     }
 
+    /// Remember variables the roots contained before they merged into `Error`.
+    pub(crate) fn strand(
+        &mut self,
+        uf: &mut UnionFind<'_>,
+        roots: impl IntoIterator<Item = Variable>,
+    ) {
+        let lost = self.detached(uf, roots);
+        self.stranded.extend(lost);
+    }
+
+    /// Call `sync` after the last merge before a lookup.
+    pub(crate) fn is_stranded(&self, uf: &mut UnionFind<'_>, variable: Variable) -> bool {
+        debug_assert_eq!(
+            self.merged,
+            uf.merges().len(),
+            "stranded lookup after an unsynced merge"
+        );
+        self.stranded.contains(&uf.find(variable))
+    }
+
     pub(crate) fn invalidate(
-        &self,
+        &mut self,
         uf: &mut UnionFind<'_>,
         roots: impl IntoIterator<Item = Variable>,
     ) {
@@ -82,7 +135,7 @@ impl Dependencies {
 
     /// Nodes removed by normalization still belong to the original computation.
     pub(crate) fn detached(
-        &self,
+        &mut self,
         uf: &mut UnionFind<'_>,
         roots: impl IntoIterator<Item = Variable>,
     ) -> BTreeSet<Variable> {
@@ -94,21 +147,23 @@ impl Dependencies {
             .collect()
     }
 
+    /// Everything reachable through current structure or recorded containment.
     fn historical(
-        &self,
+        &mut self,
         uf: &mut UnionFind<'_>,
         roots: impl IntoIterator<Item = Variable>,
     ) -> BTreeSet<Variable> {
-        let mut variables = reachable(uf, roots);
-        loop {
-            let before = variables.len();
-            for &(parent, child) in &self.edges {
-                if variables.contains(&uf.find(parent)) {
-                    variables.extend(reachable(uf, [child]));
-                }
+        self.sync(uf);
+        let mut pending: Vec<_> = roots.into_iter().collect();
+        let mut variables = BTreeSet::new();
+        while let Some(variable) = pending.pop() {
+            let variable = uf.find(variable);
+            if !variables.insert(variable) {
+                continue;
             }
-            if variables.len() == before {
-                break;
+            pending.extend(children(&uf.get(variable).content));
+            for parent in self.parents.get(&variable).into_iter().flatten() {
+                pending.extend(self.edges[parent].iter().copied());
             }
         }
         variables

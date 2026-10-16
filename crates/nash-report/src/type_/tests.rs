@@ -1256,6 +1256,14 @@ fn source_pipeline_infinite_type() {
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));
 }
+/// A tuple wider than the page puts one entry on each line.
+#[test]
+fn source_pipeline_tuple_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.int\nf x = x\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
 #[test]
 fn source_pipeline_missing_impl() {
     let source = "module Main exposing (..)\ntype A = A\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nf : A -> Primitive.bool\nf a = eq a a\n";
@@ -1266,6 +1274,22 @@ fn source_pipeline_missing_impl() {
 #[test]
 fn source_pipeline_missing_constraint() {
     let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nf : 'a -> Primitive.bool\nf a = eq a a\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
+/// The wanted predicate is wider than 80 columns, so the help line wraps.
+#[test]
+fn source_pipeline_missing_impl_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Probe 'a where\n    probe : 'a -> 'a\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) )\nf x = probe x\n";
+    let settings = source_settings(source);
+    let _guard = settings.bind_to_scope();
+    insta::assert_snapshot!(type_error_reports(source));
+}
+/// The wanted predicate is wider than 80 columns, so the help line wraps.
+#[test]
+fn source_pipeline_missing_constraint_wider_than_the_page() {
+    let source = "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\ntrait Relate 'a 'b where\n    relate : 'a -> 'b -> Primitive.bool\nf : 'element -> ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.bool\nf x y = relate x y\n";
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(type_error_reports(source));

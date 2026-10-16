@@ -1,0 +1,20 @@
+---
+source: crates/nash-report/src/type_/tests.rs
+description: "module Main exposing (..)\ntype wrapper 'a = Wrapper 'a\ntype pair 'a 'b = Pair 'a 'b\nf : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.int\nf x = x\n"
+---
+nash::type::mismatch
+
+  × Type mismatch: expected `int`,
+  │ found `( wrapper (pair int bytes)
+  │        , wrapper (pair string bool)
+  │        , wrapper (pair int int)
+  │        )`.
+   ╭─[Main.nash:5:7]
+ 3 │ type pair 'a 'b = Pair 'a 'b
+ 4 │ f : ( wrapper (pair Primitive.int Primitive.bytes), wrapper (pair Primitive.string Primitive.bool), wrapper (pair Primitive.int Primitive.int) ) -> Primitive.int
+   ·     ──────────────────────────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────
+   ·                                                                                   ╰── declared type
+ 5 │ f x = x
+   ·       ┬
+   ·       ╰── body of `f`
+   ╰────

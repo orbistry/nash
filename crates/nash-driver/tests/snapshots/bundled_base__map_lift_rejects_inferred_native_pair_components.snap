@@ -21,4 +21,5 @@ nash::type::missing_impl
 
         …
 
-        Import or define an impl for `Lift (list (pair int (list Data))) (Map Int (List Data))`.
+        Import or define an impl for
+            `Lift (list (pair int (list Data))) (Map Int (List Data))`.

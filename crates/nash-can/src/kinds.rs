@@ -1715,27 +1715,79 @@ pub(crate) fn infer_declarations<'a>(
     }
 }
 
+/// Every subject of representation predicates, variable or application,
+/// must admit at least one representation.
 fn check_representation_consistency<'a>(
     predicates: &[Pred<'a>],
 ) -> Result<(), Vec<crate::Error<'a>>> {
-    let mut admitted = BTreeMap::new();
+    let mut admitted: Vec<(
+        &'a nash_region::Located<nash_ast::Type<'a>>,
+        primitives::ReprSet,
+    )> = Vec::new();
     for pred in predicates {
         let Some(trait_) = pred.trait_ref().and_then(ReprTrait::of) else {
             continue;
         };
-        let arg = pred.args()[0];
-        if let Type::Var(name) = arg.value {
-            let previous = admitted.entry(name).or_insert(primitives::ReprSet::ALL);
-            *previous = previous.intersect(trait_.admits());
-            if previous.is_empty() {
-                return Err(vec![crate::Error::ContradictoryRepresentation {
-                    region: arg.region,
-                    variable: name,
-                }]);
+        let subject = pred.args()[0];
+        let index = match admitted
+            .iter()
+            .position(|(other, _)| nash_ast::same_type(&other.value, &subject.value))
+        {
+            Some(index) => index,
+            None => {
+                admitted.push((subject, primitives::ReprSet::ALL));
+                admitted.len() - 1
             }
+        };
+        let set = &mut admitted[index].1;
+        *set = set.intersect(trait_.admits());
+        if set.is_empty() {
+            return Err(vec![crate::Error::ContradictoryRepresentation {
+                region: subject.region,
+                subject,
+            }]);
         }
     }
     Ok(())
+}
+
+/// A class premise also promises its superclasses. Reject a context such as
+/// BigOnly int when BigOnly has Big as a superclass, even if unused.
+fn check_superclass_consistency<'a>(
+    bump: &'a Bump,
+    env: &KindEnv<'a>,
+    predicates: &[Pred<'a>],
+    context: &'a crate::error::KindContext<'a>,
+) -> Result<(), Vec<crate::Error<'a>>> {
+    let group = Default::default();
+    let mut validation = Formation::new(bump, env, &group);
+    let mut pending = predicates.to_vec();
+    let mut seen = std::collections::HashSet::new();
+    while let Some(pred) = pending.pop() {
+        if !seen.insert(pred.key()) {
+            continue;
+        }
+        validation
+            .reduce(pred)
+            .map_err(|failure| vec![representation_error(failure, context)])?;
+        if let Some(info) = pred
+            .trait_ref()
+            .and_then(|name| env.superclasses.get(&name))
+        {
+            let substitution = info
+                .parameters
+                .iter()
+                .copied()
+                .zip(pred.args().iter().copied())
+                .collect();
+            pending.extend(
+                info.supers
+                    .iter()
+                    .map(|sup| substitute_predicate(bump, &substitution, *sup)),
+            );
+        }
+    }
+    check_representation_consistency(&validation.predicates)
 }
 
 pub fn check_annotation<'a>(
@@ -1772,36 +1824,7 @@ pub fn check_annotation<'a>(
         .typ(annotation.typ)
         .map_err(|failure| vec![representation_error(failure, context)])?;
     check_representation_consistency(&formation.predicates)?;
-    // A class premise also promises its superclasses. Reject a context such
-    // as BigOnly int when BigOnly has Big as a superclass, even if unused.
-    let mut validation = Formation::new(bump, env, &group);
-    let mut pending = formation.predicates.clone();
-    let mut seen = std::collections::HashSet::new();
-    while let Some(pred) = pending.pop() {
-        if !seen.insert(pred.key()) {
-            continue;
-        }
-        validation
-            .reduce(pred)
-            .map_err(|failure| vec![representation_error(failure, context)])?;
-        if let Some(info) = pred
-            .trait_ref()
-            .and_then(|name| env.superclasses.get(&name))
-        {
-            let substitution = info
-                .parameters
-                .iter()
-                .copied()
-                .zip(pred.args().iter().copied())
-                .collect();
-            pending.extend(
-                info.supers
-                    .iter()
-                    .map(|sup| substitute_predicate(bump, &substitution, *sup)),
-            );
-        }
-    }
-    check_representation_consistency(&validation.predicates)?;
+    check_superclass_consistency(bump, env, &formation.predicates, context)?;
     Ok(bump.alloc(nash_ast::Annotation {
         typ: annotation.typ,
         free_vars: annotation.free_vars,
@@ -1991,6 +2014,14 @@ pub(crate) fn check_impl<'a>(
         })?;
     }
     check_representation_consistency(&formation.predicates)?;
+    // An impl that defines no method gets no method annotation check, so its
+    // context is checked through its superclasses here.
+    check_superclass_consistency(
+        bump,
+        env,
+        &formation.predicates,
+        &crate::error::KindContext::TypeAnnotation,
+    )?;
     Ok(bump.alloc_slice_fill_iter(formation.predicates))
 }
 
@@ -2116,6 +2147,13 @@ pub fn in_class<'a>(
             proven = proven.intersect(required.admits());
         }
     }
+    // `check_annotation` and `check_impl` reject a context that admits no
+    // representation, superclasses included. An empty set would prove every
+    // class and select every disjoint impl.
+    assert!(
+        !proven.is_empty(),
+        "contradictory representation givens reached impl selection"
+    );
     if !proven.is_all() && proven.intersect(class) == proven {
         nash_ast::head::Match::Yes(())
     } else {

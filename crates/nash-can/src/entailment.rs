@@ -2,15 +2,12 @@
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
+use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
 use nash_ast::{Pred, QualifiedName, Type};
 use nash_region::Located;
 
 use crate::Error;
 use crate::environment::{ImplInfo, Tables};
-
-// Flexible contexts need not decrease. Bound both resolution and structural work.
-const WORK_LIMIT: usize = 16_384;
-const DEPTH_LIMIT: usize = 128;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Failure {
@@ -362,27 +359,27 @@ impl<'a> Resolver<'_, 'a> {
             .iter()
             .map(|arg| self.canonical(arg, 0))
             .collect::<Result<_, _>>()?;
-        let mut selected = None;
-        for (key, info) in self
+        let candidates = self
             .tables
             .impls_for(wanted.trait_.ok_or(Failure::Missing)?)
-        {
-            if let nash_ast::head::Match::Yes(arguments) = nash_ast::head::matches(
-                &mut nash_ast::head::Canonical(&|typ, class| {
-                    crate::kinds::in_class(self.bump, &self.tables.kinds, typ, class, &class_givens)
-                }),
-                key.heads,
-                &canonical_args,
-                info.variables.len(),
-                &mut self.remaining,
-            )
-            .map_err(|_| Failure::Limit)?
-            {
-                selected = Some((*info, arguments));
-                break;
-            }
-        }
-        let (impl_, arguments) = selected.ok_or(Failure::Missing)?;
+            .map(|(key, info)| (key.heads, info.variables.len(), *info));
+        let selection = nash_ast::head::select_impl(
+            &mut nash_ast::head::Canonical(&|typ, class| {
+                crate::kinds::in_class(self.bump, &self.tables.kinds, typ, class, &class_givens)
+            }),
+            candidates,
+            &canonical_args,
+            &mut self.remaining,
+            nash_ast::head::SelectPolicy::Exact,
+        )
+        .map_err(|_| Failure::Limit)?;
+        let nash_ast::head::ImplSelection::Selected {
+            info: impl_,
+            arguments,
+        } = selection
+        else {
+            return Err(Failure::Missing);
+        };
         let mut subst = BTreeMap::new();
         for (name, argument) in impl_.variables.iter().zip(arguments) {
             subst.insert(*name, self.term(argument, &BTreeMap::new(), 0)?);

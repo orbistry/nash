@@ -1,0 +1,19 @@
+module Main exposing (..)
+
+type tag 'p = Tag
+
+impl Eq (tag 'p) where
+    eq _ _ = True
+
+impl Ord (tag 'p) where
+    compare _ _ = EQ
+
+same : Ord 'a => 'a -> 'a -> bool
+same a b = a == b
+
+wrapper : tag 'p -> bool
+wrapper t = same t t
+
+tests
+    test "an open phantom type reaches Eq through Ord" = do
+        assert (wrapper Tag)
