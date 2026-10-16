@@ -14,19 +14,22 @@ use crate::union_find::{UnionFind, Variable};
 
 /// Elm's `Pattern.State`. Constraints are stored in reverse order so that
 /// adding one is O(1); callers reverse when building the final `CLet`.
+/// `tests` marks a pattern in a module test (see `Constraint::Field`).
 pub struct State<'a> {
     pub headers: Header<'a>,
     pub vars: Vec<Variable>,
     pub rev_cons: Vec<Constraint<'a>>,
+    pub tests: bool,
 }
 
 pub type Header<'a> = BTreeMap<&'a str, Located<&'a Type<'a>>>;
 
-pub fn empty_state<'a>() -> State<'a> {
+pub fn empty_state<'a>(tests: bool) -> State<'a> {
     State {
         headers: BTreeMap::new(),
         vars: Vec::new(),
         rev_cons: Vec::new(),
+        tests,
     }
 }
 
@@ -162,6 +165,7 @@ pub fn add<'a>(
                     region,
                     context: type_::FieldContext::Pattern,
                     record: record_type,
+                    tests: state.tests,
                 });
             }
             for field in *fields {
@@ -178,6 +182,7 @@ pub fn add<'a>(
                     record: record_type,
                     field,
                     field_type,
+                    tests: state.tests,
                 });
             }
             state

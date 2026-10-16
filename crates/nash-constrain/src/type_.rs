@@ -66,17 +66,22 @@ pub struct Definition<'a> {
 /// slices, not owned containers.
 #[derive(Debug)]
 pub enum Constraint<'a> {
+    /// `tests`: the use is in a module test, where tests-block imports make
+    /// more labeled constructors visible.
     Record {
         region: Region,
         context: FieldContext<'a>,
         record: &'a Type<'a>,
+        tests: bool,
     },
+    /// `tests`: as for `Record`.
     Field {
         region: Region,
         context: FieldContext<'a>,
         record: &'a Type<'a>,
         field: &'a str,
         field_type: &'a Type<'a>,
+        tests: bool,
     },
     True,
     SaveTheEnvironment,
@@ -126,8 +131,6 @@ pub enum Constraint<'a> {
         typ: &'a Type<'a>,
         constraint: &'a Constraint<'a>,
     },
-    /// Nash only: module tests see test-only fields.
-    TestScope(&'a Constraint<'a>),
 }
 
 #[derive(Clone, Copy, Debug)]

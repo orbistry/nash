@@ -1,0 +1,37 @@
+---
+source: crates/nash-solve/tests/testing.rs
+description: "module Aux exposing (..)\ntype box = Box { value : () }\nboxed = Box { value = () }\n\nmodule Bridge exposing (boxed)\nimport Aux\nboxed = Aux.boxed\n\nmodule Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"accessor\" = do\n        .value Bridge.boxed\n    test \"update\" = do\n        let b = Bridge.boxed in let _ = { b | value = () } in ()\n    test \"pattern\" = do\n        let { value } = Bridge.boxed in value\n\nmodule Main exposing (..)\nimport Bridge\nleakAccessor = .value Bridge.boxed\nleakUpdate = let b = Bridge.boxed in { b | value = () }\nleakPattern = let { value } = Bridge.boxed in value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n"
+info: diagnostic
+---
+nash::type::not_a_record
+
+  × Expected a record, found `Aux.box`.
+   ╭─[Main.nash:3:16]
+ 2 │ import Bridge
+ 3 │ leakAccessor = .value Bridge.boxed
+   ·                ───┬──
+   ·                   ╰── field `value` accessor
+ 4 │ leakUpdate = let b = Bridge.boxed in { b | value = () }
+   ╰────
+
+nash::type::not_a_record
+
+  × Expected a record, found `Aux.box`.
+   ╭─[Main.nash:5:19]
+ 4 │ leakUpdate = let b = Bridge.boxed in { b | value = () }
+ 5 │ leakPattern = let { value } = Bridge.boxed in value
+   ·                   ────┬────
+   ·                       ╰── field `value` pattern
+ 6 │ tests
+   ╰────
+
+nash::type::not_a_record
+
+  × Expected a record, found `Aux.box`.
+   ╭─[Main.nash:4:44]
+ 3 │ leakAccessor = .value Bridge.boxed
+ 4 │ leakUpdate = let b = Bridge.boxed in { b | value = () }
+   ·                                            ──┬──
+   ·                                              ╰── field `value` update of `b`
+ 5 │ leakPattern = let { value } = Bridge.boxed in value
+   ╰────

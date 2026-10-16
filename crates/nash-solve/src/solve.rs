@@ -154,7 +154,7 @@ enum CoverageProblem<'a> {
 
 #[derive(Clone, Copy)]
 struct DeferredField<'a> {
-    test_scope: bool,
+    tests: bool,
     region: nash_region::Region,
     context: type_::FieldContext<'a>,
     record: Variable,
@@ -164,7 +164,6 @@ struct DeferredField<'a> {
 struct Solver<'a, 'tables> {
     bump: &'a Bump,
     tables: &'tables nash_can::environment::Tables<'a>,
-    test_scope: bool,
     pools: Vec<Vec<Variable>>,
     copied: Vec<(Variable, Variable)>,
     predicates: Store<'a>,
@@ -235,7 +234,6 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         }
     }
 
@@ -275,10 +273,11 @@ impl<'a> Solver<'a, '_> {
                 region,
                 context,
                 record,
+                tests,
             } => {
                 let record = self.type_to_variable(uf, rank, record);
                 self.fields.push(DeferredField {
-                    test_scope: self.test_scope,
+                    tests: *tests,
                     region: *region,
                     context: *context,
                     record,
@@ -295,12 +294,13 @@ impl<'a> Solver<'a, '_> {
                 record,
                 field,
                 field_type,
+                tests,
             } => {
                 let record = self.type_to_variable(uf, rank, record);
                 let field_type = self.type_to_variable(uf, rank, field_type);
                 self.dependencies.field(field_type, record);
                 self.fields.push(DeferredField {
-                    test_scope: self.test_scope,
+                    tests: *tests,
                     region: *region,
                     context: *context,
                     record,
@@ -423,14 +423,6 @@ impl<'a> Solver<'a, '_> {
                     self.solve(uf, env, rank, state, constraint)
                 }
             },
-
-            Constraint::TestScope(constraint) => {
-                let previous = self.test_scope;
-                self.test_scope = true;
-                let state = self.solve(uf, env, rank, state, constraint);
-                self.test_scope = previous;
-                state
-            }
 
             Constraint::Let {
                 declarations,
@@ -1208,7 +1200,7 @@ impl<'a> Solver<'a, '_> {
                         }
                         return true;
                     }
-                    let visible = if field.test_scope {
+                    let visible = if field.tests {
                         &self.tables.test_fields
                     } else {
                         &self.tables.fields
@@ -4406,7 +4398,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let name = bump.alloc(Located::at_zero("value"));
@@ -4500,7 +4491,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let result = solver.solve(
             &mut uf,
@@ -4575,7 +4565,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let result = solver.solve(
             &mut uf,
@@ -4652,7 +4641,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let result = solver.solve(
             &mut uf,
@@ -4742,7 +4730,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let result = solver.solve(
             &mut uf,
@@ -4882,7 +4869,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let result = solver.solve(
             &mut uf,
@@ -5055,7 +5041,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let a = bump.alloc(Located::at_zero(CanType::Var("a")));
@@ -5142,7 +5127,6 @@ mod copy_tests {
             kind_contracts: Default::default(),
             kind_errors: Vec::new(),
             fields: Vec::new(),
-            test_scope: false,
         };
         let mut uf = UnionFind::new();
         let result = uf.fresh(make_descriptor(Content::RigidVar("a")));

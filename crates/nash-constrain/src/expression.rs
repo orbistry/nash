@@ -24,8 +24,27 @@ use crate::type_::{self, Constraint, Definition, Type, exists, mk_flex_var, name
 use crate::union_find::{UnionFind, Variable};
 
 /// Elm's `RTV`: rigid type variables introduced by enclosing type
-/// annotations, shared with nested annotations.
-pub type Rtv<'a> = instantiate::FreeVars<'a>;
+/// annotations, shared with nested annotations. Nash also records whether
+/// the expression is in a module test, where tests-block imports make more
+/// labeled constructors visible.
+#[derive(Clone, Default)]
+pub struct Rtv<'a> {
+    vars: instantiate::FreeVars<'a>,
+    tests: bool,
+}
+
+impl Rtv<'_> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn tests() -> Self {
+        Self {
+            tests: true,
+            ..Self::default()
+        }
+    }
+}
 
 type Exp<'a> = Expected<'a, &'a Type<'a>>;
 
@@ -153,6 +172,7 @@ pub fn constrain<'a>(
                             record: record_type,
                             field,
                             field_type,
+                            tests: rtv.tests,
                         },
                         Constraint::Equal(
                             region,
@@ -187,6 +207,7 @@ pub fn constrain<'a>(
                             record: record_type,
                             field: field.value,
                             field_type,
+                            tests: rtv.tests,
                         },
                         Constraint::Equal(
                             region,
@@ -328,7 +349,7 @@ fn constrain_lambda<'a>(
         tipe,
         result_type,
         state,
-    } = constrain_args(bump, uf, args);
+    } = constrain_args(bump, uf, args, rtv.tests);
 
     let body_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
@@ -738,7 +759,13 @@ fn constrain_case_branch<'a>(
     p_expect: PExpected<'a, &'a Type<'a>>,
     b_expect: Exp<'a>,
 ) -> Constraint<'a> {
-    let state = pattern::add(bump, uf, branch.pattern, p_expect, pattern::empty_state());
+    let state = pattern::add(
+        bump,
+        uf,
+        branch.pattern,
+        p_expect,
+        pattern::empty_state(rtv.tests),
+    );
 
     let body_con = constrain(bump, uf, rtv, branch.body, b_expect);
 
@@ -839,6 +866,7 @@ fn constrain_update<'a>(
             region,
             context: type_::FieldContext::Update { record: name },
             record: record_type,
+            tests: rtv.tests,
         });
     }
     for field in fields {
@@ -862,6 +890,7 @@ fn constrain_update<'a>(
             record: record_type,
             field: field.field.value,
             field_type,
+            tests: rtv.tests,
         });
     }
     cons.push(Constraint::Equal(
@@ -939,7 +968,7 @@ fn constrain_destruct<'a>(
         uf,
         pattern_ast,
         PExpected::NoExpectation(pattern_type),
-        pattern::empty_state(),
+        pattern::empty_state(rtv.tests),
     );
 
     let expr_con = constrain(
@@ -1003,7 +1032,7 @@ pub fn constrain_method<'a>(
     constrain_definition(bump, uf, &Rtv::new(), def, Constraint::True, false)
 }
 
-/// Nash-only module test scope. Elm has no source-level test declarations.
+/// Nash-only: a module test. Elm has no source-level test declarations.
 pub fn constrain_test<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
@@ -1013,7 +1042,7 @@ pub fn constrain_test<'a>(
     let binder = type_::Binder::Named(test.name);
     let mut flex_vars = Vec::new();
     let mut prefix = Vec::new();
-    let mut state = pattern::empty_state();
+    let mut state = pattern::empty_state(true);
 
     for via in test.binders {
         let element_var = mk_flex_var(uf);
@@ -1040,7 +1069,7 @@ pub fn constrain_test<'a>(
         prefix.push(constrain(
             bump,
             uf,
-            &Rtv::new(),
+            &Rtv::tests(),
             via.generator,
             Expected::FromContext(via.generator.region, Context::TestGenerator, generator),
         ));
@@ -1056,7 +1085,7 @@ pub fn constrain_test<'a>(
     let body = constrain(
         bump,
         uf,
-        &Rtv::new(),
+        &Rtv::tests(),
         test.body,
         Expected::FromContext(test.region, Context::TestBody, unit),
     );
@@ -1071,7 +1100,7 @@ pub fn constrain_test<'a>(
         header_con: bump.alloc(reversed_and(bump, state.rev_cons)),
         body_con: bump.alloc(body),
     });
-    Constraint::TestScope(bump.alloc(Constraint::Let {
+    Constraint::Let {
         declarations: &[],
         given: &[],
         binder: Some(binder),
@@ -1085,7 +1114,7 @@ pub fn constrain_test<'a>(
         header: &[],
         header_con: bump.alloc(c_and(bump, prefix)),
         body_con: bump.alloc(Constraint::True),
-    }))
+    }
 }
 
 fn constrain_definition<'a>(
@@ -1103,7 +1132,7 @@ fn constrain_definition<'a>(
                 tipe,
                 result_type,
                 state,
-            } = constrain_args(bump, uf, args);
+            } = constrain_args(bump, uf, args, rtv.tests);
 
             let expr_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
@@ -1172,7 +1201,7 @@ fn constrain_definition<'a>(
                 result_type,
             );
             let expr_con = constrain(bump, uf, &new_rtv, body, expected);
-            let given = instantiate::from_src_context(bump, &new_rtv, context);
+            let given = instantiate::from_src_context(bump, &new_rtv.vars, context);
 
             Constraint::Let {
                 declarations: &[],
@@ -1217,7 +1246,7 @@ fn make_rigids<'a>(
 ) -> (Vec<(&'a str, Variable)>, Rtv<'a>) {
     let mut new_names: Vec<&'a str> = free_vars
         .iter()
-        .filter(|name| !rtv.contains_key(*name))
+        .filter(|name| !rtv.vars.contains_key(*name))
         .copied()
         .collect();
     new_names.sort_unstable();
@@ -1229,7 +1258,7 @@ fn make_rigids<'a>(
 
     let mut new_rtv = rtv.clone();
     for (name, var) in &new_rigids {
-        new_rtv.insert(name, bump.alloc(Type::VarN(*var)));
+        new_rtv.vars.insert(name, bump.alloc(Type::VarN(*var)));
     }
 
     (new_rigids, new_rtv)
@@ -1273,7 +1302,7 @@ pub fn constrain_recursive_defs<'a>(
                     tipe,
                     result_type,
                     state,
-                } = constrain_args(bump, uf, args);
+                } = constrain_args(bump, uf, args, rtv.tests);
 
                 let expr_con = constrain(bump, uf, rtv, body, Expected::NoExpectation(result_type));
 
@@ -1356,7 +1385,7 @@ pub fn constrain_recursive_defs<'a>(
                     body_con: bump.alloc(expr_con),
                 };
 
-                let given = instantiate::from_src_context(bump, &new_rtv, context);
+                let given = instantiate::from_src_context(bump, &new_rtv.vars, context);
 
                 // Elm prepends each def's rigids: latest def first, names
                 // sorted within a def.
@@ -1442,8 +1471,9 @@ fn constrain_args<'a>(
     bump: &'a Bump,
     uf: &mut UnionFind<'a>,
     args: &[&Located<nash_ast::Pattern<'a>>],
+    tests: bool,
 ) -> Args<'a> {
-    args_help(bump, uf, args, pattern::empty_state())
+    args_help(bump, uf, args, pattern::empty_state(tests))
 }
 
 fn args_help<'a>(
@@ -1505,10 +1535,10 @@ fn constrain_typed_args<'a>(
     src_result_type: &Located<nash_ast::Type<'a>>,
     annotation: &Located<nash_ast::Type<'a>>,
 ) -> TypedArgs<'a> {
-    let mut state = pattern::empty_state();
+    let mut state = pattern::empty_state(rtv.tests);
 
     for (index, arg) in args.iter().enumerate() {
-        let arg_type = instantiate::from_src_type(bump, rtv, arg.typ);
+        let arg_type = instantiate::from_src_type(bump, &rtv.vars, arg.typ);
         let expected = PExpected::FromContext(
             arg.pattern.region,
             PContext::TypedArg(name, index, annotation.region),
@@ -1517,11 +1547,11 @@ fn constrain_typed_args<'a>(
         state = pattern::add(bump, uf, arg.pattern, expected, state);
     }
 
-    let result_type = instantiate::from_src_type(bump, rtv, src_result_type);
+    let result_type = instantiate::from_src_type(bump, &rtv.vars, src_result_type);
 
     // Nash-only: retain an annotated alias around the whole function. Splitting
     // arguments can otherwise expand an alias that has trait implementations.
-    let tipe = instantiate::from_src_type(bump, rtv, annotation);
+    let tipe = instantiate::from_src_type(bump, &rtv.vars, annotation);
 
     TypedArgs {
         tipe,
@@ -1540,7 +1570,10 @@ mod node_tests {
         let bump = Bump::new();
         let mut uf = UnionFind::new();
         let captured = name_to_rigid(&mut uf, "captured");
-        let rtv = Rtv::from([("captured", &*bump.alloc(Type::VarN(captured)))]);
+        let rtv = Rtv {
+            vars: instantiate::FreeVars::from([("captured", &*bump.alloc(Type::VarN(captured)))]),
+            tests: false,
+        };
         let var = |name| &*bump.alloc(Located::at_zero(nash_ast::Type::Var(name)));
         let (z, cap, a) = (var("z"), var("captured"), var("a"));
         let result = &*bump.alloc(Located::at_zero(nash_ast::Type::App {
@@ -1676,7 +1709,7 @@ mod node_tests {
                 &mut uf,
                 pattern,
                 PExpected::NoExpectation(expected),
-                pattern::empty_state(),
+                pattern::empty_state(false),
             );
             let annotations: Vec<_> = state
                 .rev_cons
@@ -1729,9 +1762,7 @@ mod node_tests {
                 uses(header_con, nodes);
                 uses(body_con, nodes);
             }
-            Constraint::SaveType { constraint, .. } | Constraint::TestScope(constraint) => {
-                uses(constraint, nodes)
-            }
+            Constraint::SaveType { constraint, .. } => uses(constraint, nodes),
             _ => {}
         }
     }

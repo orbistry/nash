@@ -127,16 +127,16 @@ type_error!(
     "module Main exposing (public)\npublic = ()\ntests\n    prop \"type\" =\n        let x via () in\n        do\n            x\n"
 );
 
-#[test]
-fn test_imports_do_not_grant_field_visibility_to_module_values() {
-    let aux =
-        "module Aux exposing (..)\ntype box = Box { value : () }\nboxed = Box { value = () }\n";
-    let bridge = "module Bridge exposing (boxed)\nimport Aux\nboxed = Aux.boxed\n";
-    let good = "module Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
-    let bad = "module Main exposing (..)\nimport Bridge\nleak = Bridge.boxed.value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
+const FIELD_AUX: &str =
+    "module Aux exposing (..)\ntype box = Box { value : () }\nboxed = Box { value = () }\n";
+const FIELD_BRIDGE: &str = "module Bridge exposing (boxed)\nimport Aux\nboxed = Aux.boxed\n";
+
+/// Solves `good` and `bad` against Aux and Bridge; `good` must type-check.
+/// Returns the rendered errors of `bad`. Both import Aux only in tests.
+fn test_field_visibility(good: &str, bad: &str) -> String {
     let bump = Bump::new();
     let mut interfaces = literals::literal_interfaces(&bump);
-    for (name, source) in [("Aux", aux), ("Bridge", bridge)] {
+    for (name, source) in [("Aux", FIELD_AUX), ("Bridge", FIELD_BRIDGE)] {
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let can = nash_can::canonicalize(
             &bump,
@@ -154,7 +154,7 @@ fn test_imports_do_not_grant_field_visibility_to_module_values() {
             nash_can::from_module(&bump, &can.module, &annotations),
         );
     }
-    for source in [good, bad] {
+    let solve = |source: &str| -> Result<(), String> {
         let parsed = nash_parse::Parser::new(&bump, source).module().unwrap();
         let can = nash_can::canonicalize(
             &bump,
@@ -165,27 +165,46 @@ fn test_imports_do_not_grant_field_visibility_to_module_values() {
             &parsed,
         )
         .unwrap();
-        let result = nash_solve::run(&bump, &mut UnionFind::new(), &can.module, &can.tables);
-        if source == good {
-            result.unwrap();
-        } else {
-            let errors = result.unwrap_err();
-            let localizer = nash_report::localizer::Localizer::from_module(&parsed, &[]);
-            let text = nash_report::Source::new(source);
-            let rendered = errors
-                .iter()
-                .map(|e| {
-                    nash_report::render_plain(
-                        &nash_report::type_::to_report(&localizer, e),
-                        &text,
-                        "Main.nash",
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            insta::with_settings!({description => format!("{aux}\n{bridge}\n{good}\n{bad}"), omit_expression => true, info => &"diagnostic"}, {
-                insta::assert_snapshot!(rendered);
-            });
-        }
-    }
+        let Err(errors) = nash_solve::run(&bump, &mut UnionFind::new(), &can.module, &can.tables)
+        else {
+            return Ok(());
+        };
+        let localizer = nash_report::localizer::Localizer::from_module(&parsed, &[]);
+        let text = nash_report::Source::new(source);
+        Err(errors
+            .iter()
+            .map(|e| {
+                nash_report::render_plain(
+                    &nash_report::type_::to_report(&localizer, e),
+                    &text,
+                    "Main.nash",
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
+    };
+    solve(good).unwrap();
+    solve(bad).unwrap_err()
+}
+
+#[test]
+fn test_imports_do_not_grant_field_visibility_to_module_values() {
+    let good = "module Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
+    let bad = "module Main exposing (..)\nimport Bridge\nleak = Bridge.boxed.value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
+    let rendered = test_field_visibility(good, bad);
+    insta::with_settings!({description => format!("{FIELD_AUX}\n{FIELD_BRIDGE}\n{good}\n{bad}"), omit_expression => true, info => &"diagnostic"}, {
+        insta::assert_snapshot!(rendered);
+    });
+}
+
+/// The accessor, update, and record pattern forms see the same test-only
+/// fields as `.value` access, and stay hidden from module values.
+#[test]
+fn test_imports_grant_field_visibility_to_every_field_form_in_tests() {
+    let good = "module Main exposing (..)\nimport Bridge\ntests\n    import Aux\n    test \"accessor\" = do\n        .value Bridge.boxed\n    test \"update\" = do\n        let b = Bridge.boxed in let _ = { b | value = () } in ()\n    test \"pattern\" = do\n        let { value } = Bridge.boxed in value\n";
+    let bad = "module Main exposing (..)\nimport Bridge\nleakAccessor = .value Bridge.boxed\nleakUpdate = let b = Bridge.boxed in { b | value = () }\nleakPattern = let { value } = Bridge.boxed in value\ntests\n    import Aux\n    test \"visible\" = do\n        Bridge.boxed.value\n";
+    let rendered = test_field_visibility(good, bad);
+    insta::with_settings!({description => format!("{FIELD_AUX}\n{FIELD_BRIDGE}\n{good}\n{bad}"), omit_expression => true, info => &"diagnostic"}, {
+        insta::assert_snapshot!(rendered);
+    });
 }
