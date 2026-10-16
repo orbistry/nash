@@ -15,4 +15,4 @@ nash::type::missing_field
   help: Did you mean `x`?
 
         Available fields: { x : int
-        }
+                          }

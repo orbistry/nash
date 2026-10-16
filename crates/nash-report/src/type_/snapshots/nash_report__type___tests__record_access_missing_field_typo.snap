@@ -14,5 +14,5 @@ nash::type::mismatch
   help: Did you mean `name`?
 
         Available fields: { name : Primitive.string
-        , age : Primitive.int
-        }
+                          , age : Primitive.int
+                          }

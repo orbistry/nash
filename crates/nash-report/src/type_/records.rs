@@ -110,7 +110,7 @@ fn nearby(l: &Localizer, field: &str, fields: &[(&str, &ErrorType<'_>)]) -> (Doc
     (
         Doc::stack([
             Doc::text(format!("Did you mean `{}`?", first.0)),
-            Doc::cat([Doc::text("Available fields: "), fields_doc]),
+            Doc::cat([Doc::text("Available fields: "), Doc::align(fields_doc)]),
         ]),
         sorted
             .iter()

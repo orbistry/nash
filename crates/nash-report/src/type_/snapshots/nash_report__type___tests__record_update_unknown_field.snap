@@ -13,4 +13,4 @@ nash::type::mismatch
   help: Did you mean `name`?
 
         Available fields: { name : Primitive.string
-        }
+                          }
