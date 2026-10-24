@@ -270,9 +270,9 @@ when it needs one that is missing.
   every *cell*, one representation per subject (Big, Const or Term, as the
   representation and formation givens admit), must select an impl, and the
   context of each selected impl must hold in its cell. The evidence is
-  `Specialize P`; code generation selects the impl for each use. One work
-  budget (16,384 steps) pays for finding the subjects, the cells and every
-  selection; more is an impl-resolution-limit error. Rigid variables come only
+  `Specialize P`; code generation selects the impl for each use. The compile's
+  fuel pays for finding the subjects, the cells and every selection; running
+  out is an out-of-fuel error. Rigid variables come only
   from annotations: an unannotated definition keeps `T (list 'a)` in its
   inferred context.
 
@@ -292,14 +292,15 @@ constructor at the same application arity conflicts when corresponding
 argument kinds can unify. This check
 does not assume that different head variable names make impls disjoint.
 
-Superclass checking during canonicalization performs a bounded search.
+Superclass checking during canonicalization performs a search.
 A predicate already active in the instance-resolution chain is a cycle,
-not a proof. Expanding flexible contexts are bounded too: each impl check
-allows 16,384 work steps and fewer than 256 nested resolution or type
-conversion calls. Predicate comparisons count toward the work limit.
+not a proof. Expanding flexible contexts have no fixed bound: every
+resolution step, type conversion and predicate comparison draws from the
+compile's fuel (see [Compilation fuel](#compilation-fuel)).
 Failure reports the instantiated superclass requirement and distinguishes
-a missing proof, a cycle, and the search limit. The given superclass
-closure is computed once per impl and reused for its requirements.
+a missing proof and a cycle; running out of fuel is its own error at the impl.
+The given superclass closure is computed once per impl and reused for its
+requirements.
 
 Evidence is the derivation:
 
@@ -316,6 +317,24 @@ Evidence = Impl  { impl_: ImplRef, type_args: [Type], args: [Evidence] } -- by_i
 
 Context reduction: a retained context never contains both `Ord 'a` and
 `Eq 'a`; the superclass is dropped and its uses get `Super` evidence.
+
+### Compilation fuel
+
+Impl contexts need not shrink, so entailment, overlap checks, solver
+resolution, evidence resolution and code generation can run forever on a
+program the type rules accept. They share one step counter instead of one
+budget each. The driver installs a `Fuel` (`nash_ast::fuel`) around each
+module's compile; every search step takes one `tick`, and a pass over an
+existing type pays for its nodes with `charge`, so the steps track time even
+when types grow. `nash check`, `build`, `test` and `docs` run `Unlimited`;
+the language server runs `Limited`, so an editor never freezes on a looping
+program. Nothing caps depth: a deeper input costs more steps and recursion
+runs on the compiler stack.
+
+Running out is one error kind, `COMPILATION STEP LIMIT`
+(`nash::type::out_of_fuel`). The solver reports it at the use that needed the
+search, canonicalization at the impl being checked, and code generation as a
+plain error without a region. An exhausted search never counts as a proof.
 
 ## Inference
 
@@ -406,9 +425,9 @@ context is the given set.
 Impl selection waits for the surrounding definition's type equalities.
 Captured outer variables must also be fixed before rejecting an enclosing
 given in favor of an impl. Impl contexts may expand indefinitely; resolution
-is bounded to 256 levels and 16,384 attempts per definition boundary. Exceeding
-either bound reports `ImplResolutionLimit` at the originating call. An
-exhausted search never counts as evidence that a constraint was satisfied.
+draws from the compile's fuel. Running out reports an out-of-fuel error at the
+originating call. An exhausted search never counts as evidence that a
+constraint was satisfied.
 
 Elm's `SaveTheEnvironment` step is unchanged: top-level annotations are
 read back with `to_annotation`, which now also emits the retained
@@ -468,7 +487,7 @@ For each ambiguous variable, in order:
 Apply available defaults and retry resolution before reporting remaining
 ambiguity: an impl selected by one default can introduce the literal
 requirement for another variable. Keep the same enclosing givens, boundary
-rank, predicate origins and resolution limits across these rounds.
+rank, predicate origins and fuel across these rounds.
 
 Defaulting runs at every generalizing Let, not only at the top level, so
 the error region is the innermost definition that lost the variable. This
@@ -584,10 +603,10 @@ selects an impl needs a stated constraint, so type checking reports that case
 first. The predicate never needs `Given`, so the result is a closed tree of
 `Impl` and exact-core `ReflexiveLift` evidence. Reflexive Lift requires
 nominally equal arguments and does not choose a representation.
-Failures distinguish `MissingImpl`, `NonGround`, and `Limit`, retaining the
-failed predicate. Resolution and type traversal share a 16,384-step work
-budget, with a depth limit of 256. Context substitution is charged before
-allocation. Callers supply well-kinded canonical types and complete tables.
+Failures distinguish `MissingImpl`, `NonGround`, and `OutOfFuel`, retaining the
+failed predicate. Resolution and type traversal draw from the compile's fuel.
+Context substitution is charged before allocation. Callers supply
+well-kinded canonical types and complete tables.
 
 Codegen specializes executable trait evidence at compile time. It walks a
 definition with a substitution `Given { binder, index } -> Evidence` for its

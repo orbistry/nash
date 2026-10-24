@@ -2,16 +2,10 @@
 use std::collections::BTreeMap;
 
 use crate::Type;
+use crate::fuel::{OutOfFuel, tick};
 use crate::primitives::{Repr, ReprSet};
 use crate::{Head, HeadCon, QualifiedName};
 use nash_region::Located;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Limit;
-
-// Impl contexts need not decrease, so every trait search has a budget.
-pub const WORK_LIMIT: usize = 16_384;
-pub const DEPTH_LIMIT: usize = 256;
 
 pub enum Match<T> {
     Yes(T),
@@ -23,12 +17,7 @@ pub trait Types<'a> {
     type Node: Copy;
     fn in_class(&mut self, node: Self::Node, class: ReprSet) -> Match<()>;
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>>;
-    fn equal(
-        &mut self,
-        first: Self::Node,
-        second: Self::Node,
-        remaining: &mut usize,
-    ) -> Result<Match<()>, Limit>;
+    fn equal(&mut self, first: Self::Node, second: Self::Node) -> Result<Match<()>, OutOfFuel>;
 }
 
 /// Canonical types whose variables are rigid: a variable equals only itself
@@ -105,13 +94,8 @@ impl<'a> Types<'a> for Canonical<'_, 'a> {
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
         constructor_view(node, expected, false)
     }
-    fn equal(
-        &mut self,
-        first: Self::Node,
-        second: Self::Node,
-        remaining: &mut usize,
-    ) -> Result<Match<()>, Limit> {
-        equal_views(first, second, remaining, false)
+    fn equal(&mut self, first: Self::Node, second: Self::Node) -> Result<Match<()>, OutOfFuel> {
+        equal_views(first, second, false)
     }
 }
 
@@ -123,13 +107,8 @@ impl<'a> Types<'a> for Open<'_, 'a> {
     fn constructor(&mut self, node: Self::Node, expected: HeadCon<'a>) -> Match<Vec<Self::Node>> {
         constructor_view(node, expected, true)
     }
-    fn equal(
-        &mut self,
-        first: Self::Node,
-        second: Self::Node,
-        remaining: &mut usize,
-    ) -> Result<Match<()>, Limit> {
-        equal_views(first, second, remaining, true)
+    fn equal(&mut self, first: Self::Node, second: Self::Node) -> Result<Match<()>, OutOfFuel> {
+        equal_views(first, second, true)
     }
 }
 
@@ -151,13 +130,12 @@ fn constructor_view<'a>(
 fn equal_views<'a>(
     first: &'a Located<Type<'a>>,
     second: &'a Located<Type<'a>>,
-    remaining: &mut usize,
     open: bool,
-) -> Result<Match<()>, Limit> {
+) -> Result<Match<()>, OutOfFuel> {
     let mut pending = vec![(first, second)];
     let mut deferred = false;
     while let Some((first, second)) = pending.pop() {
-        step(remaining)?;
+        tick()?;
         let (a, aa) = canonical_view(first);
         let (b, ba) = canonical_view(second);
         if a == b && aa.len() == ba.len() {
@@ -175,11 +153,6 @@ fn equal_views<'a>(
     })
 }
 
-pub fn step(remaining: &mut usize) -> Result<(), Limit> {
-    *remaining = remaining.checked_sub(1).ok_or(Limit)?;
-    Ok(())
-}
-
 pub fn children<'p, 'a>(head: &'p Head<'a>) -> Vec<&'p Head<'a>> {
     match head {
         Head::Named { args, .. } | Head::Tuple(args) => args.iter().collect(),
@@ -193,8 +166,7 @@ pub fn matches<'a, T: Types<'a>>(
     heads: &[Head<'a>],
     arguments: &[T::Node],
     variable_count: usize,
-    remaining: &mut usize,
-) -> Result<Match<Vec<T::Node>>, Limit> {
+) -> Result<Match<Vec<T::Node>>, OutOfFuel> {
     if heads.len() != arguments.len() {
         return Ok(Match::No);
     }
@@ -202,12 +174,12 @@ pub fn matches<'a, T: Types<'a>>(
     let mut pending: Vec<_> = heads.iter().zip(arguments.iter().copied()).collect();
     let mut deferred = false;
     while let Some((head, argument)) = pending.pop() {
-        step(remaining)?;
+        tick()?;
         match head {
             Head::Var { index, repr } => {
                 let binding = &mut bindings[usize::from(*index)];
                 if let Some(previous) = *binding {
-                    match types.equal(previous, argument, remaining)? {
+                    match types.equal(previous, argument)? {
                         Match::Yes(()) => {}
                         Match::No => return Ok(Match::No),
                         Match::Deferred => deferred = true,
@@ -276,14 +248,13 @@ pub fn select_impl<'h, 'a: 'h, T: Types<'a>, I>(
     types: &mut T,
     candidates: impl IntoIterator<Item = (&'h [Head<'a>], usize, I)>,
     arguments: &[T::Node],
-    remaining: &mut usize,
     policy: SelectPolicy,
-) -> Result<ImplSelection<I, T::Node>, Limit> {
+) -> Result<ImplSelection<I, T::Node>, OutOfFuel> {
     let mut first: Option<&'h [Head<'a>]> = None;
     let mut selected = None;
     let mut deferred = false;
     for (heads, variable_count, info) in candidates {
-        match matches(types, heads, arguments, variable_count, remaining)? {
+        match matches(types, heads, arguments, variable_count)? {
             Match::No => {}
             Match::Deferred => deferred = true,
             Match::Yes(bound) => {
@@ -351,21 +322,20 @@ pub struct CoveredImpl<S, I, N> {
 /// Select an impl for every admitted representation cell of the rigid
 /// variables at representation-tested head positions. Only such positions
 /// create dimensions. The limit comes first: every subject needs a given of
-/// `trait_` at it, so a signature never hides the trait that selects. One
-/// budget pays for the discovery, the cells and every selection.
+/// `trait_` at it, so a signature never hides the trait that selects. Every
+/// step of the discovery, the cells and every selection draws from the fuel.
 pub fn cover_impls<'h, 'a: 'h, T: CoverageTypes<'a>, I: Copy>(
     types: &mut T,
     trait_: QualifiedName<'a>,
     candidates: &[(&'h [Head<'a>], usize, I)],
     arguments: &[T::Node],
-    remaining: &mut usize,
-) -> Result<Coverage<T::Subject, I, T::Node>, Limit> {
+) -> Result<Coverage<T::Subject, I, T::Node>, OutOfFuel> {
     let mut subjects = BTreeMap::new();
     let mut deferred = false;
     for (heads, _, _) in candidates {
         let mut pending: Vec<_> = heads.iter().zip(arguments.iter().copied()).collect();
         while let Some((head, argument)) = pending.pop() {
-            step(remaining)?;
+            tick()?;
             match head {
                 Head::Var { repr, .. } if repr.is_all() => {}
                 Head::Var { repr, .. } => match types.coverage_subject(argument, *repr) {
@@ -407,7 +377,7 @@ pub fn cover_impls<'h, 'a: 'h, T: CoverageTypes<'a>, I: Copy>(
         for cell in cells {
             for repr in [Repr::Big, Repr::Const, Repr::Term] {
                 if admitted.contains(repr) {
-                    step(remaining)?;
+                    tick()?;
                     let mut cell: Vec<_> = cell.clone();
                     cell.push((subject, repr));
                     next.push(cell);
@@ -423,7 +393,6 @@ pub fn cover_impls<'h, 'a: 'h, T: CoverageTypes<'a>, I: Copy>(
             types,
             candidates.iter().copied(),
             arguments,
-            remaining,
             SelectPolicy::Defer,
         );
         types.set_coverage_assumptions(&[]);
@@ -452,10 +421,9 @@ type Substitution<'p, 'a> = BTreeMap<(bool, u16), Term<'p, 'a>>;
 fn resolve<'p, 'a>(
     mut term: Term<'p, 'a>,
     substitution: &Substitution<'p, 'a>,
-    remaining: &mut usize,
-) -> Result<Term<'p, 'a>, Limit> {
+) -> Result<Term<'p, 'a>, OutOfFuel> {
     while let Head::Var { index, .. } = term.pattern {
-        step(remaining)?;
+        tick()?;
         let Some(next) = substitution.get(&(term.side, *index)) else {
             break;
         };
@@ -470,9 +438,8 @@ pub fn overlaps(
     left: &[Head<'_>],
     right: &[Head<'_>],
     repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
-    remaining: &mut usize,
-) -> Result<bool, Limit> {
-    unifiable(left, right, repr_of, remaining, true)
+) -> Result<bool, OutOfFuel> {
+    unifiable(left, right, repr_of, true)
 }
 
 /// Equality within one impl preserves variables shared between its heads.
@@ -480,18 +447,16 @@ pub fn can_equal(
     left: &[Head<'_>],
     right: &[Head<'_>],
     repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
-    remaining: &mut usize,
-) -> Result<bool, Limit> {
-    unifiable(left, right, repr_of, remaining, false)
+) -> Result<bool, OutOfFuel> {
+    unifiable(left, right, repr_of, false)
 }
 
 fn unifiable(
     left: &[Head<'_>],
     right: &[Head<'_>],
     repr_of: &dyn Fn(&Head<'_>) -> Option<Repr>,
-    remaining: &mut usize,
     freshen: bool,
-) -> Result<bool, Limit> {
+) -> Result<bool, OutOfFuel> {
     if left.len() != right.len() {
         return Ok(false);
     }
@@ -514,9 +479,9 @@ fn unifiable(
         })
         .collect();
     while let Some((left, right)) = pending.pop() {
-        step(remaining)?;
-        let left = resolve(left, &substitution, remaining)?;
-        let right = resolve(right, &substitution, remaining)?;
+        tick()?;
+        let left = resolve(left, &substitution)?;
+        let right = resolve(right, &substitution)?;
         if let Head::Var { index, repr } = left.pattern {
             let mine = classes.get(&(left.side, *index)).copied().unwrap_or(*repr);
             match right.pattern {
@@ -541,8 +506,8 @@ fn unifiable(
             }
             let mut occurs = vec![right];
             while let Some(term) = occurs.pop() {
-                let term = resolve(term, &substitution, remaining)?;
-                step(remaining)?;
+                let term = resolve(term, &substitution)?;
+                tick()?;
                 if matches!(term.pattern, Head::Var { index: other, .. } if variable == (term.side, *other))
                 {
                     return Ok(false);
@@ -609,7 +574,7 @@ mod select_tests {
         fn constructor(&mut self, _: (), _: HeadCon<'a>) -> Match<Vec<()>> {
             unreachable!("candidates are variable heads")
         }
-        fn equal(&mut self, _: (), _: (), _: &mut usize) -> Result<Match<()>, Limit> {
+        fn equal(&mut self, _: (), _: ()) -> Result<Match<()>, OutOfFuel> {
             unreachable!("each candidate has one variable")
         }
     }
@@ -620,8 +585,8 @@ mod select_tests {
     fn select(
         outcomes: &[Outcome],
         policy: SelectPolicy,
-        budget: usize,
-    ) -> Result<ImplSelection<usize, ()>, Limit> {
+        fuel: u64,
+    ) -> Result<ImplSelection<usize, ()>, OutOfFuel> {
         let heads: Vec<_> = CLASSES
             .iter()
             .map(|repr| {
@@ -643,20 +608,22 @@ mod select_tests {
             .take(outcomes.len())
             .enumerate()
             .map(|(index, heads)| (heads.as_slice(), 1, index));
-        select_impl(&mut types, candidates, &[()], &mut { budget }, policy)
+        crate::fuel::run(crate::fuel::Fuel::Limited(fuel), || {
+            select_impl(&mut types, candidates, &[()], policy)
+        })
     }
 
     use Outcome::{Deferred, No, Yes};
     use SelectPolicy::{Defer, Exact};
 
-    fn render(policy: SelectPolicy, result: Result<ImplSelection<usize, ()>, Limit>) -> String {
+    fn render(policy: SelectPolicy, result: Result<ImplSelection<usize, ()>, OutOfFuel>) -> String {
         match result {
             Ok(ImplSelection::Selected { info, .. }) => format!("selects impl {}", info + 1),
             // Inference waits for its variables; nothing binds an open type.
             Ok(ImplSelection::Deferred) if policy == Defer => "waits".to_owned(),
             Ok(ImplSelection::Deferred) => "undecided".to_owned(),
             Ok(ImplSelection::Missing) => "no impl".to_owned(),
-            Err(Limit) => "work limit".to_owned(),
+            Err(OutOfFuel) => "out of fuel".to_owned(),
         }
     }
 
@@ -677,7 +644,7 @@ mod select_tests {
 
     #[test]
     fn selection_outcomes_by_policy() {
-        let scenarios: &[(&[Outcome], usize)] = &[
+        let scenarios: &[(&[Outcome], u64)] = &[
             (&[], 100),
             (&[No, No], 100),
             (&[No, Yes, No], 100),
@@ -687,17 +654,17 @@ mod select_tests {
             (&[No, Yes], 1),
         ];
         let mut output = String::new();
-        for (outcomes, budget) in scenarios {
-            let budget_note = if *budget == 1 {
-                " (budget for one step)"
+        for (outcomes, fuel) in scenarios {
+            let fuel_note = if *fuel == 1 {
+                " (fuel for one step)"
             } else {
                 ""
             };
             output.push_str(&format!(
-                "{}{budget_note}\n  inference: {}\n  entailment and evidence: {}\n",
+                "{}{fuel_note}\n  inference: {}\n  entailment and evidence: {}\n",
                 describe(outcomes),
-                render(Defer, select(outcomes, Defer, *budget)),
-                render(Exact, select(outcomes, Exact, *budget)),
+                render(Defer, select(outcomes, Defer, *fuel)),
+                render(Exact, select(outcomes, Exact, *fuel)),
             ));
         }
         insta::with_settings!({
@@ -759,7 +726,7 @@ mod coverage_tests {
                 _ => Match::No,
             }
         }
-        fn equal(&mut self, _: Arg, _: Arg, _: &mut usize) -> Result<Match<()>, Limit> {
+        fn equal(&mut self, _: Arg, _: Arg) -> Result<Match<()>, OutOfFuel> {
             unreachable!("no head repeats a variable")
         }
     }
@@ -795,13 +762,16 @@ mod coverage_tests {
     const PAIR_LITTLE_BIG: [Head<'static>; 1] = [Head::Tuple(&[var(0, LITTLE), var(1, BIG)])];
     const PAIR_LITTLE_LITTLE: [Head<'static>; 1] = [Head::Tuple(&[var(0, LITTLE), var(1, LITTLE)])];
 
+    /// Enough fuel that no scenario but the deliberately short one runs out.
+    const PLENTY: u64 = 1 << 20;
+
     fn search(
         impls: &[(&'static str, &[Head<'static>])],
         argument: Arg,
         given: &[u8],
         deferred: bool,
-        budget: usize,
-    ) -> (Result<Coverage<u8, &'static str, Arg>, Limit>, usize) {
+        fuel: u64,
+    ) -> (Result<Coverage<u8, &'static str, Arg>, OutOfFuel>, u64) {
         let trait_ = QualifiedName {
             home: crate::ModuleName {
                 package: None,
@@ -824,9 +794,13 @@ mod coverage_tests {
             deferred,
             assumptions: Vec::new(),
         };
-        let mut remaining = budget;
-        let result = cover_impls(&mut types, trait_, &candidates, &[argument], &mut remaining);
-        (result, budget - remaining)
+        crate::fuel::run(crate::fuel::Fuel::Limited(fuel), || {
+            let result = cover_impls(&mut types, trait_, &candidates, &[argument]);
+            let crate::fuel::Fuel::Limited(left) = crate::fuel::remaining() else {
+                unreachable!("limited fuel stays limited")
+            };
+            (result, fuel - left)
+        })
     }
 
     fn cell(assumptions: &[(u8, Repr)]) -> String {
@@ -837,7 +811,7 @@ mod coverage_tests {
             .join(", ")
     }
 
-    fn render(result: Result<Coverage<u8, &'static str, Arg>, Limit>) -> String {
+    fn render(result: Result<Coverage<u8, &'static str, Arg>, OutOfFuel>) -> String {
         match result {
             Ok(Coverage::NotApplicable) => "not applicable".to_owned(),
             Ok(Coverage::Unstated(subject)) => {
@@ -851,7 +825,7 @@ mod coverage_tests {
                 .map(|covered| format!("{} selects {}", cell(&covered.assumptions), covered.info))
                 .collect::<Vec<_>>()
                 .join("; "),
-            Err(Limit) => "work limit".to_owned(),
+            Err(OutOfFuel) => "out of fuel".to_owned(),
         }
     }
 
@@ -866,7 +840,7 @@ mod coverage_tests {
         ];
         let element = Arg::Subject(0);
         let both = Arg::Pair(0, 1);
-        let (_, pairs_cost) = search(pairs, both, &[0, 1], false, WORK_LIMIT);
+        let (_, pairs_cost) = search(pairs, both, &[0, 1], false, PLENTY);
         let scenarios = [
             (
                 "Big and Little impls, given at 'a",
@@ -874,7 +848,7 @@ mod coverage_tests {
                 element,
                 &[0][..],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "only a Big impl, given at 'a",
@@ -882,7 +856,7 @@ mod coverage_tests {
                 element,
                 &[0],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "Big and Little impls, no given",
@@ -890,7 +864,7 @@ mod coverage_tests {
                 element,
                 &[],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "only a Big impl, no given (the limit comes first)",
@@ -898,7 +872,7 @@ mod coverage_tests {
                 element,
                 &[],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "Big and Little impls, the argument can still change",
@@ -906,7 +880,7 @@ mod coverage_tests {
                 element,
                 &[0],
                 true,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "pair impls, given at 'a and 'b",
@@ -914,7 +888,7 @@ mod coverage_tests {
                 both,
                 &[0, 1],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "pair impls, given at 'a only",
@@ -922,7 +896,7 @@ mod coverage_tests {
                 both,
                 &[0],
                 false,
-                WORK_LIMIT,
+                PLENTY,
             ),
             (
                 "pair impls, one step less than the whole search",
@@ -934,13 +908,13 @@ mod coverage_tests {
             ),
         ];
         let mut output = String::new();
-        for (name, impls, argument, given, deferred, budget) in scenarios {
-            let (result, _) = search(impls, argument, given, deferred, budget);
+        for (name, impls, argument, given, deferred, fuel) in scenarios {
+            let (result, _) = search(impls, argument, given, deferred, fuel);
             output.push_str(&format!("{name}\n  {}\n", render(result)));
         }
         insta::with_settings!({
             description => "Coverage of a wanted predicate whose arguments are rigid variables. \
-                Big covers Big; Little covers Const and Term. One budget pays for subject \
+                Big covers Big; Little covers Const and Term. One fuel counter pays for subject \
                 discovery, the cells, and every selection.",
             omit_expression => true,
         }, {

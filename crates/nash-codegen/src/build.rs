@@ -1,6 +1,7 @@
 //! Reachable, lexical specialization of canonical definitions.
 use std::collections::{BTreeMap, HashMap};
 
+use nash_ast::fuel::{OutOfFuel, tick};
 use nash_ast::{self as can, *};
 use nash_can::environment::Tables;
 use nash_ir::{
@@ -22,9 +23,6 @@ mod accessors;
 mod emission;
 use emission::hoist_strings;
 pub(crate) use emission::names;
-
-const MAX_SPECIALIZATIONS: usize = 1024;
-const MAX_TYPE_DEPTH: usize = 256;
 
 #[derive(Clone, Copy)]
 pub struct Input<'a, 's> {
@@ -80,10 +78,8 @@ pub enum Error<'a> {
     RootTypeArguments { expected: usize, actual: usize },
     #[error("invalid type instance for {0:?}")]
     InvalidInstance(NodeId),
-    #[error(
-        "specialization exceeded the {MAX_SPECIALIZATIONS}-body or {MAX_TYPE_DEPTH}-level type limit"
-    )]
-    SpecializationLimit,
+    #[error("code generation needed more compilation steps than it was allowed")]
+    OutOfFuel,
     #[error("operation needs a concrete runtime layout, got {0}")]
     RuntimeLayout(Ty<'a>),
     #[error("missing method body {method} of {trait_:?}")]
@@ -99,8 +95,6 @@ pub enum Error<'a> {
     Resolution(nash_solve::evidence::Failure),
     #[error("recursive values must be functions")]
     RecursiveValue,
-    #[error("recursive function initialization exceeded the 4096-step normalization limit")]
-    RecursionNormalizationLimit,
     #[error("invalid constructor or record metadata")]
     InvalidConstructor,
     #[error("comptime expression is not closed or could not be assembled: {0}")]
@@ -124,7 +118,15 @@ impl<'a> From<crate::ty_of::TypeError<'a>> for Error<'a> {
 }
 impl<'a> From<evidence::Error<'a>> for Error<'a> {
     fn from(e: evidence::Error<'a>) -> Self {
-        Self::Evidence(e)
+        match e {
+            evidence::Error::OutOfFuel => Self::OutOfFuel,
+            e => Self::Evidence(e),
+        }
+    }
+}
+impl From<OutOfFuel> for Error<'_> {
+    fn from(OutOfFuel: OutOfFuel) -> Self {
+        Self::OutOfFuel
     }
 }
 impl<'a> From<crate::decision_tree::Error<'a>> for Error<'a> {
@@ -655,9 +657,7 @@ impl<'a, 'b, 's> Engine<'a, 'b, 's> {
         if let Some(old) = self.specs.iter().find(|old| old.key == key) {
             return Ok(old.binder);
         }
-        if self.specs.len() >= MAX_SPECIALIZATIONS {
-            return Err(Error::SpecializationLimit);
-        }
+        tick()?;
         let scheme = self.scheme(template)?;
         let mut runtime_subst = t.captured.runtime_subst.clone();
         for name in scheme.annotation.free_vars {
@@ -839,16 +839,14 @@ fn native_type<'a>(arena: &'a Arena, ty: Ty<'a>) -> Result<&'a Located<Type<'a>>
     })))
 }
 fn check_type<'a>(typ: &'a Located<Type<'a>>, subst: &Substitution<'a>) -> Result<(), Error<'a>> {
-    let mut pending = vec![(typ, 0, true)];
-    while let Some((t, depth, replace)) = pending.pop() {
-        if depth > MAX_TYPE_DEPTH {
-            return Err(Error::SpecializationLimit);
-        }
-        let mut push = |t| pending.push((t, depth + 1, replace));
+    let mut pending = vec![(typ, true)];
+    while let Some((t, replace)) = pending.pop() {
+        tick()?;
+        let mut push = |t| pending.push((t, replace));
         match &t.value {
             Type::Var(n) => {
                 if replace && let Some(t) = subst.get(n) {
-                    pending.push((*t, depth + 1, false));
+                    pending.push((*t, false));
                 }
             }
             Type::Named { args, .. } => {

@@ -15,7 +15,7 @@ The head-matching and insertion descriptions incorporate the completed
 - Kind compatibility is checked before head matching. `head::overlaps`
   unifies recursive heads and intersects variable representation classes;
   its callback supplies concrete head representations. Independent binders,
-  repeated variables, occurs checks and work limits remain part of matching.
+  repeated variables, occurs checks and fuel ticks remain part of matching.
 - `insert_impl` uses the kind environment to obtain concrete representations
   during overlap checking. `check_annotation` has no module-name argument.
 - `KindHead` and the unproduced `KindContext::TypeArg`, `ValuePosition`
@@ -91,8 +91,8 @@ base kinds or expose the removed kind-scheme API. In particular:
 
 These are contract corrections for later work. Runtime/codegen, optimizer
 implementation, macros, default imports, Prop and the full validator example
-remain deferred. Trait search keeps its existing 128-level and 16,384-work
-limits; no Paterson restriction or new impl admission policy is introduced.
+remain deferred. Trait search keeps its existing policy; no Paterson
+restriction or new impl admission policy is introduced.
 
 ## Validation
 

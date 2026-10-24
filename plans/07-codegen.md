@@ -47,10 +47,10 @@ Concrete integration choices:
 - Generalized local values needing evidence or native layout are templates,
   evaluated per requested specialization. Other local values remain strict;
   there is no arbitrary instance selection for an unused overloaded value.
-- Specialization has explicit body/type-depth limits, recursive Data validation
-  has a helper-count limit, and branch normalization has a work limit. These are
-  resource errors, not claims that a single observed type-size increase proves
-  infinite specialization.
+- Specialization, evidence normalization and branch normalization draw from the
+  compile's fuel and report one out-of-fuel error; recursive Data validation
+  has a helper-count limit. These are resource errors, not claims that a single
+  observed type-size increase proves infinite specialization.
 - Strict nullary recursive values are diagnosed during codegen. The historical
   `ones` sketch below does not create a lazy infinite native list.
 - Test-only power-assert rewriting remains Plan 10. Validator assertions retain

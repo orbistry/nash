@@ -2461,8 +2461,8 @@ or SolvedTypes from a failed solve.
   and recursive definitions so recovery is not tested only on disjoint trees.
 - Two independent failing modules both report. A dependent module is blocked
   by the original failure without fabricated missing-import/type errors.
-- An impl-resolution cycle or work limit terminates the affected computation
-  while preserving collected errors and unrelated diagnostics.
+- An impl-resolution cycle or running out of compilation fuel terminates the
+  affected computation while preserving collected errors and unrelated diagnostics.
 - Repeated CLI runs and shuffled module discovery have identical ordering:
   canonical module path, primary span, then stable diagnostic tie-breakers.
   Terminal snapshots, JSON and LSP assert the same problem set and spans.

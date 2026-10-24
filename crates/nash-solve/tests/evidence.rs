@@ -552,7 +552,10 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
             trait_,
             args: bump.alloc_slice_copy(&[input(&annotations, name)]),
         };
-        (name, resolve(&bump, &tables, &pred).unwrap_err().reason)
+        let result = nash_ast::fuel::run(nash_ast::fuel::Fuel::Limited(20_000), || {
+            resolve(&bump, &tables, &pred)
+        });
+        (name, result.unwrap_err().reason)
     })
     .collect();
     assert_eq!(
@@ -560,34 +563,11 @@ fn ground_resolution_reports_missing_open_and_expanding_requirements() {
         vec![
             ("missing", Failure::MissingImpl),
             ("open", Failure::NonGround),
-            ("growing", Failure::Limit),
-            ("cycle", Failure::Limit),
+            ("growing", Failure::OutOfFuel),
+            ("cycle", Failure::OutOfFuel),
             ("function", Failure::MissingImpl),
             ("openFunction", Failure::MissingImpl),
         ]
-    );
-    let mut deep = input(&annotations, "missing");
-    for _ in 0..140 {
-        deep = bump.alloc(Located::at_zero(Type::Named {
-            reference: QualifiedName {
-                home: nash_ast::primitives::primitive_home(),
-                name: "list",
-            },
-            args: bump.alloc_slice_copy(&[deep]),
-        }));
-    }
-    assert_eq!(
-        resolve(
-            &bump,
-            &tables,
-            &Pred::Trait {
-                trait_,
-                args: bump.alloc_slice_copy(&[deep])
-            }
-        )
-        .unwrap_err()
-        .reason,
-        Failure::Limit
     );
 }
 

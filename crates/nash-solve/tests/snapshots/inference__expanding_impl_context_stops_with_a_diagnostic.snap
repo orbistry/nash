@@ -3,9 +3,9 @@ source: crates/nash-solve/tests/inference.rs
 description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep xs = xs\nvalue : list unit\nvalue = keep [()]\n"
 info: diagnostic
 ---
-nash::type::impl_resolution_limit
+nash::type::out_of_fuel
 
-  × Impl resolution for `Keep` in `keep` exceeded the work limit.
+  × Resolving `Keep` in `keep` needed more compilation steps than the editor allows.
    ╭─[Main.nash:7:9]
  6 │ value : list unit
  7 │ value = keep [()]
@@ -13,4 +13,4 @@ nash::type::impl_resolution_limit
    ╰────
   help: This requirement remains unchecked; other reported errors still apply.
 
-        Simplify cyclic or growing impl constraints.
+        `nash check` has no step limit. Simplify cyclic or growing impl constraints.

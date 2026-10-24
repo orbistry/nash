@@ -1,5 +1,7 @@
 use super::*;
-use nash_driver::{Database, InMemorySource, build_graph_production, build_with, bundled_base};
+use nash_driver::{
+    Database, Fuel, InMemorySource, build_graph_production, build_with, bundled_base,
+};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use url::Url;
@@ -13,7 +15,7 @@ async fn documented(source: &str) -> Extraction {
     let graph = build_graph_production(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (result, docs) = build_with(db, &graph, &origins, move |solved| {
+    let (result, docs) = build_with(db, &graph, &origins, Fuel::Unlimited, move |solved| {
         let module = solved.modules.iter().find(|m| m.uri == uri).unwrap();
         let source = nash_parse::Parser::new(solved.store, module.source)
             .module()

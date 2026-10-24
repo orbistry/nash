@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
 use miette::{IntoDiagnostic, Result};
-use nash_driver::{Database, FileSystemSource, Project, build_graph_with_tests, test_with};
+use nash_driver::{Database, FileSystemSource, Fuel, Project, build_graph_with_tests, test_with};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use super::build::TraceLevelArg;
@@ -138,7 +138,7 @@ impl Args {
             .into_diagnostic()?;
         let patterns = self.matches.clone();
         let exact = self.exact;
-        let (report, programs) = test_with(db, &graph, &modules, move |solved| {
+        let (report, programs) = test_with(db, &graph, &modules, Fuel::Unlimited, move |solved| {
             nash_driver::build::compile_tests_matching_with(
                 solved,
                 |uri| configs.get(uri).copied(),

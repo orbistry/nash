@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use bumpalo::Bump;
+use nash_ast::fuel::{self, Fuel};
 use nash_can::Interface;
 use tokio::sync::Mutex;
 use url::Url;
@@ -120,14 +121,19 @@ struct CompileOutput {
 ///
 /// The async part only fetches sources; the CPU-bound compilation runs on a
 /// compiler thread (`stack::run`) behind tokio's blocking pool, so no executor
-/// worker is ever stalled.
+/// worker is ever stalled. Each module compiles with its own counter of
+/// `fuel`; a module that runs out fails with a step-limit report and blocks
+/// its dependents.
 /// `origins` must contain every module in the graph, including applications.
 pub async fn build(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
+    fuel: Fuel,
 ) -> BuildResult {
-    build_with_policy(db, graph, origins, false, |_| ()).await.0
+    build_with_policy(db, graph, origins, fuel, false, |_| ())
+        .await
+        .0
 }
 
 /// Finish a successful frontend build while its original canonical arena and
@@ -137,13 +143,14 @@ pub async fn build_with<R, F>(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
+    fuel: Fuel,
     finish: F,
 ) -> (BuildResult, Option<R>)
 where
     R: Send + 'static,
     F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
 {
-    build_with_policy(db, graph, origins, true, finish).await
+    build_with_policy(db, graph, origins, fuel, true, finish).await
 }
 
 /// Compile tests and finish while canonical nodes and solved evidence remain alive.
@@ -151,19 +158,21 @@ pub async fn test_with<R, F>(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
+    fuel: Fuel,
     finish: F,
 ) -> (BuildResult, Option<R>)
 where
     R: Send + 'static,
     F: for<'a> FnOnce(Solved<'a>) -> R + Send + 'static,
 {
-    build_with_policy(db, graph, origins, false, finish).await
+    build_with_policy(db, graph, origins, fuel, false, finish).await
 }
 
 async fn build_with_policy<R, F>(
     db: Arc<Mutex<Database>>,
     graph: &DepGraph,
     origins: &crate::ModuleOrigins,
+    fuel: Fuel,
     exclude_tests: bool,
     finish: F,
 ) -> (BuildResult, Option<R>)
@@ -193,6 +202,7 @@ where
             build_sync_with_policy(
                 sources,
                 &edges,
+                fuel,
                 exclude_tests,
                 test_modules.as_ref(),
                 finish,
@@ -230,7 +240,7 @@ fn build_sync_with_edges_and<R>(
     edges: &HashMap<Url, Vec<Url>>,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
 ) -> (BuildResult, Option<R>) {
-    build_sync_with_policy(sources, edges, false, None, finish)
+    build_sync_with_policy(sources, edges, Fuel::Unlimited, false, None, finish)
 }
 
 fn build_sync_with_policy<R>(
@@ -240,6 +250,7 @@ fn build_sync_with_policy<R>(
         Result<String, String>,
     )>,
     edges: &HashMap<Url, Vec<Url>>,
+    fuel: Fuel,
     exclude_tests: bool,
     test_modules: Option<&std::collections::HashSet<Url>>,
     finish: impl for<'a> FnOnce(Solved<'a>) -> R,
@@ -277,14 +288,16 @@ fn build_sync_with_policy<R>(
             );
             continue;
         }
-        let (output, compiled) = compile_module(
-            uri,
-            package.as_ref(),
-            source,
-            &store,
-            &interfaces,
-            exclude_tests || test_modules.is_some_and(|roots| !roots.contains(uri)),
-        );
+        let (output, compiled) = fuel::run(fuel, || {
+            compile_module(
+                uri,
+                package.as_ref(),
+                source,
+                &store,
+                &interfaces,
+                exclude_tests || test_modules.is_some_and(|roots| !roots.contains(uri)),
+            )
+        });
         if let Some((interface, module)) = compiled {
             public_interfaces.insert(
                 uri.clone(),
@@ -304,9 +317,11 @@ fn build_sync_with_policy<R>(
         .count();
 
     let output = if total == success {
-        Some(finish(Solved {
-            store: &store,
-            modules: solved.into_values().collect(),
+        Some(fuel::run(fuel, || {
+            finish(Solved {
+                store: &store,
+                modules: solved.into_values().collect(),
+            })
         }))
     } else {
         None
@@ -754,6 +769,7 @@ mod tests {
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await;
         assert_eq!(result.total, 3);
@@ -780,6 +796,7 @@ mod tests {
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await;
 
@@ -814,6 +831,7 @@ mod tests {
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await;
 
@@ -873,6 +891,7 @@ main = Utils.pong Primitive.True
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await;
 
@@ -901,6 +920,7 @@ mod trait_tests {
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await
     }
@@ -984,6 +1004,7 @@ mod kind_tests {
             db,
             &graph,
             &graph.order.iter().cloned().map(|uri| (uri, None)).collect(),
+            Fuel::Unlimited,
         )
         .await;
         let diagnostics = result

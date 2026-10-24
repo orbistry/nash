@@ -2,7 +2,7 @@
 use crate::{DocsWarning, ModuleDocs, extract, primitives};
 use nash_config::Config;
 use nash_driver::{
-    Database, DriverError, FileSystemSource, Project, build_graph_production, build_with,
+    Database, DriverError, FileSystemSource, Fuel, Project, build_graph_production, build_with,
     bundled_base,
 };
 use std::{
@@ -71,7 +71,7 @@ pub async fn build(input: Input<'_>) -> Result<Documentation, Error> {
     let graph =
         build_graph_production(db.clone(), &origins.keys().cloned().collect::<Vec<_>>()).await?;
     let selected_roots = roots.clone();
-    let (compiler, extracted) = build_with(db, &graph, &origins, move |solved| {
+    let (compiler, extracted) = build_with(db, &graph, &origins, Fuel::Unlimited, move |solved| {
         solved
             .modules
             .iter()

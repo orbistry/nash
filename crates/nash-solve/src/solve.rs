@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use bumpalo::Bump;
 use nash_ast::Type as CanType;
-use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
+use nash_ast::fuel::tick;
 use nash_can::Annotations;
 use nash_constrain::error::{Category, Error, Expected, PExpected};
 use nash_constrain::type_::{
@@ -144,7 +144,7 @@ fn representation_requirement<'a>(
 
 /// Why representation coverage could not prove a wanted predicate.
 enum CoverageProblem<'a> {
-    Limit,
+    OutOfFuel,
     /// Some cell cannot prove this predicate: a context of a covered impl,
     /// or, at the limit, the wanted trait at a rigid subject.
     MissingContext(Body<'a>),
@@ -175,7 +175,6 @@ struct Solver<'a, 'tables> {
     expr_types: Vec<NodeTypeRecord>,
     pattern_types: Vec<NodeTypeRecord>,
     owners: Vec<nash_ast::NodeId>,
-    resolution_work: std::collections::HashMap<type_::PredId, usize>,
     has_poison: bool,
     dependencies: crate::recovery::Dependencies,
     failed_lineages: BTreeSet<type_::PredId>,
@@ -224,7 +223,6 @@ impl<'a, 'tables> Solver<'a, 'tables> {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -2021,13 +2019,8 @@ impl<'a> Solver<'a, '_> {
         use nash_ast::primitives::{Repr, ReprTrait};
         self.propagate_poison(uf);
         let report_missing = annotated;
-        let mut queue: VecDeque<_> = self
-            .wanted
-            .split_off(start)
-            .into_iter()
-            .map(|(rank, id)| (rank, id, self.predicates.depth(id)))
-            .collect();
-        while let Some((wanted_rank, id, resolution_depth)) = queue.pop_front() {
+        let mut queue: VecDeque<_> = self.wanted.split_off(start).into();
+        while let Some((wanted_rank, id)) = queue.pop_front() {
             if self.predicate_blocked(uf, id) {
                 self.predicates.detach(uf, id);
                 continue;
@@ -2062,7 +2055,7 @@ impl<'a> Solver<'a, '_> {
                             },
                         );
                         subs.push(sub);
-                        queue.push_back((wanted_rank, sub, resolution_depth + 1));
+                        queue.push_back((wanted_rank, sub));
                     }
                     self.predicates.solve(uf, id, Solution::Apply { subs });
                 } else {
@@ -2207,13 +2200,8 @@ impl<'a> Solver<'a, '_> {
                         };
                         self.introduce(uf, rank, &fresh);
                     }
-                    queue.push_front((wanted_rank, id, resolution_depth));
-                    queue.extend(
-                        self.wanted
-                            .split_off(start)
-                            .into_iter()
-                            .map(|(rank, id)| (rank, id, self.predicates.depth(id))),
-                    );
+                    queue.push_front((wanted_rank, id));
+                    queue.extend(self.wanted.split_off(start));
                     continue;
                 }
             }
@@ -2224,8 +2212,7 @@ impl<'a> Solver<'a, '_> {
                 crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing
             ) && let Some(binder) = binder
             {
-                let mut remaining = WORK_LIMIT;
-                match self.cover(uf, rank, id, trait_, &args, &[], &mut remaining, 0) {
+                match self.cover(uf, rank, id, trait_, &args, &[]) {
                     Ok(None) => {}
                     Ok(Some(subs)) => {
                         self.predicates.solve(uf, id, Solution::Specialize { subs });
@@ -2237,8 +2224,8 @@ impl<'a> Solver<'a, '_> {
                             continue;
                         };
                         match problem {
-                            CoverageProblem::Limit => {
-                                state.errors.push(Error::ImplResolutionLimit {
+                            CoverageProblem::OutOfFuel => {
+                                state.errors.push(Error::OutOfFuel {
                                     region: site.region,
                                     name: site.name,
                                     trait_,
@@ -2315,13 +2302,8 @@ impl<'a> Solver<'a, '_> {
             }
             if binder.is_some() {
                 let site = site.expect("wanteds originate at uses");
-                let work = self
-                    .resolution_work
-                    .entry(self.predicates.root(id))
-                    .or_default();
-                *work += 1;
-                if *work > WORK_LIMIT || resolution_depth >= DEPTH_LIMIT {
-                    state.errors.push(Error::ImplResolutionLimit {
+                if tick().is_err() {
+                    state.errors.push(Error::OutOfFuel {
                         region: site.region,
                         name: site.name,
                         trait_,
@@ -2331,8 +2313,8 @@ impl<'a> Solver<'a, '_> {
                 }
                 match selection {
                     crate::resolve::Selection::Deferred => self.wanted.push((wanted_rank, id)),
-                    crate::resolve::Selection::Limit => {
-                        state.errors.push(Error::ImplResolutionLimit {
+                    crate::resolve::Selection::OutOfFuel => {
+                        state.errors.push(Error::OutOfFuel {
                             region: site.region,
                             name: site.name,
                             trait_,
@@ -2378,7 +2360,7 @@ impl<'a> Solver<'a, '_> {
                                 },
                             );
                             subs.push(sub);
-                            queue.push_back((wanted_rank, sub, resolution_depth + 1));
+                            queue.push_back((wanted_rank, sub));
                         }
                         self.predicates.solve(
                             uf,
@@ -2470,7 +2452,6 @@ impl<'a> Solver<'a, '_> {
     /// `Ok(None)`: coverage does not apply. `Ok(Some(subs))`: every admitted
     /// cell selects an impl, and `subs` prove each impl's context under its
     /// cell. The cells are never committed to inference.
-    #[allow(clippy::too_many_arguments)]
     fn cover(
         &mut self,
         uf: &mut UnionFind<'a>,
@@ -2479,27 +2460,15 @@ impl<'a> Solver<'a, '_> {
         trait_: nash_ast::QualifiedName<'a>,
         args: &[Variable],
         assumptions: &[Body<'a>],
-        remaining: &mut usize,
-        depth: usize,
     ) -> Result<Option<Vec<type_::PredId>>, CoverageProblem<'a>> {
-        if depth >= DEPTH_LIMIT {
-            return Err(CoverageProblem::Limit);
-        }
         let givens = self.given_bodies(assumptions);
         let mut allocated = Vec::new();
-        let coverage = crate::resolve::coverage(
-            self.tables,
-            uf,
-            trait_,
-            args,
-            &givens,
-            &mut allocated,
-            remaining,
-        );
+        let coverage =
+            crate::resolve::coverage(self.tables, uf, trait_, args, &givens, &mut allocated);
         self.introduce(uf, rank, &allocated);
         let covered = match coverage {
             crate::resolve::Coverage::NotApplicable => return Ok(None),
-            crate::resolve::Coverage::Limit => return Err(CoverageProblem::Limit),
+            crate::resolve::Coverage::OutOfFuel => return Err(CoverageProblem::OutOfFuel),
             crate::resolve::Coverage::Unstated(subject) => {
                 return Err(CoverageProblem::MissingContext(Body::Trait {
                     trait_,
@@ -2538,10 +2507,10 @@ impl<'a> Solver<'a, '_> {
                         solution: None,
                     },
                 );
-                if let Err(problem) = self.prove(uf, rank, sub, &cell, remaining, depth + 1) {
+                if let Err(problem) = self.prove(uf, rank, sub, &cell) {
                     self.predicates.detach(uf, sub);
                     return Err(match problem {
-                        CoverageProblem::Limit => CoverageProblem::Limit,
+                        CoverageProblem::OutOfFuel => CoverageProblem::OutOfFuel,
                         _ => CoverageProblem::MissingContext(body),
                     });
                 }
@@ -2559,15 +2528,10 @@ impl<'a> Solver<'a, '_> {
         rank: usize,
         id: type_::PredId,
         assumptions: &[Body<'a>],
-        remaining: &mut usize,
-        depth: usize,
     ) -> Result<(), CoverageProblem<'a>> {
         use crate::preds::Solution;
         use nash_ast::primitives::{Repr, ReprTrait};
-        nash_ast::head::step(remaining).map_err(|_| CoverageProblem::Limit)?;
-        if depth >= DEPTH_LIMIT {
-            return Err(CoverageProblem::Limit);
-        }
+        tick().map_err(|_| CoverageProblem::OutOfFuel)?;
         let body = self.predicates.get(id).body.clone();
         if self.solve_from_givens(uf, rank, id, &body) {
             return Ok(());
@@ -2588,9 +2552,7 @@ impl<'a> Solver<'a, '_> {
                             solution: None,
                         },
                     );
-                    if let Err(problem) =
-                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
-                    {
+                    if let Err(problem) = self.prove(uf, rank, sub, assumptions) {
                         self.predicates.detach(uf, sub);
                         return Err(problem);
                     }
@@ -2664,9 +2626,7 @@ impl<'a> Solver<'a, '_> {
                             solution: None,
                         },
                     );
-                    if let Err(problem) =
-                        self.prove(uf, rank, sub, assumptions, remaining, depth + 1)
-                    {
+                    if let Err(problem) = self.prove(uf, rank, sub, assumptions) {
                         self.predicates.detach(uf, sub);
                         return Err(problem);
                     }
@@ -2686,18 +2646,9 @@ impl<'a> Solver<'a, '_> {
                 );
                 Ok(())
             }
-            crate::resolve::Selection::Limit => Err(CoverageProblem::Limit),
+            crate::resolve::Selection::OutOfFuel => Err(CoverageProblem::OutOfFuel),
             crate::resolve::Selection::Deferred | crate::resolve::Selection::Missing => {
-                match self.cover(
-                    uf,
-                    rank,
-                    id,
-                    trait_,
-                    &args,
-                    assumptions,
-                    remaining,
-                    depth + 1,
-                )? {
+                match self.cover(uf, rank, id, trait_, &args, assumptions)? {
                     Some(subs) => {
                         self.predicates.solve(uf, id, Solution::Specialize { subs });
                         Ok(())
@@ -4371,7 +4322,7 @@ mod copy_tests {
     }
 
     #[test]
-    fn recovery_work_limit_does_not_drop_the_next_independent_predicate() {
+    fn recovery_out_of_fuel_does_not_drop_the_next_independent_predicate() {
         let bump = Bump::new();
         let tables = nash_can::environment::Tables::default();
         let mut solver = Solver {
@@ -4388,7 +4339,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -4437,21 +4387,22 @@ mod copy_tests {
             solver.wanted.push((OUTERMOST_RANK, id));
             ids.push(id);
         }
-        solver.resolution_work.insert(ids[0], WORK_LIMIT);
-        let result = solver.resolve_wanted(
-            &mut uf,
-            OUTERMOST_RANK,
-            State {
-                env: Env::new(),
-                mark: NO_MARK.next(),
-                errors: Vec::new(),
-            },
-            0,
-            Some(binder),
-            false,
-        );
+        let result = nash_ast::fuel::run(nash_ast::fuel::Fuel::Limited(0), || {
+            solver.resolve_wanted(
+                &mut uf,
+                OUTERMOST_RANK,
+                State {
+                    env: Env::new(),
+                    mark: NO_MARK.next(),
+                    errors: Vec::new(),
+                },
+                0,
+                Some(binder),
+                false,
+            )
+        });
         assert!(
-            matches!(result.errors.as_slice(), [Error::ImplResolutionLimit { trait_: first, .. }, Error::MissingImpl { trait_: second, .. }] if first.name == "Expanding" && second.name == "Missing"),
+            matches!(result.errors.as_slice(), [Error::OutOfFuel { trait_: first, .. }, Error::OutOfFuel { trait_: second, .. }] if first.name == "Expanding" && second.name == "Missing"),
             "{:?}",
             result.errors
         );
@@ -4481,7 +4432,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -4555,7 +4505,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -4631,7 +4580,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -4720,7 +4668,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -4859,7 +4806,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -5031,7 +4977,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),
@@ -5117,7 +5062,6 @@ mod copy_tests {
             expr_types: Vec::new(),
             pattern_types: Vec::new(),
             owners: Vec::new(),
-            resolution_work: std::collections::HashMap::new(),
             has_poison: false,
             dependencies: crate::recovery::Dependencies::default(),
             failed_lineages: BTreeSet::new(),

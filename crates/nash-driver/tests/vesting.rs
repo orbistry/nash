@@ -5,7 +5,7 @@ mod vesting_input;
 use std::{path::Path, sync::Arc};
 
 use nash_driver::{
-    Database, FileSystemSource, Project, build::build_validators, build_graph, build_with,
+    Database, FileSystemSource, Fuel, Project, build::build_validators, build_graph, build_with,
 };
 use nash_plutus::{arena::Arena, data::PlutusData, flat, syn, term::Term};
 use tokio::sync::Mutex;
@@ -35,7 +35,7 @@ async fn bundled_base_vesting_artifacts_execute_all_ledger_cases() {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .expect("build dependency graph");
-    let (report, result) = build_with(db, &graph, &origins, |solved| {
+    let (report, result) = build_with(db, &graph, &origins, Fuel::Unlimited, |solved| {
         build_validators(
             solved,
             nash_config::Build {

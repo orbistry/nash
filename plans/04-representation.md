@@ -27,7 +27,7 @@ Cover declaration checking, type inference, trait resolution, specialization,
 generalization, evidence, interfaces, diagnostics and tests. Preserve Haskell
 98 semantics, representation predicates, terminating datatype-context
 inference and Plan 03 behavior. Keep the existing trait-resolution policy and
-search limits; do not add Paterson-style restrictions. Preserve later-plan
+search bounds; do not add Paterson-style restrictions. Preserve later-plan
 deferrals and unrelated work.
 
 Replace obsolete tests and descriptions with explicit assertions of the new

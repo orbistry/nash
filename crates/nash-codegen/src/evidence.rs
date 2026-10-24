@@ -6,7 +6,7 @@
 //! the impl. Runtime layout demands are a separate part of specialization identity.
 use std::collections::HashMap;
 
-use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
+use nash_ast::fuel::{OutOfFuel, tick};
 use nash_ast::{AliasType, Evidence, Head, ImplRef, NodeId, Pred, QualifiedName, Type, primitives};
 use nash_can::environment::Tables;
 use nash_plutus::arena::Arena;
@@ -37,10 +37,16 @@ pub enum Error<'a> {
     NoEvidence,
     #[error("evidence still contains a given or superclass projection")]
     UnresolvedEvidence,
-    #[error("evidence normalization exceeded its work or depth limit")]
-    Limit,
+    #[error("code generation ran out of compilation steps")]
+    OutOfFuel,
     #[error("cannot resolve superclass: {0:?}")]
     Resolution(nash_solve::evidence::Failure),
+}
+
+impl From<OutOfFuel> for Error<'_> {
+    fn from(OutOfFuel: OutOfFuel) -> Self {
+        Self::OutOfFuel
+    }
 }
 
 /// Executable choice only: type and representation layout demands belong in a
@@ -60,12 +66,7 @@ pub fn ground<'a>(
     subst: &Substitution<'a>,
     givens: &HashMap<NodeId, &[Evidence<'a>]>,
 ) -> Result<Evidence<'a>, Error<'a>> {
-    Grounder {
-        arena,
-        tables,
-        remaining: WORK_LIMIT,
-    }
-    .one(evidence, subst, givens, 0)
+    Grounder { arena, tables }.one(evidence, subst, givens)
 }
 
 pub fn ground_arguments<'a>(
@@ -75,23 +76,14 @@ pub fn ground_arguments<'a>(
     subst: &Substitution<'a>,
     givens: &HashMap<NodeId, &[Evidence<'a>]>,
 ) -> Result<&'a [Evidence<'a>], Error<'a>> {
-    Grounder {
-        arena,
-        tables,
-        remaining: WORK_LIMIT,
-    }
-    .arguments(evidence, subst, givens, 0)
+    Grounder { arena, tables }.arguments(evidence, subst, givens)
 }
 
 pub fn executable_identity<'a>(
     evidence: &Evidence<'a>,
 ) -> Result<ExecutableEvidence<'a>, Error<'a>> {
-    fn visit<'a>(
-        evidence: &Evidence<'a>,
-        remaining: &mut usize,
-        depth: usize,
-    ) -> Result<ExecutableEvidence<'a>, Error<'a>> {
-        step(remaining, depth)?;
+    fn visit<'a>(evidence: &Evidence<'a>) -> Result<ExecutableEvidence<'a>, Error<'a>> {
+        tick()?;
         Ok(match evidence {
             Evidence::Repr { .. } => ExecutableEvidence::Erased,
             Evidence::ReflexiveLift { .. } => ExecutableEvidence::Identity,
@@ -101,10 +93,10 @@ pub fn executable_identity<'a>(
                 type_args,
                 args,
             } => {
-                check_heads(remaining, impl_.key.heads, type_args.len(), depth)?;
+                check_heads(impl_.key.heads, type_args.len())?;
                 let mut children = Vec::new();
                 for arg in *args {
-                    let child = visit(arg, remaining, depth + 1)?;
+                    let child = visit(arg)?;
                     if child != ExecutableEvidence::Erased {
                         children.push(child);
                     }
@@ -116,32 +108,15 @@ pub fn executable_identity<'a>(
             }
         })
     }
-    let mut remaining = WORK_LIMIT;
-    visit(evidence, &mut remaining, 0)
-}
-
-fn step<'a>(remaining: &mut usize, depth: usize) -> Result<(), Error<'a>> {
-    if depth > DEPTH_LIMIT || *remaining == 0 {
-        return Err(Error::Limit);
-    }
-    *remaining -= 1;
-    Ok(())
+    visit(evidence)
 }
 
 // Impl keys participate in recursive ordering and hashing. Check them before
 // looking them up or copying them into an executable key.
-fn check_heads<'a>(
-    remaining: &mut usize,
-    heads: &[Head<'a>],
-    variables: usize,
-    depth: usize,
-) -> Result<(), Error<'a>> {
-    if heads.len() > *remaining {
-        return Err(Error::Limit);
-    }
-    let mut pending: Vec<_> = heads.iter().map(|head| (head, depth)).collect();
-    while let Some((head, depth)) = pending.pop() {
-        step(remaining, depth)?;
+fn check_heads<'a>(heads: &[Head<'a>], variables: usize) -> Result<(), Error<'a>> {
+    let mut pending: Vec<_> = heads.iter().collect();
+    while let Some(head) = pending.pop() {
+        tick()?;
         match head {
             Head::Var { index, .. } if usize::from(*index) >= variables => {
                 return Err(Error::MalformedImpl);
@@ -151,14 +126,11 @@ fn check_heads<'a>(
                 if matches!(head, Head::Tuple(_)) && args.len() < 2 {
                     return Err(Error::MalformedImpl);
                 }
-                if args.len() > *remaining {
-                    return Err(Error::Limit);
-                }
-                pending.extend(args.iter().map(|arg| (arg, depth + 1)));
+                pending.extend(args.iter());
             }
             Head::Function(from, to) => {
-                pending.push((from, depth + 1));
-                pending.push((to, depth + 1));
+                pending.push(from);
+                pending.push(to);
             }
         }
     }
@@ -168,7 +140,6 @@ fn check_heads<'a>(
 struct Grounder<'a, 't> {
     arena: &'a Arena,
     tables: &'t Tables<'a>,
-    remaining: usize,
 }
 
 impl<'a> Grounder<'a, '_> {
@@ -177,9 +148,8 @@ impl<'a> Grounder<'a, '_> {
         evidence: &Evidence<'a>,
         subst: &Substitution<'a>,
         givens: &HashMap<NodeId, &[Evidence<'a>]>,
-        depth: usize,
     ) -> Result<Evidence<'a>, Error<'a>> {
-        step(&mut self.remaining, depth)?;
+        tick()?;
         Ok(match evidence {
             Evidence::Given { binder, index } => {
                 let values = givens.get(binder).ok_or(Error::MissingGiven(*binder))?;
@@ -187,10 +157,10 @@ impl<'a> Grounder<'a, '_> {
                     binder: *binder,
                     index: *index,
                 })?;
-                return self.one(value, subst, givens, depth + 1);
+                return self.one(value, subst, givens);
             }
             Evidence::Super { of, index } => {
-                let of = self.one(of, subst, givens, depth + 1)?;
+                let of = self.one(of, subst, givens)?;
                 // A known representation proof entails its builtin parents
                 // even when the carried type is erased and remains open.
                 if let Evidence::Repr { trait_, typ } = of {
@@ -207,19 +177,13 @@ impl<'a> Grounder<'a, '_> {
                         typ,
                     });
                 }
-                let predicate = self.super_predicate(&of, *index, depth + 1)?;
+                let predicate = self.super_predicate(&of, *index)?;
                 self.validate_predicate(predicate)?;
                 let resolved =
                     nash_solve::evidence::resolve(self.arena.as_bump(), self.tables, &predicate)
-                        .map_err(|error| {
-                            if error.reason == nash_solve::evidence::Failure::Limit {
-                                Error::Limit
-                            } else {
-                                Error::Resolution(error.reason)
-                            }
-                        })?
+                        .map_err(resolution_error)?
                         .ok_or(Error::NoEvidence)?;
-                return self.one(&resolved, &Substitution::new(), &HashMap::new(), depth + 1);
+                return self.one(&resolved, &Substitution::new(), &HashMap::new());
             }
             Evidence::Specialize { trait_, args } => {
                 // Method B: the specialization key holds these types, so each
@@ -234,15 +198,9 @@ impl<'a> Grounder<'a, '_> {
                 };
                 let resolved =
                     nash_solve::evidence::resolve(self.arena.as_bump(), self.tables, &predicate)
-                        .map_err(|error| {
-                            if error.reason == nash_solve::evidence::Failure::Limit {
-                                Error::Limit
-                            } else {
-                                Error::Resolution(error.reason)
-                            }
-                        })?
+                        .map_err(resolution_error)?
                         .ok_or(Error::NoEvidence)?;
-                return self.one(&resolved, &Substitution::new(), &HashMap::new(), depth + 1);
+                return self.one(&resolved, &Substitution::new(), &HashMap::new());
             }
             Evidence::Repr { trait_, typ } => Evidence::Repr {
                 trait_: *trait_,
@@ -259,7 +217,7 @@ impl<'a> Grounder<'a, '_> {
                 type_args,
                 args,
             } => {
-                check_heads(&mut self.remaining, impl_.key.heads, type_args.len(), depth)?;
+                check_heads(impl_.key.heads, type_args.len())?;
                 let info = self
                     .tables
                     .impls
@@ -283,7 +241,7 @@ impl<'a> Grounder<'a, '_> {
                 Evidence::Impl {
                     impl_: *impl_,
                     type_args: self.arena.alloc_slice_copy(&types),
-                    args: self.arguments(args, subst, givens, depth + 1)?,
+                    args: self.arguments(args, subst, givens)?,
                 }
             }
         })
@@ -294,14 +252,10 @@ impl<'a> Grounder<'a, '_> {
         evidence: &[Evidence<'a>],
         subst: &Substitution<'a>,
         givens: &HashMap<NodeId, &[Evidence<'a>]>,
-        depth: usize,
     ) -> Result<&'a [Evidence<'a>], Error<'a>> {
-        if evidence.len() > self.remaining {
-            return Err(Error::Limit);
-        }
         let values = evidence
             .iter()
-            .map(|e| self.one(e, subst, givens, depth))
+            .map(|e| self.one(e, subst, givens))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(self.arena.alloc_slice_fill_iter(values))
     }
@@ -326,14 +280,14 @@ impl<'a> Grounder<'a, '_> {
         typ: &'a Located<Type<'a>>,
         subst: &Substitution<'a>,
     ) -> Result<(), Error<'a>> {
-        let mut pending = vec![(typ, 0, true)];
-        while let Some((typ, depth, replace)) = pending.pop() {
-            step(&mut self.remaining, depth)?;
-            let mut push = |child| pending.push((child, depth + 1, replace));
+        let mut pending = vec![(typ, true)];
+        while let Some((typ, replace)) = pending.pop() {
+            tick()?;
+            let mut push = |child| pending.push((child, replace));
             match &typ.value {
                 Type::Var(name) => {
                     if replace && let Some(value) = subst.get(name) {
-                        pending.push((*value, depth + 1, false));
+                        pending.push((*value, false));
                     }
                 }
                 Type::App { head, args } => {
@@ -388,7 +342,6 @@ impl<'a> Grounder<'a, '_> {
         &mut self,
         evidence: &Evidence<'a>,
         index: u16,
-        depth: usize,
     ) -> Result<Pred<'a>, Error<'a>> {
         let (trait_, args) = match evidence {
             Evidence::StructuralEq { typ } => (primitives::eq_trait(), vec![*typ]),
@@ -400,7 +353,7 @@ impl<'a> Grounder<'a, '_> {
                     .key
                     .heads
                     .iter()
-                    .map(|head| self.head_type(head, type_args, depth))
+                    .map(|head| self.head_type(head, type_args))
                     .collect::<Result<Vec<_>, _>>()?;
                 (impl_.key.trait_, args)
             }
@@ -446,9 +399,8 @@ impl<'a> Grounder<'a, '_> {
         &mut self,
         head: &Head<'a>,
         variables: &[&'a Located<Type<'a>>],
-        depth: usize,
     ) -> Result<&'a Located<Type<'a>>, Error<'a>> {
-        step(&mut self.remaining, depth)?;
+        tick()?;
         let typ = match head {
             Head::Var { index, .. } => {
                 return variables
@@ -459,7 +411,7 @@ impl<'a> Grounder<'a, '_> {
             Head::Named { reference, args } => {
                 let args = args
                     .iter()
-                    .map(|head| self.head_type(head, variables, depth + 1))
+                    .map(|head| self.head_type(head, variables))
                     .collect::<Result<Vec<_>, _>>()?;
                 Type::Named {
                     reference: *reference,
@@ -472,7 +424,7 @@ impl<'a> Grounder<'a, '_> {
                 }
                 let args = args
                     .iter()
-                    .map(|head| self.head_type(head, variables, depth + 1))
+                    .map(|head| self.head_type(head, variables))
                     .collect::<Result<Vec<_>, _>>()?;
                 Type::Tuple {
                     first: args[0],
@@ -481,8 +433,8 @@ impl<'a> Grounder<'a, '_> {
                 }
             }
             Head::Function(from, to) => Type::Lambda {
-                from: self.head_type(from, variables, depth + 1)?,
-                to: self.head_type(to, variables, depth + 1)?,
+                from: self.head_type(from, variables)?,
+                to: self.head_type(to, variables)?,
             },
         };
         Ok(self.arena.alloc(Located::at_zero(typ)))
@@ -505,6 +457,15 @@ impl<'a> Grounder<'a, '_> {
             }
         }
         Ok(())
+    }
+}
+
+/// A superclass or specialization lookup fails for a reason of its own, or because
+/// the compile ran out of fuel.
+fn resolution_error(error: nash_solve::evidence::Error<'_>) -> Error<'_> {
+    match error.reason {
+        nash_solve::evidence::Failure::OutOfFuel => Error::OutOfFuel,
+        reason => Error::Resolution(reason),
     }
 }
 

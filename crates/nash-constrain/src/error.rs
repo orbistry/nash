@@ -94,7 +94,8 @@ pub enum Error<'a> {
         available: &'a [&'a [nash_ast::Head<'a>]],
         because: &'a [Requirement<'a>],
     },
-    ImplResolutionLimit {
+    /// The compile ran out of fuel while resolving this requirement.
+    OutOfFuel {
         region: Region,
         name: &'a str,
         trait_: nash_ast::QualifiedName<'a>,

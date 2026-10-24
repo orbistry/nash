@@ -2,9 +2,9 @@
 source: crates/nash-report/src/type_/tests.rs
 description: "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nimpl Eq (Primitive.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n"
 ---
-nash::type::impl_resolution_limit
+nash::type::out_of_fuel
 
-  × Impl resolution for `Eq` in `f` exceeded the work limit.
+  × Resolving `Eq` in `f` needed more compilation steps than the editor allows.
    ╭─[Main.nash:6:8]
  5 │     eq xs ys = True
  6 │ f xs = eq xs xs
@@ -12,4 +12,4 @@ nash::type::impl_resolution_limit
    ╰────
   help: This requirement remains unchecked; other reported errors still apply.
 
-        Simplify cyclic or growing impl constraints.
+        `nash check` has no step limit. Simplify cyclic or growing impl constraints.

@@ -444,10 +444,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(graph.order, [literal.clone(), main.clone()]);
-        let result = build(db.clone(), &graph, &modules).await;
+        let result = build(db.clone(), &graph, &modules, crate::Fuel::Unlimited).await;
         assert!(result.is_success(), "{result:?}");
         modules.insert(literal.clone(), Some("example/literals".parse().unwrap()));
-        let result = build(db.clone(), &graph, &modules).await;
+        let result = build(db.clone(), &graph, &modules, crate::Fuel::Unlimited).await;
         assert!(
             matches!(&result.modules[&main], ModuleResult::Failed(reports) if reports.reports.iter().any(|report| report.title == "AMBIGUOUS TYPE"))
         );

@@ -41,8 +41,8 @@ module exports neither an interface nor successful solved output. Mark its
 dependents as blocked by the original failure instead of inventing missing
 imports or missing types.
 
-Resolution limits stop the affected computation and produce a diagnostic;
-they do not discard errors already collected or suppress independent work.
+Running out of compilation fuel stops the affected computation and produces a
+diagnostic; it does not discard errors already collected or suppress independent work.
 Never silently truncate the result. Any resource limit on diagnostic collection
 must explicitly report that additional errors may remain.
 

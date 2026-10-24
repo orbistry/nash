@@ -50,6 +50,7 @@ impl Dependencies {
                 pending.push(child);
             }
         }
+        nash_ast::fuel::charge(seen.len());
     }
 
     /// Move the indexes keyed by representative along the merges made since

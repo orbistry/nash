@@ -1,5 +1,6 @@
 mod evidence;
 pub use evidence::same_type;
+pub mod fuel;
 pub mod head;
 pub mod primitives;
 

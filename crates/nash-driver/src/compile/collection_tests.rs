@@ -28,7 +28,7 @@ async fn independent_failures_block_only_their_dependents() {
     let uris: Vec<_> = files.iter().map(|(name, _)| url(name)).collect();
     let graph = build_graph(db.clone(), &uris).await.unwrap();
     let origins = uris.iter().cloned().map(|uri| (uri, None)).collect();
-    let result = build(db, &graph, &origins).await;
+    let result = build(db, &graph, &origins, Fuel::Unlimited).await;
     assert_eq!(result.success, 1);
     assert_eq!(result.failed, 4);
     assert_eq!(result.interfaces.len(), 1);
@@ -58,6 +58,7 @@ async fn unreadable_source_does_not_hide_independent_errors() {
         db,
         &graph,
         &uris.iter().cloned().map(|uri| (uri, None)).collect(),
+        Fuel::Unlimited,
     )
     .await;
     assert!(matches!(

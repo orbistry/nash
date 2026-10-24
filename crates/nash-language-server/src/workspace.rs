@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use nash_driver::{
-    Database, DriverError, FileSystemSource, InMemorySource, ModuleOrigins, ModuleResult,
+    Database, DriverError, FileSystemSource, Fuel, InMemorySource, ModuleOrigins, ModuleResult,
     OverlaySource, Project, build, build_graph,
 };
 use nash_report::Source;
@@ -15,6 +15,13 @@ use tower_lsp_server::ls_types::{
 use url::Url;
 
 use crate::diagnostics::to_lsp;
+
+/// Compilation steps each module may take before the editor gives up on it, so
+/// a looping program reports a diagnostic instead of freezing the server.
+/// The largest Base module needs about 62 thousand steps; a looping program
+/// spends this many in 1 to 2 seconds on a dev build. `nash check` runs with
+/// unlimited fuel.
+pub(crate) const COMPILE_FUEL: Fuel = Fuel::Limited(10_000_000);
 
 struct Buffer {
     text: String,
@@ -144,7 +151,7 @@ impl Workspace {
             modules.extend(nash_driver::bundled_base::modules());
             let graph =
                 build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
-            Ok::<_, DriverError>(build(db, &graph, &modules).await)
+            Ok::<_, DriverError>(build(db, &graph, &modules, COMPILE_FUEL).await)
         }
         .await;
         let mut diagnostics: BTreeMap<Uri, Vec<Diagnostic>> = BTreeMap::new();
@@ -227,6 +234,8 @@ mod tests {
 
     const CLEAN: &str = "module Main exposing (..)\nvalue = ()\n";
     const BROKEN: &str = "module Main exposing (..)\nvalue = unknown\n";
+    /// Resolving `Keep (list unit)` needs `Keep (list (list unit))`, and so on.
+    const LOOPING: &str = "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list (list 'a)) => Keep (list 'a) where\n    keep xs = xs\nvalue : list unit\nvalue = keep [()]\n";
 
     fn fixture() -> (tempfile::TempDir, Uri) {
         let dir = tempfile::tempdir().unwrap();
@@ -296,6 +305,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_looping_program_reports_running_out_of_fuel_instead_of_hanging() {
+        let (_dir, uri) = fixture();
+        let mut workspace = Workspace::default();
+        workspace.open(uri.clone(), LOOPING.into(), 1);
+        let (notifications, error) = workspace.rebuild(&uri).await;
+        assert!(error.is_none(), "{error:?}");
+        let codes: Vec<_> = for_uri(&notifications, &uri)
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.clone())
+            .collect();
+        assert_eq!(
+            codes,
+            [Some(NumberOrString::String(
+                "nash::type::out_of_fuel".into()
+            ))]
+        );
+    }
+
+    #[tokio::test]
     async fn close_discards_overlay_and_clears_diagnostics() {
         let (dir, uri) = fixture();
         let mut workspace = Workspace::default();
@@ -333,7 +362,7 @@ mod tests {
         let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
             .await
             .unwrap();
-        let result = build(db, &graph, &modules).await;
+        let result = build(db, &graph, &modules, COMPILE_FUEL).await;
         let modules = result.ordered_reports();
         let problems: Vec<_> = modules
             .iter()

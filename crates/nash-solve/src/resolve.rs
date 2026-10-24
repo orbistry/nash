@@ -1,6 +1,6 @@
 //! Coherent selection from known heads and read-only probes for relational
 //! equalities. The solver commits only a unique candidate's equalities.
-use nash_ast::head::WORK_LIMIT;
+use nash_ast::fuel::{OutOfFuel, tick};
 use nash_ast::{HeadCon, ImplKey, QualifiedName};
 use nash_can::environment::{ImplInfo, Tables};
 use nash_constrain::{Content, FlatType, UnionFind, Variable};
@@ -44,7 +44,7 @@ pub(crate) fn has_outer_flex(uf: &mut UnionFind<'_>, args: &[Variable], rank: us
 }
 
 pub(crate) enum Selection<'a> {
-    Limit,
+    OutOfFuel,
     Deferred,
     Missing,
     Impl {
@@ -153,13 +153,12 @@ impl<'a> nash_ast::head::Types<'a> for InferenceTypes<'_, 'a> {
         &mut self,
         first: Variable,
         second: Variable,
-        remaining: &mut usize,
-    ) -> Result<nash_ast::head::Match<()>, nash_ast::head::Limit> {
-        use nash_ast::head::{Match, step};
+    ) -> Result<nash_ast::head::Match<()>, OutOfFuel> {
+        use nash_ast::head::Match;
         let mut pending = vec![(first, second)];
         let mut deferred = false;
         while let Some((first, second)) = pending.pop() {
-            step(remaining)?;
+            tick()?;
             if self.0.find(first) == self.0.find(second) {
                 continue;
             }
@@ -247,13 +246,8 @@ impl<'a> nash_ast::head::Types<'a> for ClassedTypes<'_, 'a> {
     ) -> nash_ast::head::Match<Vec<Variable>> {
         self.types.constructor(node, expected)
     }
-    fn equal(
-        &mut self,
-        a: Variable,
-        b: Variable,
-        remaining: &mut usize,
-    ) -> Result<nash_ast::head::Match<()>, nash_ast::head::Limit> {
-        self.types.equal(a, b, remaining)
+    fn equal(&mut self, a: Variable, b: Variable) -> Result<nash_ast::head::Match<()>, OutOfFuel> {
+        self.types.equal(a, b)
     }
     fn in_class(
         &mut self,
@@ -355,10 +349,8 @@ pub(crate) fn select<'a>(
 ) -> Selection<'a> {
     use nash_ast::head::{ImplSelection, SelectPolicy, select_impl};
     if args.len() >= 2 {
-        match given_candidates(tables, uf, trait_, args, givens, allocated, &mut {
-            WORK_LIMIT
-        }) {
-            None => return Selection::Limit,
+        match given_candidates(tables, uf, trait_, args, givens, allocated) {
+            None => return Selection::OutOfFuel,
             Some(candidates) if !candidates.is_empty() => return Selection::Deferred,
             Some(_) => {}
         }
@@ -373,14 +365,8 @@ pub(crate) fn select<'a>(
     let candidates = tables
         .impls_for(trait_)
         .map(|(key, info)| (key.heads, info.variables.len(), (key, *info)));
-    match select_impl(
-        &mut types,
-        candidates,
-        args,
-        &mut { WORK_LIMIT },
-        SelectPolicy::Defer,
-    ) {
-        Err(_) => Selection::Limit,
+    match select_impl(&mut types, candidates, args, SelectPolicy::Defer) {
+        Err(_) => Selection::OutOfFuel,
         Ok(ImplSelection::Deferred) => Selection::Deferred,
         Ok(ImplSelection::Selected {
             info: (key, info),
@@ -397,7 +383,7 @@ pub(crate) fn select<'a>(
 
 pub(crate) enum Coverage<'a> {
     NotApplicable,
-    Limit,
+    OutOfFuel,
     /// No given holds the wanted trait at this rigid subject.
     Unstated(Variable),
     /// A representation cell selects no impl.
@@ -422,7 +408,6 @@ pub(crate) fn coverage<'a>(
     args: &[Variable],
     givens: &[crate::preds::Body<'a>],
     allocated: &mut Vec<Variable>,
-    remaining: &mut usize,
 ) -> Coverage<'a> {
     use nash_ast::head::Coverage as Cells;
     let candidates: Vec<_> = tables
@@ -430,8 +415,8 @@ pub(crate) fn coverage<'a>(
         .map(|(key, info)| (key.heads, info.variables.len(), *info))
         .collect();
     let mut types = ClassedTypes::new(uf, tables, givens, allocated);
-    match nash_ast::head::cover_impls(&mut types, trait_, &candidates, args, remaining) {
-        Err(_) => Coverage::Limit,
+    match nash_ast::head::cover_impls(&mut types, trait_, &candidates, args) {
+        Err(_) => Coverage::OutOfFuel,
         Ok(Cells::NotApplicable) => Coverage::NotApplicable,
         Ok(Cells::Unstated(subject)) => Coverage::Unstated(subject),
         Ok(Cells::Missing(_)) => Coverage::Uncovered,
@@ -476,16 +461,11 @@ impl<'a> Probe<'_, 'a> {
         }
     }
 
-    fn occurs(
-        &mut self,
-        needle: Variable,
-        value: Variable,
-        remaining: &mut usize,
-    ) -> Result<bool, nash_ast::head::Limit> {
+    fn occurs(&mut self, needle: Variable, value: Variable) -> Result<bool, OutOfFuel> {
         let mut pending = vec![value];
         let mut seen = std::collections::BTreeSet::new();
         while let Some(value) = pending.pop() {
-            nash_ast::head::step(remaining)?;
+            tick()?;
             let value = self.root(value);
             if value == needle {
                 return Ok(true);
@@ -534,17 +514,12 @@ impl<'a> nash_ast::head::Types<'a> for Probe<'_, 'a> {
         self.classes.push((node, class));
         nash_ast::head::Match::Yes(())
     }
-    fn equal(
-        &mut self,
-        a: Variable,
-        b: Variable,
-        remaining: &mut usize,
-    ) -> Result<nash_ast::head::Match<()>, nash_ast::head::Limit> {
+    fn equal(&mut self, a: Variable, b: Variable) -> Result<nash_ast::head::Match<()>, OutOfFuel> {
         use nash_ast::head::Match;
         let mut pending = vec![(a, b)];
         let mut deferred = false;
         while let Some((a, b)) = pending.pop() {
-            nash_ast::head::step(remaining)?;
+            tick()?;
             let a = self.root(a);
             let b = self.root(b);
             if a == b {
@@ -554,7 +529,7 @@ impl<'a> nash_ast::head::Types<'a> for Probe<'_, 'a> {
             let (bv, ba) = self.types.types.view(b);
             if av == View::Flexible || bv == View::Flexible {
                 let (var, value) = if av == View::Flexible { (a, b) } else { (b, a) };
-                if self.occurs(var, value, remaining)? {
+                if self.occurs(var, value)? {
                     return Ok(Match::No);
                 }
                 self.substitutions.insert(var, value);
@@ -601,7 +576,6 @@ fn given_candidates<'a>(
     args: &[Variable],
     givens: &[crate::preds::Body<'a>],
     allocated: &mut Vec<Variable>,
-    remaining: &mut usize,
 ) -> Option<Candidates> {
     use nash_ast::head::{Match, Types};
     let mut candidates = Vec::new();
@@ -633,7 +607,7 @@ fn given_candidates<'a>(
         };
         let mut matched = Match::Yes(());
         for (a, b) in args.iter().zip(supplied) {
-            match probe.equal(*a, *b, remaining).ok()? {
+            match probe.equal(*a, *b).ok()? {
                 Match::No => {
                     matched = Match::No;
                     break;
@@ -665,9 +639,7 @@ pub(crate) fn improvement<'a>(
     if args.len() < 2 {
         return None;
     }
-    let mut remaining = WORK_LIMIT;
-    let mut candidates =
-        given_candidates(tables, uf, trait_, args, givens, allocated, &mut remaining)?;
+    let mut candidates = given_candidates(tables, uf, trait_, args, givens, allocated)?;
     if !candidates.is_empty() {
         return if candidates.len() == 1 {
             candidates.pop().flatten().filter(|e| !e.is_empty())
@@ -683,14 +655,8 @@ pub(crate) fn improvement<'a>(
             equations: Vec::new(),
             classes: Vec::new(),
         };
-        let matched = nash_ast::head::matches(
-            &mut probe,
-            key.heads,
-            args,
-            info.variables.len(),
-            &mut remaining,
-        )
-        .ok()?;
+        let matched =
+            nash_ast::head::matches(&mut probe, key.heads, args, info.variables.len()).ok()?;
         if matches!(matched, Match::No) {
             continue;
         }
@@ -712,7 +678,7 @@ pub(crate) fn improvement<'a>(
             equations: Vec::new(),
             classes: Vec::new(),
         };
-        match probe.equal(args[0], args[1], &mut remaining).ok()? {
+        match probe.equal(args[0], args[1]).ok()? {
             Match::No => {}
             Match::Deferred => candidates.push(None),
             Match::Yes(()) => candidates.push(Some(probe.equations)),
@@ -755,15 +721,9 @@ mod tests {
             [("a", unknown), ("b", unit)].into(),
         ))));
         let mut types = InferenceTypes(&mut uf);
-        assert!(matches!(
-            types.equal(first, second, &mut 100),
-            Ok(Match::Yes(()))
-        ));
-        assert!(matches!(types.equal(first, fewer, &mut 100), Ok(Match::No)));
-        assert!(matches!(
-            types.equal(first, flexible, &mut 100),
-            Ok(Match::Deferred)
-        ));
+        assert!(matches!(types.equal(first, second), Ok(Match::Yes(()))));
+        assert!(matches!(types.equal(first, fewer), Ok(Match::No)));
+        assert!(matches!(types.equal(first, flexible), Ok(Match::Deferred)));
         assert_ne!(types.0.find(first), types.0.find(second));
         assert!(matches!(types.0.get(unknown).content, Content::FlexVar(_)));
     }

@@ -1,4 +1,6 @@
-use nash_driver::{Database, InMemorySource, build_graph_with_tests, bundled_base, test_with};
+use nash_driver::{
+    Database, Fuel, InMemorySource, build_graph_with_tests, bundled_base, test_with,
+};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use url::Url;
@@ -17,7 +19,7 @@ async fn run(source: &str, trace: nash_config::TraceLevel) -> String {
     )
     .await
     .unwrap();
-    let (report, programs) = test_with(db, &graph, &modules, move |solved| {
+    let (report, programs) = test_with(db, &graph, &modules, Fuel::Unlimited, move |solved| {
         nash_driver::build::compile_tests_with(solved, |uri| {
             (uri == &main).then_some(nash_config::Build {
                 trace_level: trace,
@@ -188,7 +190,7 @@ tests
     )
     .await
     .unwrap();
-    let (report, programs) = test_with(db, &graph, &modules, move |solved| {
+    let (report, programs) = test_with(db, &graph, &modules, Fuel::Unlimited, move |solved| {
         nash_driver::build::compile_tests_with(solved, |uri| {
             roots.contains(uri).then_some(nash_config::Build {
                 optimize: if uri.path().ends_with("Baseline.nash") {

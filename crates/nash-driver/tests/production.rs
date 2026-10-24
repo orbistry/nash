@@ -1,4 +1,4 @@
-use nash_driver::{Database, InMemorySource, build, build_graph, build_with};
+use nash_driver::{Database, Fuel, InMemorySource, build, build_graph, build_with};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
 use url::Url;
@@ -66,7 +66,7 @@ async fn production_excludes_test_blocks_and_their_imports() {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (report, output) = build_with(db.clone(), &graph, &origins, |solved| {
+    let (report, output) = build_with(db.clone(), &graph, &origins, Fuel::Unlimited, |solved| {
         assert_eq!(
             solved
                 .modules
@@ -84,7 +84,7 @@ async fn production_excludes_test_blocks_and_their_imports() {
     insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
         insta::assert_snapshot!(output[0].uplc);
     });
-    let checked = build(db, &graph, &origins).await;
+    let checked = build(db, &graph, &origins, Fuel::Unlimited).await;
     insta::with_settings!({description => files.iter().map(|(_, source)| *source).collect::<Vec<_>>().join("\n"), omit_expression => true}, {
         insta::assert_snapshot!("check_test_imports", diagnostics(&checked));
     });
@@ -106,7 +106,7 @@ async fn production_keeps_normal_import_errors() {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (report, output) = build_with(db, &graph, &origins, |_| {
+    let (report, output) = build_with(db, &graph, &origins, Fuel::Unlimited, |_| {
         panic!("invalid production module reached codegen")
     })
     .await;
@@ -150,17 +150,23 @@ async fn check_retains_tests_and_production_has_no_test_dependency_edges() {
             .collect::<Vec<_>>(),
         vec![&helper]
     );
-    let checked = build(db.clone(), &graph, &origins).await;
+    let checked = build(db.clone(), &graph, &origins, Fuel::Unlimited).await;
     assert!(checked.is_success(), "{checked:#?}");
-    let (checked, retained) = nash_driver::test_with(db.clone(), &graph, &origins, move |solved| {
-        let main = solved
-            .modules
-            .iter()
-            .find(|module| module.uri == main)
-            .unwrap();
-        assert_eq!(main.source, source);
-        main.module.tests.len()
-    })
+    let (checked, retained) = nash_driver::test_with(
+        db.clone(),
+        &graph,
+        &origins,
+        Fuel::Unlimited,
+        move |solved| {
+            let main = solved
+                .modules
+                .iter()
+                .find(|module| module.uri == main)
+                .unwrap();
+            assert_eq!(main.source, source);
+            main.module.tests.len()
+        },
+    )
     .await;
     assert!(checked.is_success());
     assert_eq!(retained, Some(1));
@@ -197,7 +203,7 @@ async fn check_rejects_non_unit_test_body() {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let checked = build(db, &graph, &origins).await;
+    let checked = build(db, &graph, &origins, Fuel::Unlimited).await;
     let nash_driver::ModuleResult::Failed(_) = &checked.modules[&uri] else {
         panic!("invalid test body passed: {checked:?}")
     };
@@ -228,7 +234,7 @@ async fn dependency_validators_are_not_emitted_and_selected_roots_keep_their_tar
     )
     .await
     .unwrap();
-    let (report, outputs) = build_with(db, &graph, &origins, move |solved| {
+    let (report, outputs) = build_with(db, &graph, &origins, Fuel::Unlimited, move |solved| {
         nash_driver::build::build_validators_matching_with(solved, |uri| {
             (uri == &main).then_some(nash_config::Build::default())
         })

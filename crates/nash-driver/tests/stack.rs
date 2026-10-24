@@ -1,6 +1,6 @@
 //! Deep input compiles on the compiler stack.
 
-use nash_driver::{Database, InMemorySource, build, build_graph};
+use nash_driver::{Database, Fuel, InMemorySource, build, build_graph};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
 use url::Url;
@@ -24,6 +24,6 @@ async fn nested_parentheses_have_no_limit() {
     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let report = build(db, &graph, &modules).await;
+    let report = build(db, &graph, &modules, Fuel::Unlimited).await;
     assert!(report.is_success(), "{:?}", report.ordered_reports());
 }

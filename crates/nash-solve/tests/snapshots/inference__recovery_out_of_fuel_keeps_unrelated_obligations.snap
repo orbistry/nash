@@ -17,9 +17,9 @@ nash::type::mismatch
     ╰────
 
 
-nash::type::impl_resolution_limit
+nash::type::out_of_fuel
 
-  × Impl resolution for `Keep` in `keep` exceeded the work limit.
+  × Resolving `Keep` in `keep` needed more compilation steps than the editor allows.
    ╭─[Main.nash:8:10]
  7 │     keep xs = xs
  8 │ value = (keep [(assert Primitive.True)], missing (assert Primitive.True))
@@ -28,7 +28,7 @@ nash::type::impl_resolution_limit
    ╰────
   help: This requirement remains unchecked; other reported errors still apply.
 
-        Simplify cyclic or growing impl constraints.
+        `nash check` has no step limit. Simplify cyclic or growing impl constraints.
 
 
 nash::type::missing_impl

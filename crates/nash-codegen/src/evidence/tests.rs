@@ -294,7 +294,8 @@ fn malformed_slots_and_open_types_return_errors() {
 }
 
 #[test]
-fn cycles_and_deep_types_stop_before_recursive_allocation() {
+fn running_out_of_fuel_stops_before_recursive_allocation() {
+    use nash_ast::fuel::{self, Fuel};
     let arena = Arena::new();
     let tables = fixture(&arena);
     let binder = NodeId::def(arena.alloc(Located::at_zero("f")));
@@ -303,21 +304,21 @@ fn cycles_and_deep_types_stop_before_recursive_allocation() {
         &*arena.alloc_slice_fill_iter([Evidence::Given { binder, index: 0 }]),
     )]);
     assert!(matches!(
-        ground(
+        fuel::run(Fuel::Limited(1000), || ground(
             &arena,
             &tables,
             &Evidence::Given { binder, index: 0 },
             &Substitution::new(),
             &givens
-        ),
-        Err(Error::Limit)
+        )),
+        Err(Error::OutOfFuel)
     ));
     let mut typ = named(&arena, "int", &[]);
-    for _ in 0..=DEPTH_LIMIT {
+    for _ in 0..100 {
         typ = named(&arena, "list", arena.alloc_slice_copy(&[typ]));
     }
     assert!(matches!(
-        ground(
+        fuel::run(Fuel::Limited(50), || ground(
             &arena,
             &tables,
             &Evidence::Repr {
@@ -326,8 +327,8 @@ fn cycles_and_deep_types_stop_before_recursive_allocation() {
             },
             &Substitution::new(),
             &HashMap::new()
-        ),
-        Err(Error::Limit)
+        )),
+        Err(Error::OutOfFuel)
     ));
 }
 

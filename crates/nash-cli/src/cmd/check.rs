@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use miette::{IntoDiagnostic, Result};
 use nash_driver::{
-    Database, FileSystemSource, ModuleResult, Project, build, build_graph_with_tests,
+    Database, FileSystemSource, Fuel, ModuleResult, Project, build, build_graph_with_tests,
 };
 use nash_report::Severity;
 use tokio::sync::Mutex;
@@ -173,6 +173,9 @@ impl Args {
         )
         .await
         .into_diagnostic()?;
-        Ok((project.root, build(db, &graph, &modules).await))
+        Ok((
+            project.root,
+            build(db, &graph, &modules, Fuel::Unlimited).await,
+        ))
     }
 }

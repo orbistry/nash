@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use nash_driver::{Project, Database, build, build_graph};
+//! use nash_driver::{Fuel, Project, Database, build, build_graph};
 //! use nash_driver::source::FileSystemSource;
 //! use std::sync::Arc;
 //! use tokio::sync::Mutex;
@@ -32,7 +32,7 @@
 //!     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>()).await?;
 //!
 //!     // Compile everything
-//!     let result = build(db, &graph, &modules).await;
+//!     let result = build(db, &graph, &modules, Fuel::Unlimited).await;
 //!
 //!     println!("Compiled {} modules ({} success, {} failed)",
 //!         result.total, result.success, result.failed);
@@ -61,5 +61,6 @@ pub use database::Database;
 pub use error::DriverError;
 pub use graph::DepGraph;
 pub use interface::{Export, Interface};
+pub use nash_ast::fuel::Fuel;
 pub use project::{ModuleOrigins, Project, ProjectMember};
 pub use source::{FileSource, FileSystemSource, InMemorySource, OverlaySource};

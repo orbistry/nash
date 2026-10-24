@@ -1,0 +1,14 @@
+---
+source: crates/nash-can/tests/impls.rs
+description: "module Main exposing (..)\ntrait Keep 'a where\n    keep : 'a -> 'a\nimpl Keep (list 'a) where\n    keep x = x\nimpl Keep (list int) where\n    keep x = x\n"
+info: diagnostic
+---
+nash::type::out_of_fuel
+
+  × Checking this impl needed more compilation steps than the editor allows:
+   ╭─[src/Main.nash:6:1]
+ 5 │         keep x = x
+ 6 │ ╭─▶ impl Keep (list int) where
+ 7 │ ╰─▶     keep x = x
+   ╰────
+  help: `nash check` has no step limit. Simplify the impl head or its context.

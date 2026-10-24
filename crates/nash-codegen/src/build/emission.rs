@@ -68,7 +68,7 @@ impl<'a> Engine<'a, '_, '_> {
                         (spec.binder, spec.value.unwrap())
                     })
                     .collect::<Vec<_>>();
-                body = self.recursive_bindings(&definitions, body, &mut 4096)?;
+                body = self.recursive_bindings(&definitions, body)?;
             } else {
                 let spec = &self.specs[selected[component[0]]];
                 body = self.ir.let_(spec.binder, spec.value.unwrap(), body);
@@ -82,12 +82,8 @@ impl<'a> Engine<'a, '_, '_> {
         &self,
         definitions: &[(Binder<'a>, &'a Core<'a>)],
         root: &'a Core<'a>,
-        remaining: &mut usize,
     ) -> Result<&'a Core<'a>, Error<'a>> {
-        if *remaining == 0 {
-            return Err(Error::RecursionNormalizationLimit);
-        }
-        *remaining -= 1;
+        tick()?;
         let Some(index) = definitions
             .iter()
             .position(|(_, v)| !matches!(v.kind, CoreKind::Lam { .. }))
@@ -128,13 +124,10 @@ impl<'a> Engine<'a, '_, '_> {
                 let mut changed = replace(*body);
                 if matches!(value.kind, CoreKind::Lam { .. }) {
                     changed.push((*binder, *value));
-                    self.recursive_bindings(&changed, root, remaining)?
+                    self.recursive_bindings(&changed, root)?
                 } else if names(value).is_disjoint(&recursive_names) {
-                    self.ir.let_(
-                        *binder,
-                        value,
-                        self.recursive_bindings(&changed, root, remaining)?,
-                    )
+                    self.ir
+                        .let_(*binder, value, self.recursive_bindings(&changed, root)?)
                 } else {
                     return Err(Error::RecursiveValue);
                 }
@@ -146,13 +139,11 @@ impl<'a> Engine<'a, '_, '_> {
                         .iter()
                         .map(|b| (b.binder, self.ir.lam(b.params, b.body))),
                 );
-                self.recursive_bindings(&changed, root, remaining)?
+                self.recursive_bindings(&changed, root)?
             }
             CoreKind::Trace { message, body } if names(message).is_disjoint(&recursive_names) => {
-                self.ir.trace(
-                    message,
-                    self.recursive_bindings(&replace(*body), root, remaining)?,
-                )
+                self.ir
+                    .trace(message, self.recursive_bindings(&replace(*body), root)?)
             }
             CoreKind::Case {
                 kind,
@@ -164,17 +155,13 @@ impl<'a> Engine<'a, '_, '_> {
                     .iter()
                     .map(|branch| {
                         Ok(Branch {
-                            body: self.recursive_bindings(
-                                &replace(branch.body),
-                                root,
-                                remaining,
-                            )?,
+                            body: self.recursive_bindings(&replace(branch.body), root)?,
                             ..*branch
                         })
                     })
                     .collect::<Result<Vec<_>, Error<'a>>>()?;
                 let default = default
-                    .map(|body| self.recursive_bindings(&replace(body), root, remaining))
+                    .map(|body| self.recursive_bindings(&replace(body), root))
                     .transpose()?;
                 self.ir.case(*kind, scrutinee, &branches, default, root.ty)
             }
@@ -184,11 +171,8 @@ impl<'a> Engine<'a, '_, '_> {
                 let binder = definitions[index].0;
                 let mut rest = definitions.to_vec();
                 rest.remove(index);
-                self.ir.let_(
-                    binder,
-                    value,
-                    self.recursive_bindings(&rest, root, remaining)?,
-                )
+                self.ir
+                    .let_(binder, value, self.recursive_bindings(&rest, root)?)
             }
             _ => return Err(Error::RecursiveValue),
         })

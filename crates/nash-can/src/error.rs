@@ -59,7 +59,8 @@ pub enum Error<'a> {
     RecordTypeOutsideAlias {
         region: Region,
     },
-    ImplPatternLimit {
+    /// Overlap or superclass search used up the compile's fuel.
+    OutOfFuel {
         region: Region,
     },
     NegateWithoutNum {

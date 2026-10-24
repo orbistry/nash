@@ -1,4 +1,4 @@
-use nash_driver::{Database, InMemorySource, build_graph, build_with, bundled_base};
+use nash_driver::{Database, Fuel, InMemorySource, build_graph, build_with, bundled_base};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use url::Url;
@@ -13,7 +13,7 @@ pub async fn compile_validator(source: &str) -> nash_driver::build::ValidatorOut
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (report, result) = build_with(db, &graph, &origins, |solved| {
+    let (report, result) = build_with(db, &graph, &origins, Fuel::Unlimited, |solved| {
         nash_driver::build::build_validators(solved, nash_config::Build::default())
     })
     .await;

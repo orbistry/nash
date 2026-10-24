@@ -889,14 +889,14 @@ fn unresolved_application() {
     ));
 }
 #[test]
-fn impl_resolution_limit() {
+fn out_of_fuel() {
     let source = "module Main exposing (..)\ntrait Eq 'a where\n    eq : 'a -> 'a -> Primitive.bool\nimpl Eq (Primitive.list 'a) => Eq 'a where\n    eq xs ys = True\nf xs = eq xs xs\n";
     let region = || source_region(source, "eq xs xs");
     let settings = source_settings(source);
     let _guard = settings.bind_to_scope();
     insta::assert_snapshot!(show(
         source,
-        &Error::ImplResolutionLimit {
+        &Error::OutOfFuel {
             region: region(),
             name: "f",
             trait_: nash_ast::primitives::eq_trait()

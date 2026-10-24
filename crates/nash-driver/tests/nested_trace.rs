@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use nash_codegen::build::{Build, Input, TraceConfig};
-use nash_driver::{Database, InMemorySource, build_graph, build_with};
+use nash_driver::{Database, Fuel, InMemorySource, build_graph, build_with};
 use nash_plutus::{
     arena::Arena, binder::DeBruijn, flat, machine::PlutusVersion, pretty, term::Term,
 };
@@ -22,7 +22,7 @@ async fn compile() -> BTreeMap<String, Vec<u8>> {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (report, programs) = build_with(db, &graph, &origins, move |solved| {
+    let (report, programs) = build_with(db, &graph, &origins, Fuel::Unlimited, move |solved| {
         let arena = Arena::new();
         let build = Build::new(solved.modules.iter().map(|module| Input {
             module: module.module,

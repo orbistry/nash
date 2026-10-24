@@ -205,22 +205,24 @@ pub(super) fn unresolved_application(
     )
 }
 
-pub(super) fn resolution_limit(
+pub(super) fn out_of_fuel(
     l: &Localizer,
     region: Region,
     name: &str,
     trait_: QualifiedName<'_>,
 ) -> Report {
     report(
-        "IMPL RESOLUTION LIMIT",
+        "COMPILATION STEP LIMIT",
         region,
         Doc::text(format!(
-            "Impl resolution for `{}` in `{name}` exceeded the work limit.",
+            "Resolving `{}` in `{name}` needed more compilation steps than the editor allows.",
             l.to_string(trait_.home, trait_.name)
         )),
         [
             Doc::text("This requirement remains unchecked; other reported errors still apply."),
-            Doc::text("Simplify cyclic or growing impl constraints."),
+            Doc::text(
+                "`nash check` has no step limit. Simplify cyclic or growing impl constraints.",
+            ),
         ],
     )
 }

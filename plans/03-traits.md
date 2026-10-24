@@ -821,9 +821,10 @@ are flexible and may contain nested types or higher-kinded applications.
 It uses rigid, nominal terms, flattens type applications, and ignores source
 regions when comparing predicates. Given superclass closure is computed
 once per impl. Active instance cycles fail; expanding contexts and
-structural comparisons share a 16,384-step budget, with a depth limit of
-128. `MissingSuperclass` includes the instantiated requirement and a
-`Missing`, `Cycle`, or `Limit` reason. No failed or limited search is a proof.
+structural comparisons draw from the compile's fuel (`nash_ast::fuel`).
+`MissingSuperclass` includes the instantiated requirement and a
+`Missing` or `Cycle` reason; running out of fuel is a separate `OutOfFuel`
+error at the impl. No failed or exhausted search is a proof.
 
 Methods:
 
@@ -1715,8 +1716,8 @@ them to children, and excludes `NO_RANK` generalized variables. A case-branch
 regression verifies this against both inference and the CLI.
 Tests cover nested applications of the same impl, context reduction, missing
 child impls, given precedence through lambdas/local helpers, and expanding
-contexts. Resolution reports `ImplResolutionLimit` after 128 levels or 16,384
-expansions at a boundary. A real CLI project imports the trait and impls from
+contexts. Resolution reports `OutOfFuel` when the compile's fuel runs out at a
+boundary. A real CLI project imports the trait and impls from
 another module and successfully checks `keep [[()]]`.
 Replacing the element with a type that has no impl reports `MissingImpl` at
 the importing module's call and exits with status 1.
@@ -1759,7 +1760,7 @@ impl<'a> Solver<'a> {
             Selected { key, info, substitution } => (key, info, substitution),
             Deferred => return defer_without_binding(id),
             Missing => return Err(self.missing_impl(uf, &pred)),
-            Limit => return Err(self.impl_resolution_limit(uf, &pred)),
+            OutOfFuel => return Err(self.out_of_fuel(uf, &pred)),
         };
         let rank = self.wanted_rank_of(id);
         let subs: Vec<PredId> = info.context.iter().enumerate().map(|(index, ctx)| {
@@ -1909,8 +1910,8 @@ uses `nash_can::types::substitute_type`, retaining alias binders.
 An exact-core Lift predicate on nominally equal, already-Big arguments produces
 `ReflexiveLift`. The kind proof reuses canonical kind inference and permits
 inferred record carriers only while their representation stays unrestricted.
-Recursive resolution and structural traversal share 16,384 work steps and
-depth 128; substitution is charged before allocation. Callers provide
+Recursive resolution and structural traversal draw from the compile's fuel;
+substitution is charged before allocation. Callers provide
 well-kinded canonical types and complete metadata. This API has no givens and
 does not create inference variables.
 

@@ -747,9 +747,6 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
                 nash_can::EntailmentFailure::Cycle => {
                     "Resolving it leads back to the same requirement, forming a cycle."
                 }
-                nash_can::EntailmentFailure::Limit => {
-                    "Resolving it exceeded the search limit because the requirements keep expanding."
-                }
             };
             simple(
                 "MISSING SUPERCLASS",
@@ -897,11 +894,11 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
             &format!("The `{ctor}` constructor has no `{field}` field:"),
             "Check the field name against the constructor declaration.",
         ),
-        Error::ImplPatternLimit { region } => simple(
-            "IMPL PATTERN LIMIT",
+        Error::OutOfFuel { region } => simple(
+            "COMPILATION STEP LIMIT",
             *region,
-            "This impl pattern is too large or deeply nested:",
-            "Simplify the impl head.",
+            "Checking this impl needed more compilation steps than the editor allows:",
+            "`nash check` has no step limit. Simplify the impl head or its context.",
         ),
         Error::NegateWithoutNum { region } => simple(
             "NAMING ERROR",
@@ -952,7 +949,7 @@ pub fn to_report_with_name(source: &Source<'_>, error: &Error<'_>, expected_name
         Error::RecordLiteralNoAlias { .. } => "nash::names::record_literal_no_alias",
         Error::RecordLiteralAmbiguous { .. } => "nash::names::record_literal_ambiguous",
         Error::RecordTypeOutsideAlias { .. } => "nash::names::record_type_outside_alias",
-        Error::ImplPatternLimit { .. } => "nash::names::impl_pattern_limit",
+        Error::OutOfFuel { .. } => "nash::type::out_of_fuel",
         Error::NegateWithoutNum { .. } => "nash::names::negate_without_num",
         Error::DoWithoutMonad { .. } => "nash::names::do_without_monad",
         Error::RefutableBindPattern { .. } => "nash::names::refutable_bind_pattern",
@@ -1580,13 +1577,13 @@ mod coverage {
         );
     }
     #[test]
-    fn impl_pattern_limit() {
+    fn out_of_fuel() {
         source_snapshot!(
-            "variant_impl_pattern_limit",
-            "-- Reduced head from an impl-pattern budget exhaustion.\nimpl Equal «(List (List 'a))» where\n    equal x y = True",
+            "variant_out_of_fuel",
+            "-- Reduced head from a compile that ran out of fuel.\nimpl Equal «(List (List 'a))» where\n    equal x y = True",
             r,
             r2,
-            Error::ImplPatternLimit { region: r() },
+            Error::OutOfFuel { region: r() },
         );
     }
     #[test]
@@ -2941,7 +2938,7 @@ mod branches {
         }
     }
     #[test]
-    fn superclass_failure_reasons() {
+    fn superclass_cycle() {
         let trait_ = QualifiedName {
             home: ModuleName {
                 package: None,
@@ -2949,38 +2946,32 @@ mod branches {
             },
             name: "Equal",
         };
-
-        for (name, reason) in [
-            ("superclass_cycle", nash_can::EntailmentFailure::Cycle),
-            ("superclass_limit", nash_can::EntailmentFailure::Limit),
-        ] {
-            let (_, regions) = marked_source("impl «Core.Equal 'a» where\n    equal x y = True");
-            let r = || regions[0];
-            let arg = Located::at(r(), nash_ast::Type::Var("a"));
-            source_snapshot!(
-                name,
-                "impl «Core.Equal 'a» where\n    equal x y = True",
-                r,
-                r2,
-                Error::MissingSuperclass {
-                    region: r(),
+        let (_, regions) = marked_source("impl «Core.Equal 'a» where\n    equal x y = True");
+        let r = || regions[0];
+        let arg = Located::at(r(), nash_ast::Type::Var("a"));
+        source_snapshot!(
+            "superclass_cycle",
+            "impl «Core.Equal 'a» where\n    equal x y = True",
+            r,
+            r2,
+            Error::MissingSuperclass {
+                region: r(),
+                trait_,
+                heads: &[Located::at(
+                    r(),
+                    nash_ast::Head::Var {
+                        index: 0,
+                        repr: nash_ast::primitives::ReprSet::ALL
+                    }
+                )],
+                superclass: &nash_ast::Pred::Trait {
                     trait_,
-                    heads: &[Located::at(
-                        r(),
-                        nash_ast::Head::Var {
-                            index: 0,
-                            repr: nash_ast::primitives::ReprSet::ALL
-                        }
-                    )],
-                    superclass: &nash_ast::Pred::Trait {
-                        trait_,
-                        args: &[&arg],
-                    },
-                    index: 0,
-                    reason,
+                    args: &[&arg],
                 },
-            );
-        }
+                index: 0,
+                reason: nash_can::EntailmentFailure::Cycle,
+            },
+        );
     }
     #[test]
     fn duplicate_pattern_contexts() {

@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use bumpalo::Bump;
-use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
+use nash_ast::fuel::{OutOfFuel, tick};
 use nash_ast::{Pred, QualifiedName, Type};
 use nash_region::Located;
 
@@ -13,7 +13,25 @@ use crate::environment::{ImplInfo, Tables};
 pub enum Failure {
     Missing,
     Cycle,
-    Limit,
+}
+
+/// Why a search stopped: the wanted predicate failed, or the compile ran out of fuel.
+#[derive(Clone, Copy)]
+enum Stop {
+    Failed(Failure),
+    OutOfFuel,
+}
+
+impl From<Failure> for Stop {
+    fn from(failure: Failure) -> Self {
+        Self::Failed(failure)
+    }
+}
+
+impl From<OutOfFuel> for Stop {
+    fn from(OutOfFuel: OutOfFuel) -> Self {
+        Self::OutOfFuel
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -41,19 +59,14 @@ type Substitution<'a> = BTreeMap<&'a str, &'a Term<'a>>;
 struct Resolver<'t, 'a> {
     bump: &'a Bump,
     tables: &'t Tables<'a>,
-    remaining: usize,
 }
 
 impl<'a> Resolver<'_, 'a> {
-    fn canonical(
-        &mut self,
-        term: &'a Term<'a>,
-        depth: usize,
-    ) -> Result<&'a Located<Type<'a>>, Failure> {
-        self.step(depth)?;
+    fn canonical(&mut self, term: &'a Term<'a>) -> Result<&'a Located<Type<'a>>, Stop> {
+        tick()?;
         let mut args = Vec::new();
         for arg in term.args {
-            args.push(self.canonical(arg, depth + 1)?);
+            args.push(self.canonical(arg)?);
         }
         let args = self.bump.alloc_slice_fill_iter(args);
         let typ = match term.con {
@@ -89,21 +102,13 @@ impl<'a> Resolver<'_, 'a> {
         };
         Ok(self.bump.alloc(Located::at_zero(typ)))
     }
-    fn step(&mut self, depth: usize) -> Result<(), Failure> {
-        if depth >= DEPTH_LIMIT || self.remaining == 0 {
-            return Err(Failure::Limit);
-        }
-        self.remaining -= 1;
-        Ok(())
-    }
 
     fn term(
         &mut self,
         typ: &'a Located<Type<'a>>,
         subst: &Substitution<'a>,
-        depth: usize,
-    ) -> Result<&'a Term<'a>, Failure> {
-        self.step(depth)?;
+    ) -> Result<&'a Term<'a>, Stop> {
+        tick()?;
         let (con, args): (_, Vec<_>) = match &typ.value {
             Type::Var(name) => {
                 if let Some(term) = subst.get(name) {
@@ -143,10 +148,10 @@ impl<'a> Resolver<'_, 'a> {
                 fields.iter().map(|f| f.typ).collect(),
             ),
             Type::App { head, args } => {
-                let head = self.term(head, subst, depth + 1)?;
+                let head = self.term(head, subst)?;
                 let mut applied = head.args.to_vec();
                 for arg in *args {
-                    applied.push(self.term(arg, subst, depth + 1)?);
+                    applied.push(self.term(arg, subst)?);
                 }
                 return Ok(self.bump.alloc(Term {
                     con: head.con,
@@ -156,7 +161,7 @@ impl<'a> Resolver<'_, 'a> {
         };
         let mut terms = Vec::new();
         for arg in args {
-            terms.push(self.term(arg, subst, depth + 1)?);
+            terms.push(self.term(arg, subst)?);
         }
         Ok(self.bump.alloc(Term {
             con,
@@ -168,11 +173,11 @@ impl<'a> Resolver<'_, 'a> {
         &mut self,
         pred: &Pred<'a>,
         subst: &Substitution<'a>,
-    ) -> Result<Predicate<'a>, Failure> {
-        self.step(0)?;
+    ) -> Result<Predicate<'a>, Stop> {
+        tick()?;
         let mut args = Vec::new();
         for arg in pred.types() {
-            args.push(self.term(arg, subst, 0)?);
+            args.push(self.term(arg, subst)?);
         }
         Ok(Predicate {
             trait_: pred.trait_ref(),
@@ -180,8 +185,8 @@ impl<'a> Resolver<'_, 'a> {
         })
     }
 
-    fn equal(&mut self, a: Predicate<'a>, b: Predicate<'a>) -> Result<bool, Failure> {
-        self.step(0)?;
+    fn equal(&mut self, a: Predicate<'a>, b: Predicate<'a>) -> Result<bool, Stop> {
+        tick()?;
         if a.trait_ != b.trait_ || a.args.len() != b.args.len() {
             return Ok(false);
         }
@@ -192,15 +197,15 @@ impl<'a> Resolver<'_, 'a> {
             .is_some()
         {
             for term in left.iter_mut().chain(&mut right) {
-                let canonical = self.canonical(term, 0)?;
+                let canonical = self.canonical(term)?;
                 let subject =
                     crate::kinds::representation_subject(self.bump, &self.tables.kinds, canonical);
-                *term = self.term(subject, &BTreeMap::new(), 0)?;
+                *term = self.term(subject, &BTreeMap::new())?;
             }
         }
         let mut pending: Vec<_> = left.into_iter().zip(right).collect();
         while let Some((a, b)) = pending.pop() {
-            self.step(0)?;
+            tick()?;
             if a.con != b.con || a.args.len() != b.args.len() {
                 return Ok(false);
             }
@@ -209,14 +214,14 @@ impl<'a> Resolver<'_, 'a> {
         Ok(true)
     }
 
-    fn givens(&mut self, context: &[Pred<'a>]) -> Result<Vec<Predicate<'a>>, Failure> {
+    fn givens(&mut self, context: &[Pred<'a>]) -> Result<Vec<Predicate<'a>>, Stop> {
         let mut pending = Vec::new();
         for pred in context {
             pending.push(self.predicate(pred, &BTreeMap::new())?);
         }
         let mut result = Vec::new();
         while let Some(pred) = pending.pop() {
-            self.step(0)?;
+            tick()?;
             let mut seen = false;
             for old in &result {
                 if self.equal(pred, *old)? {
@@ -259,8 +264,8 @@ impl<'a> Resolver<'_, 'a> {
         given: &[Predicate<'a>],
         wanted: Predicate<'a>,
         active: &mut Vec<Predicate<'a>>,
-    ) -> Result<(), Failure> {
-        self.step(active.len())?;
+    ) -> Result<(), Stop> {
+        tick()?;
         for pred in given {
             if self.equal(*pred, wanted)? {
                 return Ok(());
@@ -275,7 +280,7 @@ impl<'a> Resolver<'_, 'a> {
                 let args = pred
                     .args
                     .iter()
-                    .map(|arg| self.canonical(arg, 0))
+                    .map(|arg| self.canonical(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 class_givens.push(Pred::Implied {
                     trait_,
@@ -284,7 +289,7 @@ impl<'a> Resolver<'_, 'a> {
             }
         }
         if let Some(required) = wanted.trait_.and_then(nash_ast::primitives::ReprTrait::of) {
-            let typ = self.canonical(wanted.args[0], 0)?;
+            let typ = self.canonical(wanted.args[0])?;
             return match crate::kinds::in_class(
                 self.bump,
                 &self.tables.kinds,
@@ -293,14 +298,14 @@ impl<'a> Resolver<'_, 'a> {
                 &class_givens,
             ) {
                 nash_ast::head::Match::Yes(()) => Ok(()),
-                _ => Err(Failure::Missing),
+                _ => Err(Failure::Missing.into()),
             };
         }
         if wanted.trait_.is_none() {
-            let head = self.canonical(wanted.args[0], 0)?;
+            let head = self.canonical(wanted.args[0])?;
             let args: Vec<_> = wanted.args[1..]
                 .iter()
-                .map(|arg| self.canonical(arg, 0))
+                .map(|arg| self.canonical(arg))
                 .collect::<Result<_, _>>()?;
             let group = Default::default();
             let mut formation = crate::kinds::Formation::new(self.bump, &self.tables.kinds, &group);
@@ -313,7 +318,7 @@ impl<'a> Resolver<'_, 'a> {
             for pred in formation.predicates {
                 let child = self.predicate(&pred, &BTreeMap::new())?;
                 if self.equal(child, wanted)? {
-                    return Err(Failure::Missing);
+                    return Err(Failure::Missing.into());
                 }
                 self.resolve(given, child, active)?;
             }
@@ -329,8 +334,8 @@ impl<'a> Resolver<'_, 'a> {
             };
             match self.resolve(given, big, active) {
                 Ok(()) => return Ok(()),
-                Err(Failure::Missing) => {}
-                Err(reason) => return Err(reason),
+                Err(Stop::Failed(Failure::Missing)) => {}
+                Err(stop) => return Err(stop),
             }
         }
         if self.tables.has_reflexive_lift()
@@ -351,13 +356,13 @@ impl<'a> Resolver<'_, 'a> {
         }
         for pred in active.iter() {
             if self.equal(*pred, wanted)? {
-                return Err(Failure::Cycle);
+                return Err(Failure::Cycle.into());
             }
         }
         let canonical_args: Vec<_> = wanted
             .args
             .iter()
-            .map(|arg| self.canonical(arg, 0))
+            .map(|arg| self.canonical(arg))
             .collect::<Result<_, _>>()?;
         let candidates = self
             .tables
@@ -369,20 +374,18 @@ impl<'a> Resolver<'_, 'a> {
             }),
             candidates,
             &canonical_args,
-            &mut self.remaining,
             nash_ast::head::SelectPolicy::Exact,
-        )
-        .map_err(|_| Failure::Limit)?;
+        )?;
         let nash_ast::head::ImplSelection::Selected {
             info: impl_,
             arguments,
         } = selection
         else {
-            return Err(Failure::Missing);
+            return Err(Failure::Missing.into());
         };
         let mut subst = BTreeMap::new();
         for (name, argument) in impl_.variables.iter().zip(arguments) {
-            subst.insert(*name, self.term(argument, &BTreeMap::new(), 0)?);
+            subst.insert(*name, self.term(argument, &BTreeMap::new())?);
         }
         active.push(wanted);
         for pred in impl_.context {
@@ -414,23 +417,24 @@ pub(crate) fn check<'a>(
             )
         })
         .collect();
-    let mut resolver = Resolver {
-        bump,
-        tables,
-        remaining: WORK_LIMIT,
-    };
+    let mut resolver = Resolver { bump, tables };
     let givens = resolver.givens(impl_.context);
     for (index, superclass) in trait_.supers.iter().enumerate() {
-        let checked = (|| {
-            let givens = givens.as_ref().map_err(|reason| *reason)?;
+        let checked: Result<(), Stop> = (|| {
+            let givens = givens.as_ref().map_err(|stop| *stop)?;
             let mut subst = BTreeMap::new();
             for (parameter, typ) in &canonical_subst {
-                subst.insert(*parameter, resolver.term(typ, &BTreeMap::new(), 0)?);
+                subst.insert(*parameter, resolver.term(typ, &BTreeMap::new())?);
             }
             let wanted = resolver.predicate(superclass, &subst)?;
             resolver.resolve(givens, wanted, &mut Vec::new())
         })();
-        if let Err(reason) = checked {
+        if let Err(stop) = checked {
+            let Stop::Failed(reason) = stop else {
+                return Err(vec![Error::OutOfFuel {
+                    region: impl_.region,
+                }]);
+            };
             return Err(vec![Error::MissingSuperclass {
                 region: impl_.region,
                 trait_: impl_.trait_,

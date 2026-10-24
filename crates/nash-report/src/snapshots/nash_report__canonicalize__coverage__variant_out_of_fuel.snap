@@ -1,0 +1,14 @@
+---
+source: crates/nash-report/src/canonicalize.rs
+description: "-- Reduced head from a compile that ran out of fuel.\nimpl Equal (List (List 'a)) where\n    equal x y = True"
+---
+nash::type::out_of_fuel
+
+  × Checking this impl needed more compilation steps than the editor allows:
+   ╭─[Main.nash:2:12]
+ 1 │ -- Reduced head from a compile that ran out of fuel.
+ 2 │ impl Equal (List (List 'a)) where
+   ·            ────────────────
+ 3 │     equal x y = True
+   ╰────
+  help: `nash check` has no step limit. Simplify the impl head or its context.

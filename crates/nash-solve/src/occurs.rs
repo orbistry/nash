@@ -79,9 +79,11 @@ enum Visit {
 /// occurs check of a binding.
 pub fn reaches_cycle(uf: &mut UnionFind<'_>, roots: &[Variable]) -> bool {
     let mut visits = BTreeMap::new();
-    roots
+    let found = roots
         .iter()
-        .any(|root| reaches_cycle_help(uf, &mut visits, *root))
+        .any(|root| reaches_cycle_help(uf, &mut visits, *root));
+    nash_ast::fuel::charge(visits.len());
+    found
 }
 
 fn reaches_cycle_help(

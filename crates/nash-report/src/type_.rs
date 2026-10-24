@@ -117,11 +117,11 @@ pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
             available,
             because,
         } => traits::missing_impl(localizer, *region, name, *trait_, args, available, because),
-        Error::ImplResolutionLimit {
+        Error::OutOfFuel {
             region,
             name,
             trait_,
-        } => traits::resolution_limit(localizer, *region, name, *trait_),
+        } => traits::out_of_fuel(localizer, *region, name, *trait_),
         Error::MissingConstraint {
             region,
             name,
@@ -184,7 +184,7 @@ pub fn to_report(localizer: &Localizer, error: &Error<'_>) -> Report {
         Error::UnresolvedConstraint { .. } => "nash::type::unresolved_constraint",
         Error::UnresolvedApplication { .. } => "nash::type::unresolved_application",
         Error::MissingImpl { .. } => "nash::type::missing_impl",
-        Error::ImplResolutionLimit { .. } => "nash::type::impl_resolution_limit",
+        Error::OutOfFuel { .. } => "nash::type::out_of_fuel",
         Error::MissingConstraint { .. } => "nash::type::missing_constraint",
         Error::AnnotationVariableEscapes { .. } => "nash::type::annotation_variable_escapes",
         Error::BadExpr(..) => "nash::type::mismatch",

@@ -2,7 +2,6 @@ use crate::environment::{Env, TraitInfo, dups};
 use crate::error::BadHead;
 use crate::{Error, kinds, module, types, warning::Warning};
 use bumpalo::Bump;
-use nash_ast::head::WORK_LIMIT;
 use nash_ast::{Annotation, Head, Impl, ImplKey, Pred, QualifiedName, Type};
 use nash_region::Located;
 use nash_source::Type as SourceType;
@@ -112,22 +111,17 @@ fn insert_impl<'a>(
         trait_: impl_.trait_,
         heads: bump.alloc_slice_fill_iter(impl_.heads.iter().map(|h| h.value)),
     };
-    let mut remaining = WORK_LIMIT;
     for (candidate, first) in table
         .iter()
         .filter(|(candidate, _)| candidate.trait_ == key.trait_)
     {
-        let overlaps = nash_ast::head::overlaps(
-            candidate.heads,
-            key.heads,
-            &|head| head_repr(kinds, head),
-            &mut remaining,
-        )
-        .map_err(|_| {
-            vec![Error::ImplPatternLimit {
-                region: impl_.region,
-            }]
-        })?;
+        let overlaps =
+            nash_ast::head::overlaps(candidate.heads, key.heads, &|head| head_repr(kinds, head))
+                .map_err(|_| {
+                    vec![Error::OutOfFuel {
+                        region: impl_.region,
+                    }]
+                })?;
         if overlaps {
             return Err(vec![Error::OverlappingImpls {
                 key: bump.alloc(key),
@@ -284,14 +278,11 @@ pub(crate) fn canonicalize<'a>(
         }
         if trait_ == nash_ast::primitives::lift_trait()
             && let [left, right] = heads.as_slice()
-            && nash_ast::head::can_equal(
-                &[left.value],
-                &[right.value],
-                &|head| head_repr(kind_env, head),
-                &mut { WORK_LIMIT },
-            )
+            && nash_ast::head::can_equal(&[left.value], &[right.value], &|head| {
+                head_repr(kind_env, head)
+            })
             .map_err(|_| {
-                vec![Error::ImplPatternLimit {
+                vec![Error::OutOfFuel {
                     region: source.region,
                 }]
             })?

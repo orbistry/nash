@@ -3,7 +3,7 @@ use snapshot_support::SnapshotInputs;
 
 use bumpalo::Bump;
 use indoc::indoc;
-use nash_ast::head::WORK_LIMIT;
+use nash_ast::fuel::{self, Fuel};
 
 #[test]
 fn inline_impl_bounds_are_retained_for_superclasses() {
@@ -45,26 +45,15 @@ fn recursive_overlap_ignores_representation_contexts() {
         let result = canonicalize(&bump, source).unwrap();
         keys.push(*result.tables.impls.keys().next().unwrap());
     }
-    let overlap = |a: usize, b: usize, budget: &mut usize| {
-        nash_ast::head::overlaps(keys[a].heads, keys[b].heads, &|_| None, budget)
-    };
+    let overlap =
+        |a: usize, b: usize| nash_ast::head::overlaps(keys[a].heads, keys[b].heads, &|_| None);
     assert!(
-        overlap(0, 1, &mut { WORK_LIMIT }).unwrap(),
+        overlap(0, 1).unwrap(),
         "representation contexts do not make equal heads disjoint"
     );
-    assert!(overlap(0, 2, &mut { WORK_LIMIT }).unwrap());
-    assert!(overlap(1, 2, &mut { WORK_LIMIT }).unwrap());
-    assert!(
-        overlap(0, 0, &mut { WORK_LIMIT }).unwrap(),
-        "fresh binders preserve overlap"
-    );
-    let mut budget = WORK_LIMIT;
-    assert!(overlap(0, 0, &mut budget).unwrap());
-    let mut exact_budget = WORK_LIMIT - budget;
-    assert!(exact_budget > 0);
-    assert!(overlap(0, 0, &mut exact_budget).unwrap());
-    assert_eq!(exact_budget, 0);
-    assert!(overlap(0, 0, &mut 0).is_err());
+    assert!(overlap(0, 2).unwrap());
+    assert!(overlap(1, 2).unwrap());
+    assert!(overlap(0, 0).unwrap(), "fresh binders preserve overlap");
 }
 
 #[test]
@@ -443,13 +432,14 @@ fn superclass_context_uses_given_superclasses() {
 }
 
 #[test]
-fn superclass_resolution_bounds_expanding_contexts() {
+fn superclass_resolution_reports_running_out_of_fuel_on_expanding_contexts() {
     let snapshot_inputs = SnapshotInputs::default();
     let bump = Bump::new();
-    let result = canonicalize(
-        &bump,
-        snapshot_inputs.record(indoc!(
-            "
+    let result = fuel::run(Fuel::Limited(2_000), || {
+        canonicalize(
+            &bump,
+            snapshot_inputs.record(indoc!(
+                "
         module Main exposing (..)
         trait Eq 'a where
             eq : 'a -> 'a
@@ -460,8 +450,9 @@ fn superclass_resolution_bounds_expanding_contexts() {
         impl Ord (List 'a) where
             compare x = x
     "
-        )),
-    );
+            )),
+        )
+    });
     insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
@@ -1159,5 +1150,32 @@ fn superclass_proof_needs_the_split_requirement_named() {
     }
     insta::with_settings!({description => snapshot_inputs.description(), omit_expression => true}, {
         insta::assert_snapshot!(snapshot_inputs.results(&results));
+    });
+}
+
+/// Overlap checks draw from the compile's fuel; running out reports the impl
+/// that was being checked.
+#[test]
+fn overlap_check_reports_running_out_of_fuel_at_the_impl() {
+    let snapshot_inputs = SnapshotInputs::default();
+    let bump = Bump::new();
+    let result = fuel::run(Fuel::Limited(1), || {
+        canonicalize(
+            &bump,
+            snapshot_inputs.record(indoc!(
+                "
+        module Main exposing (..)
+        trait Keep 'a where
+            keep : 'a -> 'a
+        impl Keep (list 'a) where
+            keep x = x
+        impl Keep (list int) where
+            keep x = x
+    "
+            )),
+        )
+    });
+    insta::with_settings!({info => &"diagnostic", description => snapshot_inputs.description(), omit_expression => true}, {
+        insta::assert_snapshot!(snapshot_inputs.errors(&result.unwrap_err()));
     });
 }

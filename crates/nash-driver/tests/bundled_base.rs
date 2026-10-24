@@ -1,4 +1,4 @@
-use nash_driver::{Database, InMemorySource, build, build_graph, bundled_base};
+use nash_driver::{Database, Fuel, InMemorySource, build, build_graph, bundled_base};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use url::Url;
@@ -24,7 +24,7 @@ async fn all_bundled_modules_and_implicit_prelude_compile() {
     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let result = build(db.clone(), &graph, &modules).await;
+    let result = build(db.clone(), &graph, &modules, Fuel::Unlimited).await;
     assert!(result.is_success(), "{:#?}", result.ordered_reports());
     assert_eq!(result.success, bundled_base::SOURCES.len() + 1);
     let mut db = db.lock().await;
@@ -93,7 +93,7 @@ async fn builtin_rejects_compiler_intrinsics() {
     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let result = build(db, &graph, &modules).await;
+    let result = build(db, &graph, &modules, Fuel::Unlimited).await;
     assert!(
         matches!(&result.modules[&main], nash_driver::ModuleResult::Failed(reports) if !reports.reports.is_empty())
     );
@@ -110,7 +110,7 @@ async fn base_application_fixture_compiles_without_imports() {
     let graph = build_graph(db.clone(), &origins.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let result = build(db, &graph, &origins).await;
+    let result = build(db, &graph, &origins, Fuel::Unlimited).await;
     assert!(result.is_success(), "{:#?}", result.ordered_reports());
 }
 
@@ -150,7 +150,7 @@ macro_rules! assert_base_type_error_snapshot {
         let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
             .await
             .unwrap();
-        let result = build(db, &graph, &modules).await;
+        let result = build(db, &graph, &modules, Fuel::Unlimited).await;
         let nash_driver::ModuleResult::Failed(reports) = &result.modules[&main] else {
             panic!("invalid source passed: {result:?}");
         };

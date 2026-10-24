@@ -690,7 +690,7 @@ fn recursive_function_rhs_preserves_strict_captures_once() {
 }
 
 #[test]
-fn growing_native_layouts_stop_at_an_explicit_resource_limit() {
+fn growing_native_layouts_run_out_of_fuel() {
     with_base(
         indoc::indoc!(
             r#"
@@ -703,10 +703,10 @@ fn growing_native_layouts_stop_at_an_explicit_resource_limit() {
     "#
         ),
         |arena, build, root| {
-            assert!(matches!(
-                build.compile(arena, root, None, TraceConfig::default()),
-                Err(Error::SpecializationLimit)
-            ));
+            let compiled = nash_ast::fuel::run(nash_ast::fuel::Fuel::Limited(5_000), || {
+                build.compile(arena, root, None, TraceConfig::default())
+            });
+            assert!(matches!(compiled, Err(Error::OutOfFuel)));
         },
     );
 }

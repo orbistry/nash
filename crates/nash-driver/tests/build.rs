@@ -1,4 +1,4 @@
-use nash_driver::{Database, InMemorySource, build_graph, build_with};
+use nash_driver::{Database, Fuel, InMemorySource, build_graph, build_with};
 use nash_plutus::{arena::Arena, flat, syn};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
@@ -33,7 +33,7 @@ async fn outputs_result_with(
     let graph = build_graph(db.clone(), &modules.keys().cloned().collect::<Vec<_>>())
         .await
         .unwrap();
-    let (report, result) = build_with(db, &graph, &modules, move |solved| {
+    let (report, result) = build_with(db, &graph, &modules, Fuel::Unlimited, move |solved| {
         nash_driver::build::build_validators_with(solved, config_for)
     })
     .await;
@@ -412,4 +412,17 @@ async fn o2_validator_settings_and_trace_erasure() {
             insta::assert_snapshot!(format!("o2_validator_{name}"), rendered);
         });
     }
+}
+
+/// An impl context that rewraps its argument needs one evidence node per
+/// nesting level. Checking and code generation follow the type to any depth.
+#[tokio::test]
+async fn deeply_nested_impl_context_checks_and_builds_without_a_depth_limit() {
+    let depth = 200;
+    let source = format!(
+        "validator module Main exposing (main)\ntrait C 'a where\n    c : 'a -> int\ntype wrap 'a = Wrap 'a\nimpl C int where\n    c _ = 0\nimpl C 'a => C (wrap 'a) where\n    c (Wrap x) = c x\nmain : Data -> unit\nmain _ =\n    if c {}0{} == 0 then () else fail\n",
+        "(Wrap ".repeat(depth),
+        ")".repeat(depth),
+    );
+    assert_eq!(outputs(&[("Main", &source)]).await.len(), 1);
 }

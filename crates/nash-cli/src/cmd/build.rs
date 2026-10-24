@@ -1,5 +1,5 @@
 use miette::{IntoDiagnostic, Result};
-use nash_driver::{Database, FileSystemSource, Project, build_graph_production, build_with};
+use nash_driver::{Database, FileSystemSource, Fuel, Project, build_graph_production, build_with};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -104,7 +104,7 @@ impl Args {
             })
             .collect::<std::result::Result<_, nash_config::BuildConflict>>()
             .into_diagnostic()?;
-        let (report, output) = build_with(db, &graph, &modules, move |solved| {
+        let (report, output) = build_with(db, &graph, &modules, Fuel::Unlimited, move |solved| {
             nash_driver::build::build_validators_matching_with(solved, |uri| {
                 configs.get(uri).copied()
             })

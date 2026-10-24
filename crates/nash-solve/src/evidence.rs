@@ -1,7 +1,7 @@
 //! Impl evidence for canonical predicates after inference. A type variable
 //! that reaches resolution is open: nothing will bind it.
 use bumpalo::Bump;
-use nash_ast::head::{DEPTH_LIMIT, WORK_LIMIT};
+use nash_ast::fuel::{OutOfFuel, tick};
 use nash_ast::{Evidence, ImplRef, Pred, QualifiedName, Type};
 use nash_can::environment::Tables;
 use nash_region::Located;
@@ -12,7 +12,13 @@ pub enum Failure {
     /// A decision needs an open type variable: impl selection, a
     /// representation test, or the requirements of a type.
     NonGround,
-    Limit,
+    OutOfFuel,
+}
+
+impl From<OutOfFuel> for Failure {
+    fn from(OutOfFuel: OutOfFuel) -> Self {
+        Self::OutOfFuel
+    }
 }
 
 #[derive(Debug)]
@@ -25,18 +31,13 @@ pub struct Error<'a> {
 /// Nominal aliases retain their identity. An open type variable equals only
 /// itself; resolution never chooses a type or kind to make an impl match, so
 /// a decision that needs an open variable fails with `NonGround`. Recursive
-/// contexts and structural traversal share a bounded work budget.
+/// contexts and structural traversal draw from the compile's fuel.
 pub fn resolve<'a>(
     bump: &'a Bump,
     tables: &Tables<'a>,
     pred: &Pred<'a>,
 ) -> Result<Option<Evidence<'a>>, Error<'a>> {
-    Resolver {
-        bump,
-        tables,
-        remaining: WORK_LIMIT,
-    }
-    .resolve(pred, 0)
+    Resolver { bump, tables }.resolve(pred)
 }
 
 #[derive(PartialEq, Eq)]
@@ -60,7 +61,6 @@ struct Term<'a> {
 struct Resolver<'t, 'a> {
     bump: &'a Bump,
     tables: &'t Tables<'a>,
-    remaining: usize,
 }
 
 enum Resolution<'a> {
@@ -76,7 +76,7 @@ enum Resolution<'a> {
 }
 
 enum Work<'a> {
-    Resolve(Pred<'a>, usize),
+    Resolve(Pred<'a>),
     Assemble(ImplRef<'a>, &'a [&'a Located<Type<'a>>], usize),
     Apply(usize),
 }
@@ -84,48 +84,48 @@ enum Work<'a> {
 impl<'a> Resolver<'_, 'a> {
     // Charge every node that substitute_type will copy before allocating the
     // result. Open alias bodies are retained; filled bodies are traversed.
-    fn substitution_work(&mut self, typ: &Type<'a>, depth: usize) -> Result<(), Failure> {
-        self.step(depth)?;
+    fn substitution_work(&mut self, typ: &Type<'a>) -> Result<(), Failure> {
+        tick()?;
         match typ {
             Type::App { head, args } => {
-                self.substitution_work(&head.value, depth + 1)?;
+                self.substitution_work(&head.value)?;
                 for arg in *args {
-                    self.substitution_work(&arg.value, depth + 1)?;
+                    self.substitution_work(&arg.value)?;
                 }
             }
             Type::Named { args, .. } => {
                 for arg in *args {
-                    self.substitution_work(&arg.value, depth + 1)?;
+                    self.substitution_work(&arg.value)?;
                 }
             }
             Type::Alias {
                 arguments, target, ..
             } => {
                 for arg in *arguments {
-                    self.substitution_work(&arg.typ.value, depth + 1)?;
+                    self.substitution_work(&arg.typ.value)?;
                 }
                 if let nash_ast::AliasType::Filled { typ, .. } = target {
-                    self.substitution_work(&typ.value, depth + 1)?;
+                    self.substitution_work(&typ.value)?;
                 }
             }
             Type::Lambda { from, to } => {
-                self.substitution_work(&from.value, depth + 1)?;
-                self.substitution_work(&to.value, depth + 1)?;
+                self.substitution_work(&from.value)?;
+                self.substitution_work(&to.value)?;
             }
             Type::Tuple {
                 first,
                 second,
                 rest,
             } => {
-                self.substitution_work(&first.value, depth + 1)?;
-                self.substitution_work(&second.value, depth + 1)?;
+                self.substitution_work(&first.value)?;
+                self.substitution_work(&second.value)?;
                 for arg in *rest {
-                    self.substitution_work(&arg.value, depth + 1)?;
+                    self.substitution_work(&arg.value)?;
                 }
             }
             Type::Record { fields, .. } => {
                 for field in *fields {
-                    self.substitution_work(&field.typ.value, depth + 1)?;
+                    self.substitution_work(&field.typ.value)?;
                 }
             }
             Type::Var(_) => {}
@@ -133,25 +133,17 @@ impl<'a> Resolver<'_, 'a> {
         Ok(())
     }
 
-    fn step(&mut self, depth: usize) -> Result<(), Failure> {
-        if depth >= DEPTH_LIMIT || self.remaining == 0 {
-            return Err(Failure::Limit);
-        }
-        self.remaining -= 1;
-        Ok(())
-    }
-
-    fn term(&mut self, typ: &Type<'a>, depth: usize) -> Result<Term<'a>, Failure> {
-        self.step(depth)?;
+    fn term(&mut self, typ: &Type<'a>) -> Result<Term<'a>, Failure> {
+        tick()?;
         let (con, args) = match typ {
             Type::Var(name) => (Constructor::Var(name), Vec::new()),
             Type::App { head, args } => {
-                let mut head = self.term(&head.value, depth + 1)?;
+                let mut head = self.term(&head.value)?;
                 if !matches!(head.con, Constructor::Named(_) | Constructor::Var(_)) {
                     return Err(Failure::MissingImpl);
                 }
                 for arg in *args {
-                    head.args.push(self.term(&arg.value, depth + 1)?);
+                    head.args.push(self.term(&arg.value)?);
                 }
                 return Ok(head);
             }
@@ -184,30 +176,21 @@ impl<'a> Resolver<'_, 'a> {
         };
         let args = args
             .into_iter()
-            .map(|arg| self.term(&arg.value, depth + 1))
+            .map(|arg| self.term(&arg.value))
             .collect::<Result<_, _>>()?;
         Ok(Term { con, args })
     }
 
-    fn resolve(
-        &mut self,
-        pred: &Pred<'a>,
-        depth: usize,
-    ) -> Result<Option<Evidence<'a>>, Error<'a>> {
-        let mut pending = vec![Work::Resolve(*pred, depth)];
+    fn resolve(&mut self, pred: &Pred<'a>) -> Result<Option<Evidence<'a>>, Error<'a>> {
+        let mut pending = vec![Work::Resolve(*pred)];
         let mut evidence = Vec::new();
         while let Some(work) = pending.pop() {
             match work {
-                Work::Resolve(pred, depth) => match self.resolve_step(&pred, depth)? {
+                Work::Resolve(pred) => match self.resolve_step(&pred)? {
                     Resolution::Complete(proof) => evidence.push(Some(proof)),
                     Resolution::Apply { children } => {
                         pending.push(Work::Apply(children.len()));
-                        pending.extend(
-                            children
-                                .into_iter()
-                                .rev()
-                                .map(|pred| Work::Resolve(pred, depth + 1)),
-                        );
+                        pending.extend(children.into_iter().rev().map(Work::Resolve));
                     }
                     Resolution::Impl {
                         impl_,
@@ -215,12 +198,7 @@ impl<'a> Resolver<'_, 'a> {
                         children,
                     } => {
                         pending.push(Work::Assemble(impl_, type_args, children.len()));
-                        pending.extend(
-                            children
-                                .into_iter()
-                                .rev()
-                                .map(|pred| Work::Resolve(pred, depth + 1)),
-                        );
+                        pending.extend(children.into_iter().rev().map(Work::Resolve));
                     }
                 },
                 Work::Apply(count) => {
@@ -242,15 +220,15 @@ impl<'a> Resolver<'_, 'a> {
         Ok(evidence.pop().expect("root evidence"))
     }
 
-    fn resolve_step(&mut self, pred: &Pred<'a>, depth: usize) -> Result<Resolution<'a>, Error<'a>> {
+    fn resolve_step(&mut self, pred: &Pred<'a>) -> Result<Resolution<'a>, Error<'a>> {
         let error = |reason| Error {
             predicate: *pred,
             reason,
         };
-        self.step(depth).map_err(error)?;
+        tick().map_err(|out| error(out.into()))?;
         let terms = pred
             .types()
-            .map(|arg| self.term(&arg.value, 0))
+            .map(|arg| self.term(&arg.value))
             .collect::<Result<Vec<_>, _>>()
             .map_err(error)?;
         let group = Default::default();
@@ -334,10 +312,9 @@ impl<'a> Resolver<'_, 'a> {
             }),
             candidates,
             args,
-            &mut self.remaining,
             nash_ast::head::SelectPolicy::Exact,
         )
-        .map_err(|_| error(Failure::Limit))?;
+        .map_err(|_| error(Failure::OutOfFuel))?;
         let (key, info, type_args) = match selection {
             nash_ast::head::ImplSelection::Selected {
                 info: (key, info),
@@ -358,7 +335,7 @@ impl<'a> Resolver<'_, 'a> {
         let mut children = Vec::new();
         for context in info.context {
             for typ in context.types() {
-                self.substitution_work(&typ.value, 0).map_err(error)?;
+                self.substitution_work(&typ.value).map_err(error)?;
             }
             children.push(nash_can::kinds::substitute_predicate(
                 self.bump,

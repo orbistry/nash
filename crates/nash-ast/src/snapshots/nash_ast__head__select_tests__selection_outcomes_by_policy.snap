@@ -20,6 +20,6 @@ undecided, matches
 undecided, does not match
   inference: waits
   entailment and evidence: undecided
-does not match, matches (budget for one step)
-  inference: work limit
-  entailment and evidence: work limit
+does not match, matches (fuel for one step)
+  inference: out of fuel
+  entailment and evidence: out of fuel

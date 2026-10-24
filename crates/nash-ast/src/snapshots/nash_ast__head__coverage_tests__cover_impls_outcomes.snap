@@ -1,6 +1,6 @@
 ---
 source: crates/nash-ast/src/head.rs
-description: "Coverage of a wanted predicate whose arguments are rigid variables. Big covers Big; Little covers Const and Term. One budget pays for subject discovery, the cells, and every selection."
+description: "Coverage of a wanted predicate whose arguments are rigid variables. Big covers Big; Little covers Const and Term. One fuel counter pays for subject discovery, the cells, and every selection."
 ---
 Big and Little impls, given at 'a
   'a Big selects big; 'a Const selects little; 'a Term selects little
@@ -17,4 +17,4 @@ pair impls, given at 'a and 'b
 pair impls, given at 'a only
   needs the trait at 'b
 pair impls, one step less than the whole search
-  work limit
+  out of fuel

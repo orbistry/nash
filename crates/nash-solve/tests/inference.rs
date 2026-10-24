@@ -358,12 +358,13 @@ fn recovery_final_recursive_evidence_error_survives_an_independent_mismatch() {
 }
 
 #[test]
-fn recovery_resolution_limit_keeps_unrelated_obligations() {
+fn recovery_out_of_fuel_keeps_unrelated_obligations() {
     let bump = Bump::new();
-    infer_output_snapshot!(
-        &bump,
-        indoc!(
-            r#"
+    nash_ast::fuel::run(nash_ast::fuel::Fuel::Limited(5_000), || {
+        infer_output_snapshot!(
+            &bump,
+            indoc!(
+                r#"
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
@@ -375,9 +376,10 @@ fn recovery_resolution_limit_keeps_unrelated_obligations() {
         sibling : ()
         sibling = \x -> x
     "#
-        ),
-    )
-    .expect_err("limit and independent failures");
+            ),
+        )
+    })
+    .expect_err("out of fuel and independent failures");
 }
 
 #[test]
@@ -1384,8 +1386,9 @@ fn enclosing_given_wins_after_lambda_parameter_types_are_known() {
 
 #[test]
 fn expanding_impl_context_stops_with_a_diagnostic() {
-    assert_inference_error_snapshot!(
-        r#"
+    nash_ast::fuel::run(nash_ast::fuel::Fuel::Limited(5_000), || {
+        assert_inference_error_snapshot!(
+            r#"
         module Main exposing (..)
         trait Keep 'a where
             keep : 'a -> 'a
@@ -1394,7 +1397,8 @@ fn expanding_impl_context_stops_with_a_diagnostic() {
         value : list unit
         value = keep [()]
     "#
-    );
+        );
+    });
 }
 
 #[test]
@@ -5656,36 +5660,6 @@ fn coverage_reports_the_uncovered_representation() {
             probe _ = ()
         check : Probe 'a => box 'a -> ()
         check x = probe x
-    "#
-    );
-}
-
-/// Six subjects give 729 cells, more than one work budget can select.
-#[test]
-fn coverage_search_stops_at_the_work_limit() {
-    assert_inference_error_snapshot!(
-        r#"
-        module Main exposing (..)
-        import Primitive exposing (Big, Little)
-        type six 'a 'b 'c 'd 'e 'f = Six 'a 'b 'c 'd 'e 'f
-        trait Kind 'a where
-            kind : 'a -> ()
-        impl Kind (six ('a : Big) 'b 'c 'd 'e 'f) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Big) 'c 'd 'e 'f) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Little) ('c : Big) 'd 'e 'f) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Big) 'e 'f) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Big) 'f) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Big)) where
-            kind _ = ()
-        impl Kind (six ('a : Little) ('b : Little) ('c : Little) ('d : Little) ('e : Little) ('f : Little)) where
-            kind _ = ()
-        check : ( Kind 'a, Kind 'b, Kind 'c, Kind 'd, Kind 'e, Kind 'f ) => six 'a 'b 'c 'd 'e 'f -> ()
-        check x = kind x
     "#
     );
 }
