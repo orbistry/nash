@@ -1,5 +1,20 @@
 # nash-constrain
 
+## 0.10.0 — 2026-10-24
+
+### Minor changes
+
+- [ba457678](https://github.com/orbistry/nash/commit/ba4576789b6b8e589e55a74a9fd51b8f6d78337a) Restore Elm's constraint tree: `nash-constrain` generates it from the canonical AST and `nash-solve` walks it, in place of direct inference. An annotated definition now publishes its declared type: a call with more arguments in the same module no longer replaces an alias in its annotation, so importers find the impls of that alias. — Thanks @MicroProofs!
+- [5655782b](https://github.com/orbistry/nash/commit/5655782b2686abb979fda1157722dd10c4728b19) Record on each record-field constraint whether it comes from a module test, in place of the `Constraint::TestScope` wrapper. `Constraint::Record` and `Constraint::Field` gain a `tests` field, `TestScope` is removed, and `pattern::State` and `pattern::empty_state` take the flag. Field visibility is unchanged: fields that only a tests-block import makes visible are visible in tests and nowhere else. — Thanks @MicroProofs!
+- [d47d2775](https://github.com/orbistry/nash/commit/d47d27754abacb94275313da7e8f032c65275307) Replace every separate search budget with one compile fuel counter, `nash_ast::fuel`. Trait resolution, impl overlap checks, superclass entailment, evidence resolution and code generation share it: each search step takes a `tick`, and the driver installs a fresh `Fuel` for each module's compile. `nash check`, `build`, `test` and `docs` run with unlimited fuel, so programs that the old fixed limits rejected now compile, such as an impl context that rewraps its argument used at 200 nested types. The language server runs with 10 million steps per module, so an editor gives up on a looping program after a second or two instead of freezing.
+  
+  Running out of fuel is one error kind, `COMPILATION STEP LIMIT` (`nash::type::out_of_fuel`), replacing `ImplResolutionLimit` (`nash::type::impl_resolution_limit`), `ImplPatternLimit` (`nash::names::impl_pattern_limit`), the superclass search limit, and the code generation specialization, evidence and recursion normalization limits. The solver reports it at the use that needed the search, canonicalization at the impl being checked, and code generation as a plain error. `nash_driver::build`, `build_with` and `test_with` take a `Fuel` argument, re-exported as `nash_driver::Fuel`. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [532e437a](https://github.com/orbistry/nash/commit/532e437ad0cdad996feb55548fba7cc3e8703256) Index kind contracts, recovery dependencies, stranded variables, and scheme records so that type checking does not scan every earlier declaration again. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.13.0, nash-can@0.14.0
+
 ## 0.9.0 — 2026-10-10
 
 ### Minor changes
