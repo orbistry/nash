@@ -1,5 +1,19 @@
 # nash-codegen
 
+## 0.8.0 — 2026-10-24
+
+### Minor changes
+
+- [4c4e5155](https://github.com/orbistry/nash/commit/4c4e5155128aba697fcb2181ded80f0de5e03070) Resolve superclass evidence when a type variable stays open. A phantom parameter that no use fixes, as in `wrapper : tag 'p -> bool; wrapper t = same t t` with `same : Ord 'a => 'a -> 'a -> bool`, passed type checking but stopped `nash test` with "superclass resolution requires a ground type". `nash_solve::evidence::resolve` now keeps open type variables. An open variable equals only itself. An impl that matches whatever the variable is proves the predicate, and resolution reports `NonGround` only when no impl does and impl selection, a representation test, or the requirements of a type need the variable. The new `nash_ast::head::Open` matches impl heads against open types. Under `SelectPolicy::Exact`, `select_impl` now returns `Deferred` when no impl is selected and a candidate is undecided. `nash_codegen::evidence::Error::NonGround` is removed. — Thanks @MicroProofs!
+- [baadec9e](https://github.com/orbistry/nash/commit/baadec9e5b89b384d1433a68849bd85a237b6aea) Add the representation coverage rule. When a rigid type variable keeps impl selection from deciding, because the impls are split by its representation class (for example `Eq (list ('a : Big))` and `Eq 'a => Eq (list ('a : Little))`), inference accepts the predicate if the annotation states the trait at that variable and every admitted representation selects an impl whose context holds. `same : Eq 'a => list 'a -> list 'a -> bool` now compiles. The evidence is the new `Evidence::Specialize`; code generation selects the impl for each use and keeps the selecting types in the specialization key. A missing element constraint is now reported as a missing constraint, such as `Eq 'a`, instead of a missing impl for the container. Superclass proofs do not use the rule: an impl names a split requirement in its context. nash-ast also gains `head::cover_impls` and `ReprTrait::exactly`. — Thanks @MicroProofs!
+- [d47d2775](https://github.com/orbistry/nash/commit/d47d27754abacb94275313da7e8f032c65275307) Replace every separate search budget with one compile fuel counter, `nash_ast::fuel`. Trait resolution, impl overlap checks, superclass entailment, evidence resolution and code generation share it: each search step takes a `tick`, and the driver installs a fresh `Fuel` for each module's compile. `nash check`, `build`, `test` and `docs` run with unlimited fuel, so programs that the old fixed limits rejected now compile, such as an impl context that rewraps its argument used at 200 nested types. The language server runs with 10 million steps per module, so an editor gives up on a looping program after a second or two instead of freezing.
+  
+  Running out of fuel is one error kind, `COMPILATION STEP LIMIT` (`nash::type::out_of_fuel`), replacing `ImplResolutionLimit` (`nash::type::impl_resolution_limit`), `ImplPatternLimit` (`nash::names::impl_pattern_limit`), the superclass search limit, and the code generation specialization, evidence and recursion normalization limits. The solver reports it at the use that needed the search, canonicalization at the impl being checked, and code generation as a plain error. `nash_driver::build`, `build_with` and `test_with` take a `Fuel` argument, re-exported as `nash_driver::Fuel`. — Thanks @MicroProofs!
+
+### Patch changes
+
+- Updated dependencies: nash-ast@0.13.0, nash-can@0.14.0, nash-ir@0.5.2, nash-solve@0.11.0
+
 ## 0.7.0 — 2026-10-10
 
 ### Minor changes

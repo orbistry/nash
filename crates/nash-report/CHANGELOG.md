@@ -1,5 +1,21 @@
 # nash-report
 
+## 0.8.0 — 2026-10-24
+
+### Minor changes
+
+- [4dcd4e98](https://github.com/orbistry/nash/commit/4dcd4e986ad5cb4b15baefdbf159b140fa4e36a8) Break a tuple or record type that does not fit the line with one entry per line, as Elm does. The entries were joined without break points, so only the last entries broke and the type drifted to the right. Add `Doc::pcat`, Elm's `D.cat`. — Thanks @MicroProofs!
+- [d47d2775](https://github.com/orbistry/nash/commit/d47d27754abacb94275313da7e8f032c65275307) Replace every separate search budget with one compile fuel counter, `nash_ast::fuel`. Trait resolution, impl overlap checks, superclass entailment, evidence resolution and code generation share it: each search step takes a `tick`, and the driver installs a fresh `Fuel` for each module's compile. `nash check`, `build`, `test` and `docs` run with unlimited fuel, so programs that the old fixed limits rejected now compile, such as an impl context that rewraps its argument used at 200 nested types. The language server runs with 10 million steps per module, so an editor gives up on a looping program after a second or two instead of freezing.
+  
+  Running out of fuel is one error kind, `COMPILATION STEP LIMIT` (`nash::type::out_of_fuel`), replacing `ImplResolutionLimit` (`nash::type::impl_resolution_limit`), `ImplPatternLimit` (`nash::names::impl_pattern_limit`), the superclass search limit, and the code generation specialization, evidence and recursion normalization limits. The solver reports it at the use that needed the search, canonicalization at the impl being checked, and code generation as a plain error. `nash_driver::build`, `build_with` and `test_with` take a `Fuel` argument, re-exported as `nash_driver::Fuel`. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [3d86f097](https://github.com/orbistry/nash/commit/3d86f0971cba9df677d02296c21c25ed7889b52c) Align the record after "Available fields:" under its opening brace. Its later lines started at the left margin. — Thanks @MicroProofs!
+- [f205096a](https://github.com/orbistry/nash/commit/f205096a25e5f4e1aedd2ec2ddd5da3d44b48eeb) Reject contradictory representation contexts on type applications, such as `(Big ('f 'a), Little ('f 'a))`, with the existing contradictory-representation error. They used to reach impl selection, where an empty proven set matched every disjoint impl. Export `nash_ast::same_type` for location-free type comparison. — Thanks @MicroProofs!
+- [b613c93b](https://github.com/orbistry/nash/commit/b613c93b077b2c22d13af47904d6e6fffb00d002) Stop `nash check` from crashing with "Doc::text must not contain newlines" when a missing-constraint or missing-impl predicate is wider than 80 columns. The help line is now part of the report layout instead of pre-rendered text. When a sentence with a predicate does not fit the line, the predicate moves to its own line, indented by 4. Sentences that fit render as before. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.13.0, nash-can@0.14.0, nash-constrain@0.10.0, nash-nitpick@0.3.4
+
 ## 0.7.0 — 2026-10-10
 
 ### Minor changes
