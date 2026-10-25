@@ -1,5 +1,19 @@
 # nash-can
 
+## 0.14.0 — 2026-10-24
+
+### Minor changes
+
+- [d47d2775](https://github.com/orbistry/nash/commit/d47d27754abacb94275313da7e8f032c65275307) Replace every separate search budget with one compile fuel counter, `nash_ast::fuel`. Trait resolution, impl overlap checks, superclass entailment, evidence resolution and code generation share it: each search step takes a `tick`, and the driver installs a fresh `Fuel` for each module's compile. `nash check`, `build`, `test` and `docs` run with unlimited fuel, so programs that the old fixed limits rejected now compile, such as an impl context that rewraps its argument used at 200 nested types. The language server runs with 10 million steps per module, so an editor gives up on a looping program after a second or two instead of freezing.
+  
+  Running out of fuel is one error kind, `COMPILATION STEP LIMIT` (`nash::type::out_of_fuel`), replacing `ImplResolutionLimit` (`nash::type::impl_resolution_limit`), `ImplPatternLimit` (`nash::names::impl_pattern_limit`), the superclass search limit, and the code generation specialization, evidence and recursion normalization limits. The solver reports it at the use that needed the search, canonicalization at the impl being checked, and code generation as a plain error. `nash_driver::build`, `build_with` and `test_with` take a `Fuel` argument, re-exported as `nash_driver::Fuel`. — Thanks @MicroProofs!
+
+### Patch changes
+
+- [115db1d2](https://github.com/orbistry/nash/commit/115db1d2d1dd6c5516a14029428c1d2a0447e64f) Check every impl context together with its superclasses for contradictory representations. An impl that defines no method, such as `impl (Foo 'a, Little 'a) => Sub 'a` where `Foo` requires `Big`, skipped this check and crashed the superclass entailment check; it now gets the contradictory-representation error. — Thanks @MicroProofs!
+- [f205096a](https://github.com/orbistry/nash/commit/f205096a25e5f4e1aedd2ec2ddd5da3d44b48eeb) Reject contradictory representation contexts on type applications, such as `(Big ('f 'a), Little ('f 'a))`, with the existing contradictory-representation error. They used to reach impl selection, where an empty proven set matched every disjoint impl. Export `nash_ast::same_type` for location-free type comparison. — Thanks @MicroProofs!
+- Updated dependencies: nash-ast@0.13.0
+
 ## 0.13.0 — 2026-09-27
 
 ### Minor changes
